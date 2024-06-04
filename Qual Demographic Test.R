@@ -147,3 +147,4 @@ kable(hcw_tbl2, col.names = c("Service",
                              "N (Percentage)", 
                              "Average Duration (Mean [SD]) [Year]"),
       caption = "MH Service Provision")
+fews
