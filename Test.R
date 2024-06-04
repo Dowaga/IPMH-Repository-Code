@@ -2,7 +2,7 @@ rm(list = ls())
 
 pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
                openxlsx, gtsummary, kableExtra)
-# Upload the dataset
+
 
 # create column with the symptoms named, separated by semicolons
 linelist_sym_1 <- linelist_cleaned %>% 
