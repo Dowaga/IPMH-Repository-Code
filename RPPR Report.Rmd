@@ -1,0 +1,115 @@
+---
+title: "RPPR Age enrollment Report"
+author: "David Owaga"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, echo=F, include=F}
+rm(list = ls())
+
+pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
+               openxlsx, gtsummary, kableExtra, flextable, writexl) 
+
+# Read Qualitative demographic data
+qual_demographic_df <-read.csv("C:/Users/DAMARIS/Desktop/IPMH/Qual Demographics/IPMHAim1QualDemograp_DATA_2024-06-10_0619.csv") 
+
+
+#Read Quantitative data
+quant_demographic_df <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-06-14_0523.csv") 
+```
+
+
+```{r Quant age range, echo=FALSE, message=FALSE, warning=FALSE}
+hcw_demo <- quant_demographic_df %>%
+  select(record_id, starts_with("hcw_"), demographic_hcws_complete) %>%
+  filter(!is.na(hcw_participant_id))
+
+hcw_demo <- hcw_demo %>% 
+  mutate(age = as.numeric(case_when(hcw_dob_uk==1~floor(hcw_cal_age),
+                         hcw_dob_uk==0~hcw_age)))
+
+quant_age_df <- hcw_demo %>% 
+    select(record_id, age, hcw_sex) %>% 
+    mutate(age_range = case_when(
+       age >= 18 & age <=25 ~ "18-25",
+       age >= 26 & age <= 45 ~ "26-45",
+       age >= 46 & age <= 64 ~ "46-64",
+       age >= 65 & age <= 75 ~ "65-75",
+       age >75 ~ "> 76+"))
+
+quant_age_summary <- quant_age_df %>% 
+    group_by(age_range) %>% 
+    rename(`Age Categories` = age_range ) %>% 
+    summarise(Total = n())
+```
+
+
+```{r Qual age range, echo=FALSE, message=FALSE, warning=FALSE}
+qual_age_df <- qual_demographic_df %>% 
+    select(record_id, hcw_age, policy_age, women_age, hcw_sex, policy_sex) %>% 
+  mutate(age = coalesce(hcw_age, policy_age, women_age),
+         Gender = coalesce(hcw_sex, policy_sex)) %>% 
+  mutate(Gender = ifelse(is.na(Gender), 2, Gender)) %>% 
+    mutate(age_range = case_when(
+       age >= 18 & age <=25 ~ "18-25",
+       age >= 26 & age <= 45 ~ "26-45",
+       age >= 46 & age <= 64 ~ "46-64",
+       age >= 65 & age <= 75 ~ "65-75",
+       age >75 ~ "> 76+")) %>% 
+    select(record_id, age, Gender, age_range)
+
+qual_age_summary <- qual_age_df %>% 
+    group_by(age_range) %>% 
+    rename(`Age Categories` = age_range ) %>% 
+    summarise(Total = n())
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+# Merge the two tables by Age Category and sum up the Total values
+merged_summary <- quant_age_summary %>%
+  full_join(qual_age_summary, by = "Age Categories") %>%
+  mutate(`Total Count` = coalesce(Total.x, 0) + coalesce(Total.y, 0)) %>%
+  select(`Age Categories`, `Total Count`) %>% 
+    adorn_totals()
+
+# Transpose the resulting dataframe
+transposed_summary <- as.data.frame(t(merged_summary))
+colnames(transposed_summary) <- transposed_summary[1, ]
+transposed_summary <- transposed_summary[-1, ]
+
+# Create overall_table with a caption
+overall_table <- flextable(transposed_summary) %>%
+  set_caption(caption = "Age Enrollment Report")
+
+# Print the overall_table
+#print(overall_table)
+
+ #Print the transposed summary table using kableExtra
+kable(transposed_summary, 
+      format = "latex", caption = "Age Enrollment Summary")%>%
+    kable_styling(latex_options = c("striped", "hold_position"), font_size = 12)
+```
+
+
+```{r Gender and Age, echo=FALSE, message=FALSE, warning=FALSE}
+qual_gender <- qual_age_df %>% 
+    select(Gender, age) %>% 
+    rename(Age = age) %>% 
+    mutate(Gender = recode(Gender,
+                        "1" = "Male",
+                        "2"= "Female"))
+
+quant_gender <- quant_age_df %>% 
+    select(hcw_sex, age) %>% 
+    rename(Age = age, Gender = hcw_sex) %>% 
+    mutate(Gender = recode(Gender,
+                        "1" = "Male",
+                        "2"= "Female"))
+
+enro_gender <- rbind(qual_gender, quant_gender)
+
+write_xlsx(enro_gender, "Enrollment Gender and Age.xlsx")
+```
+
