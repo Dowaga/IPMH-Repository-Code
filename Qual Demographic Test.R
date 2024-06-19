@@ -1,5 +1,5 @@
 rm(list = ls())
-
+getwd() 
 pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
                openxlsx, gtsummary, kableExtra) 
 
