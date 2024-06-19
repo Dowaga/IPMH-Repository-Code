@@ -11,7 +11,7 @@ da_users <- data.frame(Analyst = c("Owaga"),
 current_wd <- getwd() 
 
 if (grepl("Dowaga", current_wd)) {
-  rctact_filepath <- "C:/Users/DAMARIS/Desktop/IPMH Repository Code"
+  ipmh_filepath <- "C:/Users/Damaris/uw/ngumbau-IPMH"
 } else {
  print("No filepath")
 }
@@ -19,7 +19,7 @@ if (grepl("Dowaga", current_wd)) {
 ### Working Directory Check ###
 
 if(endsWith(current_wd, "IPMH Repository Code")) {
-  chvneo_wd <- current_wd
+  ipmh_wd <- current_wd
 } else {
   print("WARNING: Incorrect Working Directory")
 } 
