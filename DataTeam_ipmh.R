@@ -22,5 +22,3 @@ if(endsWith(current_wd, "IPMH Repository Code")) {ipmh_wd <- current_wd
   print("WARNING: Incorrect Working Directory")
 } 
 
-
-Hello
