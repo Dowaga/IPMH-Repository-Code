@@ -1,0 +1,1267 @@
+---
+title: "Facility checklist - randomization group check"
+author: "Yuwei Wang & David Owaga"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+rm(list = ls())
+library(knitr)
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(dplyr)
+library(table1) 
+library(stddiff) 
+library(cobalt) 
+library(vtable)
+library(openxlsx)
+
+#read data
+data_df <- read.csv("IPMHAim1FacilityChec_DATA_2024-04-19_0530.csv")
+
+# Filter out facility 10 and 12 (dropped facilities)
+data_df <- data_df %>% 
+    filter(!context_facility %in% c(10,12))
+```
+We are reporting the group randomization for `r nrow(data_df)` facilities.
+
+## 1. General facility information
+
+```{r echo=FALSE, warning=FALSE}
+#staff numbers + bed
+data_df <- data_df %>%
+  mutate(across(contains("pt"), as.numeric)) %>% 
+  mutate(
+    # Example of creating a new variable: total_medical_staff
+    # This assumes you have columns like medical_officers_all, nurses_all, etc.
+    total_medical_staff = rowSums(dplyr::select(., contains("_all")), na.rm = TRUE),
+    pt_medical_staff = rowSums(dplyr::select(., contains("pt")), na.rm=T),
+    total_mh_staff = rowSums(dplyr::select(., contains("psychia_all"), 
+                                    contains("psycho_all"),
+                                    contains("msw_all"),
+                                    contains("psynurse_all"),
+                                    contains("counsellor_all"),
+                                    contains("other_all")), na.rm = T),
+    pt_mh_staff = rowSums(dplyr::select(., contains("psychia_pt"), 
+                                    contains("psycho_pt"),
+                                    contains("msw_pt"),
+                                    contains("psynurse_pt"),
+                                    contains("counsellor_pt"),
+                                    contains("other_pt")), na.rm = T),
+    Group = case_when(
+  record_id %in% c(1, 2, 3, 4, 5, 6) ~ "B", 
+  record_id %in% c(7, 8) ~ "C1",
+  record_id %in% c(9, 21) ~ "D2",
+  record_id %in% c(11, 22) ~ "E1", 
+  record_id %in% c(13, 14) ~ "E2",
+  record_id %in% c(15, 16, 17, 18) ~ "F", 
+  record_id %in% c(19, 20) ~ "H",
+  TRUE ~ "Other"))
+
+summary_table <- data_df %>%
+  summarise(
+    "Staff" = sprintf("%.2f (%.2f)", mean(total_medical_staff, na.rm = TRUE), sd(total_medical_staff, na.rm = TRUE)),
+    "Part-time staff" = sprintf("%.2f (%.2f)", mean(pt_medical_staff, na.rm = TRUE), sd(pt_medical_staff, na.rm = TRUE)),
+    "Mental health staff" = sprintf("%.2f (%.2f)", mean(total_mh_staff, na.rm = TRUE), sd(total_mh_staff, na.rm = TRUE)),
+    "Part-time mental health staff" = sprintf("%.2f (%.2f)", mean(pt_mh_staff, na.rm = TRUE), sd(pt_mh_staff, na.rm = TRUE)),
+    "Inpatient beds" = sprintf("%.2f (%.2f)", mean(beds_inpatient, na.rm = TRUE), sd(beds_inpatient, na.rm = TRUE)),
+    "Delivery beds" = sprintf("%.2f (%.2f)", mean(beds_delivery, na.rm = TRUE), sd(beds_delivery, na.rm = TRUE)),
+   "Mental health beds" = sprintf("%.2f (%.2f)", mean(beds_mh, na.rm = TRUE), sd(beds_mh, na.rm = TRUE)),
+   "Opening hours"= sprintf("%.2f (%.2f)", mean(readiness_hour, na.rm = TRUE), sd(readiness_hour, na.rm = TRUE)),
+   "Intergration level" = sprintf("%.2f (%.2f)", mean(inte, na.rm = TRUE), sd(inte, na.rm = TRUE)))
+
+#electronic system
+data_df$elec_record <- case_when(data_df$readiness_record___2 == 1 ~1,
+                                 data_df$readiness_record___2 == 0  ~ 0)
+
+#service readiness
+binary_vars <- c("Functioning land-line telephone" = "readiness_landline", 
+                 "Functioning cellular telephone" = "readiness_cellular", 
+                 "Functioning computer" = "readiness_computer", 
+                 "Internet access" = "readiness_internet", 
+              "Electricity availability" = "readiness_electricity", 
+               "Water source" = "readiness_water", 
+              "Private consultation room" = "readiness_privacy", 
+              "Electronic record system" = "elec_record")
+
+calc_n_percentage <- function(x) {
+  n <- sum(x == 1, na.rm = TRUE)
+  percentage <- round(mean(x == 1, na.rm = TRUE) * 100)
+  paste(n, sprintf("(%d%%)", percentage))
+}
+
+summary_table2 <- data_df %>%
+  summarise(across(all_of(binary_vars), calc_n_percentage))
+
+#medication
+data_df$medic <- apply(data_df[, c("medic_psycho1_sta1", "medic_psycho1_sta2", "medic_psycho1_sta3",
+                              "medic_psycho2_sta1", "medic_psycho2_sta2", "medic_psycho2_sta3",
+                              "medic_dep_sta1", "medic_dep_sta2", "medic_dep_sta3",
+                              "medic_anx_sta1", "medic_anx_sta2", "medic_anx_sta3",
+                              "medic_mood_sta1", "medic_mood_sta2", "medic_mood_sta3",
+                              "medic_antiepi_sta1", "medic_antiepi_sta2", "medic_antiepi_sta3")], 
+                       1, function(x) sum(x == 1, na.rm = T))
+
+summary_table3 <- data_df %>%
+  summarise("Types of available and unexpired psychiatric drugs" = sprintf("%.2f (%.2f)", 
+                                                            mean(medic, na.rm = TRUE), sd(medic, na.rm = TRUE)))
+
+summary_table <- bind_cols(summary_table, summary_table2, summary_table3)
+  
+summary_table_long <- pivot_longer(summary_table, cols = everything(),
+                                   names_to = "variable", values_to = "n_and_percentage")
+
+summary_table_long <- summary_table_long %>%
+  mutate(Total_N = nrow(data_df)) %>% 
+  dplyr::select(variable, Total_N, n_and_percentage)
+
+summary_table_long <- summary_table_long %>%
+  rename(
+    "Variables" = variable,  
+    "Total N" = Total_N,
+    "Mean (sd) or n (percentage)" = n_and_percentage)
+
+kable(summary_table_long, caption = "General facility information [n(%) for binary variables, mean(sd) for continuous variables]",
+      align = c('l', 'c', 'c'))
+
+#Group B data
+group_b_data <- data_df %>%
+  filter(Group == "B")
+
+set.seed(123)  # Setting a seed for reproducibility
+group_b_data <- group_b_data[sample(nrow(group_b_data)), ]
+
+group_b_data$Subgroup <- rep(c("Subgroup_1", "Subgroup_2"), each = 3)
+
+sumtable_B <- group_b_data %>%
+  dplyr::select(Staff = total_medical_staff ,
+         `Part-time staff` = pt_medical_staff,
+         `Mental health staff` = total_mh_staff,
+         `Part-time mental health staff` = pt_mh_staff,
+         `Inpatient beds` = beds_inpatient,
+         `Delivery beds` = beds_delivery,
+         `Mental health beds` = beds_mh,
+         `Opening hours` = readiness_hour,
+         `Intergration level` = inte,
+         `Functioningland-line telephone` = readiness_landline,
+         `Functioning cellular telephone` = readiness_cellular,
+         `Electricity availability` = readiness_electricity,
+         `Water source` = readiness_water,
+         `Functioning computer` = readiness_computer,
+         `Private consultation room` = readiness_privacy,
+         `Electronic record system` = elec_record,
+         `Types of available and unexpired psychiatricdrugs` = medic, Subgroup) %>% 
+  sumtable(group = "Subgroup",
+             group.test = TRUE,
+             out = 'return')
+
+kable(sumtable_B, caption = "General facility information comparison in Group B",
+      align = c('l', 'c', 'c'))
+
+#Group C1 data
+group_c_data <- data_df %>%
+  filter(Group == "C1")
+
+sumtable_C1 <- group_c_data %>%
+  dplyr::select(Staff = total_medical_staff ,
+         `Part-time staff` = pt_medical_staff,
+         `Mental health staff` = total_mh_staff,
+         `Part-time mental health staff` = pt_mh_staff,
+         `Inpatient beds` = beds_inpatient,
+         `Delivery beds` = beds_delivery,
+         `Mental health beds` = beds_mh,
+         `Opening hours` = readiness_hour,
+         `Intergration level` = inte,
+         `Functioningland-line telephone` = readiness_landline,
+         `Functioning cellular telephone` = readiness_cellular,
+         `Electricity availability` = readiness_electricity,
+         `Water source` = readiness_water,
+         `Functioning computer` = readiness_computer,
+         `Private consultation room` = readiness_privacy,
+         `Electronic record system` = elec_record,
+         `Types of available and unexpired psychiatricdrugs` = medic, record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_C1, caption = "General facility information comparison in Group C1",
+      align = c('l', 'c', 'c'))
+
+#Group D2 data
+group_d_data <- data_df %>%
+  filter(Group == "D2")
+
+sumtable_D2 <- group_d_data %>%
+  dplyr::select(Staff = total_medical_staff ,
+         `Part-time staff` = pt_medical_staff,
+         `Mental health staff` = total_mh_staff,
+         `Part-time mental health staff` = pt_mh_staff,
+         `Inpatient beds` = beds_inpatient,
+         `Delivery beds` = beds_delivery,
+         `Mental health beds` = beds_mh,
+         `Opening hours` = readiness_hour,
+         `Intergration level` = inte,
+         `Functioningland-line telephone` = readiness_landline,
+         `Functioning cellular telephone` = readiness_cellular,
+         `Electricity availability` = readiness_electricity,
+         `Water source` = readiness_water,
+         `Functioning computer` = readiness_computer,
+         `Private consultation room` = readiness_privacy,
+         `Electronic record system` = elec_record,
+         `Types of available and unexpired psychiatricdrugs` = medic, record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_D2, caption = "General facility information comparison in Group D2",
+      align = c('l', 'c', 'c'))
+
+#Group E1 data
+group_e1_data <- data_df %>%
+  filter(Group == "E1")
+
+sumtable_E1 <- group_e1_data %>%
+  dplyr::select(Staff = total_medical_staff ,
+         `Part-time staff` = pt_medical_staff,
+         `Mental health staff` = total_mh_staff,
+         `Part-time mental health staff` = pt_mh_staff,
+         `Inpatient beds` = beds_inpatient,
+         `Delivery beds` = beds_delivery,
+         `Mental health beds` = beds_mh,
+         `Opening hours` = readiness_hour,
+         `Intergration level` = inte,
+         `Functioningland-line telephone` = readiness_landline,
+         `Functioning cellular telephone` = readiness_cellular,
+         `Electricity availability` = readiness_electricity,
+         `Water source` = readiness_water,
+         `Functioning computer` = readiness_computer,
+         `Private consultation room` = readiness_privacy,
+         `Electronic record system` = elec_record,
+         `Types of available and unexpired psychiatricdrugs` = medic, record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_E1, caption = "General facility information comparison in Group E1",
+      align = c('l', 'c', 'c'))
+
+#Group E2 data
+group_e2_data <- data_df %>%
+  filter(Group == "E2")
+
+sumtable_E2 <- group_e2_data %>%
+  dplyr::select(Staff = total_medical_staff ,
+         `Part-time staff` = pt_medical_staff,
+         `Mental health staff` = total_mh_staff,
+         `Part-time mental health staff` = pt_mh_staff,
+         `Inpatient beds` = beds_inpatient,
+         `Delivery beds` = beds_delivery,
+         `Mental health beds` = beds_mh,
+         `Opening hours` = readiness_hour,
+         `Intergration level` = inte,
+         `Functioningland-line telephone` = readiness_landline,
+         `Functioning cellular telephone` = readiness_cellular,
+         `Electricity availability` = readiness_electricity,
+         `Water source` = readiness_water,
+         `Functioning computer` = readiness_computer,
+         `Private consultation room` = readiness_privacy,
+         `Electronic record system` = elec_record,
+         `Types of available and unexpired psychiatricdrugs` = medic, record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_E2, caption = "General facility information comparison in Group E2",
+      align = c('l', 'c', 'c'))
+
+#Group F data
+group_f_data <- data_df %>%
+  filter(Group == "F")
+group_f_data <- group_f_data[sample(nrow(group_f_data)), ]
+group_f_data$Subgroup <- rep(c("Subgroup_1", "Subgroup_2"), each = 2)
+
+sumtable_f <- group_f_data %>%
+  dplyr::select(Staff = total_medical_staff ,
+         `Part-time staff` = pt_medical_staff,
+         `Mental health staff` = total_mh_staff,
+         `Part-time mental health staff` = pt_mh_staff,
+         `Inpatient beds` = beds_inpatient,
+         `Delivery beds` = beds_delivery,
+         `Mental health beds` = beds_mh,
+         `Opening hours` = readiness_hour,
+         `Intergration level` = inte,
+         `Functioningland-line telephone` = readiness_landline,
+         `Functioning cellular telephone` = readiness_cellular,
+         `Electricity availability` = readiness_electricity,
+         `Water source` = readiness_water,
+         `Functioning computer` = readiness_computer,
+         `Private consultation room` = readiness_privacy,
+         `Electronic record system` = elec_record,
+         `Types of available and unexpired psychiatricdrugs` = medic, Subgroup) %>% 
+  sumtable(group = "Subgroup",
+             group.test = TRUE,
+             out = 'return')
+kable(sumtable_f, caption = "General facility information comparison in Group F",
+      align = c('l', 'c', 'c'))
+
+#Group H data
+group_h_data <- data_df %>%
+  filter(Group == "H")
+
+sumtable_h <- group_h_data %>%
+  dplyr::select(Staff = total_medical_staff ,
+         `Part-time staff` = pt_medical_staff,
+         `Mental health staff` = total_mh_staff,
+         `Part-time mental health staff` = pt_mh_staff,
+         `Inpatient beds` = beds_inpatient,
+         `Delivery beds` = beds_delivery,
+         `Mental health beds` = beds_mh,
+         `Opening hours` = readiness_hour,
+         `Intergration level` = inte,
+         `Functioningland-line telephone` = readiness_landline,
+         `Functioning cellular telephone` = readiness_cellular,
+         `Electricity availability` = readiness_electricity,
+         `Water source` = readiness_water,
+         `Functioning computer` = readiness_computer,
+         `Private consultation room` = readiness_privacy,
+         `Electronic record system` = elec_record,
+         `Types of available and unexpired psychiatricdrugs` = medic, record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_h, caption = "General facility information comparison in Group H",
+      align = c('l', 'c', 'c'))
+```
+
+## 2. Mental health service provision information
+
+```{r echo=F}
+#service provision
+data_df$refer_in <- case_when(data_df$context_mh_refer1==1 | data_df$context_mh_refer3==1 | data_df$context_mh_refer5==1 ~ 1,
+                         data_df$context_mh_refer1==0 & data_df$context_mh_refer3==0 & data_df$context_mh_refer5==0 ~ 0)
+data_df$refer_out <- case_when(data_df$context_mh_refer2==1 | data_df$context_mh_refer4==1 | data_df$context_mh_refer6==1 ~ 1,
+                         data_df$context_mh_refer2==0 & data_df$context_mh_refer4==0 & data_df$context_mh_refer6==0 ~ 0)
+data_df$trt_ps <- ifelse(rowSums(data_df[, c("trt_ps_cadre___1", "trt_ps_cadre___2", "trt_ps_cadre___3", 
+                                             "trt_ps_cadre___4", "trt_ps_cadre___5", "trt_ps_cadre___6", 
+                                             "trt_ps_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+
+data_df$trt_pm <- ifelse(rowSums(data_df[, c("trt_pm_cadre___1", "trt_pm_cadre___2", "trt_pm_cadre___3", 
+                                             "trt_pm_cadre___4", "trt_pm_cadre___5", "trt_pm_cadre___6", 
+                                             "trt_pm_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+
+data_df$trt_bat <- ifelse(rowSums(data_df[, c("trt_bat_cadre___1", "trt_bat_cadre___2", "trt_bat_cadre___3", 
+                                             "trt_bat_cadre___4", "trt_bat_cadre___5", "trt_bat_cadre___6", 
+                                             "trt_bat_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+
+data_df$trt_sc <- ifelse(rowSums(data_df[, c("trt_sc_cadre___1", "trt_sc_cadre___2", "trt_sc_cadre___3", 
+                                             "trt_sc_cadre___4", "trt_sc_cadre___5", "trt_sc_cadre___6", 
+                                             "trt_sc_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+
+data_df$trt_cbt <- ifelse(rowSums(data_df[, c("trt_cbt_cadre___1", "trt_cbt_cadre___2", "trt_cbt_cadre___3", 
+                                             "trt_cbt_cadre___4", "trt_cbt_cadre___5", "trt_cbt_cadre___6", 
+                                             "trt_cbt_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+
+data_df$trt_ip <- ifelse(rowSums(data_df[, c("trt_ip_cadre___1", "trt_ip_cadre___2", "trt_ip_cadre___3", 
+                                             "trt_ip_cadre___4", "trt_ip_cadre___5", "trt_ip_cadre___6", 
+                                             "trt_ip_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+
+data_df$trt_brief <- ifelse(rowSums(data_df[, c("trt_brief_cadre___1", "trt_brief_cadre___2", "trt_brief_cadre___3", 
+                                             "trt_brief_cadre___4", "trt_brief_cadre___5", "trt_brief_cadre___6", 
+                                             "trt_brief_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+data_df$trt_met <- ifelse(rowSums(data_df[, c("trt_met_cadre___1", "trt_met_cadre___2", "trt_met_cadre___3", 
+                                             "trt_met_cadre___4", "trt_met_cadre___5", "trt_met_cadre___6", 
+                                             "trt_met_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+
+data_df$trt_posi <- ifelse(rowSums(data_df[, c("trt_posi_cadre___1", "trt_posi_cadre___2", "trt_posi_cadre___3", 
+                                             "trt_posi_cadre___4", "trt_posi_cadre___5", "trt_posi_cadre___6", 
+                                             "trt_posi_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+
+data_df$trt_fam <- ifelse(rowSums(data_df[, c("trt_fam_cadre___1", "trt_fam_cadre___2", "trt_fam_cadre___3", 
+                                             "trt_fam_cadre___4", "trt_fam_cadre___5", "trt_fam_cadre___6", 
+                                             "trt_fam_cadre___7")] == 1, na.rm = TRUE) > 0, 1, 0)
+
+
+binary_vars <- c("Screening using a validated scale" = "context_mh_screen", 
+                 "Documentation of screening results" = "context_mh_docu1", 
+                 "Identification/Diagnosis" = "context_mh_diag", 
+                 "Documentation of diagnostic results" = "context_mh_docu2", 
+              "Referral to services within the facility" = "refer_in", 
+               "Referral to services outside the facility" = "refer_out", 
+              "Conduct of psychological counselling" = "context_mh_pcs", 
+              "Conduct of group therapy" = "context_mh_group", 
+              "Conduct of psychiatric appointments"= "context_mh_psychi",
+              "Conduct of problem solving therapy" = "trt_ps",
+                "Conduct of problem management plus" = "trt_pm",
+                "Conduct of behavioral activation therapy" = "trt_bat",
+                "Conduct of supportive counselling" = "trt_sc",
+                "Conduct of cognitive behavioral therapy" = "trt_cbt",
+                "Conduct of interpersonal psychotherapy" = "trt_ip",
+                "Conduct of brief interventions for alcohol" = "trt_brief",
+                "Conduct of motivation enhancement therapy" = "trt_met",
+                "Conduct of positive psychotherapy" = "trt_posi",
+                "Conduct of family support groups" = "trt_fam",
+              "Documentation of treatment offered" = "context_mh_docu3", 
+              "Prescription of psychiatric medication" = "context_mh_med", 
+              "Procedure for ongoing monitoring" = "context_mh_monitor",
+              " Problem solving therapy guided by a published manual"= "trt_published",
+              "PM+ guided by a published manual" = "pm_trt_published",
+              "Behavioral activation therapy guided by a published
+ manual" = "bat_manualized",
+  "Supportive counselling guided by a published manual"= "sc_manualized",
+ "Cognitive behavioral therapy guided by a published manual" = "cbt_manualized",
+ "Interpersonal psychotherapy guided by a published
+ manual" = "ip_manualized",
+ "Brief interventions for alcohol guided by a published
+ manual"= "brief_manualized",
+ "Motivation enhancement therapy guided by a published manual" = "met_manualized",
+ "Positive psychotherapy guided by a published manual" = "posi_manualized",
+ "Family support groups guided by a published manual" = "fam_manualized")
+total_n <- sapply(binary_vars, function(var) sum(!is.na(data_df[[var]])))
+total_n_df <- data.frame(variable = names(total_n), Total_N = total_n)
+
+summary_table_long <- data_df %>%
+  summarise(across(all_of(binary_vars), calc_n_percentage)) %>%
+  pivot_longer(cols = everything(), names_to = "Services", values_to = "N (percentage)")
+summary_table_long <- left_join(summary_table_long, total_n_df, by = c("Services" = "variable"))
+
+summary_table_long <- summary_table_long %>%
+  select(Services, Total_N, `N (percentage)`) %>% 
+  rename("Total N" = Total_N)
+
+# who is the most common provider?
+find_most_common_providers <- function(data_df, base_var_names) {
+  results <- lapply(base_var_names, function(base_var_name) {
+    # Create dynamic pattern for pivot_longer
+    pattern <- paste0("^", base_var_name, "___\\d+$")
+    
+    # Transform data from wide to long format for the specific service type
+    long_data_df <- data_df %>%
+      pivot_longer(cols = matches(pattern),
+                   names_to = "provider",
+                   values_to = "provided",
+                   names_prefix = paste0(base_var_name, "___")) %>%
+      filter(provided == 1) %>%
+      mutate(provider = as.factor(str_replace(provider, "^.*_([0-9]+)$", paste(sub("\\_", " ", base_var_name), "Provider \\1"))))
+    
+    # Count occurrences of each provider and find the most common one(s)
+    provider_counts <- long_data_df %>%
+      group_by(provider) %>%
+      summarise(count = n(), .groups = 'drop')
+    
+    max_count <- max(provider_counts$count, na.rm = TRUE)
+    
+    most_common_providers <- provider_counts %>%
+      filter(count == max_count) %>%
+      summarise(
+        Most_Common_Providers = paste(provider, collapse = ", "),
+        Count = first(count)
+      ) %>%
+      mutate(Service_Type = base_var_name)
+    
+    return(most_common_providers)
+  })
+  
+  # Combine all results into a single dataframe
+  do.call(rbind, results)
+}
+
+base_var_names <- c("context_who_screen", "context_who_docu1", "context_who_diag", 
+                    "context_who_docu2", "context_who_refer1", "context_who_refer2", "context_who_pcs", 
+                    "context_who_group", "context_who_psychi", "context_who_docu3", 
+                    "context_who_med", "context_who_monitor")
+
+most_common_providers_summary <- find_most_common_providers(data_df, base_var_names)
+most_common_providers_summary$Service_Type <- str_replace(most_common_providers_summary$Service_Type, "context_who_", "context_mh_")
+most_common_providers_summary$Service_Type <- ifelse(most_common_providers_summary$Service_Type == "context_mh_refer1", "refer_in", most_common_providers_summary$Service_Type)
+most_common_providers_summary$Service_Type <- ifelse(most_common_providers_summary$Service_Type == "context_mh_refer2", "refer_out", most_common_providers_summary$Service_Type)
+
+find_most_common_providers_treatment <- function(data_df, treatment_var_prefixes) {
+  results <- lapply(treatment_var_prefixes, function(treatment_var_prefix) {
+    # Define the pattern to match treatment provider columns
+    pattern <- paste0("^", treatment_var_prefix, "___\\d+$")
+    
+    # Transform data from wide to long format for the specific treatment type
+    long_data_df <- data_df %>%
+      pivot_longer(cols = matches(pattern),
+                   names_to = "provider",
+                   values_to = "provided",
+                   names_prefix = paste0(treatment_var_prefix, "___")) %>%
+      filter(provided == 1) %>%
+      mutate(provider = as.factor(str_replace(provider, "^.*___(\\d+)$", paste0(treatment_var_prefix, " Provider \\1"))))
+    
+    # Count occurrences of each provider and find the most common one(s)
+    provider_counts <- long_data_df %>%
+      group_by(provider) %>%
+      summarise(count = n(), .groups = 'drop')
+    
+    max_count <- max(provider_counts$count, na.rm = TRUE)
+    
+    most_common_providers <- provider_counts %>%
+      filter(count == max_count) %>%
+      summarise(
+        Most_Common_Providers = paste(provider, collapse = ", "),
+        Count = first(count)
+      ) %>%
+      mutate(Service_Type = treatment_var_prefix)
+    
+    return(most_common_providers)
+  })
+  
+  # Combine all results into a single dataframe
+  combined_results <- bind_rows(results)
+  return(combined_results)
+}
+
+base_var_names <- c("trt_ps_cadre", "trt_pm_cadre", "trt_bat_cadre", 
+                    "trt_sc_cadre", "trt_cbt_cadre", "trt_ip_cadre", "trt_brief_cadre", 
+                    "trt_met_cadre", "trt_posi_cadre", "trt_fam_cadre")
+
+most_common_providers2 <- find_most_common_providers_treatment(data_df, base_var_names)
+
+patterns_replacements <- c(
+  "trt_ps_cadre" = "trt_ps",
+  "trt_pm_cadre" = "trt_pm",
+  "trt_bat_cadre" = "trt_bat",
+  "trt_sc_cadre" = "trt_sc",
+  "trt_cbt_cadre" = "trt_cbt",
+  "trt_ip_cadre" = "trt_ip",
+  "trt_brief_cadre" = "trt_brief",
+  "trt_met_cadre" = "trt_met",
+  "trt_posi_cadre" = "trt_posi",
+  "trt_fam_cadre" = "trt_fam"
+)
+
+most_common_providers2$Service_Type <- str_replace_all(most_common_providers2$Service_Type, patterns_replacements)
+
+most_common_provider <- bind_rows(most_common_providers_summary, most_common_providers2)
+
+#add labeling
+provider_mapping <- c("1" = "Medical Officers", "2" = "Psychiatrists", "3" = "OB",
+                      "4" = "Nurses", "5" = "Psychologists", "6" = "Social Workers",
+                      "7" = "Other", "8" = "Clinical Officers")
+
+apply_provider_mapping <- function(provider_string, mapping) {
+  # Split the provider string into individual numbers
+  provider_numbers <- str_split(provider_string, ",\\s*")[[1]]
+  
+  # Map each number to its corresponding provider title
+  labeled_providers <- sapply(provider_numbers, function(number) mapping[number])
+  
+  # Combine back into a single string with numeric labels
+  labeled_providers_string <- paste(seq_along(labeled_providers), labeled_providers, sep=". ", collapse=", ")
+  
+  return(labeled_providers_string)
+}
+
+most_common_provider$Most_Common_Providers <- sapply(most_common_provider$Most_Common_Providers, apply_provider_mapping, mapping = provider_mapping)
+
+#combine tables
+service_type_mapping <- setNames(c("Screening using a validated scale", "Documentation of screening results", 
+                                   "Identification/Diagnosis", "Documentation of diagnostic results", 
+                                   "Referral to services within the facility", "Referral to services outside the facility", 
+                                   "Conduct of psychological counselling", "Conduct of group therapy", 
+                                   "Conduct of psychiatric appointments", "Conduct of problem solving therapy",
+                                   "Conduct of problem management plus", "Conduct of behavioral activation therapy",
+                                   "Conduct of supportive counselling", "Conduct of cognitive behavioral therapy",
+                                   "Conduct of interpersonal psychotherapy", "Conduct of brief interventions for alcohol",
+                                   "Conduct of motivation enhancement therapy", "Conduct of positive psychotherapy",
+                                   "Conduct of family support groups", "Documentation of treatment offered", 
+                                   "Prescription of psychiatric medication", "Procedure for ongoing monitoring"),
+                         c("context_mh_screen", "context_mh_docu1", "context_mh_diag", "context_mh_docu2", 
+                           "refer_in", "refer_out", "context_mh_pcs", "context_mh_group", "context_mh_psychi",
+                           "trt_ps", "trt_pm", "trt_bat", "trt_sc", "trt_cbt", "trt_ip", "trt_brief",
+                           "trt_met", "trt_posi", "trt_fam", "context_mh_docu3", "context_mh_med", "context_mh_monitor"))
+
+most_common_provider$Service_Type <- sapply(most_common_provider$Service_Type, function(x) service_type_mapping[x])
+
+most_common_provider<- most_common_provider %>%
+  select(-Count)
+
+combined_table <- summary_table_long %>%
+  left_join(most_common_provider, by = c("Services" = "Service_Type"))
+
+combined_table <- combined_table %>%
+  rename(
+    "Most Common Providers" = "Most_Common_Providers")
+
+kable(combined_table, caption = "Mental health service provision information [n(%)]",
+      align = c("l", "c", "c", "l")) 
+```
+*Notes: Other means providers other than medical officers, psychiatrists, obstetricians/gynaecologists, nurses, psychologists, social workers, and clinical officers.*
+
+## How Pschotherapies are Provided
+
+```{r pschological treament manualized, include=FALSE}
+# Process the data
+pst <- data_df %>%
+  select(record_id, how_trt_provided) %>%
+  filter(!how_trt_provided == "") #%>%
+  #mutate(how_trt_provided = strsplit(how_trt_provided, "[.,]")) %>%
+  #unnest(how_trt_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(pst, format = "latex", booktabs = TRUE, col.names = c("Facility","How Problem solving therapy is provided"))
+
+pm <- data_df %>%
+  select(record_id, how_pm_provided) %>%
+  filter(!how_pm_provided == "") #%>%
+  #mutate(how_pm_provided = strsplit(how_pm_provided, "[.,]")) %>%
+  #unnest(how_pm_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(pst, format = "latex", booktabs = TRUE, col.names = c("Facility", "How Problem Management plus (PM+) is provided"))
+
+bat <- data_df %>%
+  select(record_id, how_bat_provided) %>%
+  filter(!how_bat_provided == "")# %>%
+  #mutate(how_bat_provided = strsplit(how_bat_provided, "[.,]")) %>%
+  #unnest(how_bat_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(bat, format = "latex", booktabs = TRUE, col.names = c("Facility", "How Behavioral activation therapy is provided"))
+
+supportive_c <- data_df %>%
+  select(record_id, how_sc_provided) %>%
+  filter(!how_sc_provided == "") #%>%
+  #mutate(how_sc_provided = strsplit(how_sc_provided, "[.,]")) %>%
+  #unnest(how_sc_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(supportive_c, format = "latex", booktabs = TRUE, col.names = c("Facility", "How supportive counselling is provided"))
+
+cognitive <- data_df %>%
+  select(record_id,  how_cbt_provided) %>%
+  filter(! how_cbt_provided == "") #%>%
+  #mutate(how_cbt_provided = strsplit(how_cbt_provided, "[.,]")) %>%
+  #unnest(how_cbt_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(cognitive, format = "latex", booktabs = TRUE, col.names = c("Facility", "How  cognitive behavioral therapy is provided"))
+
+int_psy <- data_df %>%
+  select(record_id, how_ip_provided) %>%
+  filter(!how_ip_provided == "") #%>%
+  #mutate(how_ip_provided = strsplit(how_ip_provided, "[.,]")) %>%
+  #unnest(how_ip_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(int_psy, format = "latex", booktabs = TRUE, col.names = c("Facility", "How Interpersonal psychotherapy is provided"))
+
+brief <- data_df %>%
+  select(record_id, how_brief_provided) %>%
+  filter(!how_brief_provided == "")# %>%
+  #mutate(how_brief_provided = strsplit(how_brief_provided, "[.,]")) %>%
+  #unnest(how_brief_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(brief, format = "latex", booktabs = TRUE, col.names = c("Facility", "How brief interventions for alcohol is provided"))
+
+met <- data_df %>%
+  select(record_id, how_met_provided) %>%
+  filter(!how_met_provided == "")# %>%
+  #mutate(how_met_provided = strsplit(how_met_provided, "[.,]")) %>%
+  #unnest(how_met_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(met, format = "latex", booktabs = TRUE, col.names = c("Facility", "How motivation enhancement therapy is provided"))
+
+posi <- data_df %>%
+  select(record_id, how_posi_provided) %>%
+  filter(!how_posi_provided == "") #%>%
+  #mutate(how_posi_provided = strsplit(how_posi_provided, "[.,]")) %>%
+  #unnest(how_posi_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(posi, format = "latex", booktabs = TRUE, col.names = c("Facility", "How positive psychotherapy is provided"))
+
+fam <- data_df %>%
+  select(record_id, how_fam_provided) %>%
+  filter(!how_fam_provided == "") #%>%
+  #mutate(how_fam_provided = strsplit(how_fam_provided, "[.,]")) %>%
+  #unnest(how_fam_provided) %>% 
+    #select(-record_id)
+
+# Display the table
+kable(fam, format = "latex", booktabs = TRUE, col.names = c("Facility","How Family support groups is provided"))
+
+
+psycho <- data_df %>% 
+    select(record_id, how_trt_provided, how_pm_provided, how_bat_provided,
+           how_sc_provided,how_cbt_provided,how_ip_provided, how_brief_provided,
+           how_met_provided, how_posi_provided, how_fam_provided)%>% 
+  mutate(record_id = dplyr::recode(record_id, 
+                                   "1" =	"Rwambwa Sub-county Hospital",
+                                   "2" = 	"Sigomere Sub County Hospital",
+                                   "3" =	"Uyawi Sub County Hospital",
+                                   "4" = "Got Agulu Sub-District Hospital",
+                                   "5" = "Ukwala Sub County Hospital",
+                                   "6" = "Madiany Sub County Hospital",
+                                   "7" =	"Kabondo Sub County Hospital",
+                                   "8" = "Mbita Sub-County Hospital",
+                                   "9" = "Miriu Health Centre",
+                                   "10"	= "Pala Health Centre",
+                                   "11" =	"Nyandiwa Level IV Hospital",
+                                   "12" =	"Magunga Level IV Hospital",
+                                   "13" = "Ober Kamoth Sub County Hospital",
+                                   "14" = "Gita Sub County Hospital",
+                                   "15" =	"Akala Health Centre",
+                                   "16" =	"Usigu Health Centre",
+                                   "17" = "Ramula Health Centre",
+                                   "18" =	"Simenya Health Centre",
+                                   "19" =	"Airport Health Centre (Kisumu)",
+                                   "20" =	"Nyalenda Health Centre")) %>% 
+    rename('Problem solving therapy' = how_trt_provided) %>% 
+    rename("Problem Management plus (PM+)" = how_pm_provided) %>% 
+    rename("Behavioral activation therapy" = how_bat_provided) %>% 
+    rename("Supportive counselling" = how_sc_provided) %>% 
+    rename("Cognitive behavioral therapy" = how_cbt_provided) %>% 
+    rename("Interpersonal psychotherapy" = how_ip_provided) %>% 
+    rename("Brief interventions for alcohol" = how_brief_provided) %>% 
+    rename("Motivation enhancement therapy" = how_met_provided) %>% 
+    rename("Positive psychotherapy" = how_posi_provided) %>% 
+    rename("Family support groups" = how_fam_provided)
+
+Pschotherapies <- list("Problem solving therapy" = pst,
+                       "Problem Management plus (PM+)" = pm,
+                       "Behavioral activation therapy" = bat,
+                       "Supportive counselling" = supportive_c,
+                       "Cognitive behavioral therapy" = cognitive,
+                       "Interpersonal psychotherapy" = int_psy,
+                       "Brief interventions for alcohol" = brief,
+                       "Motivation enhancement therapy" = met, 
+                       "Positive psychotherapy" = posi,
+                       "Family support groups" = fam) 
+
+
+
+
+
+write.xlsx(Pschotherapies, "Psychotherapies Provision.xlsx")
+```
+
+
+
+```{r balance check, echo=F}
+#group B
+group_b_data <- data_df %>%
+  filter(Group == "B")
+set.seed(123)  # Setting a seed for reproducibility
+group_b_data <- group_b_data[sample(nrow(group_b_data)), ]
+group_b_data$Subgroup <- rep(c("Subgroup_1", "Subgroup_2"), each = 3)
+
+sumtable_b <- group_b_data %>%
+  select("Screening using a validated scale" = context_mh_screen,
+         "Documentation of screening results" = context_mh_docu1,
+                 "Identification/Diagnosis" = context_mh_diag, 
+                 "Documentation of diagnostic results" = context_mh_docu2, 
+              "Referral to services within the facility" = refer_in, 
+               "Referral to services outside the facility" = refer_out, 
+              "Conduct of psychological counselling" = context_mh_pcs, 
+              "Conduct of group therapy" = context_mh_group, 
+              "Conduct of psychiatric appointments"= context_mh_psychi,
+              "Conduct of problem solving therapy" = trt_ps,
+                "Conduct of problem management plus" = trt_pm,
+                "Conduct of behavioral activation therapy" = trt_bat,
+                "Conduct of supportive counselling" = trt_sc,
+                "Conduct of cognitive behavioral therapy" = trt_cbt,
+                "Conduct of interpersonal psychotherapy" = trt_ip,
+                "Conduct of brief interventions for alcohol" = trt_brief,
+                "Conduct of motivation enhancement therapy" = trt_met,
+                "Conduct of positive psychotherapy" = trt_posi,
+                "Conduct of family support groups" = trt_fam,
+              "Documentation of treatment offered" = context_mh_docu3, 
+              "Prescription of psychiatric medication" = context_mh_med, 
+              "Procedure for ongoing monitoring" = context_mh_monitor,Subgroup) %>% 
+  sumtable(group = "Subgroup",
+             group.test = TRUE,
+             out = 'return')
+kable(sumtable_b, caption = "Mental health service provision comparison in Group B",
+      align = c('l', 'c', 'c'))
+
+#group C1
+group_c_data <- data_df %>%
+  filter(Group == "C1")
+
+sumtable_C1 <- group_c_data %>%
+  select("Screening using a validated scale" = context_mh_screen,
+         "Documentation of screening results" = context_mh_docu1,
+                 "Identification/Diagnosis" = context_mh_diag, 
+                 "Documentation of diagnostic results" = context_mh_docu2, 
+              "Referral to services within the facility" = refer_in, 
+               "Referral to services outside the facility" = refer_out, 
+              "Conduct of psychological counselling" = context_mh_pcs, 
+              "Conduct of group therapy" = context_mh_group, 
+              "Conduct of psychiatric appointments"= context_mh_psychi,
+              "Conduct of problem solving therapy" = trt_ps,
+                "Conduct of problem management plus" = trt_pm,
+                "Conduct of behavioral activation therapy" = trt_bat,
+                "Conduct of supportive counselling" = trt_sc,
+                "Conduct of cognitive behavioral therapy" = trt_cbt,
+                "Conduct of interpersonal psychotherapy" = trt_ip,
+                "Conduct of brief interventions for alcohol" = trt_brief,
+                "Conduct of motivation enhancement therapy" = trt_met,
+                "Conduct of positive psychotherapy" = trt_posi,
+                "Conduct of family support groups" = trt_fam,
+              "Documentation of treatment offered" = context_mh_docu3, 
+              "Prescription of psychiatric medication" = context_mh_med, 
+              "Procedure for ongoing monitoring" = context_mh_monitor,record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_C1, caption = "Mental health service provision comparison in Group C1",
+      align = c('l', 'c', 'c'))
+
+#Group D2 data
+group_d_data <- data_df %>%
+  filter(Group == "D2")
+
+sumtable_D2 <- group_d_data %>%
+  select("Screening using a validated scale" = context_mh_screen,
+         "Documentation of screening results" = context_mh_docu1,
+                 "Identification/Diagnosis" = context_mh_diag, 
+                 "Documentation of diagnostic results" = context_mh_docu2, 
+              "Referral to services within the facility" = refer_in, 
+               "Referral to services outside the facility" = refer_out, 
+              "Conduct of psychological counselling" = context_mh_pcs, 
+              "Conduct of group therapy" = context_mh_group, 
+              "Conduct of psychiatric appointments"= context_mh_psychi,
+              "Conduct of problem solving therapy" = trt_ps,
+                "Conduct of problem management plus" = trt_pm,
+                "Conduct of behavioral activation therapy" = trt_bat,
+                "Conduct of supportive counselling" = trt_sc,
+                "Conduct of cognitive behavioral therapy" = trt_cbt,
+                "Conduct of interpersonal psychotherapy" = trt_ip,
+                "Conduct of brief interventions for alcohol" = trt_brief,
+                "Conduct of motivation enhancement therapy" = trt_met,
+                "Conduct of positive psychotherapy" = trt_posi,
+                "Conduct of family support groups" = trt_fam,
+              "Documentation of treatment offered" = context_mh_docu3, 
+              "Prescription of psychiatric medication" = context_mh_med, 
+              "Procedure for ongoing monitoring" = context_mh_monitor,record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_D2, caption = "Mental health service provision comparison in Group D2",
+      align = c('l', 'c', 'c'))
+
+#Group E1 data
+group_e1_data <- data_df %>%
+  filter(Group == "E1")
+
+sumtable_E1 <- group_e1_data %>%
+  select("Screening using a validated scale" = context_mh_screen,
+         "Documentation of screening results" = context_mh_docu1,
+                 "Identification/Diagnosis" = context_mh_diag, 
+                 "Documentation of diagnostic results" = context_mh_docu2, 
+              "Referral to services within the facility" = refer_in, 
+               "Referral to services outside the facility" = refer_out, 
+              "Conduct of psychological counselling" = context_mh_pcs, 
+              "Conduct of group therapy" = context_mh_group, 
+              "Conduct of psychiatric appointments"= context_mh_psychi,
+              "Conduct of problem solving therapy" = trt_ps,
+                "Conduct of problem management plus" = trt_pm,
+                "Conduct of behavioral activation therapy" = trt_bat,
+                "Conduct of supportive counselling" = trt_sc,
+                "Conduct of cognitive behavioral therapy" = trt_cbt,
+                "Conduct of interpersonal psychotherapy" = trt_ip,
+                "Conduct of brief interventions for alcohol" = trt_brief,
+                "Conduct of motivation enhancement therapy" = trt_met,
+                "Conduct of positive psychotherapy" = trt_posi,
+                "Conduct of family support groups" = trt_fam,
+              "Documentation of treatment offered" = context_mh_docu3, 
+              "Prescription of psychiatric medication" = context_mh_med, 
+              "Procedure for ongoing monitoring" = context_mh_monitor,record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_E1, caption = "Mental health service provision comparison in Group E1",
+      align = c('l', 'c', 'c'))
+
+#Group E2 data
+group_e2_data <- data_df %>%
+  filter(Group == "E2")
+
+sumtable_E2 <- group_e2_data %>%
+  select("Screening using a validated scale" = context_mh_screen,
+         "Documentation of screening results" = context_mh_docu1,
+                 "Identification/Diagnosis" = context_mh_diag, 
+                 "Documentation of diagnostic results" = context_mh_docu2, 
+              "Referral to services within the facility" = refer_in, 
+               "Referral to services outside the facility" = refer_out, 
+              "Conduct of psychological counselling" = context_mh_pcs, 
+              "Conduct of group therapy" = context_mh_group, 
+              "Conduct of psychiatric appointments"= context_mh_psychi,
+              "Conduct of problem solving therapy" = trt_ps,
+                "Conduct of problem management plus" = trt_pm,
+                "Conduct of behavioral activation therapy" = trt_bat,
+                "Conduct of supportive counselling" = trt_sc,
+                "Conduct of cognitive behavioral therapy" = trt_cbt,
+                "Conduct of interpersonal psychotherapy" = trt_ip,
+                "Conduct of brief interventions for alcohol" = trt_brief,
+                "Conduct of motivation enhancement therapy" = trt_met,
+                "Conduct of positive psychotherapy" = trt_posi,
+                "Conduct of family support groups" = trt_fam,
+              "Documentation of treatment offered" = context_mh_docu3, 
+              "Prescription of psychiatric medication" = context_mh_med, 
+              "Procedure for ongoing monitoring" = context_mh_monitor, record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_E2, caption = "Mental health service provision comparison in Group E2",
+      align = c('l', 'c', 'c'))
+
+#Group F data
+group_f_data <- data_df %>%
+  filter(Group == "F")
+group_f_data <- group_f_data[sample(nrow(group_f_data)), ]
+group_f_data$Subgroup <- rep(c("Subgroup_1", "Subgroup_2"), each = 2)
+
+sumtable_f <- group_f_data %>%
+  select("Screening using a validated scale" = context_mh_screen,
+         "Documentation of screening results" = context_mh_docu1,
+                 "Identification/Diagnosis" = context_mh_diag, 
+                 "Documentation of diagnostic results" = context_mh_docu2, 
+              "Referral to services within the facility" = refer_in, 
+               "Referral to services outside the facility" = refer_out, 
+              "Conduct of psychological counselling" = context_mh_pcs, 
+              "Conduct of group therapy" = context_mh_group, 
+              "Conduct of psychiatric appointments"= context_mh_psychi,
+              "Conduct of problem solving therapy" = trt_ps,
+                "Conduct of problem management plus" = trt_pm,
+                "Conduct of behavioral activation therapy" = trt_bat,
+                "Conduct of supportive counselling" = trt_sc,
+                "Conduct of cognitive behavioral therapy" = trt_cbt,
+                "Conduct of interpersonal psychotherapy" = trt_ip,
+                "Conduct of brief interventions for alcohol" = trt_brief,
+                "Conduct of motivation enhancement therapy" = trt_met,
+                "Conduct of positive psychotherapy" = trt_posi,
+                "Conduct of family support groups" = trt_fam,
+              "Documentation of treatment offered" = context_mh_docu3, 
+              "Prescription of psychiatric medication" = context_mh_med, 
+              "Procedure for ongoing monitoring" = context_mh_monitor, Subgroup) %>% 
+  sumtable(group = "Subgroup",
+             group.test = TRUE,
+             out = 'return')
+kable(sumtable_f, caption = "Mental health service provision comparison in Group F",
+      align = c('l', 'c', 'c'))
+
+#Group H data
+group_h_data <- data_df %>%
+  filter(Group == "H")
+
+sumtable_h <- group_h_data %>%
+  select("Screening using a validated scale" = context_mh_screen,
+         "Documentation of screening results" = context_mh_docu1,
+                 "Identification/Diagnosis" = context_mh_diag, 
+                 "Documentation of diagnostic results" = context_mh_docu2, 
+              "Referral to services within the facility" = refer_in, 
+               "Referral to services outside the facility" = refer_out, 
+              "Conduct of psychological counselling" = context_mh_pcs, 
+              "Conduct of group therapy" = context_mh_group, 
+              "Conduct of psychiatric appointments"= context_mh_psychi,
+              "Conduct of problem solving therapy" = trt_ps,
+                "Conduct of problem management plus" = trt_pm,
+                "Conduct of behavioral activation therapy" = trt_bat,
+                "Conduct of supportive counselling" = trt_sc,
+                "Conduct of cognitive behavioral therapy" = trt_cbt,
+                "Conduct of interpersonal psychotherapy" = trt_ip,
+                "Conduct of brief interventions for alcohol" = trt_brief,
+                "Conduct of motivation enhancement therapy" = trt_met,
+                "Conduct of positive psychotherapy" = trt_posi,
+                "Conduct of family support groups" = trt_fam,
+              "Documentation of treatment offered" = context_mh_docu3, 
+              "Prescription of psychiatric medication" = context_mh_med, 
+              "Procedure for ongoing monitoring" = context_mh_monitor, record_id) %>% 
+  sumtable(group = "record_id",  summ = list(c('N(x)','mean(x)')), out = 'return')
+
+
+kable(sumtable_h, caption = "Mental health service provision comparison in Group H",
+      align = c('l', 'c', 'c'))
+
+```
+
+## 3. Differences between WLWh and HIV-negative perinatal women
+
+```{r echo=F}
+binary_summary <- data.frame(
+  Variable = c("context_hiv_screen", "context_hiv_docu1", "context_hiv_diag", "context_hiv_docu2", "context_hiv_refer1", "context_hiv_refer2", "context_hiv_pcs", 
+               "context_hiv_group", "context_hiv_psychi", "context_hiv_med", "context_hiv_docu3", "context_hiv_monitor"),
+  Yes = c(sum(data_df$context_hiv_screen == 1, na.rm = TRUE), sum(data_df$context_hiv_docu1 == 1, na.rm = TRUE), sum(data_df$context_hiv_diag == 1, na.rm = TRUE),
+          sum(data_df$context_hiv_docu2 == 1, na.rm = TRUE), sum(data_df$context_hiv_refer1 == 1, na.rm = TRUE), sum(data_df$context_hiv_refer2 == 1, na.rm = TRUE), 
+          sum(data_df$context_hiv_pcs == 1, na.rm = TRUE), sum(data_df$context_hiv_group == 1, na.rm = TRUE), sum(data_df$context_hiv_psychi == 1, na.rm = TRUE), 
+          sum(data_df$context_hiv_med == 1, na.rm = TRUE), sum(data_df$context_hiv_docu3 == 1, na.rm = TRUE), 
+          sum(data_df$context_hiv_monitor == 1, na.rm = TRUE)),
+  No = c(sum(data_df$context_hiv_screen == 0, na.rm = TRUE), sum(data_df$context_hiv_docu1 == 0, na.rm = TRUE), sum(data_df$context_hiv_diag == 0, na.rm = TRUE),
+         sum(data_df$context_hiv_docu2 == 0, na.rm = TRUE), sum(data_df$context_hiv_refer1 == 0, na.rm = TRUE), sum(data_df$context_hiv_refer2 == 0, na.rm = TRUE), 
+          sum(data_df$context_hiv_pcs == 0, na.rm = TRUE), sum(data_df$context_hiv_group == 0, na.rm = TRUE), sum(data_df$context_hiv_psychi == 0, na.rm = TRUE), 
+          sum(data_df$context_hiv_med == 0, na.rm = TRUE), sum(data_df$context_hiv_docu3 == 0, na.rm = TRUE), 
+          sum(data_df$context_hiv_monitor == 0, na.rm = TRUE))
+)
+
+# Calculate the overall total
+binary_summary$Total <- binary_summary$Yes + binary_summary$No
+
+# Calculate the percentage of each category
+binary_summary$Yes <- sprintf("%d (%d%%)", binary_summary$Yes, round((binary_summary$Yes / binary_summary$Total) * 100))
+binary_summary$No <- sprintf("%d (%d%%)", binary_summary$No, round((binary_summary$No / binary_summary$Total) * 100))
+
+# Print the resulting summary table
+binary_summary <- binary_summary %>%
+    mutate(Variable = recode(Variable,
+                             context_hiv_screen ="Screening using a validated scale",
+               context_hiv_docu1 = "Documentation of screening results",
+               context_hiv_diag = "Identification/Diagnosis",
+               context_hiv_docu2 = "Documentation of diagnostic results",
+               context_hiv_refer1 = "Referral to services within this facility",
+                context_hiv_refer2 =  "Referral to services outside this facility",
+                context_hiv_pcs = "Conduct of psychological counselling",
+               context_hiv_group = "Conduct of group therapy",
+                context_hiv_psychi = "Conduct of psychiatric appointments",
+                context_hiv_med = "Documentation of treatment offered",
+                context_hiv_docu3 = "Prescription of psychiatric medication",
+               context_hiv_monitor = "Procedure for ongoing monitoring")) %>% 
+    select(Variable, Total, Yes, No)
+
+binary_summary <- binary_summary %>%
+  rename(
+    "Services" = "Variable",
+    "Differences" = "Yes",
+    "No differences" = "No")
+
+# Display the table
+kable(binary_summary, caption = "Differences between WLWh and HIV-negative perinatal women [n(%)]",
+      align = c("l", "c", "c", "c"))
+
+#group B
+group_b_data <- data_df %>%
+  filter(Group == "B")
+set.seed(123)  # Setting a seed for reproducibility
+group_b_data <- group_b_data[sample(nrow(group_b_data)), ]
+group_b_data$Subgroup <- rep(c("Subgroup_1", "Subgroup_2"), each = 3)
+
+sumtable_b <- group_b_data %>%
+  select("Screening using a validated scale" = context_hiv_screen,
+         "Documentation of screening results" = context_hiv_docu1,
+          "Identification/Diagnosis" = context_hiv_diag,
+          "Documentation of diagnostic results" = context_hiv_docu2,
+          "Referral to services within this facility" = context_hiv_refer1,
+          "Referral to services outside this facility" = context_hiv_refer2,
+        "Conduct of psychological counselling" = context_hiv_pcs,
+          "Conduct of group therapy" = context_hiv_group,
+          "Conduct of psychiatric appointments" = context_hiv_psychi,
+          "Documentation of treatment offered" = context_hiv_med,
+          "Prescription of psychiatric medication" =context_hiv_docu3,
+          "Procedure for ongoing monitoring" = context_hiv_monitor, Subgroup) %>% 
+  sumtable(group = "Subgroup",
+             group.test = TRUE,
+             out = 'return')
+
+# Display the table
+kable(sumtable_b, caption = "HIV difference comparison in Group B",
+      align = c("l", "c", "c", "c"))
+
+#group C1
+group_c_data <- data_df %>%
+  filter(Group == "C1")
+
+sumtable_c <- group_c_data %>%
+  select("Screening using a validated scale" = context_hiv_screen,
+         "Documentation of screening results" = context_hiv_docu1,
+          "Identification/Diagnosis" = context_hiv_diag,
+          "Documentation of diagnostic results" = context_hiv_docu2,
+          "Referral to services within this facility" = context_hiv_refer1,
+          "Referral to services outside this facility" = context_hiv_refer2,
+        "Conduct of psychological counselling" = context_hiv_pcs,
+          "Conduct of group therapy" = context_hiv_group,
+          "Conduct of psychiatric appointments" = context_hiv_psychi,
+          "Documentation of treatment offered" = context_hiv_med,
+          "Prescription of psychiatric medication" =context_hiv_docu3,
+          "Procedure for ongoing monitoring" = context_hiv_monitor, record_id) %>% 
+  sumtable(group = "record_id",
+             summ = list(c('N(x)','mean(x)')),
+             out = 'return')
+
+# Display the table
+kable(sumtable_c, caption = "HIV difference comparison in Group C1",
+      align = c("l", "c", "c", "c"))
+
+#group D2
+group_d_data <- data_df %>%
+  filter(Group == "D2")
+
+sumtable_d <- group_d_data %>%
+  select("Screening using a validated scale" = context_hiv_screen,
+         "Documentation of screening results" = context_hiv_docu1,
+          "Identification/Diagnosis" = context_hiv_diag,
+          "Documentation of diagnostic results" = context_hiv_docu2,
+          "Referral to services within this facility" = context_hiv_refer1,
+          "Referral to services outside this facility" = context_hiv_refer2,
+        "Conduct of psychological counselling" = context_hiv_pcs,
+          "Conduct of group therapy" = context_hiv_group,
+          "Conduct of psychiatric appointments" = context_hiv_psychi,
+          "Documentation of treatment offered" = context_hiv_med,
+          "Prescription of psychiatric medication" =context_hiv_docu3,
+          "Procedure for ongoing monitoring" = context_hiv_monitor, record_id) %>% 
+  sumtable(group = "record_id",
+             summ = list(c('N(x)','mean(x)')),
+             out = 'return')
+
+# Display the table
+kable(sumtable_d, caption = "HIV difference comparison in Group D2",
+      align = c("l", "c", "c", "c"))
+
+#group E1
+group_e1_data <- data_df %>%
+  filter(Group == "E1")
+
+sumtable_e1 <- group_e1_data %>%
+  select("Screening using a validated scale" = context_hiv_screen,
+         "Documentation of screening results" = context_hiv_docu1,
+          "Identification/Diagnosis" = context_hiv_diag,
+          "Documentation of diagnostic results" = context_hiv_docu2,
+          "Referral to services within this facility" = context_hiv_refer1,
+          "Referral to services outside this facility" = context_hiv_refer2,
+        "Conduct of psychological counselling" = context_hiv_pcs,
+          "Conduct of group therapy" = context_hiv_group,
+          "Conduct of psychiatric appointments" = context_hiv_psychi,
+          "Documentation of treatment offered" = context_hiv_med,
+          "Prescription of psychiatric medication" =context_hiv_docu3,
+          "Procedure for ongoing monitoring" = context_hiv_monitor, record_id) %>% 
+  sumtable(group = "record_id",
+             summ = list(c('N(x)','mean(x)')),
+             out = 'return')
+
+# Display the table
+kable(sumtable_e1, caption = "HIV difference comparison in Group E1",
+      align = c("l", "c", "c", "c"))
+
+#group E2
+group_e2_data <- data_df %>%
+  filter(Group == "E2")
+
+sumtable_e2 <- group_e2_data %>%
+  select("Screening using a validated scale" = context_hiv_screen,
+         "Documentation of screening results" = context_hiv_docu1,
+          "Identification/Diagnosis" = context_hiv_diag,
+          "Documentation of diagnostic results" = context_hiv_docu2,
+          "Referral to services within this facility" = context_hiv_refer1,
+          "Referral to services outside this facility" = context_hiv_refer2,
+        "Conduct of psychological counselling" = context_hiv_pcs,
+          "Conduct of group therapy" = context_hiv_group,
+          "Conduct of psychiatric appointments" = context_hiv_psychi,
+          "Documentation of treatment offered" = context_hiv_med,
+          "Prescription of psychiatric medication" =context_hiv_docu3,
+          "Procedure for ongoing monitoring" = context_hiv_monitor, record_id) %>% 
+  sumtable(group = "record_id",
+             summ = list(c('N(x)','mean(x)')),
+             out = 'return')
+
+# Display the table
+kable(sumtable_e2, caption = "HIV difference comparison in Group E2",
+      align = c("l", "c", "c", "c"))
+
+#group F
+group_f_data <- data_df %>%
+  filter(Group == "F")
+set.seed(123)  # Setting a seed for reproducibility
+group_f_data <- group_f_data[sample(nrow(group_f_data)), ]
+group_f_data$Subgroup <- rep(c("Subgroup_1", "Subgroup_2"), each = 2)
+
+sumtable_f <- group_f_data %>%
+  select("Screening using a validated scale" = context_hiv_screen,
+         "Documentation of screening results" = context_hiv_docu1,
+          "Identification/Diagnosis" = context_hiv_diag,
+          "Documentation of diagnostic results" = context_hiv_docu2,
+          "Referral to services within this facility" = context_hiv_refer1,
+          "Referral to services outside this facility" = context_hiv_refer2,
+        "Conduct of psychological counselling" = context_hiv_pcs,
+          "Conduct of group therapy" = context_hiv_group,
+          "Conduct of psychiatric appointments" = context_hiv_psychi,
+          "Documentation of treatment offered" = context_hiv_med,
+          "Prescription of psychiatric medication" =context_hiv_docu3,
+          "Procedure for ongoing monitoring" = context_hiv_monitor, Subgroup) %>% 
+  sumtable(group = "Subgroup",
+             group.test = TRUE,
+             out = 'return')
+
+# Display the table
+kable(sumtable_f, caption = "HIV difference comparison in Group F",
+      align = c("l", "c", "c", "c"))
+
+#group H
+group_h_data <- data_df %>%
+  filter(Group == "H")
+
+sumtable_h <- group_h_data %>%
+  select("Screening using a validated scale" = context_hiv_screen,
+         "Documentation of screening results" = context_hiv_docu1,
+          "Identification/Diagnosis" = context_hiv_diag,
+          "Documentation of diagnostic results" = context_hiv_docu2,
+          "Referral to services within this facility" = context_hiv_refer1,
+          "Referral to services outside this facility" = context_hiv_refer2,
+        "Conduct of psychological counselling" = context_hiv_pcs,
+          "Conduct of group therapy" = context_hiv_group,
+          "Conduct of psychiatric appointments" = context_hiv_psychi,
+          "Documentation of treatment offered" = context_hiv_med,
+          "Prescription of psychiatric medication" =context_hiv_docu3,
+          "Procedure for ongoing monitoring" = context_hiv_monitor, record_id) %>% 
+  sumtable(group = "record_id",
+             summ = list(c('N(x)','mean(x)')),
+             out = 'return')
+
+# Display the table
+kable(sumtable_h, caption = "HIV difference comparison in Group H",
+      align = c("l", "c", "c", "c"))
+```
+
+# Common reasons for differences
+
+**Screening using a validated scale**: 
+
+1. For HIV Negative is basic screening and documented in ANC register for PMTCT is by use of PHQ9 and documented in EMR.
+
+2. For PMTCT the screening is more frequent compared to the general population.
+
+3. For HIV negative they use PHQ 2, while for HIV positive they use PHQ9.
+
+4. For HIV positive (EMR) we use a scale, while HIV negative there is no use of a scale in screening.
+
+**Documentation of screening results**: 
+
+1. PMTCT uses EMR while HIV negative they use ANC registers or the mother-child booklet.
+
+**Identification/Diagnosis**: 
+
+1. PMTCT they have a lot of support so its easier to diagnose compared to the HIV negative mothers;
+
+2. It's easier to bring partners in board in HIV negative mothers compared to HIV positive women and for HIV positive women mentor mothers are involved.
+
+**Documentation of diagnosis**:
+
+1. For PMTCT it is recorded in EMR and for HIV negative it is recorded in ANC registers.
+
+**Conduct of psychological counselling sessions**: 
+
+1. We do individual based counselling for PMTCT.
+
+**Conduct of group therapy**: 
+
+1. PMTCT they are funded to have group, therapies unlike the HIV negative mothers who do not receive any support to have group therapies
+
+**Conduct of ongoing monitoring**: 
+
+1. For the sero exposed women who have disclosure issues need involvement of mentor mothers.
+
+
+# Appendix: R Code
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+
+```
