@@ -1,0 +1,372 @@
+---
+title: "IPMH Qual Demographics Summary"
+author: "David Owaga & Yuwei Wang"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+
+```{r setup, echo=F, include=F}
+rm(list = ls())
+
+pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
+               openxlsx, gtsummary, kableExtra) 
+
+#read data
+demographic_df <-read.csv("IPMHAim1QualDemograp_DATA_2024-06-10_0619.csv") 
+```
+
+## Health Care Workers Demographics
+
+We are reporting 6 Focus Group Discussions (FGDs) for health care workers, with 4 comprising 7 participants each and 2 comprising 6 participants each - altogether **`r sum(demographic_df$redcap_event_name == "demographics_arm_2")`**. 
+
+```{r HCW, echo=F,message=F, warning=F}
+hcw <- demographic_df %>%
+  select(record_id, starts_with("hcw_"), demographic_hcws_complete) %>%
+  filter(!is.na(hcw_participant_id))
+
+# Look at number of NAs and datatype for each variable
+# hcw %>% df_status() %>% select(variable, q_na, type)
+
+hcw <- hcw %>% 
+  mutate(hcw_sex = dplyr::recode(hcw_sex, "1" = "Male","2" = "Female")) %>% 
+  mutate(hcw_education = dplyr::recode(hcw_education, 
+                                       "1" = "No schooling completed",
+                                       "2" = "Primary school",
+                                       "3" = "Secondary school", 
+                                       "4" = "Diploma", 
+                                       "5" = "Bachelor's degree or higher degree")) %>%
+  mutate(hcw_job = dplyr::recode(hcw_job, "1" = "Medical officer", 
+                                 "2" = "Psychiatrists", 
+                                 "3" = "Obstetrician/gynaecologist",
+                                 "4" = "Nurses", "5" = "Psychologist", 
+                                 "6" = "Mental health social worker", 
+                                 "7" = "Other social worker", 
+                                 "8" = "HTS counsellor", 
+                                 "9" = "Community health worker", 
+                                 "10" = "Mentor mother", 
+                                 "11" = "Other",
+                                 "12" = "Clinical Officer")) %>% 
+  mutate(hcw_wlwh = dplyr::recode(hcw_wlwh, "0" = "No","1" = "Yes")) %>% 
+  mutate(hcw_mh_provision = dplyr::recode(hcw_mh_provision, "0" = "No", 
+                                          "1" = "Yes")) %>% 
+  mutate(hcw_terms = dplyr::recode(hcw_terms, 
+                                   "1" = "Permanent and pensionable", 
+                                   "2" = "Contract","3" = "Volunteer", 
+                                   "4" = "Other")) %>% 
+  mutate(hcw_facility = dplyr::recode(hcw_facility, 
+                                   "1" =	"Rwambwa Sub-county Hospital",
+                                   "2" = 	"Sigomere Sub County Hospital",
+                                   "3" =	"Uyawi Sub County Hospital",
+                                   "4" = "Got Agulu Sub-District Hospital",
+                                   "5" = "Ukwala Sub County Hospital",
+                                   "6" = "Madiany Sub County Hospital",
+                                   "7" =	"Kabondo Sub County Hospital",
+                                   "8" = "Mbita Sub-County Hospital",
+                                   "9" = "Miriu Health Centre",
+                                   "10"	= "Pala Health Centre",
+                                   "11" =	"Nyandiwa Level IV Hospital",
+                                   "12" =	"Magunga Level IV Hospital",
+                                   "13" = "Ober Kamoth Sub County Hospital",
+                                   "14" = "Gita Sub County Hospital",
+                                   "15" =	"Akala Health Centre",
+                                   "16" =	"Usigu Health Centre",
+                                   "17" = "Ramula Health Centre",
+                                   "18" =	"Simenya Health Centre",
+                                   "19" =	"Airport Health Centre (Kisumu)",
+                                   "20" =	"Nyalenda Health Centre")) %>% 
+  mutate(hcw_hrscare = as.numeric(hcw_hrscare)) %>% 
+  mutate(hcw_yearjob = hcw_yrsjob/12) %>% 
+  mutate(hcw_yearwork = hcw_monthswork/12) %>% 
+  mutate(hcw_yearcare = hcw_yrscare/12)
+
+#basic demo table
+hcw_tbl1 <- hcw %>% tbl_summary(
+  include=c(hcw_age, hcw_sex, hcw_education, hcw_dpt___1, hcw_dpt___2,
+            hcw_dpt___3, hcw_dpt___4, hcw_dpt___5, hcw_dpt___6, hcw_job, 
+            hcw_yearjob,  hcw_facility, hcw_yearwork, hcw_terms, hcw_yearcare,
+            hcw_hrscare, hcw_wlwh, hcw_mh_provision),
+  label = list(hcw_age ~ "Age (Years)",
+               hcw_sex ~ "Gender",
+               hcw_education ~ "Education level",
+               hcw_dpt___1 ~ "Working in antenatal care",
+               hcw_dpt___2 ~ "Working in postnatal care",
+               hcw_dpt___3 ~ "Working in immunization clinic",
+               hcw_dpt___4 ~ "Working in PMTCT",
+               hcw_dpt___5 ~ "Working in family planning clinic",
+               hcw_dpt___6 ~ "Working in other department",
+               hcw_job ~ "Current Designation",
+               hcw_yearjob ~ "Current job duration (Years)",
+               hcw_facility ~ "Current facility",
+               hcw_yearwork ~ "Duration in the facility (Years)",
+               hcw_terms ~ "Terms of engagement in the facility",
+               hcw_yearcare ~ "Duration offering care to PW in the facility (Years)",
+               hcw_hrscare ~ "Hours/week taking care of PW in the facility", 
+               hcw_wlwh ~ "Providing care to PW living with HIV",
+               hcw_mh_provision ~ "Provided MH services to PW"),
+  missing = "no",
+  digits = list(all_continuous() ~ 1), 
+  type = list(hcw_hrscare ~ "continuous"),
+  statistic = list(all_continuous() ~ "{mean} ± {sd}")) %>% 
+  modify_caption("**Basic Demographic Summary for HCWs**") %>%
+  bold_labels() 
+
+hcw_tbl1
+
+# table 2
+hcw_mh <- hcw %>%
+  filter(hcw_mh_provision == "Yes") %>% 
+  select(hcw_mh_service___1, hcw_mh_service___2, hcw_mh_service___3,
+         hcw_mh_service___4,hcw_mh_service___5,hcw_mh_service___6,
+         hcw_mh_service___7, hcw_screen, hcw_diag, hcw_refer, hcw_therapy,
+         hcw_med, hcw_monitor, hcw_service_other) %>% 
+  mutate(hcw_sreen_year = hcw_screen/12,
+         hcw_diag_year = hcw_diag/12,
+         hcw_refer_year = hcw_refer/12,
+         hcw_therapy_year = hcw_therapy/12,
+         hcw_med_year = hcw_med/12,
+         hcw_monitor_year = hcw_monitor/12,
+         hcw_other_year = hcw_service_other/12)
+
+services <- list(
+  "Screening" = c("hcw_mh_service___1", "hcw_sreen_year"),
+  "Diagnosis" = c("hcw_mh_service___2", "hcw_diag_year"),
+  "Talk therapies" = c("hcw_mh_service___3", "hcw_therapy_year"),
+  "Prescribing medication" = c("hcw_mh_service___4", "hcw_med_year"),
+  "Ongoing monitoring" = c("hcw_mh_service___5", "hcw_monitor_year"),
+  "Referral" = c("hcw_mh_service___6", "hcw_refer_year"),
+  "Other" = c("hcw_mh_service___7", "hcw_other_year")
+)
+
+hcw_tbl2 <- data.frame(Service = character(), 
+                      `N (Percentage)` = character(), 
+                      `Average Duration (Mean [SD])` = character(), 
+                      stringsAsFactors = FALSE)
+
+# Loop through each service to calculate the stats
+for (service_name in names(services)) {
+  service_info <- services[[service_name]]
+  N <- sum(!is.na(hcw_mh[[service_info[1]]]) & hcw_mh[[service_info[1]]] == 1, na.rm = TRUE)
+  total_providers <- nrow(hcw_mh)
+  percentage_providers <- (N / total_providers) * 100
+  N_percentage <- sprintf("%d (%.2f%%)", N, percentage_providers)
+  duration_mean <- mean(hcw_mh[[service_info[2]]], na.rm = TRUE)
+  duration_sd <- sd(hcw_mh[[service_info[2]]], na.rm = TRUE)
+  duration_mean_sd <- sprintf("%.2f (%.2f)", duration_mean, duration_sd)
+  hcw_tbl2 <- rbind(hcw_tbl2, 
+                   data.frame(Service = service_name, 
+                              `N (Percentage)` = N_percentage, 
+                              `Average Duration (Mean [SD])` = duration_mean_sd))
+}
+
+
+# Print the final table
+kable(hcw_tbl2, col.names = c("Service", 
+                             "N (Percentage)", 
+                             "Average Duration (Mean [SD]) [Year]"),
+      caption = "MH Service Provision")
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+who_prescribe <- hcw %>% 
+    select(hcw_job, hcw_mh_service___4) %>% 
+    filter(hcw_mh_service___4 == 1)
+
+who_prescribe %>% 
+    tbl_summary(
+        include = hcw_job,
+        label = list(hcw_job ~ "Cadre")) %>% 
+  modify_caption("*Who Subscribes MH Medication*") %>%
+  bold_labels()
+```
+
+\pagebreak
+
+## Policymakers Demographics
+
+We are reporting the demographics for **`r sum(demographic_df$redcap_event_name == "demographics_arm_3")` policymakers**.
+
+```{r pm, echo=F, message=F, warning=F}
+pm_d <- demographic_df %>%
+select(record_id, starts_with("policy_"), 
+       demographics_policymakers_complete) %>%
+filter(!is.na(policy_participant_id))
+
+#pm_d %>% df_status() %>% select(variable, q_na, type)
+
+pm_tbl <- pm_d %>%
+  mutate(policy_sex = dplyr::recode(policy_sex,
+                                    "1" = "Male",
+                                    "2" = "Female")) %>% 
+  mutate(policy_education = dplyr::recode(policy_education,
+                                          "1" = "No schooling completed",
+                                          "2" = "Primary school",
+                                          "3" = "Secondary school",
+                                          "4" = "Diploma",
+                                          "5" = "Bachelor's degree or higher degree"))%>%
+  mutate(policy_level = dplyr::recode(policy_level,
+                                      "1" = "National level",
+                                      "2" = "County level",
+                                      "3" = "Sub-county level", 
+                                      "4" = "Community level", 
+                                      "5" = "Facility level", 
+                                      "6" = "Other")) %>% 
+  mutate(policy_mh_year = policy_year_mh/12) %>% 
+   mutate(policy_mch_year = policy_year_mch/12) %>% 
+   mutate(policy_hiv_year = policy_year_hiv/12) %>% 
+   mutate(policy_other_year = policy_year_other/12) %>% 
+   mutate(policy_yearwork = policy_yearofwork/12)
+
+pm_tbl1 <- pm_tbl %>%
+  tbl_summary(
+    include = c(policy_age, policy_sex, policy_education, policy_job___1, 
+                policy_job___2, policy_job___3, policy_job___4, policy_mh_year,
+                policy_mch_year, policy_hiv_year, policy_other_year, policy_level,
+                policy_yearwork),
+    label = list(policy_age ~ "Age (Years)",
+                 policy_sex ~ "Gender",
+                 policy_education ~ "Education level",
+                 policy_job___1 ~ "Working in mental health sector",
+                 policy_job___2 ~ "Working in maternal and child health sector",
+                 policy_job___3 ~ "Working in HIV sector",
+                 policy_job___4 ~ "Working in other sectors",
+                 policy_mh_year ~ "Duration working in mental health (Years)",
+                 policy_mch_year ~ "Duration working in maternal and child health sector (Years)",
+                 policy_hiv_year ~ "Duration working in HIV sector (Years)",
+                 policy_other_year ~ "Duration working in other sectors (Years)",
+                 policy_level ~ "Working level",
+                 policy_yearwork ~ "Working duration in current job title (Years)"),
+    missing = "no",
+    digits = list(all_continuous() ~ 1),
+    type = list(
+      policy_age = "continuous",
+      policy_mh_year = "continuous",
+      policy_mch_year = "continuous",
+      policy_hiv_year = "continuous",
+      policy_other_year = "continuous",
+      policy_yearwork = "continuous"
+    ),
+    statistic = list(all_continuous() ~ "{mean} ± {sd}")
+  ) %>%
+  modify_caption("**Basic Demographic Summary for Policymakers**") %>%
+  bold_labels()
+
+pm_tbl1
+```
+
+\pagebreak
+
+## Perinatal Women Demographics
+
+We are reporting 6 FGDs, with 4 comprising 7 participants each and 2 comprising 6 participants each - altogether **`r sum(demographic_df$redcap_event_name == "demographic_arm_1")`**.
+
+```{r PPW, echo=F, message=F, warning=F}
+ppw_d <- demographic_df %>%
+select(record_id, starts_with("women_"), 
+       demographics_perinatal_women_complete) %>%
+filter(!is.na(women_participant_id)) %>% 
+    mutate(women_education = dplyr::recode(women_education,
+                                          "1" = "No formal education",
+                                          "2" = "Primary - not completed",
+                                          "3" = "Primary completed",
+                                          "4" = "Secondary - not completed",
+                                          "5" = "Secondary - completed",
+                                          "6" = "Above secondary / tertiary")) %>% 
+    mutate(women_partner = dplyr::recode(women_partner,
+                                         "1" =  "No partner, single",
+                                         "2" =  "Unsteady boyfriend (on and off)",
+                                         "3" =  "Steady boyfriend",
+                                         "4" =  "Married, monogamous",
+                                         "5" =  "Married, polygamous",
+                                         "6" =  "Divorced/widowed",
+                                         "7" =  "Separated",
+                                         "8" =  "Prefer not to answer")) %>% 
+    mutate(women_employment = dplyr::recode(women_employment,
+                                            "1" = "Unemployed",
+                                            "2" =  "Salaried",
+                                            "3"  = "On wages (Irregular salary, kibarua)",
+                                            "4" =  "Self-employed",
+                                            "5" =  "Student",
+                                            "6" =  "Out of work and looking for work",
+                                            "7" =  "Out of work but not currently looking for work",
+                                            "8" =  "A homemaker",
+                                            "9" =  "Other")) %>% 
+     mutate(women_residence = dplyr::recode(women_residence,
+                                            "1" = "Urban or city center",
+                                            "2" = "Peri-urban areas",
+                                            "3" = "Rural areas or countryside")) %>% 
+    mutate(women_hiv = dplyr::recode(women_hiv,
+                                      "1" =  "HIV negative",
+                                      "2" =  "Living with HIV",
+                                      "99" =  "Don't know",
+                                     "-2" =  "Prefer not to answer")) %>% 
+    mutate(women_pregnancy = dplyr::recode(women_pregnancy,
+                                           "1" = "Pregnant",
+                                           "0" = "Postpartum")) %>% 
+    mutate(women_distance = dplyr::recode(women_distance,
+                                          "1" = "One hour or more than one hour",
+                                          "0" = "Less than one hour"))
+
+ppw_tbl1 <- ppw_d %>%
+  tbl_summary(
+    include = c(women_age, women_education, women_service___1, women_service___2, women_service___3, women_service___4, women_service___5, women_service___6, women_pregnancy, women_gestational, women_delivery, women_preg_before, women_preg_number, women_partner, women_employment, women_residence, women_distance, women_hiv, women_art, women_mh_provision, women_mh_reception),
+    label = list(women_age ~ "Age (Years)",
+                 women_education ~ "Education level",
+                 women_service___1 ~ "First Antenatal care visit",
+                 women_service___2 ~ "Follow-up antenatal care visit",
+                 women_service___3 ~ "Postnatal care visit",
+                 women_service___4 ~ "Immunization for my baby visit",
+                 women_service___5 ~ "PMTCT Services visit",
+                 women_service___6 ~ "Family planning Services visit",
+                 women_pregnancy ~ "Pregnancy status",
+                 women_gestational ~ "Gestational age (Weeks)",
+                 women_delivery ~ "Duration since delivery (Weeks)",
+                 women_preg_before ~ "Ever Been pregnant before",
+                 women_preg_number ~ "Total pregnancies",
+                 women_partner ~ "Kind of partner",
+                 women_employment ~ "Employment status",
+                 women_residence ~ "Current resident description",
+                 women_distance ~ "Time taken to facility",
+                 women_hiv ~ "HIV status",
+                 women_art ~ "Currently using ART",
+                 women_mh_provision ~ "Has a HCW ever talked to you about MH during your perinatal period",
+                 women_mh_reception ~ "Have you ever received MH care during your perinatal period"),
+    missing = "no",
+    digits = list(all_continuous() ~ 1),
+    type = list(
+      women_age = "continuous",
+      women_gestational = "continuous",
+      women_delivery = "continuous",
+      women_preg_number = "continuous"
+    ),
+    statistic = list(all_continuous() ~ "{mean} ± {sd}")
+  ) %>%
+  modify_caption("**Basic Demographic Summary for PPWs**") %>%
+    bold_labels() 
+
+ppw_tbl1
+```
+
+
+```{r RPPR age Range}
+age_df <- demographic_df %>% 
+    select(record_id, hcw_age, policy_age,women_age) %>% 
+  mutate(age = coalesce(hcw_age, policy_age, women_age)) %>% 
+    mutate(age_range = case_when(
+       age >= 18 & age <=25 ~ "18-25",
+       age >= 26 & age <= 45 ~ "26-45",
+       age >= 46 & age <= 64 ~ "46-64",
+       age >= 65 & age <= 75 ~ "65-75",
+       age >75 ~ "> 76+"))
+
+age_summary <- age_df %>% 
+    group_by(age_range) %>% 
+    summarise(Total = n())
+```
+
+
+## Appendix: R Code
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
