@@ -1,0 +1,1382 @@
+---
+title: "IPMH Quant Survey Screening"
+author: "David Owaga"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+
+```{r setup, echo = F, include = F}
+rm(list = ls())
+
+pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
+               openxlsx, gtsummary, kableExtra, ggrepel, UpSetR) 
+
+knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
+
+#read data
+data <- read.csv("IPMHAim1Quantitative_DATA_2024-07-09_0539.csv") 
+```
+
+## Health Care Workers Demographics
+
+Altogether, we have data for `r sum(data$redcap_event_name == "survey_arm_2")` participants currently.
+
+```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
+hcw_demo <- data %>%
+  select(record_id, starts_with("hcw_"), demographic_hcws_complete) %>%
+  filter(!is.na(hcw_participant_id))
+
+hcw_demo <- hcw_demo %>% 
+  mutate(age = as.numeric(case_when(hcw_dob_uk == 1 ~ floor(hcw_cal_age),
+                         hcw_dob_uk == 0 ~ hcw_age))) %>% 
+  mutate(hcw_sex = dplyr::recode(hcw_sex, "1" = "Male","2" = "Female")) %>% 
+  mutate(hcw_education = dplyr::recode(hcw_education, 
+                                       "1" = "No schooling completed",
+                                       "2" = "Primary school",
+                                       "3" = "Secondary school", 
+                                       "4" = "Diploma", 
+                                       "5" = "Bachelor's degree or higher degree"),
+         hcw_education = fct_relevel(hcw_education,
+                                      "Diploma", "Bachelor's degree or higher degree", "Secondary school", "Primary school")) %>%
+  mutate(hcw_job = dplyr::case_when(hcw_job___1 == "1" ~ "Medical officer", 
+                                 hcw_job___2 == "1" ~ "Psychiatrists", 
+                                 hcw_job___3 == "1" ~  "Obstetrician/gynaecologist",
+                                 hcw_job___4 == "1"~ "Clinical officer", 
+                                 hcw_job___5 == "1" ~ "Nurses", 
+                                 hcw_job___6 == "1"~ "Psychologist", 
+                                 hcw_job___7 == "1" ~ "Mental health social worker", 
+                                 hcw_job___8 == "1" ~ "Other social worker", 
+                                 hcw_job___9 == "1" ~ "HTS counsellor", 
+                                 hcw_job___10 == "1" ~ "Community health worker", 
+                                 hcw_job___11 == "1" ~ "Mentor mother", 
+                                 hcw_job___12 == "1" ~ "Other"),
+         hcw_job = fct_relevel(hcw_job,
+                               "Nurses", "Clinical officer", "HTS counsellor", "Mentor mother", "Psychiatrists", "Psychologist", "Medical officer")) %>%
+  #This now works because no one choose two positions - check this next time
+  mutate(hcw_wlwh = dplyr::recode(hcw_wlwh, "0" = "No","1" = "Yes")) %>% 
+  mutate(hcw_terms = dplyr::recode(hcw_terms, 
+                                   "1" = "Permanent and pensionable", 
+                                   "2" = "Contract","3" = "Volunteer", 
+                                   "4" = "Other"),
+         hcw_terms = fct_relevel(hcw_terms,
+                                 "Contract", "Permanent and pensionable", 
+                                 "Volunteer", "Other")) %>% 
+  mutate(hcw_facility = dplyr::recode(hcw_facility, 
+                                    "0" = "Specialist",
+                                   "1" =	"Rwambwa Sub-county Hospital",
+                                   "2" = 	"Sigomere Sub County Hospital",
+                                   "3" =	"Uyawi Sub County Hospital",
+                                   "4" = "Got Agulu Sub-District Hospital",
+                                   "5" = "Ukwala Sub County Hospital",
+                                   "6" = "Madiany Sub County Hospital",
+                                   "7" =	"Kabondo Sub County Hospital",
+                                   "8" = "Mbita Sub-County Hospital",
+                                   "11" =	"Nyandiwa Level IV Hospital",
+                                   "13" = "Ober Kamoth Sub County Hospital",
+                                   "14" = "Gita Sub County Hospital",
+                                   "15" =	"Akala Health Centre",
+                                   "16" =	"Usigu Health Centre",
+                                   "17" = "Ramula Health Centre",
+                                   "18" =	"Simenya Health Centre",
+                                   "19" =	"Airport Health Centre (Kisumu)",
+                                   "20" =	"Nyalenda Health Centre",
+                                   "21" = "Mirogi Health Centre",
+                                   "22" = "Ndiru Level 4 Hospital")) %>% 
+  mutate(hcw_hrscare = as.numeric(hcw_hrscare)) %>% 
+  mutate(hcw_yearjob = hcw_yrsjob/12) %>% 
+  mutate(hcw_yearwork = hcw_monthswork/12) %>% 
+  mutate(hcw_yearcare = hcw_yrscare/12)
+
+# basic demo table
+hcw_demo %>% tbl_summary(
+  include=c(age, hcw_sex, hcw_education,hcw_job,  hcw_care, hcw_dpt___2, 
+            hcw_dpt___1, hcw_dpt___4, hcw_dpt___5, hcw_dpt___3, hcw_dpt___6, 
+            hcw_yearjob, hcw_yearwork, hcw_terms,, hcw_wlwh, hcw_yearcare, 
+            hcw_hrscare),
+  label = list(age ~ "Age (Years)",
+               hcw_sex ~ "Gender",
+               hcw_education ~ "Education level",
+               hcw_dpt___1 ~ "Working in antenatal care",
+               hcw_dpt___2 ~ "Working in postnatal care",
+               hcw_dpt___3 ~ "Working in immunization clinic",
+               hcw_dpt___4 ~ "Working in PMTCT",
+               hcw_dpt___5 ~ "Working in family planning clinic",
+               hcw_dpt___6 ~ "Working in other department",
+               hcw_job ~ "Current Designation",
+               hcw_yearjob ~ "Current job duration (Years)",
+               hcw_yearwork ~ "Duration in the facility (Years)",
+               hcw_terms ~ "Terms of engagement in the facility",
+               hcw_yearcare ~ "Duration offering care to PW in the facility (Years)",
+               hcw_hrscare ~ "Hours/week taking care of PW in the facility", 
+               hcw_wlwh ~ "Currently providing care to PW living with HIV",
+               hcw_care ~ "Offering care to perinatal women"),
+  missing = "no",
+  digits = list(all_continuous() ~ 1), 
+  type = list(age ~ "continuous", 
+              hcw_hrscare ~ "continuous",
+              hcw_yearjob ~ "continuous", 
+              hcw_yearwork~ "continuous", 
+              hcw_yearcare~ "continuous", 
+              hcw_hrscare ~ "continuous"),
+  statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+  bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 1: Basic Demographic Summary for HCWs") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+```
+
+
+
+## Screening
+```{r Grouping others who should screen, echo=FALSE, message=FALSE, warning=FALSE}
+data <- data %>%
+  mutate(screen_who_other = case_when(
+    grepl("Adherence counsellor|Adherence counsellor.|Adherence counsellors|Adherence counselors|Adherence|Adherence counsellor, CHVs|Adherence counsellor, peer educator", screen_who_other, TRUE ~ screen_who_other) ~ "Adherence Counsellor",
+    grepl("Peer Educator|Peer educators|Peer educator|Peer educators|Adherence counsellor, peer educator", screen_who_other, ignore.case = TRUE) ~ "Peer Educator",
+    grepl("Triage clerks", screen_who_other, ignore.case = TRUE) ~ "Triage Clerks",
+    grepl("Receptionist", screen_who_other, ignore.case = TRUE) ~ "Receptionist",
+    grepl("Lab tech", screen_who_other, ignore.case = TRUE) ~ "Lab Technologist",
+    TRUE ~ NA_character_  # Set to NA if no match
+  ))%>% 
+    mutate(screen_who_other = fct_relevel(screen_who_other,
+                                             "Adherence Counsellor", "Peer Educator", "Triage Clerks", "Lab Technologist", "Receptionist"))
+
+# Others to Screen PMAD in PWLHIV
+data <- data %>%
+  mutate(screen_who_other_hiv = case_when(
+    grepl("Adherence counsellor|Adherence counsellor.|Adherence counsellors|Adherence counselors|Adherence|Adherence counsellor, CHVs", screen_who_other_hiv, TRUE ~ screen_who_other_hiv) ~ "Adherence Counsellor",
+    grepl("Peer Educator|Peer educators|Peer educator|Peer educators|adherence counselors", screen_who_other_hiv, ignore.case = TRUE) ~ "Peer Educator",
+    grepl("Triage clerks", screen_who_other_hiv, ignore.case = TRUE) ~ "Triage Clerks",
+    grepl("Receptionist", screen_who_other_hiv, ignore.case = TRUE) ~ "Receptionist",
+    grepl("Lab tech", screen_who_other_hiv, ignore.case = TRUE) ~ "Lab Technologist",
+    screen_who_other_hiv == "" | is.na(screen_who_other_hiv) ~ NA_character_,  # Set to NA if empty or NA
+    TRUE ~ screen_who_other_hiv  # Keep original value if no match
+  ))%>% 
+    mutate(screen_who_other = fct_relevel(screen_who_other_hiv,
+                                             "Adherence Counsellor", "Peer Educator", "Triage Clerks", "Lab Technologist", "Receptionist"))
+
+```
+
+
+```{r Grouping other screening tools, echo=FALSE, message=FALSE, warning=FALSE}
+data <- data %>%
+  mutate(screen_tool_other = case_when(
+    grepl("BDI", screen_tool_other, ignore.case = TRUE) ~ "Beck's Depression Inventory (BDI)",
+    grepl("GBV", screen_tool_other, ignore.case = TRUE) ~ "GBV Screening Tool",
+    grepl("BHTS", screen_tool_other, ignore.case = TRUE) ~ "HTS Screening",
+    screen_tool_other == "" | is.na(screen_tool_other) ~ NA_character_,  # Set to NA if empty or NA
+    TRUE ~ screen_tool_other  # Keep original value if no match
+  ))
+
+```
+
+
+```{r PMAD Screening Summary, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+    filter(hcw_care == 1) %>% 
+    mutate(hcw_care = recode(hcw_care,
+                             "1" = "Yes",
+                             "0" = "No"),
+           screen_role = recode(screen_role,
+                                "1" = "Yes",
+                                "0" =  "No",
+                                "-2" =  "No answer",
+                               "99" = "I don't know"),
+           screen_role = fct_relevel(screen_role,
+                                             "Yes", "No", "I don't know"),
+           hcw_care = fct_relevel(hcw_care,
+                                  "Yes", "No"),
+           screen_time = recode(screen_time,
+                                "1" = "This week",
+                                "2" = "Last week",
+                                "3" = "A month ago",
+                                "4" = "More than a month ago",
+                                "5" = "I don't remember"),
+           screen_time = fct_relevel(screen_time,
+                                             "This week", "More than a month ago", "Last week", "A month ago", "I don't remember"),
+           screen_times = recode(screen_times,
+                                "1" = "Less than 2 times",
+                                "2" = "3 to 4 times",
+                                "3" = "5 to 6 times",
+                                "4" = "More than 6 times"),
+           screen_times = fct_relevel(screen_times,
+                                      "More than 6 times", "Less than 2 times", "3 to 4 times", "5 to 6 times")) %>% 
+  select(screen_provision, screen_hiv, screen_provision_now, screen_hiv_now,
+            screen_time, screen_time, screen_times, screen_tool___3, screen_tool___1, screen_tool___5, screen_tool___2, screen_tool___4, screen_tool___8, screen_tool_other,  screen_long,  screen_who___4,  screen_who___5,  screen_who___7,  screen_who___8,  screen_who___9,  screen_who___2,  screen_who___3,  screen_who___1,  screen_who___6,  screen_who___99,  screen_who___11,  screen_who___12, screen_who_other,  screen_who_hiv___4, screen_who_hiv___5, screen_who_hiv___7, screen_who_hiv___8, screen_who_hiv___9, screen_who_hiv___99, screen_who_hiv___11, screen_who_hiv___12, screen_role) %>% 
+     tbl_summary(
+         percent = "cell",
+         label = list(
+             screen_who___1 ~ "Psychitrist",
+             screen_who___2 ~ "Psychologist",
+             screen_who___3 ~ "Social Worker",
+             screen_who___4 ~ "Nurse", 
+             screen_who___5 ~ "Clinical Officer",
+             screen_who___6 ~ "Medical Officer",
+             screen_who___7 ~ "HTS counsellor", 
+             screen_who___8 ~ "Mentor mother",
+             screen_who___9 ~ "Community Health Worker",
+             screen_who___99 ~ "I don't know",
+             screen_who___11 ~ "No one",
+             screen_who___12 ~ "Other",
+             screen_who_other ~ "Others who should screen",
+             screen_provision ~ "Ever provided PMAD screening to PW",
+             screen_hiv ~ "Ever provided PMAD screening to PWLHIV",
+             screen_provision_now ~ "Ever provided PMAD screening to PW in current Facility",
+             screen_hiv_now ~ "Ever provided PMAD screening to PWLHIV in current Facility",
+             screen_time ~ "Last time screened PW for PMAD",
+             screen_times ~ "Frequency of screening PW for PMAD in this facility in the past 2 months",
+             screen_role ~ "Is it your role to screen for PMAD",
+             screen_tool___1 ~ "No specific tool",
+             screen_tool___2 ~ "PHQ2",
+             screen_tool___3 ~ "PHQ9",
+             screen_tool___4 ~ "GAD-2",
+             screen_tool___5 ~ "GAD-7",
+             screen_tool___8 ~ "Other",
+             screen_tool_other ~ "Other PMAD screening tools",
+             screen_long ~ "PMAD screening duration",
+             screen_who_hiv___4 ~ "Nurse", 
+             screen_who_hiv___5 ~ "Clinical Officer",
+             screen_who_hiv___7 ~ "HTS counsellor", 
+             screen_who_hiv___8 ~ "Mentor mother",
+             screen_who_hiv___9 ~ "Community Health Worker",
+             screen_who_hiv___99 ~ "I don't know",
+             screen_who_hiv___11 ~ "No one",
+             screen_who_hiv___12 ~ "Other"),
+         missing = "no",
+         digits = list(all_continuous() ~ 1),
+         statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>%
+    bold_labels() %>% 
+    add_n() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 2: PMAD screening") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+
+```
+
+
+```{r PMAD screening tools used/do use, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+    filter(hcw_care == 1) %>%
+    filter(screen_provision_now == 1 | screen_hiv_now == 1) %>% 
+    tbl_summary(
+        include = c(screen_tool___3, screen_tool___1, screen_tool___5, 
+                    screen_tool___2, screen_tool___4, screen_tool___8),
+        label = list(screen_tool___1 ~ "No specific tool", 
+                     screen_tool___2 ~ "PHQ2", 
+                     screen_tool___3 ~ "PHQ9", 
+                     screen_tool___4 ~ "GAD-2", 
+                     screen_tool___5 ~ "GAD-7", 
+                     screen_tool___8 ~ "Other")
+    ) %>% 
+    bold_labels() %>% 
+    add_n() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("PMAD screening Tools") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+
+```
+
+
+
+```{r Other cadre to screen PMAD, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+    filter(hcw_care == 1) %>% 
+    filter(screen_who___12 == 1) %>% 
+    select(screen_who_other)%>% 
+    tbl_summary(
+        label = list(screen_who_other ~ "Others who should provide screening for PMAD to PW"  
+                )) %>% 
+    bold_labels() %>% 
+    add_n() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Others to Screen PMAD") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1))
+```
+
+
+```{r Others who should provide PMAD screening to PWLHIV in this facility? in this facility?, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+    filter(hcw_care == 1) %>% 
+    filter( screen_who_hiv___12 == 1) %>% 
+    select(screen_who_other_hiv)%>% 
+    mutate(screen_who_other_hiv = fct_relevel(screen_who_other_hiv,
+                                             "Adherence Counsellor", "Peer Educator", "Triage Clerks", "Lab Technologist", "Receptionist"))%>% 
+    tbl_summary(,
+                label = list(screen_who_other_hiv ~ "Others who should provide screening for PMAD to PWLHIV"  
+                )) %>% 
+    bold_labels() %>% 
+    add_n() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Others to Provide PMAD Screening to PWLHIV") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1))
+```
+
+## Screening prioritization
+
+```{r screning dataset, echo=FALSE, message=FALSE, warning=FALSE}
+screen_hcw <- data %>%
+  filter(!is.na(hcw_participant_id)) %>% 
+  select(record_id, starts_with("screen_"), screening_hcw_complete, screening_hcw_prioritization_complete)
+```
+
+### Barriers
+
+```{r screen_barrier_hcw, echo=F, warning=F, message=F}
+screen_barrier <- screen_hcw %>% 
+  select(record_id, matches("barrier|add")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- screen_barrier %>%
+  pivot_longer(cols = -c(record_id, screen_barrier_other),
+               names_to = c("type", "barrier"), 
+               names_pattern = "screen_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_importance = mean_value_barrier,
+    se_importance = se_value_barrier,
+    mean_addressability = mean_value_add,
+    se_addressability = se_value_add
+  ) %>% 
+  mutate(se_average = (se_importance + se_addressability)/2)
+
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                  "knowledge" = "Knowledge: Insufficient training or knowledge gap",
+                                   "guideline" =	"Guideline: Lack of guidelines",
+                                   "tool" = 	"Tool: Lack of tools",
+                                   "room" =	"Room: Lack of a specific room/enough rooms",
+                                   "hcwstigma" = "HCWstigma: HCW stigmatization of patients with mental illnesses",
+                                   "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
+                                   "workload" = "Workload: Having too many clients to see",
+                                   "specialist" =	"Specialist: The unavailability of psychologists/counsellors",
+                                   "staff" = "Staff: Lack of a specific person to screen",
+                                   "priority" =	"Priority: Lack of prioritization MH among HCW",
+                                   "report" = "Report: Lack of targets or reporting requirements",
+                                   "stigma" = "Stigma: Stigma whereby women not wanting to be associated with mental illness",
+                                   "language" =	"Language: Language barrier between women and HCW",
+                                   "fear" =	"Fear: Women's fear of opening up to HCW",
+                                 "aware" = "Aware: Lack of community awareness/sensitization in MH such that women are unaware of the need for screening"))
+
+ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
+  geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
+  scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
+  scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
+  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for screening",
+       x = "Importance",
+       y = "Addressability",
+       color = "Barrier detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+
+```
+
+### Strategies
+
+```{r screen_stra_hcw, echo=F, warning=F, message=F}
+screen_strategy <- screen_hcw %>% 
+  select(record_id, matches("stra|diff")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- screen_strategy %>%
+  pivot_longer(cols = -c(record_id, screen_stra_other),
+               names_to = c("type", "strategy"), 
+               names_pattern = "screen_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(strategy, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_feasibility = mean_value_stra,
+    se_feasibility = se_value_stra,
+    mean_impact= mean_value_diff,
+    se_impact = se_value_diff
+  ) %>% 
+  mutate(se_average = (se_feasibility + se_impact)/2)
+
+stats <- stats %>%
+  mutate(strategy = case_when(
+    strategy == "taskshift" ~ "workload",
+    TRUE ~ strategy 
+  ))
+
+stats <- stats %>% 
+  mutate(strategy_detail = dplyr::recode(strategy, 
+                                  "knowledge" = "Knowledge: Provide training for HCWs",
+                                   "guideline" =	"Guideline: Provide screening guidelines for HCWs",
+                                   "tool" = 	"Tool: Provide standardized tools for HCWs",
+                                   "report" =	"Report: Provide standardized reporting structures for HCWs",
+                                  "room" = "Room: Provide physical space/rooms for screening",
+                                   "workload" = "Workload: Task-shifting of screening to other providers",
+                                   "incentive" = "Incentive: Provide financial incentives to HCWs",
+                                   "specialist" =	"Specialist: Employ specialized mental health staff",
+                                   "staff" = "Staff: Allocate screening to a specific HCW\n or have a mental health desk for screening",
+                                   "language" =	"Language: Provide a translator",
+                                 "aware" = "Aware: Sensitize CHVs and the community about MH"))
+
+ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
+  geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
+  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
+  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  labs(title = "Strategy prioritization for the screening phase",
+       x = "Impact",
+       y = "Feasibility",
+       color = "Strategy detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+```
+
+
+
+#  Diagnosis and Treatment Hcw
+```{r Grouping other tools for PMAD Diagnosis, echo=FALSE, message=FALSE, warning=FALSE}
+data <- data %>%
+  mutate(dx_way_other = case_when(
+    grepl("BDI", dx_way_other, TRUE ~ dx_way_other) ~ "Beck's Depression Inventory (BDI)",
+    grepl("BAI", dx_way_other, ignore.case = TRUE) ~ "Beck's Anxiety Inventory (BAI)",
+    grepl("Beck's depression inventory|Becks depression inventory", dx_way_other, ignore.case = TRUE) ~ "Beck's Depression Inventory (BDI)",
+    grepl("GAD 7|GAD7", dx_way_other, ignore.case = TRUE) ~ "Generalized Anxiety Disorder 7 (GAD-7)",
+    grepl("History taking", dx_way_other, ignore.case = TRUE) ~ "History Taking",
+    TRUE ~ dx_way_other,  # Keep original value if no match
+    dx_way_other == "" | is.na(dx_way_other) ~ NA_character_,  # Set to NA if empty or NA
+  ))
+
+data <- data %>%
+  mutate(dx_way_now_other = case_when(
+    grepl("BDI", dx_way_now_other, TRUE ~ dx_way_now_other) ~ "Beck's Depression Inventory (BDI)",
+    grepl("BAI", dx_way_now_other, ignore.case = TRUE) ~ "Beck's Anxiety Inventory (BAI)",
+    grepl("Beck's depression inventory|Becks depression inventory", dx_way_now_other, ignore.case = TRUE) ~ "Beck's Depression Inventory (BDI)",
+    grepl("GAD 7|GAD7", dx_way_now_other, ignore.case = TRUE) ~ "Generalized Anxiety Disorder 7 (GAD-7)",
+    grepl("History taking", dx_way_now_other, ignore.case = TRUE) ~ "History Taking",
+    TRUE ~ dx_way_now_other,  # Keep original value if no match
+  dx_way_now_other == "" | is.na(dx_way_now_other) ~ NA_character_,  # Set to NA if empty or NA
+  ))
+
+```
+
+
+```{r Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+    filter(hcw_care == 1) %>% 
+    mutate(dx_trt_time = recode(dx_trt_time,
+                                "1" = "This week",
+                                "2" =  "Last week",
+                                "3" = "A month ago",
+                                "4"  = "More than a month ago",
+                                "5" =  "I don't remember"),
+           dx_trt_time = fct_relevel(dx_trt_time, 
+                                     "More than a month ago", "Last week", "A month ago", "This week", "I don't remember"),
+           dx_trt_hiv_time = recode(dx_trt_hiv_time,
+                                "1" = "This week",
+                                "2" =  "Last week",
+                                "3" = "A month ago",
+                                "4"  = "More than a month ago",
+                                "5" =  "I don't remember"),
+           dx_trt_hiv_time = fct_relevel(dx_trt_hiv_time, 
+                                     "More than a month ago", "Last week", "A month ago", "I don't remember", "This week"),
+           dx_trt_hiv_times = recode(dx_trt_hiv_times,
+                                 "1" = "Less than 2 times",
+                                 "2" = "3 to 4 times",
+                                 "3" = "5 to 6 times",
+                                 "4" =  "More than 6 times"),
+           dx_trt_hiv_times = fct_relevel(dx_trt_hiv_times,
+                                      "Less than 2 times", "3 to 4 times", "5 to 6 times", "More than 6 times"),
+           dx_trt_times = recode(dx_trt_times,
+                                 "1" = "Less than 2 times",
+                                 "2" = "3 to 4 times",
+                                 "3" = "5 to 6 times",
+                                 "4" =  "More than 6 times"),
+           dx_trt_times = fct_relevel(dx_trt_times,
+                                      "Less than 2 times", "3 to 4 times", "5 to 6 times", "More than 6 times"),
+           dxtrt_role = recode(dxtrt_role,
+                               "99" = "I don't know",
+                               "1" = "Yes",
+                               "0" = "No"),
+           dxtrt_role = fct_relevel(dxtrt_role,
+                                    "Yes", "No", "I don't know")) %>%
+    select(dx_provision, dx_hiv,  dx_way___1,  dx_way___2,  dx_way___3, 
+           dx_way___4,  dx_way___5, dx_provision_now, dx_hiv_now, 
+           dx_way_now___1, dx_way_now___2, dx_way_now___4, dx_way_now___5, 
+           dx_way_now_other,  trt_provisions,  trt_hiv,  trt_type___1, 
+           trt_type___2,  trt_type___3, 
+           trt_type___4, trt_provision_now,  trt_hiv_now,  trt_type_now___1, 
+           trt_type_now___2, trt_type_now___3, trt_type_now___4, dx_trt_time, 
+           dx_trt_times,
+           dx_trt_long, dx_trt_hiv_time, dx_trt_hiv_times, dxtrt_hiv_long, 
+           trt_med___1, trt_med___2, trt_med___3, trt_med___4, trt_med___5, 
+           trt_diff, trt_type_hiv___1, trt_type_hiv___2, trt_type_hiv___3, 
+           trt_med_hiv___1,  trt_med_hiv___2,  trt_med_hiv___3, dx_trt_who___4,
+           dx_trt_who___5, dx_trt_who___1, dx_trt_who___2, 
+           dx_trt_who___6, dx_trt_who___7, dx_trt_who___8, dx_trt_who___12,
+           dxtrt_who_hiv___5, dxtrt_who_hiv___4, dxtrt_who_hiv___1, 
+           dxtrt_who_hiv___2, dxtrt_who_hiv___6, dxtrt_who_hiv___7, 
+           dxtrt_who_hiv___8, dxtrt_who_hiv___99, 
+           dxtrt_who_hiv___12, dxtrt_role) %>% 
+    tbl_summary(missing = "no",
+         digits = list(all_continuous() ~ 1),
+         type = list(dxtrt_hiv_long ~ "continuous",
+                     dx_trt_long ~ "continuous"),
+         label = list(
+             dx_provision ~ "Ever provided PMAD Diagnosis to PW",
+             dx_hiv ~ "Ever provided PMAD Diagnosis to PWLHIV",
+             dx_way___1 ~ "Clinical judgement",
+             dx_way___2 ~ "PHQ9",
+             dx_way___3 ~ "CESD",
+             dx_way___4 ~ "DSM5",
+             dx_way___5 ~ "Other",
+             dx_provision_now ~ "Ever provided PMAD diagnosis to PW in current facility",
+             dx_hiv_now ~ "Ever provided PMAD diagnosis to PWLHIV in current facility",
+             dx_way_now___1 ~ "Clinical judgement",
+             dx_way_now___2 ~ "PHQ9",
+             dx_way_now___4 ~ "DSM5",
+             dx_way_now___5 ~ "Other",
+             trt_provisions ~ "Ever offered treatment to PW",
+              trt_hiv ~ "Ever offered treatment to PWLHIV",
+             trt_provision_now ~ "Ever offered treated to PW in curent Facility",
+              trt_hiv_now ~ "Ever offered treated to PWLHIV in curent Facility",
+             dx_trt_time ~ "Last time diagnosed and/or treated PW with PMAD",
+             dx_trt_times ~ "PW PMAD diagnosis or treatment frequency in the past 2 months",
+             dxtrt_role ~ "Is it your role to diagnose and/or treat PW for PMAD",
+            dx_trt_hiv_time ~ "Last time diagnosed and/or treated PWLHIV with PMAD",
+            dx_trt_hiv_times ~ "PWLHIV PMAD diagnosis or treatment frequency in the past 2 months",
+            dxtrt_hiv_long ~ "Time to diagnose and/or treat PWLHIV with PMAD (Minutes)",
+            trt_med___1 ~ "Antidepressants",
+            trt_med___2 ~ "Antipsychotics",
+            trt_med___3 ~ "Mood stabilizers",
+            trt_med___4 ~ "Sedatives",
+            trt_med___5 ~ "Other",
+            trt_diff ~ "Does PMAD treatment PW differ?",
+            dx_trt_who___1 ~ "Psychiatrist",
+            dx_trt_who___2 ~ "Psychologist",
+            dx_trt_who___4 ~ "Nurse",
+            dx_trt_who___5 ~"Clinical Officer",
+            dx_trt_who___6 ~ "Medical Officer",
+            dx_trt_who___7 ~ "HTS counsellor",
+            dx_trt_who___8 ~ "Mentor mother",
+            dx_trt_who___12 ~ "Other",
+            dxtrt_who_hiv___1 ~ "Psychiatrist",
+            dxtrt_who_hiv___2 ~ "Psychologist",
+            dxtrt_who_hiv___4 ~ "Nurse",
+            dxtrt_who_hiv___5 ~ "Clinical Officer",
+            dxtrt_who_hiv___6 ~ "Medical Officer",
+            dxtrt_who_hiv___7 ~ "HTS counsellor",
+            dxtrt_who_hiv___8 ~ "Mentor mother",
+            dxtrt_who_hiv___99 ~ "I don't know",
+            dxtrt_who_hiv___12 ~ "Others",
+            dx_way_now_other ~ "Other PMAD screening tools in the current facility",
+            trt_type___1 ~ "Manualized counselling",
+            trt_type___2 ~ "Medication",
+            trt_type___3 ~ "Unspecific counselling",
+            trt_type___4 ~ "Other",
+            trt_med_hiv___1 ~ "Antidepressants",
+            trt_med_hiv___2 ~ "Antipsychotics",
+            trt_med_hiv___3 ~ "Mood stabilizers",
+            trt_type_hiv___1 ~ "Manualized counselling",
+            trt_type_hiv___2 ~ "Medication",
+            trt_type_hiv___3 ~ "Other",
+            dx_trt_long ~ "Time to diagnose and/or treat PW with PMAD (Minutes)",
+            trt_type_now___1 ~  "manualized counselling",
+            trt_type_now___2 ~ "medication",
+            trt_type_now___3 ~ "Unspecific Counselling",
+             trt_type_now___4 ~ "Other")) %>%
+    modify_caption("**Diagnosis and Treatment**") %>%
+    bold_labels() %>% 
+    add_n() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table3: PMAD Diagnosis and Treatment") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+```
+
+
+```{r PW PMAD Treatments, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+    filter(trt_provisions == 1|trt_hiv == 1) %>% 
+    tbl_summary(
+        include = c(trt_type___3, trt_type___2, trt_type___1,  trt_type___4),
+        label = list(
+            trt_type___3 ~ "Unspecific counselling", 
+            trt_type___2 ~ "Medication", 
+            trt_type___1 ~ "Manualized Counselling",
+             trt_type___4 ~ "Others"
+        ))%>% 
+    bold_labels() %>% 
+    add_n() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("PMAD Treatments") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+```
+
+
+```{r PW PMAD screening tools, echo=FALSE, message=FALSE, warning=FALSE}
+screening_tools <- data %>% 
+    filter(hcw_care == 1) %>%
+    filter(dx_provision == 1 | dx_hiv == 1)
+
+screening_tools %>% 
+    tbl_summary(
+        include = c(dx_way___1, dx_way___2, dx_way___4, dx_way___5, dx_way___3),
+        label = list(
+            dx_way___1 ~ "Clinical judgement",
+            dx_way___2 ~ "PHQ9",
+            dx_way___3 ~ "CESD",
+            dx_way___4 ~ "DSM5",
+            dx_way___5 ~ "Other"
+        )
+    )%>% 
+    add_n()%>% 
+    bold_labels()%>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("PW PMAD screening tools") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+```
+
+```{r other PMAD screening tools, echo=FALSE, message=FALSE, warning=FALSE}
+screening_tools %>% 
+    filter(dx_way___5 == 1) %>% 
+    tbl_summary(
+        include = c(dx_way_other))%>% 
+    add_n()%>% 
+    bold_labels()%>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("PW PMAD screening tools") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+    
+```
+
+
+```{r PMAD screening Tools among PW in the current facility, echo=FALSE, message=FALSE, warning=FALSE}
+ facility_tools <- data %>% 
+    filter(hcw_care == 1) %>%
+    filter(dx_provision_now == 1 | dx_hiv_now == 1)
+
+facility_tools %>% 
+    tbl_summary(
+        include = c(dx_way_now___1, dx_way_now___2, dx_way_now___4, dx_way_now___5),
+        label = list(
+            dx_way_now___1 ~ "Clinical judgement",
+            dx_way_now___2 ~ "PHQ9",
+            dx_way_now___4 ~ "DSM5",
+            dx_way_now___5 ~ "Other"
+        )
+    ) %>% 
+    add_n()%>% 
+    bold_labels()%>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("PW PMAD screening Tools in the current facility") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+```
+
+
+```{r Other PMAD Screening tools, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+    filter(hcw_care == 1) %>% 
+    filter(dx_way_now___5 == 1) %>% 
+    select(dx_way_now_other) %>% 
+    tbl_summary(
+    label = list(dx_way_now_other ~ "Other PMAD screening tools in the current facility")) %>% 
+    add_n() %>% 
+    bold_labels()%>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Other PMAD Screening tools") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+```
+
+```{r PMAD treatmet for PW, echo=FALSE, message=FALSE, warning=FALSE}
+data %>% 
+    filter(trt_provisions == 1| trt_hiv == 1) %>% 
+    tbl_summary(
+        include = c(trt_type___3, trt_type___2, trt_type___1, trt_type___4),
+        label = list(trt_type___1 ~ "Manualized counselling",
+                      trt_type___2 ~ "Medication",
+                     trt_type___3 ~ "Unspecific counselling",
+                     trt_type___4 ~ "Other")
+        )%>% 
+    add_n() %>% 
+    bold_labels() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("PW PMAD treatmet") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+
+# PMAD Treatments used in the Current Facility
+data %>% 
+    filter(hcw_care == 1) %>%
+    filter(trt_provision_now == 1 | trt_hiv_now == 1) %>%
+    select(trt_type_now___1, trt_type_now___2, trt_type_now___3,
+           trt_type_now___4) %>% 
+    tbl_summary(
+        label = list(trt_type_now___1 ~ "Manualized counselling",
+                     trt_type_now___2 ~ "Medication",
+                     trt_type_now___3 ~ "Unspecific counselling",
+                     trt_type_now___4 ~ "Other")
+        )%>% 
+    add_n() %>% 
+    bold_labels() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("PW PMAD treatmet in the Current Facility") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+```
+
+
+```{r Medications Prescribed, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+data %>% 
+    filter(trt_type___2 == 1) %>% 
+    select(trt_med___1, trt_med___2, trt_med___3, 
+           trt_med___4, trt_med___5) %>% 
+    tbl_summary(
+        label = list(trt_med___1 ~ "Antidepressants",
+                     trt_med___2 ~ "Antipsychotics",
+                     trt_med___3 ~ "Mood stabilizers",
+                     trt_med___4 ~ "Sedatives",
+                     trt_med___5 ~ "Other")
+    )%>% 
+    add_n() %>% 
+    bold_labels() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("PW PMAD Medications Prescribed") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1))
+```
+
+
+```{r Different PMAD Medication for PWLHIV, echo=FALSE, message=FALSE, warning=FALSE}
+data%>% 
+    filter(trt_type_hiv___2 == 1) %>% 
+    select(trt_med_hiv___1, trt_med_hiv___2, trt_med_hiv___3) %>% 
+    tbl_summary(,
+                label = list(
+                    trt_med_hiv___1 ~ "Antidepressants", 
+                    trt_med_hiv___2 ~ "Antipsychotics", 
+                    trt_med_hiv___3 ~ "Mood stabilizers"
+                             )
+                )%>% 
+    add_n() %>% 
+    bold_labels() %>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Different PMAD Medication for PWLHIV") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1))
+```
+
+
+## Diagnosis and treatment prioritization
+
+### Barriers
+
+```{r dxtrt_barrier_hcw, echo=F, message=FALSE, warning=FALSE}
+dxtrt_hcw <- data %>%
+  filter(!is.na(hcw_participant_id)) %>% 
+  select(record_id, starts_with("dxtrt"), starts_with("trt"),
+         starts_with("dx"), starts_with("dx_trt"),
+         diagnosis_and_treatment_hcw_complete, 
+         diagnosis_and_treatment_hcw_prioritization_complete)
+
+dxtrt_barrier <- dxtrt_hcw %>% 
+  select(record_id, matches("barrier|add")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- dxtrt_barrier %>%
+  mutate(dxtrt_add_denial = dxtrt_add_deny) %>%  
+  select(-dxtrt_add_deny) %>%  
+  pivot_longer(cols = -c(record_id, dxtrt_barrier_other),
+               names_to = c("type", "barrier"), 
+               names_pattern = "dxtrt_(.*)_(.*)") 
+  
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_importance = mean_value_barrier,
+    se_importance = se_value_barrier,
+    mean_addressability = mean_value_add,
+    se_addressability = se_value_add
+  ) %>% 
+  mutate(se_average = (se_importance + se_addressability)/2)
+
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                  "knowledge" = "Knowledge: Insufficient training of CHWS\n resulting in reduced confidence to handle the cases",
+                                   "guideline" =	"Guideline: Lack of guidelines",
+                                   "tool" = 	"Tool: Lack of tools",
+                                   "room" =	"Room: Lack of a specific room/enough rooms",
+                                   "hcwstigma" = "HCWstigma: HCW stigmatization of patients with mental illnesses",
+                                  "regist" = "Regist: Lack of designated facility registers to document results",
+                                   "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
+                                   "staff" = "Staff: Lack of a specific person to diagnose and/or treat",
+                                   "fund" = "Fund: Lack of funding support for diagnosis",
+                                  "religion" = "Religion: Exisiting cultural beliefs and religion\n (witchcraft and services from pastors instead of HCWs)",
+                                  "stigma" = "Stigma: Stigmatization from the community",
+                                   "workload" = "Workload: Having too many clients to see",
+                                  "fear" =	"Fear: Women's fear of opening up to HCW",
+                                  "drug" = "Drug: lLmited drug supply to manage patients",
+                                  "psych" = "Psych: The unavailability of psychologists/counsellors", 
+                                  "denial" = "Denial: Patients' denial of PMAD",
+                                  "gap" = "Gap: Lack of knowledge among clients on\n where to seek treatment services",
+                                  "adhere" = "Adhere: Poor patient adherence to treatment",
+                                  "transport" = "Transport: Lack of funds for transport to seek treatment",
+                                  "compete" = "Patient's competing priorities"))
+
+ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
+  geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
+  scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
+  scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
+  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for diagnosis and treatment",
+       x = "Importance",
+       y = "Addressability",
+       color = "Barrier detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+
+```
+
+### Strategies
+
+```{r dxtrt_stra_hcw, echo=F, warning=F, message=F}
+dxtrt_strategy <- dxtrt_hcw %>% 
+  select(record_id, matches("stra|diff")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- dxtrt_strategy %>%
+  select(-trt_diff, -trt_diff_couns) %>% 
+  mutate(dxtrt_stra_trainexist = dxtrt_stra_train_exist,
+         dxtrt_stra_trainmore = dxtrt_stra_train_more,
+         dxtrt_diff_trainexist = dxtrt_diff_train_exist,
+         dxtrt_diff_trainmore = dxtrt_diff_train_more,
+         dxtrt_stra_staff = dxtrt_stra_employ,
+         dxtrt_diff_staff = dxtrt_diff_employ) %>%
+  select(-dxtrt_stra_train_exist, -dxtrt_stra_train_more,
+         -dxtrt_diff_train_exist, -dxtrt_diff_train_more,
+         -dxtrt_stra_employ, -dxtrt_diff_employ) %>%
+  pivot_longer(cols = -c(record_id, dxtrt_stra_other),
+               names_to = c("type", "strategy"), 
+               names_pattern = "dxtrt_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(strategy, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_feasibility = mean_value_stra,
+    se_feasibility = se_value_stra,
+    mean_impact= mean_value_diff,
+    se_impact = se_value_diff
+  ) %>% 
+  mutate(se_average = (se_feasibility + se_impact)/2)
+
+stats <- stats %>% 
+  mutate(strategy_detail = dplyr::recode(strategy, 
+                                  "trainexist" = "Trainexist: Train existing HCWs\n on diagnosis and treatment modalities for PMAD",
+                                  "trainmore" = "Trainmore: Train more providers to become mental health specialists",
+                                  "drug" = "Drug: procure required drugs",
+                                   "guideline" =	"Guideline: Provide guidelines for HCWs",
+                                   "tool" = 	"Tool: Provide standardized tools for HCWs",
+                                  "room" = "Room: Provide physical space/rooms",
+                                  "regist" = "Regist: Provide facility registers to document results",
+                                  "staff" = "Staff: Employ specialised MH staff",
+                                  "aware" = "Aware: Sensitize CHVs and the community about MH",
+                                  "partner" = "Partner: Involve partner or someone to support women",
+                                  "dot" = "DOT: Provide DOT in the facility",
+                                  "empower" = "Empower: Soceio-economic empowerment of women",
+                                  "group" = "Group: Provide group therapy"))
+
+ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
+  geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
+  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
+  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  labs(title = "Strategy prioritization for diagnosis and treatment",
+       x = "Impact",
+       y = "Feasibility",
+       color = "Strategy detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+```
+
+
+## Referral and Remission
+```{r Referral and Remission Summary, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+refremis_hcw <- data %>%
+    filter(hcw_care == 1) %>% 
+  filter(!is.na(hcw_participant_id)) %>% 
+  select(record_id, starts_with("ref_"), starts_with("remis_"), starts_with("refremis_"),
+         starts_with("refmis_"), referral_and_remission_hcw_complete)
+
+refremis_hcw <- refremis_hcw %>% 
+  mutate(ref_remis_time = dplyr::recode(ref_remis_time, 
+                                       "1" = "This week",
+                                       "2" = "Last week",
+                                       "3" = "A month ago", 
+                                       "4" = "More than a month ago", 
+                                       "5" = "I don't remember")) %>%
+  mutate(ref_remis_times = dplyr::recode(ref_remis_times, 
+                                       "1" = "Less than 2 times",
+                                       "2" = "3 to 4 times",
+                                       "3" = "5 to 6 times", 
+                                       "4" = "More than 6 times")) %>%
+  mutate(ref_role = dplyr::recode(ref_role, 
+                                       "1" = "Yes",
+                                       "0" = "No",
+                                       "-2" = "No answer", 
+                                       "99" = "I don't know"))
+
+# convert 0 in HIV referral to NA iff referral currently ==0
+refremis_hcw <- refremis_hcw %>%
+  mutate(ref_provision_hiv = ifelse(ref_provision_now == 0, NA, ref_provision_hiv))
+
+other <- refremis_hcw %>% 
+    filter(ref_where___5 == 1) %>% 
+    select(ref_where_other)
+
+# Other referrals
+refremis_hcw <- refremis_hcw %>%
+  mutate(ref_where_other = case_when(
+    grepl("Mathare|Mtrh|Mathari", ref_where_other, ignore.case = TRUE) ~ "Mathare National Teaching and Referral Hospital",
+    grepl("Bondo", ref_where_other, ignore.case = TRUE) ~ "Bondo Sub-County Hospital",
+    grepl("Madiany", ref_where_other, ignore.case = TRUE) ~ "Madiany Sub-County Hospital",
+    grepl("psychiatric review", ref_where_other, ignore.case = TRUE) ~ "Booking for Psychiatric review",
+    grepl("Kendu adventist hospital", ref_where_other, ignore.case = TRUE) ~ "Kendu Adventist Hospital",
+    grepl("Yala", ref_where_other, ignore.case = TRUE) ~ "Yala Sub-County Hospital",
+    grepl("Kayole", ref_where_other, ignore.case = TRUE) ~ "Kayole Health Centre",
+    grepl("Chulaimbo", ref_where_other, ignore.case = TRUE) ~ "Chulaimbo Sub-County Hospital",
+    grepl("Rachuonyo", ref_where_other, ignore.case = TRUE) ~ "Rachuonyo Sun-County Hospital",
+    grepl("Within", ref_where_other, ignore.case = TRUE) ~ "Within the facility",
+    TRUE ~ ref_where_other,  # Keep original value if no match
+  ref_where_other == "" | is.na(ref_where_other) ~ NA_character_,  # Set to NA if empty or NA
+    )) %>% 
+    mutate(ref_remis_time = fct_relevel(ref_remis_time,
+                                         "More than a month ago", "A month ago",
+                                        "I don't remember", "Last week", "This week"),
+           ref_remis_times = fct_relevel(ref_remis_times, 
+                                         "Less than 2 times", "3 to 4 times", 
+                                         "More than 6 times", "5 to 6 times"),
+           ref_role = fct_relevel(ref_role,
+                                  "Yes", "No", "I don't know"))
+
+
+refremis_hcw %>% tbl_summary(
+  include=c(ref_provision, ref_provision_now, ref_provision_hiv, ref_where___1,
+            ref_where___2, ref_where___3, ref_where___4, ref_where___5, 
+            ref_where_other, ref_where_hiv_diff, ref_where_hiv_diff, ref_where_diff_hiv___5, remis_provision, 
+            remis_provision_now, remis_hiv, ref_remis_time,  ref_remis_times, 
+            ref_who___5, ref_who___4, ref_who___6, ref_who___2, ref_who___1, 
+            ref_who___7, ref_who___9, ref_who___3, ref_who___8, ref_who___12, 
+            ref_who_hiv___5, ref_who_hiv___4, 
+            ref_who_hiv___6, ref_who_hiv___2, ref_who_hiv___1, ref_who_hiv___7,
+            ref_who_hiv___9, ref_who_hiv___8, ref_who_hiv___12, 
+            ref_who_hiv___99,  ref_role),
+  label = list(ref_provision ~ "Ever provided PMAD referral to PW",
+               ref_provision_now ~ "Providing PMAD referral currently",
+               ref_where___1 ~ "Jaramogi Oginga Odinga TRH",
+               ref_where___2 ~ "Homa Bay TRH",
+               ref_where___3 ~ "Siaya TRH",
+               ref_where___4 ~ "Kisumu CRH",
+               ref_where___5 ~ "Other facilities",
+               remis_provision ~ "Ever assessed PMAD remission",
+               remis_provision_now ~ "Assessing PMAD remission currently",
+               remis_hiv ~ "Ever assessed PMAD remission among PWLHIV",
+               ref_remis_time ~ "Last time to refer or assess remission",
+               ref_remis_times ~ "Times to refer or assess remission\n in the last two months",
+               ref_role ~ "Is it your role to refer or assess remission?",
+               ref_where_hiv_diff ~ "Is the referral facility for PW and PWLHIV the same?",
+               ref_provision_hiv ~ "Ever provided PMAD referral services for PWLHIV",
+               ref_where_other ~ "Other PW referral Facilities",
+               ref_where_diff_hiv___5 ~ "Other facilities",
+               ref_who___5 ~ "Clinical Officer", 
+               ref_who___4 ~ "Nurse", 
+               ref_who___6 ~ "Medical Officer", 
+               ref_who___2 ~ "Psychologist", 
+               ref_who___1 ~ "Psychiatrist", 
+               ref_who___7 ~ "HTS counsellor", 
+               ref_who___9 ~ "Community Health Worker", 
+               ref_who___3 ~ "Social worker", 
+               ref_who___8 ~ "Mentor mother", 
+               ref_who___12 ~ "Other",
+               ref_who_hiv___5 ~ "Clinical Officer", 
+               ref_who_hiv___4 ~ "Nurse", 
+               ref_who_hiv___6 ~ "Medical Officer", 
+               ref_who_hiv___2 ~ "Psychologist", 
+               ref_who_hiv___1 ~ "Psychiatrist", 
+               ref_who_hiv___7 ~ "HTS counsellor",
+               ref_who_hiv___9 ~ "Community Health Worker", 
+               ref_who_hiv___8 ~ "Mentor mother", 
+               ref_who_hiv___12 ~ "Other", 
+               ref_who_hiv___99 ~ "I don't know"),
+  missing = "no",
+  digits = list(all_continuous() ~ 1),
+  statistic = list(all_continuous() ~ "{mean} ± {sd}")) %>% 
+    add_n() %>% 
+    bold_labels()%>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("**Table 4: Referral or remission assessment provision and condition**") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+
+```
+
+
+```{r Where do you normally refer women to?, echo=FALSE, message=FALSE, warning=FALSE}
+refremis_hcw %>% 
+    filter(ref_provision_now == 1) %>% 
+    select(ref_where___3, ref_where___4, ref_where___2, ref_where___1, 
+           ref_where___5) %>% 
+    tbl_summary(
+        label = list(
+            ref_where___1 ~ "Jaramogi Oginga Odinga TRH",
+            ref_where___2 ~ "Homa Bay TRH",
+            ref_where___3 ~ "Siaya TRH",
+            ref_where___4 ~ "Kisumu CRH",
+            ref_where___5 ~ "Other")
+    ) %>% 
+    add_n() %>% 
+    bold_labels()%>% 
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Referral Facilities") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1))
+```
+
+
+## Referral and monitor remission prioritization
+
+### Barriers
+
+```{r refremis_barrier_hcw, echo=F, warning=F, message=F}
+refremis_barrier <- refremis_hcw %>% 
+  select(record_id, matches("barr|add")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99))) %>% 
+  mutate(refremis_add_knowledge = refmis_add_knowledge) %>% 
+  mutate(refremis_add_tool = refmis_add_tool) %>% 
+  mutate(refremis_add_workload = refmis_add_workload) %>% 
+  select(-refmis_add_knowledge, -refmis_add_tool, -refmis_add_workload)
+
+long_data <- refremis_barrier %>%
+  pivot_longer(cols = -c(record_id,ref_barrier_other),
+               names_to = c("type", "barrier"), 
+               names_pattern = "refremis_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_importance = mean_value_barr,
+    se_importance = se_value_barr,
+    mean_addressability = mean_value_add,
+    se_addressability = se_value_add
+  ) %>% 
+  mutate(se_average = (se_importance + se_addressability)/2)
+
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                        "guideline" =	"Guideline: Lack of guidelines",
+                                        "hcwstigma" = "HCWstigma: HCW stigmatization of patients with mental illnesses",
+                                        "track" = "Track: lack of systems to track PMAD treatment",
+                                        "relative" = "Relative: patients being influenced by relatives not to go for the referral",
+                                        "transport" = "Transport: patients' lack of transport\n to attend the referral/remission assessments",
+                                        "stigma" = "Stigma: Stigma from the community",
+                                        "honor" = "Honor: Patients do not honor the referral\n or remission assessment visits they have been given",
+                                  "knowledge" = "Knowledge: Insufficient training or knowledge gap for HCWs",
+                                   "tool" = 	"Tool: Lack of standard tools",
+                                  "workload" = "Workload: Having too many clients to see"))
+
+ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
+  geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
+  scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
+  scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
+  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for referral and remission assessment",
+       x = "Importance",
+       y = "Addressability",
+       color = "Barrier detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+
+```
+
+### Strategies
+
+```{r refremis_stra_hcw, echo=F, warning=F, message=F}
+refremis_strategy <- refremis_hcw %>% 
+  select(record_id, matches("stra|diff")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- refremis_strategy %>%
+  pivot_longer(cols = -c(record_id, ref_stra_other, ref_where_hiv_diff,
+                         ref_where_diff_hiv___1, ref_where_diff_hiv___2,
+                         ref_where_diff_hiv___3, ref_where_diff_hiv___4,
+                         ref_where_diff_hiv___5, ref_diff_other),
+               names_to = c("type", "strategy"), 
+               names_pattern = "refremis_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(strategy, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_feasibility = mean_value_stra,
+    se_feasibility = se_value_stra,
+    mean_impact= mean_value_diff,
+    se_impact = se_value_diff
+  ) %>% 
+  mutate(se_average = (se_feasibility + se_impact)/2)
+
+stats <- stats %>% 
+  mutate(strategy_detail = dplyr::recode(strategy, 
+                                  "knowledge" = "Knowledge: Provide training for existing HCWs",
+                                  "chv" = "CHV: Involve CHVs to aid in completion of referral",
+                                   "guideline" =	"Guideline: Provide guidelines for HCWs",
+                                   "tool" = 	"Tool: Provide standardized tools for HCWs",
+                                  "home" = "Home: Conduct home visits to participants"))
+
+ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
+  geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
+  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
+  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  labs(title = "Strategy prioritization for referral & remission assessment",
+       x = "Impact",
+       y = "Feasibility",
+       color = "Strategy detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = strategy, color = strategy_detail),size = 5,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+```
+
+
+# IPMH
+
+## Screening prioritization
+
+### Barriers
+
+```{r screen_barrier_ipmh, echo=F, warning=F, message=F}
+ipmh_hcw <- data %>% select(record_id, starts_with("ipmh_"))
+
+ipmh_screen <- ipmh_hcw %>% select(record_id,starts_with("ipmh_scre_"))
+
+ipmh_screen_barrier <- ipmh_screen %>% 
+  select(record_id, matches("bar|add")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- ipmh_screen_barrier %>%
+  pivot_longer(cols = -c(record_id, ipmh_scre_barrier_other),
+               names_to = c("type", "barrier"), 
+               names_pattern = "ipmh_scre_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_importance = mean_value_bar,
+    se_importance = se_value_bar,
+    mean_addressability = mean_value_add,
+    se_addressability = se_value_add
+  ) %>% 
+  mutate(se_average = (se_importance + se_addressability)/2)
+
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                        "reach" = "Reach: Lay providers do not reach\n all PPW coming to the facility",
+                                        "workload" = "Workload: Having too many services to offer\n hence increasing the workload",
+                                        "staff" = "Staff: Shortage of staff",
+                                        "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
+                                        "flow" = "Cumbersome flow from screening to diagnosis\n to getting PM+ leading to loss of patients",
+                                        "confi" = "Confi: Fear of breach of confidentiality",
+                                        "long" = "Long: The probability that patient visits\n may last longer than usual",
+                                        "partner" = "Partner: Lack of partner involvement"))
+                                        
+
+ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
+  geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
+  scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
+  scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
+  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for IPMH screening",
+       x = "Importance",
+       y = "Addressability",
+       color = "Barrier detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+
+```
