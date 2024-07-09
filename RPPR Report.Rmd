@@ -1,5 +1,5 @@
 ---
-title: "RPPR Age enrollment Report"
+title: "RPPR Enrollment Age Report"
 author: "David Owaga"
 date: "`r Sys.Date()`"
 output: pdf_document
