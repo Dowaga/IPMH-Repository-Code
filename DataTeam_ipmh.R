@@ -12,7 +12,7 @@ current_wd <- getwd()
 if (grepl("Dowaga", current_wd)) {
   ipmh_filepath <- "C:/Users/Damaris/uw/ngumbau-IPMH"
 } else if (grepl("Lincolnpothan", current_wd)) {
-    rctact_filepath <- "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/Documents - chv-neo/RCT Activities"
+    rctact_filepath <- "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/IPMH study"
 } else {
  print("No filepath")
 }
