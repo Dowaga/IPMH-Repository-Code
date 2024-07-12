@@ -15,7 +15,7 @@ pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr,
 knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 
 #read data
-data <- read.csv("IPMHAim1Quantitative_DATA_2024-07-09_0539.csv") 
+data <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-07-09_0539.csv")
 ```
 
 ## Health Care Workers Demographics
@@ -1379,4 +1379,206 @@ ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
 
+```
+
+
+### Strategies
+
+```{r pm_stra_ipmh, echo=F, warning=F, message=F}
+ipmh_pm_strategy <- ipmh_pm %>% 
+  mutate(ipmh_trt_diff_stream = ipmh_trt_diff_streami) %>% 
+  select(-ipmh_trt_diff_streami) %>% 
+  select(record_id, matches("stra|diff")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+  
+long_data <- ipmh_pm_strategy %>%
+  pivot_longer(cols = -c(record_id, ipmh_trt_strategy_other),
+               names_to = c("type", "strategy"), 
+               names_pattern = "ipmh_trt_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(strategy, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_feasibility = mean_value_stra,
+    se_feasibility = se_value_stra,
+    mean_impact= mean_value_diff,
+    se_impact = se_value_diff
+  ) %>% 
+  mutate(se_average = (se_feasibility + se_impact)/2)
+
+stats <- stats %>% 
+  mutate(strategy_detail = dplyr::recode(strategy, 
+                                         "traincli" = "Traincli: Train cliniains on all IPMH processes",
+                                         "clin" = "Clin: Have clinicians in charge of PM+",
+                                         "stream" = "Stream: streamline the workflow at the facility",
+                                         "incentive" = "Incentive: Provide financial incentives to HCWs",
+                                         "chv" = "CHV: Involve CHVs",
+                                         "partner" = "Partner: Encourage male partner involvement",
+                                         "info" = "Info: Provide IPMH information and \nreassurance at the triage desk"))
+
+ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
+  geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
+  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
+  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  labs(title = "Strategy prioritization for IPMH PM+",
+       x = "Impact",
+       y = "Feasibility",
+       color = "Strategy detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+```
+
+## Telepsychiatry prioritization
+
+### Barriers
+
+```{r telepsy_barrier_ipmh, echo=F, warning=F, message=F}
+ipmh_telepsy <- ipmh_hcw %>% select(record_id,starts_with("ipmh_telepsy_"))
+
+ipmh_telepsy_barrier <- ipmh_telepsy %>% 
+  select(record_id, matches("bar|add")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- ipmh_telepsy_barrier %>%
+  pivot_longer(cols = -c(record_id, ipmh_telepsy_barrier_other),
+               names_to = c("type", "barrier"), 
+               names_pattern = "ipmh_telepsy_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_importance = mean_value_bar,
+    se_importance = se_value_bar,
+    mean_addressability = mean_value_add,
+    se_addressability = se_value_add
+  ) %>% 
+  mutate(se_average = (se_importance + se_addressability)/2)
+
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                        "sche" = "Sche: Scheduling process of telepsychiatry",
+                                        "drug" = "Drug: Inadequate or lack of access to the medication prescribed",
+                                        "setup" = "Setup:User challenges in setting up and using telepsychiatry",
+                                        "internet" = "Internet: Internet connectivity for telepsychiatry",
+                                        "port" = "Port: Portability of the gadgets used for telepsychiatry",
+                                        "gadget" = "Gadget: Lack of required gadgets to conduct telepsychiatry",
+                                        "inte" = "Inte: Challenging process of integration\n with the care at the facility",
+                                        "language" = "Language: Language barrier between women and HCWs",
+                                        "confi" = "Confi: Fear of breach of confidentiality",
+                                        "physical" = "Clients unwillingness to talk to psychiatrist \n over the online platform as opposed to in-person"))
+
+ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
+  geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
+  scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
+  scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
+  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for IPMH telepsychiatry",
+       x = "Importance",
+       y = "Addressability",
+       color = "Barrier detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+
+```
+
+### Strategies
+
+```{r telepsy_stra_ipmh, echo=F, warning=F, message=F}
+ipmh_telepsy_strategy <- ipmh_telepsy %>% 
+  select(record_id, matches("stra|diff")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+  
+long_data <- ipmh_telepsy_strategy %>%
+  pivot_longer(cols = -c(record_id, ipmh_telepsy_stra_other),
+               names_to = c("type", "strategy"), 
+               names_pattern = "ipmh_telepsy_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(strategy, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_feasibility = mean_value_stra,
+    se_feasibility = se_value_stra,
+    mean_impact= mean_value_diff,
+    se_impact = se_value_diff
+  ) %>% 
+  mutate(se_average = (se_feasibility + se_impact)/2)
+
+stats <- stats %>% 
+  mutate(strategy_detail = dplyr::recode(strategy, 
+                                         "align" = "Align: Align psychiatry appointment with routine clinic visits",
+                                         "mm" = "MM: Have mentor mothers sit in during telepsychiatry",
+                                         "lang" = "Lang: Involve translators for language barrier or those who are deaf",
+                                         "partner" = "Partner: Have a support partner during telepsychiatry",
+                                         "nurse" = "Nurse: Involve nurses and clinicians during telepsychiatry"))
+
+ggplot(stats, aes(x = mean_impact, y = mean_feasibility )) +
+  geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
+  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
+  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  labs(title = "Strategy prioritization for IPMH telepsychiatry",
+       x = "Impact",
+       y = "Feasibility",
+       color = "Strategy detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
 ```
