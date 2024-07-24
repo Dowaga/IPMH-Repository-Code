@@ -2,7 +2,9 @@
 title: "IPMH Quant Survey - HCW"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
-output: pdf_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 
 ```{r setup, echo = F, include = F}
@@ -14,7 +16,7 @@ pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr,
 knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 
 #read data
-data <- read.csv("~/Desktop/uw/IPMH/data analysis/IPMHAim1Quantitative_DATA_2024-07-12_0007.csv")
+data <- read.csv("~/Desktop/uw/IPMH/data analysis/IPMHAim1Quantitative_DATA_2024-07-23_2308.csv")
 ```
 
 ## Health Care Workers Demographics
@@ -1417,13 +1419,13 @@ stats <- long_data %>%
 
 stats <- stats %>% 
   mutate(barrier_detail = dplyr::recode(barrier, 
-                                        "reach" = "Reach: Lay providers do not reach\n all PPW coming to the facility",
-                                        "workload" = "Workload: Having too many services to offer\n hence increasing the workload",
+                                        "reach" = "Reach: Lay providers do not reach all PPW coming to the facility",
+                                        "workload" = "Workload: Increased staff workload",
                                         "staff" = "Staff: Shortage of staff",
-                                        "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
-                                        "flow" = "Cumbersome flow from screening to diagnosis\n to getting PM+ leading to loss of patients",
+                                        "incentive" = "Incentive: Lack of financial incentives to motivate HCWs",
+                                        "flow" = "Flow: Complex flow from screening to getting PM+, leading to loss of patients",
                                         "confi" = "Confi: Fear of breach of confidentiality",
-                                        "long" = "Long: The probability that patient visits\n may last longer than usual",
+                                        "long" = "Long: Lengthening of patient visits",
                                         "partner" = "Partner: Lack of partner involvement"))
                                         
 ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
@@ -1433,7 +1435,7 @@ ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_hline(yintercept = cutoff_addressability, linetype = "dashed", color = "grey") +
   geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
   annotate("text", x = cutoff_importance, y = 4, label = paste0("Cutoff: ", round(cutoff_importance, 2)), hjust = -0.1) +
-  annotate("text", x = 1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
+  annotate("text", x = 1.1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
   labs(title = "Barrier prioritization for IPMH screening",
        x = "Importance",
        y = "Addressability",
@@ -1450,7 +1452,7 @@ ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
         plot.title = element_text(size = 18, face = "bold"),
         legend.text = element_text(size = 12),
         legend.direction = "vertical",
-        legend.position = "bottom",
+        legend.position = "bottom", # can change this to none
         plot.margin = margin(1, 1, 1, 1, "cm"))
 
 ```
@@ -1495,13 +1497,13 @@ stats <- long_data %>%
 stats <- stats %>% 
   mutate(strategy_detail = dplyr::recode(strategy, 
                                          "nurse" = "Nurse: Have the nurses screen at 1st contact",
-                                         "room" = "Room: Provide a specific area for screening",
+                                         "room" = "Room: Provide a specific area for screening at the facility",
                                          "incentive" = "Incentive: Provide financial incentives to HCWs",
-                                         "trainall" = "Trainall: train all HCWs",
+                                         "trainall" = "Trainall: Train all HCWs",
                                          "plan" = "Plan: Proper planning of activities",
-                                         "chv" = "CHV: Involve CHVs",
+                                         "chv" = "CHV: Involve community health promoters",
                                          "partner" = "Partner: Encourage male partner involvement",
-                                         "info" = "Info: Provide IPMH information and \nreassurance at the triage desk"))
+                                         "info" = "Info: Provide IPMH information and reassurance at the triage desk to ensure confidentiality"))
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
@@ -1510,7 +1512,7 @@ ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_hline(yintercept = cutoff_feasiblity, linetype = "dashed", color = "grey") +
   geom_vline(xintercept = cutoff_impact, linetype = "dashed", color = "grey") +
     annotate("text", x = cutoff_impact, y = 5, label = paste0("Cutoff: ", round(cutoff_impact, 2)), hjust = -0.1) +
-  annotate("text", x = 4, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
+  annotate("text", x = 4.05, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
   labs(title = "Strategy prioritization for IPMH screening",
        x = "Impact",
        y = "Feasibility",
@@ -1576,11 +1578,11 @@ stats <- stats %>%
   mutate(barrier_detail = dplyr::recode(barrier, 
                                         "workload" = "Workload: Increased workload for lay providers",
                                         "staff" = "Staff: Shortage of staff",
-                                        "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
-                                        "flow" = "Cumbersome flow from pming to diagnosis\n to getting PM+ leading to loss of patients",
-                                        "prefer" = "Prefer: Patients prefer to deal with\n one HCW as opposed to many",
+                                        "incentive" = "Incentive: Lack of financial incentives to motivate HCWs",
+                                        "flow" = "Complex flow from screening to getting PM+, leading to loss of patients",
+                                        "prefer" = "Prefer: Patients prefer to deal with one HCW as opposed to many",
                                         "confi" = "Confi: Fear of breach of confidentiality",
-                                        "long" = "Long: The probability that patient visits\n may last longer than usual",
+                                        "long" = "Long: Lengthening of patient visits",
                                         "partner" = "Partner: Lack of partner involvement"))
 
 ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
@@ -1590,7 +1592,7 @@ ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_hline(yintercept = cutoff_addressability, linetype = "dashed", color = "grey") +
   geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
   annotate("text", x = cutoff_importance, y = 4, label = paste0("Cutoff: ", round(cutoff_importance, 2)), hjust = -0.1) +
-  annotate("text", x = 1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
+  annotate("text", x = 1.1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
   labs(title = "Barrier prioritization for IPMH PM+",
        x = "Importance",
        y = "Addressability",
@@ -1654,12 +1656,12 @@ stats <- long_data %>%
 stats <- stats %>% 
   mutate(strategy_detail = dplyr::recode(strategy, 
                                          "traincli" = "Traincli: Train cliniains on all IPMH processes",
-                                         "clin" = "Clin: Have clinicians in charge of PM+",
-                                         "stream" = "Stream: streamline the workflow at the facility",
+                                         "clin" = "Clin: Have clinicians in charge of PM+ instead of lay providers",
+                                         "stream" = "Stream: Streamline the workflow at the facility",
                                          "incentive" = "Incentive: Provide financial incentives to HCWs",
-                                         "chv" = "CHV: Involve CHVs",
+                                         "chv" = "CHV: Involving community health promoters",
                                          "partner" = "Partner: Encourage male partner involvement",
-                                         "info" = "Info: Provide IPMH information and \nreassurance at the triage desk"))
+                                         "info" = "Info: Provide IPMH information and reassurance at the triage desk to ensure confidentiality"))
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
@@ -1668,7 +1670,7 @@ ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_hline(yintercept = cutoff_feasiblity, linetype = "dashed", color = "grey") +
   geom_vline(xintercept = cutoff_impact, linetype = "dashed", color = "grey") +
     annotate("text", x = cutoff_impact, y = 5, label = paste0("Cutoff: ", round(cutoff_impact, 2)), hjust = -0.1) +
-  annotate("text", x = 4.5, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
+  annotate("text", x = 4.51, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
   labs(title = "Strategy prioritization for IPMH PM+",
        x = "Impact",
        y = "Feasibility",
@@ -1733,16 +1735,16 @@ stats <- long_data %>%
 
 stats <- stats %>% 
   mutate(barrier_detail = dplyr::recode(barrier, 
-                                        "sche" = "Sche: Scheduling process of telepsychiatry",
+                                        "sche" = "Sche: Complex scheduling process of telepsychiatry",
                                         "drug" = "Drug: Inadequate or lack of access to the medication prescribed",
                                         "setup" = "Setup: User challenges in setting up and using telepsychiatry",
                                         "internet" = "Internet: Internet connectivity for telepsychiatry",
-                                        "port" = "Port: Portability of the gadgets used for telepsychiatry",
+                                        "port" = "Port: Portability of the device used for telepsychiatry",
                                         "gadget" = "Gadget: Lack of required gadgets to conduct telepsychiatry",
-                                        "inte" = "Inte: Challenging process of integration\n with the care at the facility",
-                                        "language" = "Language: Language barrier between women and HCWs",
+                                        "inte" = "Inte: Challenging process of integration with the care at the facility",
+                                        "language" = "Language: Language barrier between women and psychiatrists",
                                         "confi" = "Confi: Fear of breach of confidentiality",
-                                        "physical" = "Physical: Clients unwillingness to talk to psychiatrist \n over the online platform as opposed to in-person"))
+                                        "physical" = "Physical: Clients' preference to talk to psychiatrists in person instead of online"))
 
 ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_point(aes(color = barrier_detail, size = se_average), shape = 1) +
@@ -1751,7 +1753,7 @@ ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_hline(yintercept = cutoff_addressability, linetype = "dashed", color = "grey") +
   geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
   annotate("text", x = cutoff_importance, y = 4, label = paste0("Cutoff: ", round(cutoff_importance, 2)), hjust = -0.1) +
-  annotate("text", x = 1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
+  annotate("text", x = 1.1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
   labs(title = "Barrier prioritization for IPMH telepsychiatry",
        x = "Importance",
        y = "Addressability",
@@ -1812,7 +1814,7 @@ stats <- long_data %>%
 
 stats <- stats %>% 
   mutate(strategy_detail = dplyr::recode(strategy, 
-                                         "align" = "Align: Align psychiatry appointment with routine clinic visits",
+                                         "align" = "Align: Align psychiatry appointments with routine clinic visits",
                                          "mm" = "MM: Have mentor mothers sit in during telepsychiatry",
                                          "lang" = "Lang: Involve translators for language barrier or those who are deaf",
                                          "partner" = "Partner: Have a support partner during telepsychiatry",
@@ -1825,7 +1827,7 @@ ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_hline(yintercept = cutoff_feasiblity, linetype = "dashed", color = "grey") +
   geom_vline(xintercept = cutoff_impact, linetype = "dashed", color = "grey") +
     annotate("text", x = cutoff_impact, y = 5, label = paste0("Cutoff: ", round(cutoff_impact, 2)), hjust = -0.1) +
-  annotate("text", x = 4.5, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
+  annotate("text", x = 4.51, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
   labs(title = "Strategy prioritization for IPMH telepsychiatry",
        x = "Impact",
        y = "Feasibility",
