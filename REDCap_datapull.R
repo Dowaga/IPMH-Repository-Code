@@ -1,0 +1,46 @@
+# Header ------------------------------------------------------------------
+
+# Author(s): Yuwei Wang
+# Date: Jul 29, 2024
+# Description: This script pulls data from the REDCap projects and exports them as .csv files to the Raw Study Data folder on One Drive.
+# Notes: It will be useful to refer to https://github.com/CHV-NEO/rct_live/blob/main/REDCap_datapull.R for more information. We can consider adding cleaning codes in this script. Also, if longitudinal, we might need to export data based on the forms, not directly the whole dataset.
+
+# Setup ------------------------------------------------------------------------
+rm(list = ls())             
+
+# Reference source codes & other dependencies: Use this section to reference other scripts and dependencies
+source("DataTeam_ipmh.R")
+source("Dependencies.R") #Where we store all needed R packages
+
+#Where we refer to token [other tokens need request now]
+token_df <- read.csv(file.path (ipmh_filepath, "/Data/Tokens.csv"))
+aim1qual_consenting_token <- token_df[1,2]
+
+#Aim1 qual consenting database----------------
+# Set file paths: Use this section to set input and output filepaths
+data_aim1qual_consenting_dir <- file.path(ipmh_filepath, "/Data/2. Consenting database") # Aim1 qual consenting
+
+# Create a REDCap database connection ###
+httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
+
+redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+                            token = aim1qual_consenting_token) 
+
+### Import the REDCap dataset ###
+aim1qual_consenting <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
+                                     records = NULL, events = NULL, survey = FALSE, factors = FALSE, 
+                                     dag = FALSE, checkboxLabels = TRUE)
+
+### Creating datafile ###
+write.csv(aim1qual_consenting, paste0(ipmh_filepath,"/Data/2. Consenting database/Aim1_qual_",Sys.Date(),".csv"))
+
+#Aim1 qual demographics database---------------------
+
+#Aim 1 quant consenting database----------------------
+
+#Aim 1 quant survey database-------------------------
+
+#Aim 1 facility checklist database--------------------
+
+
+
