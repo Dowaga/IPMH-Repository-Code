@@ -3,7 +3,7 @@
 da_users <- data.frame(Analyst = c("Owaga", "Lincoln Pothan", "Yuwei Wang"),
                        github_user = c("Dowaga", "lpothan", "yuwei-eve"),
                        git_filepath = c("C:/Program Files/Git/", "/usr/local/bin/git", "usr/local/bin/git"),
-                       ipmh_filepath = c("C:/Users/Damaris/uw/ngumbau - IPMH study", 
+                       ipmh_filepath = c("C:/Users/Damaris/UW/ngumbau - IPMH study", 
                                          "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/IPMH study",
                                          "/Users/yuweiwang_1997/Library/CloudStorage/OneDrive-UW/IPMH study"),
                        machinetype = c("PC", "Mac", "Mac"))
