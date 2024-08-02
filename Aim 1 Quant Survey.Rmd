@@ -1469,6 +1469,9 @@ long_data <- ipmh_screen_strategy %>%
                names_to = c("type", "strategy"), 
                names_pattern = "ipmh_scre_(.*)_(.*)")
 
+long_data <- long_data %>%
+  mutate(strategy = ifelse(strategy == "plan", "streamline", strategy))
+
 cutoff_impact <- long_data %>% 
   filter(type == "diff") %>% 
   summarise(mean_value = mean(value, na.rm = TRUE)) %>% 
@@ -1500,10 +1503,10 @@ stats <- stats %>%
                                          "room" = "Room: Provide a specific area for screening at the facility",
                                          "incentive" = "Incentive: Provide financial incentives to HCWs",
                                          "trainall" = "Trainall: Train all HCWs",
-                                         "plan" = "Plan: Proper planning of activities",
+                                         "streamline" = "Streamline: Streamline workflow at the facility",
                                          "chv" = "CHV: Involve community health promoters",
                                          "partner" = "Partner: Encourage male partner involvement",
-                                         "info" = "Info: Provide IPMH information and reassurance at the triage desk to ensure confidentiality"))
+                                         "info" = "Info: Provide IPMH information and reassurance at the triage desk"))
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
