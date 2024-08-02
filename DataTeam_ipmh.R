@@ -12,7 +12,7 @@ da_users <- data.frame(Analyst = c("Owaga", "Lincoln Pothan", "Yuwei Wang"),
 current_wd <- getwd()
 
 if (grepl("Dowaga", current_wd)) {
-  ipmh_filepath <- "C:/Users/Damaris/uw/ngumbau - IPMH study"
+  ipmh_filepath <- "C:/Users/Damaris/UW/ngumbau - IPMH study"
 } else if (grepl("Lincolnpothan", current_wd)) {
     ipmh_filepath <- "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/IPMH study"
 } else if (grepl("yuweiwang_1997", current_wd)) { 
