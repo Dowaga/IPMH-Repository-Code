@@ -10,15 +10,19 @@ rm(list = ls())
 
 # Reference source codes & other dependencies: Use this section to reference other scripts and dependencies
 source("DataTeam_ipmh.R")
-source("Dependencies.R") #Where we store all needed R packages
+source("Dependencies.R") # Where we store all needed R packages
 
-#Where we refer to token
+# Where we refer to token
 token_df <- read.csv(file.path (ipmh_filepath, "/Data/Tokens.csv"))
 aim1qual_consenting_token <- token_df[1,2]
 aim1qual_demo_token <- token_df[2,2]
 aim1quant_consenting_token <- token_df[3,2]
 aim1quant_data_token <-token_df[4,2]
 aim1_facilitychecklist_token <- token_df[5,2]
+
+
+# Display the first few rows of the dataframe to confirm successful loading
+head(token_df)
 
 #Aim1 qual consenting database----------------
 # Set file paths: Use this section to set input and output filepaths
