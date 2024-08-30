@@ -1,0 +1,201 @@
+---
+title: "Aim 1 Quant Survey - PPW"
+author: "David Owaga & Yuwei Wang"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, echo = F, include = F}
+rm(list = ls())
+
+pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
+               openxlsx, gtsummary, kableExtra, ggrepel, UpSetR, funModeling, gt) 
+
+knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
+
+# read data
+data <- read.csv("IPMHAim1Quantitative_DATA_2024-08-29_0934.csv")
+
+```
+
+## Women Demographics
+
+Altogether, we currently have data for  `r sum(data$redcap_event_name == "survey_arm_1")` participants.
+
+```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
+ppw_data <- data %>% 
+    filter(redcap_event_name == "survey_arm_1")
+
+ppw_demo <- ppw_data %>%
+  select(record_id, cal_age, starts_with("women_"), demographics_perinatal_women_complete, pmad_phq1, pmad_phq2, 
+         pmad_gad1, pmad_gad2) %>%
+  filter(!is.na(women_participant_id)) %>% 
+    mutate(age = as.numeric(case_when(women_dob_uk == 1 ~ floor(cal_age),
+                         women_dob_uk == 0 ~ women_age))) %>% 
+  mutate(women_pregnancy = dplyr::recode(women_pregnancy,
+                                         "1" = "Pregnant",
+                                         "0" = "Postpartum")) %>% 
+    mutate(phq2_scores = pmad_phq1 + pmad_phq2,
+           gad2_scores = pmad_gad1 + pmad_gad2,
+           pmad = ifelse(phq2_scores >= 3 | gad2_scores >= 3, 1, 0))
+
+ppw_demo <- ppw_demo %>% 
+  mutate(women_education = dplyr::recode(women_education, 
+                                       "1" = "No formal education",
+                                       "2" = "Primary - not completed",
+                                       "3" = "Primary completed", 
+                                       "4" = "Secondary - not completed", 
+                                       "5" = "Secondary - completed",
+                                       "6" = "Above secondary / tertiary"),
+         women_education = fct_relevel("Primary completed", "Secondary - completed",
+                                       "Secondary - not completed")) %>%
+  mutate(women_service = dplyr::case_when(
+      women_service___1 == "1" ~ "First Antenatal care visit",
+      women_service___2 == "1" ~ "Follow-up antenatal care visit",
+      women_service___3 == "1" ~  "Postnatal care",
+      women_service___4 == "1"~ "Immunization for my baby",
+      women_service___5 == "1" ~ "PMTCT",
+      women_service___6 == "1"~ "Family planning",
+      women_service___7 == "1" ~ "Other",)) %>%
+    mutate(women_facility = dplyr::recode(women_facility, 
+                                    "0" = "Specialist",
+                                   "1" = "Rwambwa Sub-county Hospital",
+                                   "2" = "Sigomere Sub County Hospital",
+                                   "3" = "Uyawi Sub County Hospital",
+                                   "4" = "Got Agulu Sub-District Hospital",
+                                   "5" = "Ukwala Sub County Hospital",
+                                   "6" = "Madiany Sub County Hospital",
+                                   "7" = "Kabondo Sub County Hospital",
+                                   "8" = "Mbita Sub-County Hospital",
+                                   "11" = "Nyandiwa Level IV Hospital",
+                                   "13" = "Ober Kamoth Sub County Hospital",
+                                   "14" = "Gita Sub County Hospital",
+                                   "15" = "Akala Health Centre",
+                                   "16" = "Usigu Health Centre",
+                                   "17" = "Ramula Health Centre",
+                                   "18" = "Simenya Health Centre",
+                                   "19" = "Airport Health Centre (Kisumu)",
+                                   "20" = "Nyalenda Health Centre",
+                                   "21" = "Mirogi Health Centre",
+                                   "22" = "Ndiru Level 4 Hospital"),
+           women_partner = dplyr::recode(women_partner,
+                                         "1" = 	"No partner, single",
+                                         "2" = "Unsteady boyfriend (on and off)",
+                                         "3" = "Steady boyfriend",
+                                         "4" = "Married, monogamous",
+                                         "5" = "Married, polygamous",
+                                         "6" = "Divorced/widowed",
+                                         "7" = "Separated",
+                                         "8" = "Prefer not to answer"),
+            women_partner = fct_relevel(women_partner,
+                                      "Married, monogamous", "No partner, single", "Married, polygamous", "Divorced/widowed", "Steady boyfriend")) %>% 
+  mutate(women_gestational = as.numeric(women_gestational)) %>% 
+  mutate(women_delivery = as.numeric(women_delivery)) %>% 
+    mutate(women_employment = dplyr::recode(women_employment,
+                                            "1" = "Unemployed",
+                                            "2" = "Salaried",
+                                            "3" = "On wages (Irregular salary, kibarua)",
+                                            "4" = "Self-employed",
+                                            "5" = "Student",
+                                            "6" = "Out of work and looking for work",
+                                            "7" = "Out of work but not currently looking for work",
+                                            "8" = "A homemaker",
+                                            "9" = "Other"),
+           women_employment = fct_relevel(women_employment,
+                                          "Self-employed", "Unemployed", "Student",
+                                          "On wages (Irregular salary, kibarua)",
+                                          "A homemaker", "Out of work but not currently looking for work", "Salaried")) %>% 
+    mutate(women_residence = dplyr::recode(women_residence,
+                                           "1" = "Urban or city center",
+                                           "2" = "Peri-urban areas",
+                                           "3" = "Rural areas or countryside"),
+           women_residence = fct_relevel(women_residence,
+                                         "Rural areas or countryside", "Peri-urban areas", "Urban or city center"),
+           women_distance = dplyr::recode(women_distance,
+                                          "0" = "< an hour",
+                                          "1" = ">= an hour")) %>% 
+    mutate(women_hiv = dplyr::recode(women_hiv,
+                                     "1"  = "HIV negative",
+                                     "2" = "Living with HIV",
+                                     "99" = "Don't know",
+                                     "-2" =	"Prefer not to answer")) %>% 
+    mutate(women_art = dplyr::recode(women_art,
+                                     "1" = "Yes",
+                                     "0" = "No",
+                                     "-2" = "I prefer not to say"))
+
+# basic demo table
+ppw_demo %>% tbl_summary(
+  include=c(age, women_education, women_service___4,
+            women_service___2, women_service___1, women_service___3, 
+            women_pregnancy, women_gestational, women_delivery, women_preg_number,
+            women_partner, women_employment, women_residence, women_distance,
+            women_distance_0, women_distance_1, women_hiv, women_hiv_history, 
+            women_art, pmad),
+  label = list(age ~ "Age (Years)",
+               women_education ~ "Education level",
+               women_gestational ~ "Gestational age (weeks)",
+               women_service___1 ~ "First Antenatal care visit",
+               women_service___2 ~ "Follow-up antenatal care visit",
+               women_service___3 ~ "Postnatal care",
+               women_service___4 ~ "Immunization for my baby",
+               women_pregnancy ~ "Pregnancy Status",
+               women_delivery ~ "Weeks since delivery",
+               women_preg_number ~ "Total number of pregnancies",
+               women_partner ~ "Kind of partner",
+               women_employment ~ "Employement status",
+               women_residence ~ "Residential area",
+               women_distance ~ "Duration to the facility",
+               women_distance_0 ~ "Duration to the facility (Munites)",
+               women_distance_1 ~ "Duration to the facility (Hours)",
+               women_hiv ~ "HIV status",
+               women_art ~ "Currently using antiretroviral therapy",
+               women_hiv_history ~ "Duration known LHIV (years)",
+               pmad ~ "PHQ2 or QAD2 => 3"),
+  missing = "no",
+  digits = list(all_continuous() ~ 1), 
+  type = list(age ~ "continuous", 
+              women_gestational ~ "continuous",
+              women_delivery ~ "continuous",
+              women_preg_number ~ "continuous",
+              women_distance_0 ~ "continuous",
+              women_distance_1 ~ "continuous",
+              women_hiv_history ~ "continuous"),
+  statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+  bold_labels() %>%
+    add_n() %>% 
+    italicize_levels() %>% 
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 1: Basic Demographic Summary for Women") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+
+```
+
+
+## SCREENING
+```{r PMAD Screening Summary, echo=FALSE, message=FALSE, warning=FALSE}
+screen_ppw <- ppw_data  %>%
+  select(record_id, starts_with("scr_diff_"), screening_access, screening_strategy_other, screening_complete, screening_times, starts_with("scr_barrier"))
+```
+
+
+```{r screen_barrier_ppw, echo=F, warning=F, message=F}
+screening_barrier <- screen_ppw %>% 
+    select(record_id, matches("barrier|add"))
+```
+
+
+## PMAD
+```{r GAD2 & PHQ2 Results, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+phq2_gad2 <- ppw_data %>% 
+    dplyr::select(record_id,pmad_phq1, pmad_phq2, pmad_gad1, pmad_gad2) %>% 
+    mutate(phq2_scores = pmad_phq1 + pmad_phq2,
+           gad2_scores = pmad_gad1 + pmad_gad2,
+           pmad = ifelse(phq2_scores >= 3 | gad2_scores >= 3, 1, 0))
+
+```
+
