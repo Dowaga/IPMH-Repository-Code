@@ -2,20 +2,20 @@
 title: "Aim 1 Quant Survey - PPW"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
-output: pdf_document
+output: word_document
 ---
 
 ```{r setup, echo = F, include = F}
 rm(list = ls())
 
 pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
-               openxlsx, gtsummary, kableExtra, ggrepel, UpSetR, funModeling, gt) 
+               openxlsx, gtsummary, kableExtra, ggrepel, UpSetR,
+               funModeling, gt, likert, summarytools) 
 
-knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
+knitr::opts_chunk$set(fig.width = 12, fig.height = 15)
 
 # read data
-data <- read.csv("IPMHAim1Quantitative_DATA_2024-08-29_0934.csv")
-
+data <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-09-17_0534.csv")
 ```
 
 ## Women Demographics
@@ -27,7 +27,7 @@ ppw_data <- data %>%
     filter(redcap_event_name == "survey_arm_1")
 
 ppw_demo <- ppw_data %>%
-  select(record_id, cal_age, starts_with("women_"), demographics_perinatal_women_complete, pmad_phq1, pmad_phq2, 
+  dplyr::select(record_id, cal_age, starts_with("women_"), demographics_perinatal_women_complete, pmad_phq1, pmad_phq2, 
          pmad_gad1, pmad_gad2) %>%
   filter(!is.na(women_participant_id)) %>% 
     mutate(age = as.numeric(case_when(women_dob_uk == 1 ~ floor(cal_age),
@@ -47,8 +47,8 @@ ppw_demo <- ppw_demo %>%
                                        "4" = "Secondary - not completed", 
                                        "5" = "Secondary - completed",
                                        "6" = "Above secondary / tertiary"),
-         women_education = fct_relevel("Primary completed", "Secondary - completed",
-                                       "Secondary - not completed")) %>%
+         women_education = fct_relevel(women_education,
+                                       "Above secondary / tertiary", "Primary completed", "Secondary - not completed", "Secondary - completed", "Primary - not completed", "No formal education")) %>%
   mutate(women_service = dplyr::case_when(
       women_service___1 == "1" ~ "First Antenatal care visit",
       women_service___2 == "1" ~ "Follow-up antenatal care visit",
@@ -101,10 +101,11 @@ ppw_demo <- ppw_demo %>%
                                             "7" = "Out of work but not currently looking for work",
                                             "8" = "A homemaker",
                                             "9" = "Other"),
+           women_employment = case_when(
+               women_employment == "Other" ~ women_employment_other,
+               TRUE ~ women_employment),
            women_employment = fct_relevel(women_employment,
-                                          "Self-employed", "Unemployed", "Student",
-                                          "On wages (Irregular salary, kibarua)",
-                                          "A homemaker", "Out of work but not currently looking for work", "Salaried")) %>% 
+                                          "Salaried", "Self-employed", "Unemployed", "Student", "On wages (Irregular salary, kibarua)", "A homemaker", "Out of work and looking for work","Out of work but not currently looking for work" )) %>% 
     mutate(women_residence = dplyr::recode(women_residence,
                                            "1" = "Urban or city center",
                                            "2" = "Peri-urban areas",
@@ -126,12 +127,11 @@ ppw_demo <- ppw_demo %>%
 
 # basic demo table
 ppw_demo %>% tbl_summary(
-  include=c(age, women_education, women_service___4,
-            women_service___2, women_service___1, women_service___3, 
-            women_pregnancy, women_gestational, women_delivery, women_preg_number,
-            women_partner, women_employment, women_residence, women_distance,
-            women_distance_0, women_distance_1, women_hiv, women_hiv_history, 
-            women_art, pmad),
+  include=c(age, women_service___4, women_service___2, women_service___1,
+            women_service___3, women_pregnancy, women_gestational,
+            women_delivery, women_preg_number, women_education, women_partner,
+            women_employment,women_residence, women_distance, women_distance_0, 
+            women_distance_1, women_hiv, women_hiv_history, women_art, pmad),
   label = list(age ~ "Age (Years)",
                women_education ~ "Education level",
                women_gestational ~ "Gestational age (weeks)",
@@ -143,7 +143,7 @@ ppw_demo %>% tbl_summary(
                women_delivery ~ "Weeks since delivery",
                women_preg_number ~ "Total number of pregnancies",
                women_partner ~ "Kind of partner",
-               women_employment ~ "Employement status",
+               women_employment ~ "Employment status",
                women_residence ~ "Residential area",
                women_distance ~ "Duration to the facility",
                women_distance_0 ~ "Duration to the facility (Munites)",
@@ -175,27 +175,579 @@ ppw_demo %>% tbl_summary(
 
 ```
 
+```{r empty, echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
+
+```
+
 
 ## SCREENING
 ```{r PMAD Screening Summary, echo=FALSE, message=FALSE, warning=FALSE}
 screen_ppw <- ppw_data  %>%
-  select(record_id, starts_with("scr_diff_"), screening_access, screening_strategy_other, screening_complete, screening_times, starts_with("scr_barrier"))
+  dplyr::select(record_id, starts_with("scr_diff_"), screening_access, screening_strategy_other, screening_complete, screening_times, starts_with("scr_barrier"))
 ```
 
 
-```{r screen_barrier_ppw, echo=F, warning=F, message=F}
+
+### Screening Barriers
+```{r screen_barrier_ppw, echo=F, message=FALSE, warning=FALSE}
 screening_barrier <- screen_ppw %>% 
-    select(record_id, matches("barrier|add"))
+    dplyr::select(record_id, matches("barrier|diff"))
+
+long_data <- screening_barrier %>%
+  pivot_longer(cols = -c(record_id),
+               names_to = c("type", "barrier"), 
+               names_pattern = "scr_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  dplyr::rename(
+    mean_importance = mean_value_barrier,
+    se_importance = se_value_barrier,
+    mean_difference = mean_value_diff,
+    se_difference = se_value_diff
+  ) %>% 
+  mutate(se_average = (se_importance + se_difference)/2) %>% 
+    mutate(mean_importance = ifelse(is.na(mean_importance),0, mean_importance),
+           mean_difference = ifelse(is.na(mean_difference),0, mean_difference),
+           se_average = ifelse(is.na(se_average),0, se_average))
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                  "atti" = "Attitude: Having friendly and respectful providers",
+                                   "avail" = "Availability: Lack of PMAD Screening",
+                                   "confi" = 	"Confidentality: Assuring confidentiality in mental health services",
+                                   "norm" =	"Normal: Having signs of depression and anxiety is treat as normal",
+                                   "partner" = "Male Partner: Lack of male partner involvement and support",
+                                   "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
+                                   "provide" = "Provider: Having providers whose work is dedicated to offering mental health support",
+                                   "room" =	"Room: Having a dedicated private place for MH screening",
+                                   "service" = "Staff: Lack of a specific person to screen",
+                                   "special" =	"Special: Having providers and counsellors with specialized mental health training",
+                                   "stigma" = "Stigma: Not talking to providers I already know about mental health issues",
+                                   "stigmacom" = "Family Stigma: Fear of being judged by family members and community members",
+                                   "stigmahcw" = "Provider Stigma: Fear of being judged by providers",
+                                   "trainexist" = "Training: Training existing providers on how to handle patients with mental illnesses",
+                                 "aware" = "Aware: Lack of awareness or knowledge on mental illnesses",
+                                 "witch" = "Witch: Women believing mental illness is as a result of witchcraft",
+                                 "workload" = "Workload: Provider not having time to ask about depression or anxiety"))
+
+
+ggplot(stats, aes(x = mean_importance, y = mean_difference)) +
+  geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
+  scale_x_continuous(breaks = 1:16, limits = c(0, 8)) +
+  scale_y_continuous(breaks = 1:10, limits = c(0, 8)) +
+  geom_hline(yintercept = 4.0, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 4.0, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for screening",
+       x = "Importance",
+       y = "difference",
+       color = "Barrier Details",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 15) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal()+
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 10),
+        legend.position = "bottom",
+        legend.direction = "vertical",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
 ```
 
 
-## PMAD
-```{r GAD2 & PHQ2 Results, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-phq2_gad2 <- ppw_data %>% 
-    dplyr::select(record_id,pmad_phq1, pmad_phq2, pmad_gad1, pmad_gad2) %>% 
-    mutate(phq2_scores = pmad_phq1 + pmad_phq2,
-           gad2_scores = pmad_gad1 + pmad_gad2,
-           pmad = ifelse(phq2_scores >= 3 | gad2_scores >= 3, 1, 0))
+# Diagnosis and Treatment
+```{r Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+dia_treat_ppw <- ppw_data %>% 
+  dplyr::select(record_id, starts_with("dx_"), starts_with("trt_"), starts_with("dxt_"), diagnosis_and_treatment_complete) %>% 
+    mutate(dx_access = dplyr::recode(dx_access,
+                                     "1" = "Yes - both depression and anxiety",
+                                     "2" = "Yes - only depression",
+                                     "3" = "Yes - only anxiety",
+                                     "0" = "No"),
+           dx_access = fct_relevel(dx_access, "No", "Yes - only depression",
+                                   "Yes - only anxiety", "Yes - both depression and anxiety"),
+           dx_depression = dplyr::recode(dx_depression,
+                                         "0" = "During the pregnancy",
+                                         "1" = "After delivery"),
+           dx_depression = fct_relevel(dx_depression,
+                                       "During the pregnancy", "After delivery"),
+           dx_anxiety = dplyr::recode(dx_anxiety,
+                                      "0" = "During the pregnancy",
+                                      "1" = "After delivery"),
+           trt_times = dplyr::recode(trt_times,
+                                     "1" = "Less than 2 times",
+                                     "2" = "Less than 2 times"))
 
+dia_treat_ppw <- dia_treat_ppw %>%
+  mutate(trt_type_counseling = case_when(
+    grepl("general counselling", trt_type_counseling, TRUE ~ trt_type_counseling) ~ "General Counselling",
+    grepl("Interpersonal counselling.|Interpersonal counselling", trt_type_counseling, ignore.case = TRUE) ~ "Interpersonal Counselling",
+    grepl("supportive counselling", trt_type_counseling, ignore.case = TRUE) ~ "Supportive Counselling",
+    grepl("unspecified counselling|Unspecified counselling|unspecified counselling", trt_type_counseling, ignore.case = TRUE) ~ "Unspecified Counselling",
+    trt_type_counseling == "" | is.na(trt_type_counseling) ~ NA_character_,  # Set to NA if empty or NA
+    TRUE ~ trt_type_counseling  # Keep original value if no match
+  ))%>% 
+    mutate(trt_type_counseling = fct_relevel(trt_type_counseling,
+                                             "Unspecified Counselling", "Interpersonal Counselling", "General Counselling", "Supportive Counselling"))
+
+
+dia_treat_ppw %>% 
+    tbl_summary(
+        include = c(dx_access, dx_depression, dx_depression_before,
+                    dx_depression_after, dx_anxiety, dx_anxiety_before,
+                    trt_caretype___1, trt_type_counseling,
+                    trt_times),
+        label = list(dx_access ~ "Ever been diagnosed with depression and/or anxiety",
+               dx_depression ~ "Diagnosed depression during or after pregnancy",
+               trt_caretype___1 ~ "Counselling",
+               dx_anxiety ~ "Diagnosed anxiety during or after pregnancy",
+               dx_anxiety_before ~ "Gestational age (month) diagnosed with anxiety",
+               trt_times ~ "Times treated of depression and/or anxiety in last 2 months",
+               trt_type_counseling ~ "Type of counselling",
+               dx_depression_before ~ "Gestational age (month) diagnosed with depression",
+               dx_depression_after ~ "Diagnosed with depression after delivery in Month"),
+    digits = list(all_continuous() ~ 1), 
+  type = list(dx_depression_before ~ "continuous",
+              dx_depression_after ~ "continuous",
+              dx_anxiety_before ~ "continuous"),
+        missing = "no") %>% 
+    bold_labels() %>%
+    add_n() %>% 
+    italicize_levels() %>% 
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 1: Basic Demographic Summary for Women") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+
+trt_times <- ppw_data %>% 
+    dplyr::select(record_id, dx_access, trt_times) %>% 
+    filter(!is.na(trt_times))
+
+```
+
+### Diagnosis and Treatment Barriers
+```{r Diagnosis and Treatment_barrier_ppw, echo=F, warning=F, message=F}
+dixtreat_barrier <- dia_treat_ppw %>% 
+    dplyr::select(record_id, matches("barrier|diff")) %>% 
+    dplyr::select(-c(trt_diff, trt_diff_couns)) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+
+long_data <- dixtreat_barrier %>%
+    dplyr::select(-dxt_barrier_other) %>% 
+  pivot_longer(cols = -c(record_id),
+               names_to = c("type", "barrier"), 
+               names_pattern = "dxt_(.*)_(.*)")
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  dplyr::rename(
+    mean_importance = mean_value_barrier,
+    se_importance = se_value_barrier,
+    mean_difference = mean_value_diff,
+    se_difference = se_value_diff
+  ) %>% 
+  mutate(se_average = (se_importance + se_difference)/2) %>% 
+    mutate(mean_importance = ifelse(is.na(mean_importance),0, mean_importance),
+           mean_difference = ifelse(is.na(mean_difference),0, mean_difference),
+           se_average = ifelse(is.na(se_average),0, se_average))
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                  "atti" = "Attitude: Having friendly and respectful providers",
+                                   "aware" = "Awereness:Creating awareness on mental health in the community",
+                                   "chv" = 	"CHVs:Using community health providers to provide mental health support",
+                                   "confi" = "Normal: Having signs of depression and anxiety is treat as normal",
+                                   "drug" = "Male Partner: Lack of male partner involvement and support",
+                                   "fear" = "Fear: Fear of not getting the mental health support or treatment needed",
+                                   "finan" = "Finance: Getting care is expensive",
+                                   "norm" =	"Room: Having a dedicated private place for MH screening",
+                                   "partner" = "Staff: Lack of a specific person to screen",
+                                   "priority" =	"Special: Having providers and counsellors with specialized mental health training",
+                                   "provide" = "Provider: Having providers whose work is dedicated to offering mental health support",
+                                   "religion" = "Religion: Prefer going for prayers instead of speaking with a provider",
+                                   "room" = "Having dedicated place for mental health treatment in the facilities",
+                                   "service" = "Integrating MH treatment as part of routine care in the clinic",
+                                 "special" = "Special: Having providers and counsellors with specialized MH training",
+                                 "stigmacom" = "Stigmacom: Fear of being judged by family members and community members",
+                                 "stigmahcw" = "Stigmahcw: Fear of being judged by providers",
+                                 "trainexist" = "Training existing providers on how to handle patients with mental illnesses",
+                                 "transport" = "Transport: Government incentives to help in getting transport to the facilities",
+                                 "where" = "Where: Not knowing where to seek help for depression or anxiety",
+                                 "witch" = "Witch: Women believing that mental illness is as a result of witchcraft",
+                                 "workload" = "Workload: Provider not having time to provide depression or anxiety treatment"))
+
+
+ggplot(stats, aes(x = mean_importance, y = mean_difference)) +
+  geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
+  scale_x_continuous(breaks = 1:4, limits = c(0, 4)) +
+  scale_y_continuous(breaks = 1:5, limits = c(0, 5)) +
+  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 2, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for screening",
+       x = "Importance",
+       y = "difference",
+       color = "Barrier detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 15) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal()+
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 10),
+        legend.position = "bottom",
+        legend.direction = "vertical",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+```
+
+
+## Referral And Remission
+```{r Rerem, echo=F, warning=F, message=F}
+rerem_ppw <- ppw_data %>% 
+    dplyr::select(record_id, refer_access, refer_facility___1, 
+                  refer_facility___2, refer_facility___3, 
+                  refer_facility___4, refer_facility___5, 
+                  refer_facility_other, rem_access, starts_with("rerem_"),
+                  referral_and_remission_complete)
+
+rerem_ppw %>% 
+    select(-record_id) %>% 
+    dfSummary(
+        graph.col = TRUE,
+        style = "grid",
+        graph.magnif = 0.75
+    ) %>% 
+    stview()
+
+
+#Referral Summary
+ppw_data %>% 
+    tbl_summary(
+  include=c(refer_access, refer_facility___1, refer_facility___2, refer_facility___3, refer_facility___4, refer_facility___5, rem_access),
+  label = list(refer_access ~ "Refered to receive care for PMAD",
+               refer_facility___1 ~ "Jaramogi Oginga Odinga TRH",
+               refer_facility___2 ~ "Homa Bay TRH",
+               refer_facility___3 ~ "Siaya TRH",
+               refer_facility___4 ~	"Kisumu CRH",
+               refer_facility___5 ~	"Other",
+               rem_access ~ "Received treatment multiple times with the provider monitoring symptoms"),
+  missing = "no",
+  digits = list(all_continuous() ~ 1),
+  statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+  bold_labels() %>%
+    add_n() %>% 
+    italicize_levels() %>% 
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 1: Basic Demographic Summary for Women") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
+    
+
+```
+
+
+# Frequency of Barriers
+```{r Frequency of Barriers, echo = F, warning = F, message = F}
+freq_bar_ppw <- ppw_data %>% 
+    dplyr::select(record_id, starts_with("freq_barr_"), frequency_of_barriers_complete) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+freq_bar_df <- freq_bar_ppw %>% 
+    dplyr::select(2:21)%>% 
+  dplyr::rename("Not being asked during the visits" = freq_barr_service,
+          "Inapproachable providers" = freq_barr_atti,
+          "Lack of private room" = freq_barr_room,
+         "Having signs isnormal" = freq_barr_norm,
+         "Lack of specilaist communication in facility" = freq_barr_provide,
+         "Lack of specialized MH providers" = freq_barr_special,
+         "Confidentiality by providers" = freq_barr_confi,
+         "Providers lack of time to provide MH services)" = freq_barr_workload,
+         "Lack of male partner involvement" = freq_barr_partner,
+         "Believing it is witchcraft" = freq_barr_witch,
+          "Fear family members and community judgement " = freq_barr_stigmacom,
+          "Fear of being judged by providers" = freq_barr_stigmahcw,
+         "Lack of awareness or knowledge" = freq_barr_aware,
+         "Not knowing where to seek help" = freq_barr_where,
+         "Transport to get care is difficult" = freq_barr_transport,
+        "Fear of not getting treatment needed" = freq_barr_fear,
+        "Having conflicting priorities" = freq_barr_priority,
+        "Getting care is expensive" = freq_barr_finan,
+        "Prefer traditional medicine or prayers " = freq_barr_religion,
+        "Lack of drugs in the facility" = freq_barr_drug)
+
+# Define the mapping
+likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
+
+# Apply the mapping
+freq_bar_df <- freq_bar_df %>%
+  mutate(across(everything(), ~ likert_mapping[. + 1]))
+
+# Trim white spaces
+freq_bar_df <- freq_bar_df %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
+
+freq_bar_df <- freq_bar_df %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+
+results <- likert(freq_bar_df)
+
+plot <- plot(results, text.size = 5, centered = FALSE)+
+    theme_bw(base_size = 10)+
+    theme(legend.position = "right")+
+    labs(title = "How frequently have you experienced these Barriers to receiving MH services since your most recent pregnancy?",
+         subtitle = "n = 110",
+         hjust = .5)
+plot
+```
+
+
+#IPMH
+```{r IPMH, echo=F, message=FALSE, warning=FALSE}
+ipmh_ppw <- ppw_data %>% 
+    dplyr::select(record_id, starts_with("ip_scre_"), 
+                  starts_with("freq_scre_"),
+                  starts_with("ip_"),
+                  	ipmh_complete)
+
+ipmh_barriers <- ipmh_ppw %>% 
+    dplyr::select(record_id,ip_scre_barr_workload, ip_scre_barr_confi, ip_scre_barr_familiar, freq_scre_workload, freq_scre_confi, freq_scre_familiar)%>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- ipmh_barriers %>%
+  pivot_longer(cols = -c(record_id),
+               names_to = c("type", "barrier"), 
+               names_pattern = "(.*)_(.*)") %>% 
+    mutate(type = dplyr::recode(type,
+                                "freq_scre" = "Frequency",
+                                "ip_scre_barr" = "Challenge"))
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_challenge = mean_value_Challenge,
+    se_challenge = se_value_Challenge,
+    mean_frequent = mean_value_Frequency,
+    se_frequent = se_value_Frequency
+  ) %>% 
+  mutate(se_average = (se_challenge + se_frequent)/2)
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                         "confi" = "Confidentiality: Align psychiatry appointment with routine clinic visits",
+                                         "familiar" = "Familiar: Have mentor mothers sit in during telepsychiatry",
+                                         "workload" = "Workload: Involve translators for language barrier or those who are deaf"))
+
+ggplot(stats, aes(x = mean_frequent, y = mean_challenge )) +
+  geom_point(aes(color = barrier, size = se_average), shape =1) +
+  scale_x_continuous(breaks = 1:3, limits = c(1, 3)) +
+  scale_y_continuous(breaks = 1:3, limits = c(1, 3)) +
+  geom_hline(yintercept = 1.1, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 1.1, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for IPMH screening",
+       x = "Frequency",
+       y = "Challenging",
+       color = "Barrier Details",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold", hjust = .5),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+
+```
+
+
+```{r PM+ barrier prioritization, echo=FALSE, message=FALSE, warning=FALSE}
+ip_pm_barr <- ppw_data %>% 
+    dplyr::select(record_id, ip_trt_barr_transport, ip_trt_barr_many, 
+                  ip_trt_barr_atti, freq_trt_transport, freq_trt_many, 
+                  freq_trt_atti)%>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- ip_pm_barr %>%
+  pivot_longer(cols = -c(record_id),
+               names_to = c("type", "barrier"), 
+               names_pattern = "(.*)_(.*)") %>% 
+    mutate(type = dplyr::recode(type,
+                                "freq_trt" = "Frequency",
+                                "ip_trt_barr" = "Barrier"))
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_barrier = mean_value_Barrier,
+    se_barrier = se_value_Barrier,
+    mean_frequent = mean_value_Frequency,
+    se_frequent = se_value_Frequency
+  ) %>% 
+  mutate(se_average = (se_barrier + se_frequent)/2)
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                         "atti" = "Attitude: Providers being inapproachable",
+                                         "many" = "Many:Having many sessions",
+                                         "transport" = "Transport:Transporting to attend sessions is difficult"))
+
+ggplot(stats, aes(x = mean_frequent, y = mean_barrier )) +
+  geom_point(aes(color = barrier, size = se_average), shape =1) +
+  scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
+  scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
+  geom_hline(yintercept = 1.7, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 1.3, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for IPMH PM+",
+       x = "Frequency",
+       y = "Challenging",
+       color = "Barrier detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size = F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold", hjust = .5),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+```
+
+## Telepsychiatry prioritization
+```{r Telepsychiatry Barrier, echo=FALSE, message=FALSE, warning=FALSE}
+tele_barr <- ppw_data %>% 
+    dplyr::select(record_id, ip_tele_barr_internet, ip_tele_barr_drug,
+                  ip_tele_barr_prefer, ip_tele_barr_tech, ip_tele_barr_examine, 
+                  ip_tele_barr_finan, freq_tele_internet, freq_tele_drug,
+                  freq_tele_finan, freq_tele_prefer, freq_tele_tech, 
+                  freq_tele_examine)%>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+long_data <- tele_barr %>%
+  pivot_longer(cols = -c(record_id),
+               names_to = c("type", "barrier"), 
+               names_pattern = "(.*)_(.*)") %>% 
+    mutate(type = dplyr::recode(type,
+                                "ip_tele_barr" = "Barrier",
+                                "freq_tele" = "Frequency"))
+
+stats <- long_data %>%
+  group_by(barrier, type) %>%
+  summarise(
+    mean_value = mean(value, na.rm = TRUE),
+    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
+  rename(
+    mean_barrier = mean_value_Barrier,
+    se_barrier = se_value_Barrier,
+    mean_frequent = mean_value_Frequency,
+    se_frequent = se_value_Frequency
+  ) %>% 
+  mutate(se_average = (se_barrier + se_frequent)/2)
+
+stats <- stats %>% 
+  mutate(barrier_detail = dplyr::recode(barrier, 
+                                         "drug" = "Drug: Difficult to get mental health medication",
+                                         "examine" = "Examine:Difficulty showing the physical problem (the cause of the MH issue) through telepsychiatry",
+                                         "finan" = "Finance:The drugs recommended may be expensive",
+                                        "internet" = "Internet:Internet connectivity for telepsychiatry",
+                                        "prefer" = "Prefer:Not comfortable with video format for MH appointments",
+                                        "tech" = "Tech:Challenge in using technology as women may experience technical difficulties with doing the videocall"))
+
+ggplot(stats, aes(x = mean_frequent, y = mean_barrier )) +
+  geom_point(aes(color = barrier, size = se_average), shape =1) +
+  scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
+  scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
+  geom_hline(yintercept = 1.6, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = 1.5, linetype = "dashed", color = "grey") +
+  labs(title = "Barrier prioritization for IPMH telepsychiatry",
+       x = "Frequency",
+       y = "Challenging",
+       color = "Barrier detail",
+       size = "Average SE") +
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
+                  max.overlaps = 20) + 
+  guides(size = F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  theme_minimal() + 
+  theme(axis.text.y = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold"),
+        plot.title = element_text(size = 18, face = "bold", hjust = .5),
+        legend.text = element_text(size = 12),
+        legend.direction = "vertical",
+        legend.position = "bottom",
+        plot.margin = margin(1, 1, 1, 1, "cm"))
+
+```
+
+
+```{r GAD2 & PHQ2 Results, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+phq_gad2_scores <- ppw_demo %>% 
+    select(record_id, pmad_phq1, pmad_phq2, pmad_gad1, pmad_gad2)
+
+```
+
+```{r PPW age in months, include=FALSE}
+age_months <- ppw_data %>% 
+    select(record_id, women_dob_uk, women_dob, women_age, cal_age) %>%
+    mutate(age = as.numeric(case_when(
+        women_dob_uk == 1 ~ round(cal_age*12),
+        women_dob_uk == 0 ~ round(women_age * 12)))) %>% 
+    select(record_id, age)
 ```
 
