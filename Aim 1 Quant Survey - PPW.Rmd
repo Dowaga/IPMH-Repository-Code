@@ -10,12 +10,24 @@ rm(list = ls())
 
 pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
                openxlsx, gtsummary, kableExtra, ggrepel, UpSetR,
-               funModeling, gt, likert, summarytools) 
+               funModeling, gt, gtExtras,likert, summarytools, 
+               ggstats) 
 
-knitr::opts_chunk$set(fig.width = 12, fig.height = 15)
+knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 
 # read data
-data <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-09-17_0534.csv")
+data <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-10-02_0823.csv")
+
+# Quick overview of the selected columns
+data %>% 
+    dplyr::select(redcap_event_name, women_pregnancy, women_gestational, women_delivery, women_preg_before, women_preg_number, women_education, women_partner, women_employment) %>% 
+    dfSummary(
+        graph.col = TRUE,
+        style = "grid",
+        graph.magnif = 0.75
+    ) %>% 
+    stview()
+
 ```
 
 ## Women Demographics
@@ -164,7 +176,7 @@ ppw_demo %>% tbl_summary(
   statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
   bold_labels() %>%
     add_n() %>% 
-    italicize_levels() %>% 
+    italicize_levels() %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
@@ -172,10 +184,6 @@ ppw_demo %>% tbl_summary(
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) 
-
-```
-
-```{r empty, echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
 
 ```
 
@@ -188,82 +196,133 @@ screen_ppw <- ppw_data  %>%
 
 
 
-### Screening Barriers
-```{r screen_barrier_ppw, echo=F, message=FALSE, warning=FALSE}
-screening_barrier <- screen_ppw %>% 
-    dplyr::select(record_id, matches("barrier|diff"))
-
-long_data <- screening_barrier %>%
-  pivot_longer(cols = -c(record_id),
-               names_to = c("type", "barrier"), 
-               names_pattern = "scr_(.*)_(.*)")
-
-stats <- long_data %>%
-  group_by(barrier, type) %>%
-  summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
-    .groups = "drop"
-  ) %>%
-  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
-  dplyr::rename(
-    mean_importance = mean_value_barrier,
-    se_importance = se_value_barrier,
-    mean_difference = mean_value_diff,
-    se_difference = se_value_diff
-  ) %>% 
-  mutate(se_average = (se_importance + se_difference)/2) %>% 
-    mutate(mean_importance = ifelse(is.na(mean_importance),0, mean_importance),
-           mean_difference = ifelse(is.na(mean_difference),0, mean_difference),
-           se_average = ifelse(is.na(se_average),0, se_average))
-
-stats <- stats %>% 
-  mutate(barrier_detail = dplyr::recode(barrier, 
-                                  "atti" = "Attitude: Having friendly and respectful providers",
-                                   "avail" = "Availability: Lack of PMAD Screening",
-                                   "confi" = 	"Confidentality: Assuring confidentiality in mental health services",
-                                   "norm" =	"Normal: Having signs of depression and anxiety is treat as normal",
-                                   "partner" = "Male Partner: Lack of male partner involvement and support",
-                                   "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
-                                   "provide" = "Provider: Having providers whose work is dedicated to offering mental health support",
-                                   "room" =	"Room: Having a dedicated private place for MH screening",
-                                   "service" = "Staff: Lack of a specific person to screen",
-                                   "special" =	"Special: Having providers and counsellors with specialized mental health training",
-                                   "stigma" = "Stigma: Not talking to providers I already know about mental health issues",
-                                   "stigmacom" = "Family Stigma: Fear of being judged by family members and community members",
-                                   "stigmahcw" = "Provider Stigma: Fear of being judged by providers",
-                                   "trainexist" = "Training: Training existing providers on how to handle patients with mental illnesses",
-                                 "aware" = "Aware: Lack of awareness or knowledge on mental illnesses",
-                                 "witch" = "Witch: Women believing mental illness is as a result of witchcraft",
-                                 "workload" = "Workload: Provider not having time to ask about depression or anxiety"))
+### Impact of Screening Strategies
+```{r Screening Strategies, echo=F, message=FALSE, warning=FALSE}
+screening_strategies <- screen_ppw %>% 
+    dplyr::select(starts_with("scr_diff_"))
 
 
-ggplot(stats, aes(x = mean_importance, y = mean_difference)) +
-  geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
-  scale_x_continuous(breaks = 1:16, limits = c(0, 8)) +
-  scale_y_continuous(breaks = 1:10, limits = c(0, 8)) +
-  geom_hline(yintercept = 4.0, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 4.0, linetype = "dashed", color = "grey") +
-  labs(title = "Barrier prioritization for screening",
-       x = "Importance",
-       y = "difference",
-       color = "Barrier Details",
-       size = "Average SE") +
-  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
-                  max.overlaps = 15) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
-  theme_minimal()+
-  theme(axis.text.y = element_text(size = 12),
-        axis.text.x = element_text(size = 12),
-        axis.title.y = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 10),
-        legend.position = "bottom",
-        legend.direction = "vertical",
-        plot.margin = margin(1, 1, 1, 1, "cm"))
+# Define the mapping
+likert_mapping <- c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact ",
+    "Major positive impact")
+
+
+# Apply the mapping
+screening_strategies <- screening_strategies %>%
+  mutate(across(everything(), ~ likert_mapping[.])) 
+
+# Trim white spaces
+screening_strategies <- screening_strategies %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact ",
+    "Major positive impact")
+
+
+screening_strategies <- screening_strategies %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+
+gglikert(
+  screening_strategies,
+  variable_labels = c(
+      scr_diff_service = "Integrating screening as part of routine care in the clinic",
+      scr_diff_trainexist = "Training existing providers on how to handle patients with mental illnesses",
+      scr_diff_room = "Having a dedicated private place for MH screening" ,
+      scr_diff_provide = "Having providers whose work is dedicated to offering mental health support",
+      scr_diff_special = "Having providers and counsellors with specialized mental health training",
+      scr_diff_aware = "Creating awareness on mental health in the community for example using community health promoters or through churches",
+      scr_diff_confi =  "Assuring confidentiality in mental health services",
+      scr_diff_stigma = "Not talking to providers I already know about mental health issues",
+      scr_diff_atti = "[Having friendly and respectful providers" 
+  ),
+  sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05)+
+    labs(title = "Impact of Screening Strategies",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5))+  # Center the footnote
+  scale_fill_brewer(palette = "RdYlBu")
+
 ```
 
+
+### Criticality of  Screening Barriers
+```{r Screening Barriers, echo=F, message=FALSE, warning=FALSE}
+screening_barries <- screen_ppw %>% 
+    dplyr::select(starts_with("scr_barrier_"))
+
+
+# Define the mapping
+likert_mapping <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+
+# Apply the mapping
+screening_barries <- screening_barries %>%
+  mutate(across(everything(), ~ likert_mapping[.])) 
+
+# Trim white spaces
+screening_barries <- screening_barries %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+
+screening_barries <- screening_barries %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+
+gglikert(
+  screening_barries,
+  variable_labels = c(
+      scr_barrier_room = "Not having a private space to talk about mental health in the facilities",
+      scr_barrier_norm = "Having signs of depression and anxiety as normal to you thus you do not see a need to seek care",
+      scr_barrier_provide = "Not having a specific provider to talk about mental health issues in the facilities" ,
+      scr_barrier_special = "Lack of providers with specialized MH training",
+      scr_barrier_confi = "Fear of breach of confidentiality by providers",
+      scr_barrier_workload = "Provider not having time to ask about depression or anxiety as they are attending to many women",
+      scr_barrier_partner =  "Lack of male partner involvement and support",
+      scr_barrier_witch = "Women believing mental illness is as a result of witchcraft, hence they don't talk about it",
+      scr_barrier_stigmacom = "Fear of being judged by family members and community members",
+      scr_barrier_stigmahcw = "Fear of being judged by providers",
+      scr_barrier_aware = "Lack of awareness or knowledge on mental illnesses",
+      scr_barrier_avail = "Screening for MH not being available and you not being asked by the healthcare provider about your MH during the visits",
+      scr_barrier_atti = "Providers being inapproachable"),
+  sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05)+
+    labs(title = "Criticality of Screening Barriers",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5))+  # Center the footnote
+  scale_fill_brewer(palette = "RdYlBu")
+
+```
 
 # Diagnosis and Treatment
 ```{r Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -327,7 +386,7 @@ dia_treat_ppw %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header("Table 1: Basic Demographic Summary for Women") %>% 
+  gt::tab_header("Table 2: Diagnosis and Treatment Summary for PPW") %>% 
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) 
@@ -338,89 +397,126 @@ trt_times <- ppw_data %>%
 
 ```
 
-### Diagnosis and Treatment Barriers
-```{r Diagnosis and Treatment_barrier_ppw, echo=F, warning=F, message=F}
-dixtreat_barrier <- dia_treat_ppw %>% 
-    dplyr::select(record_id, matches("barrier|diff")) %>% 
-    dplyr::select(-c(trt_diff, trt_diff_couns)) %>%
+
+
+### Criticality of Diagnosis and Treatment Barriers 
+```{r criticality of barriers to Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE}
+criticality_df <- dia_treat_ppw %>% 
+    select(starts_with("dxt_barrier_"))%>%
+  mutate(across(where(is.numeric), ~ na_if(., 99))) %>% 
+     select(-dxt_barrier_other)
+
+
+# Define the mapping
+likert_mapping <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+
+# Apply the mapping
+criticality_df <- criticality_df %>%
+  mutate(across(everything(), ~ likert_mapping[.]))
+
+# Trim white spaces
+criticality_df <- criticality_df %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+
+criticality_df <- criticality_df %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+
+gglikert(
+  criticality_df,
+  variable_labels = c(
+      dxt_barrier_service = "Not being asked about mental health during the visits",
+      dxt_barrier_atti = "Providers being inapproachable",
+      dxt_barrier_stigmahcw = "Fear of being judged by providers" ,
+      dxt_barrier_stigmacom = "Fear of being judged by family members and community members",
+      dxt_barrier_room = "Not having a private space for mental health treatment in the facilities",
+      dxt_barrier_where = "Not knowing where to seek help for depression or anxiety",
+      dxt_barrier_provide =  "Not having a specific provider to talk about mental health issues in the facilities",
+      dxt_barrier_special = "Lack of providers with specialized MH training",
+      dxt_barrier_transport = "Transport to get care is difficult",
+      dxt_barrier_confi = "Fear of breach of confidentiality by providers", 
+      dxt_barrier_fear = "Fear of not getting the mental health support or treatment needed",
+      dxt_barrier_priority = "Having conflicting priorities such as work",
+      dxt_barrier_norm = "Having signs of depression and anxiety is normal to you thus you do not see a need to seek care",
+      dxt_barrier_finan = "Getting care is expensive",
+      dxt_barrier_workload = "Provider not having time to provide depression or anxiety treatment or not keeping appointments as scheduled",
+     dxt_barrier_religion = "Prefer going for traditional medicine or prayers instead of speaking with a provider",
+     dxt_barrier_witch = "Women believing that mental illness is as a result of witchcraft and as such they don't go for treatment",
+     dxt_barrier_partner = "Lack of male partner involvement and support",
+     dxt_barrier_drug = "Lack of drugs in the facility"  
+  ),
+  sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05)+
+    labs(title = "Criticality of Diagnosis and Treatment Barriers",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5))+  # Center the footnote
+  scale_fill_brewer(palette = "RdYlBu")
+```
+
+
+### Impact of Diagnosis and Treatment Strategies
+```{r Impact of strategies, echo=FALSE, message=FALSE, warning=FALSE}
+impact_df <- dia_treat_ppw %>% 
+    select(starts_with("dxt_diff_"))%>%
   mutate(across(where(is.numeric), ~ na_if(., 99)))
 
+# Define the mapping
+likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
 
-long_data <- dixtreat_barrier %>%
-    dplyr::select(-dxt_barrier_other) %>% 
-  pivot_longer(cols = -c(record_id),
-               names_to = c("type", "barrier"), 
-               names_pattern = "dxt_(.*)_(.*)")
+# Apply the mapping
+impact_df <- impact_df %>%
+  mutate(across(everything(), ~ likert_mapping[.]))
 
-stats <- long_data %>%
-  group_by(barrier, type) %>%
-  summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
-    .groups = "drop"
-  ) %>%
-  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
-  dplyr::rename(
-    mean_importance = mean_value_barrier,
-    se_importance = se_value_barrier,
-    mean_difference = mean_value_diff,
-    se_difference = se_value_diff
-  ) %>% 
-  mutate(se_average = (se_importance + se_difference)/2) %>% 
-    mutate(mean_importance = ifelse(is.na(mean_importance),0, mean_importance),
-           mean_difference = ifelse(is.na(mean_difference),0, mean_difference),
-           se_average = ifelse(is.na(se_average),0, se_average))
+# Trim white spaces
+impact_df <- impact_df %>%
+  mutate_all(trimws)
 
-stats <- stats %>% 
-  mutate(barrier_detail = dplyr::recode(barrier, 
-                                  "atti" = "Attitude: Having friendly and respectful providers",
-                                   "aware" = "Awereness:Creating awareness on mental health in the community",
-                                   "chv" = 	"CHVs:Using community health providers to provide mental health support",
-                                   "confi" = "Normal: Having signs of depression and anxiety is treat as normal",
-                                   "drug" = "Male Partner: Lack of male partner involvement and support",
-                                   "fear" = "Fear: Fear of not getting the mental health support or treatment needed",
-                                   "finan" = "Finance: Getting care is expensive",
-                                   "norm" =	"Room: Having a dedicated private place for MH screening",
-                                   "partner" = "Staff: Lack of a specific person to screen",
-                                   "priority" =	"Special: Having providers and counsellors with specialized mental health training",
-                                   "provide" = "Provider: Having providers whose work is dedicated to offering mental health support",
-                                   "religion" = "Religion: Prefer going for prayers instead of speaking with a provider",
-                                   "room" = "Having dedicated place for mental health treatment in the facilities",
-                                   "service" = "Integrating MH treatment as part of routine care in the clinic",
-                                 "special" = "Special: Having providers and counsellors with specialized MH training",
-                                 "stigmacom" = "Stigmacom: Fear of being judged by family members and community members",
-                                 "stigmahcw" = "Stigmahcw: Fear of being judged by providers",
-                                 "trainexist" = "Training existing providers on how to handle patients with mental illnesses",
-                                 "transport" = "Transport: Government incentives to help in getting transport to the facilities",
-                                 "where" = "Where: Not knowing where to seek help for depression or anxiety",
-                                 "witch" = "Witch: Women believing that mental illness is as a result of witchcraft",
-                                 "workload" = "Workload: Provider not having time to provide depression or anxiety treatment"))
+# Set factor levels
+levels <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
 
+impact_df <- impact_df %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
 
-ggplot(stats, aes(x = mean_importance, y = mean_difference)) +
-  geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
-  scale_x_continuous(breaks = 1:4, limits = c(0, 4)) +
-  scale_y_continuous(breaks = 1:5, limits = c(0, 5)) +
-  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 2, linetype = "dashed", color = "grey") +
-  labs(title = "Barrier prioritization for screening",
-       x = "Importance",
-       y = "difference",
-       color = "Barrier detail",
-       size = "Average SE") +
-  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
-                  max.overlaps = 15) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
-  theme_minimal()+
-  theme(axis.text.y = element_text(size = 12),
-        axis.text.x = element_text(size = 12),
-        axis.title.y = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 10),
-        legend.position = "bottom",
-        legend.direction = "vertical",
-        plot.margin = margin(1, 1, 1, 1, "cm"))
+gglikert(impact_df,
+         variable_labels = c(
+             dxt_diff_service ="Integrating MH treatment routine care",
+             dxt_diff_trainexist = "MH training to existing providers",
+             dxt_diff_room = "Private room for HM treatment", 
+             dxt_diff_provide = "Having mental health providers",
+             dxt_diff_transport = "Transport facilitation",
+             dxt_diff_aware = "MH community awareness",
+             dxt_diff_chv = "Using CHVs to support MH",
+             dxt_diff_special = "Having MH specialized providers"),
+         sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05,
+         width = 0.5)+
+    labs(title = "Impact of Diagnosis and Treatment Strategies",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+
 ```
 
 
@@ -432,15 +528,6 @@ rerem_ppw <- ppw_data %>%
                   refer_facility___4, refer_facility___5, 
                   refer_facility_other, rem_access, starts_with("rerem_"),
                   referral_and_remission_complete)
-
-rerem_ppw %>% 
-    select(-record_id) %>% 
-    dfSummary(
-        graph.col = TRUE,
-        style = "grid",
-        graph.magnif = 0.75
-    ) %>% 
-    stview()
 
 
 #Referral Summary
@@ -506,7 +593,7 @@ likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
 
 # Apply the mapping
 freq_bar_df <- freq_bar_df %>%
-  mutate(across(everything(), ~ likert_mapping[. + 1]))
+  mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
 freq_bar_df <- freq_bar_df %>%
@@ -526,8 +613,10 @@ plot <- plot(results, text.size = 5, centered = FALSE)+
     theme_bw(base_size = 10)+
     theme(legend.position = "right")+
     labs(title = "How frequently have you experienced these Barriers to receiving MH services since your most recent pregnancy?",
-         subtitle = "n = 110",
-         hjust = .5)
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+    
 plot
 ```
 
@@ -665,15 +754,64 @@ ggplot(stats, aes(x = mean_frequent, y = mean_barrier )) +
         plot.margin = margin(1, 1, 1, 1, "cm"))
 ```
 
+
+## IPHM barriers to Telepsychiatry
+```{r Frequency of IPMH Telepsychiatry barriers,  echo=FALSE, message=FALSE, warning=FALSE}
+tele_barr_df <-ppw_data  %>%
+    dplyr::select(starts_with("freq_tele_"))%>%
+    dplyr::rename("Internet connectivity for telepsychiatry" = freq_tele_internet,
+          "Difficult to get mental health medication" = freq_tele_drug,
+          "The drugs recommended may be expensive" = freq_tele_finan,
+         "Not comfortable with video format for MH appointments" = freq_tele_prefer,
+         "Technology Hurdles for Women in Video Calls" = freq_tele_tech,
+         "Challenges in Demonstrating Physical Issues in Tele" = freq_tele_examine)
+
+
+
+# Define the mapping
+likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Always')
+
+
+# Apply the mapping
+tele_barr_df <- tele_barr_df %>%
+  mutate(across(everything(), ~ likert_mapping[. + 1]))
+
+
+# Trim white spaces
+tele_barr_df <- tele_barr_df %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
+
+tele_barr_df <- tele_barr_df %>%
+    lapply(function(x) factor(x, levels = levels)) %>%
+    as.data.frame()
+
+
+results <- likert(tele_barr_df)
+
+plot <- plot(results, text.size = 5, centered = FALSE) +
+    theme_bw(base_size = 15) +
+    theme(legend.position = "right") +
+    labs(title = "Barriers to receiving IPMH telepsychiatry",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.title = element_text(hjust = 0.5))  # Center the footnote
+
+plot
+```
+
+
+
 ## Telepsychiatry prioritization
 ```{r Telepsychiatry Barrier, echo=FALSE, message=FALSE, warning=FALSE}
 tele_barr <- ppw_data %>% 
     dplyr::select(record_id, ip_tele_barr_internet, ip_tele_barr_drug,
-                  ip_tele_barr_prefer, ip_tele_barr_tech, ip_tele_barr_examine, 
+                  ip_tele_barr_prefer, ip_tele_barr_tech, ip_tele_barr_examine,
                   ip_tele_barr_finan, freq_tele_internet, freq_tele_drug,
                   freq_tele_finan, freq_tele_prefer, freq_tele_tech, 
                   freq_tele_examine)%>%
-  mutate(across(where(is.numeric), ~ na_if(., 99)))
+    mutate(across(where(is.numeric), ~ na_if(., 99)))
 
 long_data <- tele_barr %>%
   pivot_longer(cols = -c(record_id),
@@ -734,6 +872,7 @@ ggplot(stats, aes(x = mean_frequent, y = mean_barrier )) +
         plot.margin = margin(1, 1, 1, 1, "cm"))
 
 ```
+
 
 
 ```{r GAD2 & PHQ2 Results, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
