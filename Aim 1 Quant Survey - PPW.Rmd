@@ -13,7 +13,7 @@ pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr,
                funModeling, gt, gtExtras,likert, summarytools, 
                ggstats) 
 
-knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
+knitr::opts_chunk$set(fig.width = 12, fig.height = 10)
 
 # read data
 data <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-10-02_0823.csv")
@@ -560,7 +560,7 @@ ppw_data %>%
 
 
 
-# Frequency of Barriers
+## Frequency of Barriers
 ```{r Frequency of Barriers, echo = F, warning = F, message = F}
 freq_bar_ppw <- ppw_data %>% 
     dplyr::select(record_id, starts_with("freq_barr_"), frequency_of_barriers_complete) %>%
@@ -622,8 +622,9 @@ plot
 ```
 
 
-#IPMH
-```{r IPMH barriers to Screning, echo=F, message=FALSE, warning=FALSE}
+## IPMH
+
+```{r Criticality of IPMH barriers to Screning, echo=F, message=FALSE, warning=FALSE}
 ipmh_ppw <- ppw_data %>% 
     dplyr::select(record_id, starts_with("ip_scre_"), 
                   starts_with("freq_scre_"),
@@ -662,7 +663,7 @@ gglikert(ipmh_screening_barriers,
          labels_accuracy = 1,
          labels_hide_below = 0.05,
          width = 0.5)+
-    labs(title = "Impact of IPMH Barriers to Screening",
+    labs(title = "Criticality of IPMH Barriers to Screening",
          caption = "Note: n = 190") +  # Add a footnote
     theme(plot.caption = element_text(hjust = 0.5),
           plot.title = element_text(hjust = 0.5),)  # Center the footnote
@@ -751,32 +752,195 @@ gglikert(ipmh_strategies,
     theme(plot.caption = element_text(hjust = 0.5),
           plot.title = element_text(hjust = 0.5),)  # Center the footnote
 
+```
+
+
+#### Criticality of IPMH Barriers to PM+
+```{r Criticality of IPMH Barriers to PM+, echo=FALSE, message=FALSE, warning=FALSE}
+ip_pm_barr <- ppw_data %>% 
+    select(starts_with("ip_trt_barr_"))
+
+# Define the mapping
+likert_mapping <- c('Not a challenge at al', 'Makes it a little hard', 'Makes it hard', 'Makes it very hard', 'Makes it impossible')
+
+# Apply the mapping
+ip_pm_barr <- ip_pm_barr %>%
+  mutate(across(everything(), ~ likert_mapping[.]))
+
+# Trim white spaces
+ip_pm_barr <- ip_pm_barr %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c('Not a challenge at al', 'Makes it a little hard', 'Makes it hard', 'Makes it very hard', 'Makes it impossible')
+
+ip_pm_barr <- ip_pm_barr %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+
+gglikert(ip_pm_barr,
+         variable_labels = c(
+             ip_trt_barr_transport ="Transporting to attend sessions is difficult",
+             ip_trt_barr_many = "Having many sessions",
+             ip_trt_barr_atti = "Providers being inapproachable"),
+         sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05,
+         width = 0.5)+
+    labs(title = "Criticality of IPMH Barriers to PM+",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5),)  # Center the footnote
 
 ```
 
 
-### Criticality of IPMH Barriers to PM+
-```{r IPMH Barrier to PM+, echo=FALSE, message=FALSE, warning=FALSE}
-ip_pm_barr <- ppw_data %>% 
-    dplyr::select(record_id, ip_trt_barr_transport, ip_trt_barr_many, 
-                  ip_trt_barr_atti, freq_trt_transport, freq_trt_many, 
+
+#### Frequency of IPMH Barriers Accessing PM+ Services
+```{r Frequency of IPMH Barriers Accessing PM+ Services, echo=FALSE, message=FALSE, warning=FALSE}
+ip_pm_barr_freq <- ppw_data %>% 
+    dplyr::select(freq_trt_transport, freq_trt_many, 
                   freq_trt_atti)
 
+
+# Define the mapping
+likert_mapping <- c('Never', 'Rarely', 'Occasionally', 'Frequently', 'Always')
+
+# Apply the mapping
+ip_pm_barr_freq <- ip_pm_barr_freq %>%
+  mutate(across(everything(), ~ likert_mapping[.]))
+
+# Trim white spaces
+ip_pm_barr_freq <- ip_pm_barr_freq %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c('Never', 'Rarely', 'Occasionally', 'Frequently', 'Always')
+
+ip_pm_barr_freq <- ip_pm_barr_freq %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+
+gglikert(ip_pm_barr_freq,
+         variable_labels = 
+             c(
+             freq_trt_transport = "Transporting to attend sessions is difficult",
+             freq_trt_many = "Having many sessions",
+             freq_trt_atti = "Providers being inapproachable"),
+         sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05,
+         width = 0.5)+
+    labs(title = "Frequency of IPMH Barriers to Accessing PM+ Services",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5),)  # Center the footnote
 ```
 
 
+#### Impact of IPMH Strategies on Accessing PM+ Services
+```{r Impact of IPMH Strategies on Accessing PM+ Services, echo=FALSE, message=FALSE, warning=FALSE}
+ip_pm_strategies <- ppw_data %>% 
+    dplyr::select(starts_with("ip_trt_diff_"))
 
-## IPHM barriers to Telepsychiatry
-```{r Frequency of IPMH Telepsychiatry barriers,  echo=FALSE, message=FALSE, warning=FALSE}
+
+# Define the mapping
+likert_mapping <- c('Major negative impact', 'Some negative impact', 'No impact', 'Some positive impact', 'Major positive impact')
+
+# Apply the mapping
+ip_pm_strategies <- ip_pm_strategies %>%
+  mutate(across(everything(), ~ likert_mapping[.]))
+
+# Trim white spaces
+ip_pm_strategies <- ip_pm_strategies %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c('Major negative impact', 'Some negative impact', 'No impact', 'Some positive impact', 'Major positive impact')
+
+ip_pm_strategies <- ip_pm_strategies %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+
+gglikert(ip_pm_strategies,
+         variable_labels = 
+             c(
+             ip_trt_diff_atti = "Having friendly and respectful providers",
+             ip_trt_diff_train = "Training healthcare providers",
+             ip_trt_diff_hcw = "Recruiting new healthcare workers with whom clients have no familiarity with",
+             ip_trt_diff_provide = "Having providers whose work is dedicated to offering MH support"),
+         sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05,
+         width = 0.5)+
+    labs(title = "Impact of Strategies on Accessing PM+ Services",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+```
+
+
+### Telepsychiatry
+#### Criticality of IPMH barriers to Telepsychiatry
+```{r Criticality of IPMH Telepsychiatry barriers, echo=FALSE, message=FALSE, warning=FALSE}
+criticality_barr <-ppw_data  %>%
+    dplyr::select(starts_with("ip_tele_barr_"))
+
+
+# Define the mapping
+likert_mapping <- c('Not a challenge at all', 'Makes it a little hard', 'Makes it hard', 'Makes it very hard', 'Makes it impossible')
+
+
+# Apply the mapping
+criticality_barr <- criticality_barr %>%
+  mutate(across(everything(), ~ likert_mapping[.])) 
+
+# Trim white spaces
+criticality_barr <- criticality_barr %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c('Not a challenge at all', 'Makes it a little hard', 'Makes it hard', 'Makes it very hard', 'Makes it impossible')
+
+
+criticality_barr <- criticality_barr %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+
+gglikert(
+  criticality_barr,
+  variable_labels = c(
+      ip_tele_barr_internet = "Internet connectivity for telepsychiatry",
+      ip_tele_barr_drug = "Difficult to get mental health medication",
+      ip_tele_barr_prefer = "Not comfortable with video format for MH appointments",
+      ip_tele_barr_tech = "Challenge in using technology as women may experience technical di culties with doing the videocall",
+      ip_tele_barr_examine = "Difficulty showing the physical problem (the
+ cause of the MH issue",
+      ip_tele_barr_finan = "The drugs recommended may be expensive"),
+  sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05)+
+    labs(title = "Criticality of IPMH barriers to Telepsychiatry",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5))+  # Center the footnote
+  scale_fill_brewer(palette = "RdYlBu",  
+                    guide = guide_legend(title = "Likert Scale"))
+```
+
+
+#### Frequency of IPHM Barriers to Accessing Telepsychiatry Services
+```{r Frequency of IPMH barriers to Telepsychiatry,  echo=FALSE, message=FALSE, warning=FALSE}
 tele_barr_df <-ppw_data  %>%
-    dplyr::select(starts_with("freq_tele_"))%>%
-    dplyr::rename("Internet connectivity for telepsychiatry" = freq_tele_internet,
-          "Difficult to get mental health medication" = freq_tele_drug,
-          "The drugs recommended may be expensive" = freq_tele_finan,
-         "Not comfortable with video format for MH appointments" = freq_tele_prefer,
-         "Technology Hurdles for Women in Video Calls" = freq_tele_tech,
-         "Challenges in Demonstrating Physical Issues in Tele" = freq_tele_examine)
-
+    dplyr::select(starts_with("freq_tele_"))
 
 
 # Define the mapping
@@ -785,8 +949,7 @@ likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Always')
 
 # Apply the mapping
 tele_barr_df <- tele_barr_df %>%
-  mutate(across(everything(), ~ likert_mapping[. + 1]))
-
+  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 tele_barr_df <- tele_barr_df %>%
@@ -795,92 +958,78 @@ tele_barr_df <- tele_barr_df %>%
 # Set factor levels
 levels <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
 
+
 tele_barr_df <- tele_barr_df %>%
-    lapply(function(x) factor(x, levels = levels)) %>%
-    as.data.frame()
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
 
 
-results <- likert(tele_barr_df)
-
-plot <- plot(results, text.size = 5, centered = FALSE) +
-    theme_bw(base_size = 15) +
-    theme(legend.position = "right") +
-    labs(title = "Barriers to receiving IPMH telepsychiatry",
+gglikert(
+  tele_barr_df,
+  variable_labels = c(
+      freq_tele_internet = "Internet connectivity for telepsychiatry",
+      freq_tele_drug = "Difficult to get mental health medication",
+      freq_tele_finan = "The drugs recommended may be expensive",
+      freq_tele_prefer = "Not comfortable with video format for MH appointments",
+      freq_tele_tech = "Technology Hurdles for Women in Video Calls",
+      freq_tele_examine = "Challenges in Demonstrating Physical Issues in Tele"),
+  sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05)+
+    labs(title = "Frequency of IPMH Barriers to receiving Telepsychiatry",
          caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.title = element_text(hjust = 0.5))  # Center the footnote
-
-plot
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5))+  # Center the footnote
+  scale_fill_brewer(palette = "RdYlBu",  
+                    guide = guide_legend(title = "Likert Scale"))
 ```
 
 
 
-## Telepsychiatry prioritization
-```{r Telepsychiatry Barrier, echo=FALSE, message=FALSE, warning=FALSE}
-tele_barr <- ppw_data %>% 
-    dplyr::select(record_id, ip_tele_barr_internet, ip_tele_barr_drug,
-                  ip_tele_barr_prefer, ip_tele_barr_tech, ip_tele_barr_examine,
-                  ip_tele_barr_finan, freq_tele_internet, freq_tele_drug,
-                  freq_tele_finan, freq_tele_prefer, freq_tele_tech, 
-                  freq_tele_examine)%>%
-    mutate(across(where(is.numeric), ~ na_if(., 99)))
+#### Impact of IPMH Strategies on Telepsychiatry
+```{r Impact of IPMH Strategies on Telepsychiaty, echo=FALSE, message=FALSE, warning=FALSE}
+tele_stratergies <- ppw_data %>% 
+    dplyr::select(starts_with("ip_tele_diff_"))
 
-long_data <- tele_barr %>%
-  pivot_longer(cols = -c(record_id),
-               names_to = c("type", "barrier"), 
-               names_pattern = "(.*)_(.*)") %>% 
-    mutate(type = dplyr::recode(type,
-                                "ip_tele_barr" = "Barrier",
-                                "freq_tele" = "Frequency"))
 
-stats <- long_data %>%
-  group_by(barrier, type) %>%
-  summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
-    .groups = "drop"
-  ) %>%
-  pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
-  rename(
-    mean_barrier = mean_value_Barrier,
-    se_barrier = se_value_Barrier,
-    mean_frequent = mean_value_Frequency,
-    se_frequent = se_value_Frequency
-  ) %>% 
-  mutate(se_average = (se_barrier + se_frequent)/2)
+# Define the mapping
+likert_mapping <- c('Major negative impact', 'Some negative impact', ' No impact', 'Some positive impact', ' Major positive impact')
 
-stats <- stats %>% 
-  mutate(barrier_detail = dplyr::recode(barrier, 
-                                         "drug" = "Drug: Difficult to get mental health medication",
-                                         "examine" = "Examine:Difficulty showing the physical problem (the cause of the MH issue) through telepsychiatry",
-                                         "finan" = "Finance:The drugs recommended may be expensive",
-                                        "internet" = "Internet:Internet connectivity for telepsychiatry",
-                                        "prefer" = "Prefer:Not comfortable with video format for MH appointments",
-                                        "tech" = "Tech:Challenge in using technology as women may experience technical difficulties with doing the videocall"))
 
-ggplot(stats, aes(x = mean_frequent, y = mean_barrier )) +
-  geom_point(aes(color = barrier, size = se_average), shape =1) +
-  scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
-  scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
-  geom_hline(yintercept = 1.6, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 1.5, linetype = "dashed", color = "grey") +
-  labs(title = "Barrier prioritization for IPMH telepsychiatry",
-       x = "Frequency",
-       y = "Challenging",
-       color = "Barrier detail",
-       size = "Average SE") +
-  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size = F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
-  theme_minimal() + 
-  theme(axis.text.y = element_text(size = 12),
-        axis.text.x = element_text(size = 12),
-        axis.title.y = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 12, face = "bold"),
-        plot.title = element_text(size = 18, face = "bold", hjust = .5),
-        legend.text = element_text(size = 12),
-        legend.direction = "vertical",
-        legend.position = "bottom",
-        plot.margin = margin(1, 1, 1, 1, "cm"))
+# Apply the mapping
+tele_stratergies <- tele_stratergies %>%
+  mutate(across(everything(), ~ likert_mapping[.])) 
+
+# Trim white spaces
+tele_stratergies <- tele_stratergies %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c('Major negative impact', 'Some negative impact', ' No impact', 'Some positive impact', ' Major positive impact')
+
+
+tele_stratergies <- tele_stratergies %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+
+gglikert(
+  tele_stratergies,
+  variable_labels = c(
+      ip_tele_diff_inperson = "Bringing the psychiatrist in-person regularly",
+      ip_tele_diff_internet = "Install strong internet connectivity",
+      ip_tele_diff_wifi = "Government to provide free WIFI"),
+  sort = "descending",
+         sort_prop_include_center = TRUE,
+         labels_accuracy = 1,
+         labels_hide_below = 0.05)+
+    labs(title = "Impact of IPMH Strategies on Telepsychiatry",
+         caption = "Note: n = 190") +  # Add a footnote
+    theme(plot.caption = element_text(hjust = 0.5),
+          plot.title = element_text(hjust = 0.5))+  # Center the footnote
+  scale_fill_brewer(palette = "RdYlBu",  
+                    guide = guide_legend(title = "Likert Scale"))
 
 ```
 
