@@ -16,11 +16,13 @@ pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr,
 knitr::opts_chunk$set(fig.width = 12, fig.height = 10)
 
 # read data
-data <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-10-02_0823.csv")
+source("REDCap_datapull.R")
+data <- aim1quant_data %>%
+  filter(pt_id < 15000000)
 
 # Quick overview of the selected columns
 data %>% 
-    dplyr::select(redcap_event_name, women_pregnancy, women_gestational, women_delivery, women_preg_before, women_preg_number, women_education, women_partner, women_employment) %>% 
+    dplyr::select(women_pregnancy, women_gestational, women_delivery, women_preg_before, women_preg_number, women_education, women_partner, women_employment) %>% 
     dfSummary(
         graph.col = TRUE,
         style = "grid",
@@ -31,115 +33,145 @@ data %>%
 
 ## Women Demographics
 
-Altogether, we currently have data for  `r sum(data$redcap_event_name == "survey_arm_1")` participants.
+Altogether, we currently have data for  `r nrow(data)` participants.
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
-ppw_data <- data %>% 
-    filter(redcap_event_name == "survey_arm_1")
-
-ppw_demo <- ppw_data %>%
-  dplyr::select(record_id, cal_age, starts_with("women_"), demographics_perinatal_women_complete, pmad_phq1, pmad_phq2, 
+ppw_demo <- data %>%
+  dplyr::select(record_id, cal_age, starts_with("women_"), 
+                demographics_perinatal_women_complete, pmad_phq1, pmad_phq2, 
          pmad_gad1, pmad_gad2) %>%
-  filter(!is.na(women_participant_id)) %>% 
-    mutate(age = as.numeric(case_when(women_dob_uk == 1 ~ floor(cal_age),
-                         women_dob_uk == 0 ~ women_age))) %>% 
-  mutate(women_pregnancy = dplyr::recode(women_pregnancy,
-                                         "1" = "Pregnant",
-                                         "0" = "Postpartum")) %>% 
-    mutate(phq2_scores = pmad_phq1 + pmad_phq2,
-           gad2_scores = pmad_gad1 + pmad_gad2,
+  filter(!is.na(women_participant_id)) 
+
+ppw_demo <- ppw_demo %>% 
+    mutate(age = case_when(
+        women_dob_uk == "No / <u>Ooyo</u> /<i>La</i>" ~ women_age,
+        women_dob_uk == "Yes / <u>Ee</u> /<i>Ndio</i>" & !is.na(cal_age) ~ floor(cal_age),
+        women_dob_uk == "Yes / <u>Ee</u> /<i>Ndio</i>" & is.na(cal_age) ~ NA_real_, 
+        TRUE ~ NA_real_ )) %>% 
+    mutate(women_pregnancy_recode = dplyr::recode(women_pregnancy,
+                                         "Pregnant / <u>An gi ich</u> /<i>Mjamzito</i>" = "Pregnant",
+                                         "Postpartum / <u>Asenyuol</u> /<i>Baada ya kujifungua</i>" = "Postpartum")) %>% 
+    mutate(pmad_phq1_score = case_when(
+        str_detect(pmad_phq1, "Not at all") ~ 0,
+        str_detect(pmad_phq1, "Several days") ~ 1,
+        str_detect(pmad_phq1, "More than half the days") ~ 2,
+        str_detect(pmad_phq1, "Nearly every day") ~ 3,
+        TRUE ~ NA_real_  # Handle any unmatched cases
+    )) %>% 
+    mutate(pmad_phq2_score = case_when(
+        str_detect(pmad_phq2, "Not at all") ~ 0,
+        str_detect(pmad_phq2, "Several days") ~ 1,
+        str_detect(pmad_phq2, "More than half the days") ~ 2,
+        str_detect(pmad_phq2, "Nearly every day") ~ 3,
+        TRUE ~ NA_real_  # Handle any unmatched cases
+    )) %>% 
+    mutate(pmad_gad1_score = case_when(
+        str_detect(pmad_gad1, "Not at all") ~ 0,
+        str_detect(pmad_gad1, "Several days") ~ 1,
+        str_detect(pmad_gad1, "More than half the days") ~ 2,
+        str_detect(pmad_gad1, "Nearly every day") ~ 3,
+        TRUE ~ NA_real_  # Handle any unmatched cases
+    )) %>% 
+    mutate(pmad_gad2_score = case_when(
+        str_detect(pmad_gad2, "Not at all") ~ 0,
+        str_detect(pmad_gad2, "Several days") ~ 1,
+        str_detect(pmad_gad2, "More than half the days") ~ 2,
+        str_detect(pmad_gad2, "Nearly every day") ~ 3,
+        TRUE ~ NA_real_  # Handle any unmatched cases
+    )) %>% 
+    mutate(phq2_scores = pmad_phq1_score + pmad_phq2_score,
+           gad2_scores = pmad_gad1_score + pmad_gad2_score,
            pmad = ifelse(phq2_scores >= 3 | gad2_scores >= 3, 1, 0))
 
 ppw_demo <- ppw_demo %>% 
   mutate(women_education = dplyr::recode(women_education, 
-                                       "1" = "No formal education",
-                                       "2" = "Primary - not completed",
-                                       "3" = "Primary completed", 
-                                       "4" = "Secondary - not completed", 
-                                       "5" = "Secondary - completed",
-                                       "6" = "Above secondary / tertiary"),
+                                       "No formal education / <u>Aonge somo</u> /<i>Hakuna elimu rasmi</i>" = "No formal education",
+                                       "Primary - not completed /<u>Okatieko praimar </u> /<i>Shule ya msingi - sijamaliza</i>" = "Primary - not completed",
+                                       "Primary completed / <u>Atieko somo mar praimar </u> /<i>Kumaliza shule ya msingi </i>" = "Primary completed", 
+                                       "Secondary - not completed / <u> Okatieko sekondar </u> /<i>Sekondari -  Sijamaliza </i>" = "Secondary - not completed", 
+                                       "Secondary - completed /<u>Atieko somo mar sekondar </u> /<i>Sekondari - nimemaliza </i>" = "Secondary - completed",
+                                       "Above secondary / tertiary / <u> Akalo sekondar/mbalariany</u> /<i>Zaidi ya sekondari/vyuo vikuu</i>" = "Above secondary / tertiary"),
          women_education = fct_relevel(women_education,
-                                       "Above secondary / tertiary", "Primary completed", "Secondary - not completed", "Secondary - completed", "Primary - not completed", "No formal education")) %>%
-  mutate(women_service = dplyr::case_when(
-      women_service___1 == "1" ~ "First Antenatal care visit",
-      women_service___2 == "1" ~ "Follow-up antenatal care visit",
-      women_service___3 == "1" ~  "Postnatal care",
-      women_service___4 == "1"~ "Immunization for my baby",
-      women_service___5 == "1" ~ "PMTCT",
-      women_service___6 == "1"~ "Family planning",
-      women_service___7 == "1" ~ "Other",)) %>%
+                                       "Above secondary / tertiary", "Primary completed", 
+                                       "Secondary - not completed", "Secondary - completed", "Primary - not completed", "No formal education")) %>%
     mutate(women_facility = dplyr::recode(women_facility, 
-                                    "0" = "Specialist",
-                                   "1" = "Rwambwa Sub-county Hospital",
-                                   "2" = "Sigomere Sub County Hospital",
-                                   "3" = "Uyawi Sub County Hospital",
-                                   "4" = "Got Agulu Sub-District Hospital",
-                                   "5" = "Ukwala Sub County Hospital",
-                                   "6" = "Madiany Sub County Hospital",
-                                   "7" = "Kabondo Sub County Hospital",
-                                   "8" = "Mbita Sub-County Hospital",
-                                   "11" = "Nyandiwa Level IV Hospital",
-                                   "13" = "Ober Kamoth Sub County Hospital",
-                                   "14" = "Gita Sub County Hospital",
-                                   "15" = "Akala Health Centre",
-                                   "16" = "Usigu Health Centre",
-                                   "17" = "Ramula Health Centre",
-                                   "18" = "Simenya Health Centre",
-                                   "19" = "Airport Health Centre (Kisumu)",
-                                   "20" = "Nyalenda Health Centre",
-                                   "21" = "Mirogi Health Centre",
-                                   "22" = "Ndiru Level 4 Hospital"),
-           women_partner = dplyr::recode(women_partner,
-                                         "1" = 	"No partner, single",
-                                         "2" = "Unsteady boyfriend (on and off)",
-                                         "3" = "Steady boyfriend",
-                                         "4" = "Married, monogamous",
-                                         "5" = "Married, polygamous",
-                                         "6" = "Divorced/widowed",
-                                         "7" = "Separated",
-                                         "8" = "Prefer not to answer"),
-            women_partner = fct_relevel(women_partner,
-                                      "Married, monogamous", "No partner, single", "Married, polygamous", "Divorced/widowed", "Steady boyfriend")) %>% 
+                                   "01, Rwambwa Sub-county Hospital" = "Rwambwa Sub-county Hospital",
+                                   "02, Sigomere Sub County Hospital" = "Sigomere Sub County Hospital",
+                                   "03, Uyawi Sub County Hospital" = "Uyawi Sub County Hospital",
+                                   "04, Got Agulu Sub-District Hospital" = "Got Agulu Sub-District Hospital",
+                                   "05, Ukwala Sub County Hospital" = "Ukwala Sub County Hospital",
+                                   "06, Madiany Sub County Hospital" = "Madiany Sub County Hospital",
+                                   "07, abondo Sub County Hospital" = "Kabondo Sub County Hospital",
+                                   "08, Mbita Sub-County Hospital" = "Mbita Sub-County Hospital",
+                                   "11, Nyandiwa Level IV Hospital" = "Nyandiwa Level IV Hospital",
+                                   "13, Ober Kamoth Sub County Hospital" = "Ober Kamoth Sub County Hospital",
+                                   "14, Gita Sub County Hospital" = "Gita Sub County Hospital",
+                                   "15, Akala Health Centre" = "Akala Health Centre",
+                                   "16, Usigu Health Centre" = "Usigu Health Centre",
+                                   "17, Ramula Health Centre" = "Ramula Health Centre",
+                                   "18, Simenya Health Centre" = "Simenya Health Centre",
+                                   "19, Airport Health Centre (Kisumu)" = "Airport Health Centre (Kisumu)",
+                                   "20, Nyalenda Health Centre" = "Nyalenda Health Centre",
+                                   "21, Mirogi Health Centre" = "Mirogi Health Centre",
+                                   "22, Ndiru Level 4 Hospital" = "Ndiru Level 4 Hospital")) %>% 
+          mutate(women_partner = case_when(
+              str_detect(women_partner, "No partner") ~ "No partner, single",
+              str_detect(women_partner, "Married, monogamous") ~ "Married, monogamous",
+              str_detect(women_partner, "Married, polygamous") ~ "Married, polygamous",
+              str_detect(women_partner, "Unsteady boyfriend") ~ "Unsteady boyfriend (on and off)",
+              str_detect(women_partner, "Steady boyfriend") ~ "Steady boyfriend",
+              str_detect(women_partner, "Divorced") ~ "Divorced/widowed",
+              str_detect(women_partner, "Separated") ~ "Separated",
+              str_detect(women_partner, "Prefer not to say") ~ "Prefer not to say")) %>% 
   mutate(women_gestational = as.numeric(women_gestational)) %>% 
   mutate(women_delivery = as.numeric(women_delivery)) %>% 
-    mutate(women_employment = dplyr::recode(women_employment,
-                                            "1" = "Unemployed",
-                                            "2" = "Salaried",
-                                            "3" = "On wages (Irregular salary, kibarua)",
-                                            "4" = "Self-employed",
-                                            "5" = "Student",
-                                            "6" = "Out of work and looking for work",
-                                            "7" = "Out of work but not currently looking for work",
-                                            "8" = "A homemaker",
-                                            "9" = "Other"),
-           women_employment = case_when(
-               women_employment == "Other" ~ women_employment_other,
-               TRUE ~ women_employment),
-           women_employment = fct_relevel(women_employment,
-                                          "Salaried", "Self-employed", "Unemployed", "Student", "On wages (Irregular salary, kibarua)", "A homemaker", "Out of work and looking for work","Out of work but not currently looking for work" )) %>% 
+    mutate(women_employment = case_when(
+              str_detect(women_employment, "Unemployed") ~ "Unemployed",
+              str_detect(women_employment, "Salaried") ~ "Salaried",
+              str_detect(women_employment, "On wages") ~ "On wages (Irregular salary)",
+              str_detect(women_employment, "Self-employed") ~ "Self-employed",
+              str_detect(women_employment, "Student") ~ "Student",
+              str_detect(women_employment, "Out of work and looking") ~ "Out of work and looking for work",
+              str_detect(women_employment, "Out of work but not") ~ "Out of work but not currently looking for work",
+              str_detect(women_employment, "A homemaker") ~ "A homemaker",
+               str_detect(women_employment, "Other") ~ women_employment_other)) %>% 
     mutate(women_residence = dplyr::recode(women_residence,
-                                           "1" = "Urban or city center",
-                                           "2" = "Peri-urban areas",
-                                           "3" = "Rural areas or countryside"),
+                                           "Urban or city center / <u> Boma</u> /<i>Mjini,/i>" = "Urban or city center",
+                                           "Peri-urban areas / <u> Aluora mag boma</u> /<i>Kandokando ya jiji</i>" = "Peri-urban areas",
+                                           "Rural areas or countryside / <u> Kuonde mabor gi boma</u> /<i>Maeneo ya vijijini</i>" = "Rural areas or countryside"),
            women_residence = fct_relevel(women_residence,
-                                         "Rural areas or countryside", "Peri-urban areas", "Urban or city center"),
-           women_distance = dplyr::recode(women_distance,
-                                          "0" = "< an hour",
-                                          "1" = ">= an hour")) %>% 
+                                         "Rural areas or countryside", "Peri-urban areas", "Urban or city center")) %>% 
+        mutate(women_distance = dplyr::recode(women_distance,
+                                          "less than one hour /<u>Matin ne saa achiel</u> /<i>chini ya saa moja</i>" = "< an hour",
+                                          "one hour or more than one hour / <u>Saa achiel kata moingo saa achiel</u> /<i>Saa moja au zaidi</i>" = ">= an hour")) %>% 
     mutate(women_hiv = dplyr::recode(women_hiv,
-                                     "1"  = "HIV negative",
-                                     "2" = "Living with HIV",
-                                     "99" = "Don't know",
-                                     "-2" =	"Prefer not to answer")) %>% 
-    mutate(women_art = dplyr::recode(women_art,
-                                     "1" = "Yes",
-                                     "0" = "No",
-                                     "-2" = "I prefer not to say"))
+                                     "HIV negative /<u>Aonge kute mag ayaki</u> /<i>Sina VVU</i>"  = "HIV negative",
+                                     "Living with HIV /<u>An gi ayaki </u> /<i>Naishi na VVU </i>" = "Living with HIV",
+                                     "Don't know /<u>Akia chalna</u> /<i>Sijui</i>" = "Don't know",
+                                     "Prefer not to answer /<u>Okdaher mar duoko penjoni</u> /<i>Ningependa nisiweke jibu</i>" =	"Prefer not to answer")) %>% 
+    mutate(women_art = case_when(
+        str_detect(women_art, "Yes") ~ "Yes",
+        str_detect(women_art, "No") ~ "No",
+        str_detect(women_art, "prefer") ~ "Prefer not to say")) %>% 
+    mutate(women_service___1 = case_when(women_service___1 == "Checked" ~ 1,
+                                         women_service___1 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___2 = case_when(women_service___2 == "Checked" ~ 1,
+                                         women_service___2 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___3 = case_when(women_service___3 == "Checked" ~ 1,
+                                         women_service___3 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___4 = case_when(women_service___4 == "Checked" ~ 1,
+                                         women_service___4 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___5 = case_when(women_service___5 == "Checked" ~ 1,
+                                         women_service___5 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___6 = case_when(women_service___6 == "Checked" ~ 1,
+                                         women_service___6 == "Unchecked" ~ 0))
+    
 
 # basic demo table
 ppw_demo %>% tbl_summary(
   include=c(age, women_service___4, women_service___2, women_service___1,
-            women_service___3, women_pregnancy, women_gestational,
+            women_service___3, women_service___6, 
+            women_pregnancy_recode, women_gestational,
             women_delivery, women_preg_number, women_education, women_partner,
             women_employment,women_residence, women_distance, women_distance_0, 
             women_distance_1, women_hiv, women_hiv_history, women_art, pmad),
@@ -150,19 +182,20 @@ ppw_demo %>% tbl_summary(
                women_service___2 ~ "Follow-up antenatal care visit",
                women_service___3 ~ "Postnatal care",
                women_service___4 ~ "Immunization for my baby",
-               women_pregnancy ~ "Pregnancy Status",
+               women_service___6 ~ "Family planning",
+               women_pregnancy_recode ~ "Pregnancy Status",
                women_delivery ~ "Weeks since delivery",
                women_preg_number ~ "Total number of pregnancies",
                women_partner ~ "Kind of partner",
                women_employment ~ "Employment status",
                women_residence ~ "Residential area",
                women_distance ~ "Duration to the facility",
-               women_distance_0 ~ "Duration to the facility (Munites)",
+               women_distance_0 ~ "Duration to the facility (Minutes)",
                women_distance_1 ~ "Duration to the facility (Hours)",
                women_hiv ~ "HIV status",
                women_art ~ "Currently using antiretroviral therapy",
                women_hiv_history ~ "Duration known LHIV (years)",
-               pmad ~ "PHQ2 or QAD2 => 3"),
+               pmad ~ "PHQ2 or QAD2 >= 3"),
   missing = "no",
   digits = list(all_continuous() ~ 1), 
   type = list(age ~ "continuous", 
@@ -171,8 +204,12 @@ ppw_demo %>% tbl_summary(
               women_preg_number ~ "continuous",
               women_distance_0 ~ "continuous",
               women_distance_1 ~ "continuous",
-              women_hiv_history ~ "continuous"),
-  statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+              women_hiv_history ~ "continuous"
+              ),
+  statistic = list(
+    all_continuous() ~ "{median} [IQR: {p25}, {p75}]",
+    all_categorical() ~ "{n} ({p}%)"
+  ))%>% 
   bold_labels() %>%
     add_n() %>% 
     italicize_levels() %>%
@@ -187,20 +224,177 @@ ppw_demo %>% tbl_summary(
 ```
 
 
-## SCREENING
+\pagebreak
+
+# Screening
+
 ```{r PMAD Screening Summary, echo=FALSE, message=FALSE, warning=FALSE}
-screen_ppw <- ppw_data  %>%
+screen_ppw <- data  %>%
   dplyr::select(record_id, starts_with("scr_diff_"), screening_access, screening_strategy_other, screening_complete, screening_times, starts_with("scr_barrier"))
+
+#basic screening table
+screen_ppw <- screen_ppw %>% 
+    mutate(screening_access = dplyr::recode(screening_access,
+                                           "No /<u>Ooyo</u> /<i>Hapana</i>" = "No",
+                                           "Yes /<u> Ee</u> /<i>Ndio</i>" = "Yes")) %>% 
+    mutate(screening_times = dplyr::recode(screening_times,
+                                          "Less than 2 times /<u>Matin ne 2</u> /<i>Chini ya mara 2</i>" = "Less than 2 times",
+                                          "3 to 4 times /<u>3 kata 4</u> /<i>Mara 3 au 4</i>" = "3-4 times",
+                                          "5 to 6 times /<u>5 kata 6</u> /<i>Mara 5 au 6</i>" = "5-6 times",
+                                          "More than 6 times /<u>Moingo 6</u> /<i>Zaidi ya mara 6</i>" = "More than 6 times"))
+
+screen_ppw %>% tbl_summary(
+  include=c(screening_access, screening_times),
+  label = list(screening_access ~ "Service access",
+               screening_times ~ "Times of access"),
+  missing = "no",
+  digits = list(all_continuous() ~ 1),
+  statistic = list(
+    all_categorical() ~ "{n} ({p}%)"
+  ))%>% 
+  bold_labels() %>%
+    add_n() %>% 
+    italicize_levels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 2: Basic Screening Summary for Women") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
 ```
 
+## Criticality of Screening Barriers
+
+```{r Screening Barriers, echo=F, message=FALSE, warning=FALSE}
+screening_barriers <- screen_ppw %>% 
+    dplyr::select(starts_with("scr_barrier_"))
+
+# Define the mapping
+likert_mapping <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+# Apply the mapping
+screening_barriers <- screening_barriers %>%
+  mutate(across(everything(), ~ likert_mapping[.])) 
+
+# Trim white spaces
+screening_barriers <- screening_barriers %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+screening_barriers <- screening_barriers %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+# gglikert(
+#   screening_barriers,
+#   variable_labels = c(
+#       scr_barrier_room = "Not having a private space to talk about MH in the facilities",
+#       scr_barrier_norm = "Having signs of depression and anxiety is normal to you thus you do not see a need to seek care",
+#       scr_barrier_provide = "Not having a specific provider to talk about MH in the facilities" ,
+#       scr_barrier_special = "Lack of providers with specialized MH training",
+#       scr_barrier_confi = "Fear of breach of confidentiality by providers",
+#       scr_barrier_workload = "Provider not having time to ask as they are attending too many women",
+#       scr_barrier_partner =  "Lack of male partner involvement and support",
+#       scr_barrier_witch = "Women believing mental illness is as a result of witchcraft, hence they don't talk about it",
+#       scr_barrier_stigmacom = "Fear of being judged by family members and community members",
+#       scr_barrier_stigmahcw = "Fear of being judged by providers",
+#       scr_barrier_aware = "Lack of awareness or knowledge on mental illnesses",
+#       scr_barrier_avail = "Screening for MH not being available and you not being asked by providers about MH during visits",
+#       scr_barrier_atti = "Providers being inapproachable"),
+#   sort = "descending",
+#          sort_prop_include_center = FALSE,
+#          labels_accuracy = 1,
+#          labels_hide_below = 0.01)+
+#     labs(title = "Criticality of Screening Barriers",
+#          caption = "Note: n = 190") +  # Add a footnote
+#       theme(
+#     plot.caption = element_text(hjust = 0.5),
+#     plot.title = element_text(hjust = 0.5),
+#     axis.text.x = element_blank(),  # Remove x-axis text
+#     axis.ticks.x = element_blank(),  # Remove x-axis ticks
+#     axis.title.x = element_blank()  # Remove x-axis title
+#   ) +
+#   scale_fill_brewer(palette = "RdYlBu", direction = -1)  # Reverse the color direction
 
 
-### Impact of Screening Strategies
+# Reshape the data to long format for ggplot2 and remove NA values
+screening_barriers_long <- screening_barriers %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c("Not a challenge at all", 
+                                      "Makes it a little hard", 
+                                      "Makes it hard", 
+                                      "Makes it very hard", 
+                                      "Makes it impossible"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
+
+# Define labels for the barriers
+barrier_labels <- c(
+  scr_barrier_room = "Not having a private space to talk about MH in the facilities",
+  scr_barrier_norm = "Having signs of depression and anxiety is normal to you,\n so you do not seek care",
+  scr_barrier_provide = "Not having a specific provider to \ntalk about MH in the facilities",
+  scr_barrier_special = "Lack of providers with specialized MH training",
+  scr_barrier_confi = "Fear of breach of confidentiality by providers",
+  scr_barrier_workload = "Provider not having time to ask \n due to attending too many women",
+  scr_barrier_partner = "Lack of male partner involvement and support",
+  scr_barrier_witch = "Belief that mental illness is a result\n of witchcraft, hence not discussed",
+  scr_barrier_stigmacom = "Fear of being judged by family and community members",
+  scr_barrier_stigmahcw = "Fear of being judged by providers",
+  scr_barrier_aware = "Lack of awareness or knowledge on mental illnesses",
+  scr_barrier_avail = "Screening for MH not available and\n not asked about during visits",
+  scr_barrier_atti = "Providers being inapproachable"
+)
+
+
+
+# Plot with ggplot2 (non-centered, left-aligned bars)
+ggplot(screening_barriers_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill") +  # Stacked bar chart with fill
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), 
+            position = position_fill(vjust = 0.5), size = 3.5, color = "black") + 
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Criticality of Screening Barriers"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
+    axis.title.y = element_blank()
+  ) +
+  scale_x_discrete(labels = barrier_labels) +  # Apply custom labels for the barriers
+  coord_flip()  # Flip the coordinates for horizontal bars
+```
+
+## Impact of Screening Strategies
+
 ```{r Screening Strategies, echo=F, message=FALSE, warning=FALSE}
 screening_strategies <- screen_ppw %>% 
     dplyr::select(starts_with("scr_diff_"))
 
-
 # Define the mapping
 likert_mapping <- c(
     "Major negative impact",
@@ -208,7 +402,6 @@ likert_mapping <- c(
     "No impact",
     "Some positive impact ",
     "Major positive impact")
-
 
 # Apply the mapping
 screening_strategies <- screening_strategies %>%
@@ -226,107 +419,93 @@ levels <- c(
     "Some positive impact ",
     "Major positive impact")
 
-
 screening_strategies <- screening_strategies %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# gglikert(
+#   screening_strategies,
+#   variable_labels = c(
+#       scr_diff_service = "Integrating screening as part of routine care in the clinic",
+#       scr_diff_trainexist = "Training existing providers on how to handle patients with mental illnesses",
+#       scr_diff_room = "Having a dedicated private place for MH screening" ,
+#       scr_diff_provide = "Having providers whose work is dedicated to offering mental health support",
+#       scr_diff_special = "Having providers and counsellors with specialized mental health training",
+#       scr_diff_aware = "Creating awareness on mental health in the community for example using community health promoters or through churches",
+#       scr_diff_confi =  "Assuring confidentiality in mental health services",
+#       scr_diff_stigma = "Not talking to providers I already know about mental health issues",
+#       scr_diff_atti = "[Having friendly and respectful providers"
+#   ),
+#   sort = "descending",
+#          sort_prop_include_center = TRUE,
+#          labels_accuracy = 1,
+#          labels_hide_below = 0.05)+
+#     labs(title = "Impact of Screening Strategies",
+#          caption = "Note: n = 190") +  # Add a footnote
+#     theme(plot.caption = element_text(hjust = 0.5),
+#           plot.title = element_text(hjust = 0.5))+  # Center the footnote
+#   scale_fill_brewer(palette = "RdYlBu")
 
-gglikert(
-  screening_strategies,
-  variable_labels = c(
-      scr_diff_service = "Integrating screening as part of routine care in the clinic",
-      scr_diff_trainexist = "Training existing providers on how to handle patients with mental illnesses",
+# Reshape the data to long format for ggplot2 and remove NA values
+screening_strategies_long <- screening_strategies %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Strategy", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact ",
+    "Major positive impact"))) %>%
+  group_by(Strategy, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
+
+# Define labels for the barriers
+Strategy_labels <- c(
+  scr_diff_service = "Integrating screening as part of routine care in the clinic",
+      scr_diff_trainexist = "Training existing providers on \nhow to handle patients with mental illnesses",
       scr_diff_room = "Having a dedicated private place for MH screening" ,
-      scr_diff_provide = "Having providers whose work is dedicated to offering mental health support",
-      scr_diff_special = "Having providers and counsellors with specialized mental health training",
-      scr_diff_aware = "Creating awareness on mental health in the community for example using community health promoters or through churches",
-      scr_diff_confi =  "Assuring confidentiality in mental health services",
-      scr_diff_stigma = "Not talking to providers I already know about mental health issues",
-      scr_diff_atti = "[Having friendly and respectful providers" 
-  ),
-  sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05)+
-    labs(title = "Impact of Screening Strategies",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5))+  # Center the footnote
-  scale_fill_brewer(palette = "RdYlBu")
+      scr_diff_provide = "Having providers whose work is dedicated \n to offering mental health support",
+      scr_diff_special = "Having providers and counsellors \n with specialized mental health training",
+      scr_diff_aware = "Creating awareness on MH in the community \n for example using CHPs or through churches",
+      scr_diff_confi =  "Assuring confidentiality in MH services",
+      scr_diff_stigma = "Not talking to providers I already know about MH issues",
+      scr_diff_atti = "Having friendly and respectful providers"
+)
 
+# Plot with ggplot2 (non-centered, left-aligned bars)
+ggplot(screening_strategies_long, aes(x = Strategy, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill") +  # Stacked bar chart with fill
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), 
+            position = position_fill(vjust = 0.5), size = 3.5, color = "black") + 
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Impact of Screening Strategies"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
+    axis.title.y = element_blank()
+  ) +
+  scale_x_discrete(labels = Strategy_labels) +  # Apply custom labels for the barriers
+  coord_flip() 
 ```
 
-
-### Criticality of  Screening Barriers
-```{r Screening Barriers, echo=F, message=FALSE, warning=FALSE}
-screening_barries <- screen_ppw %>% 
-    dplyr::select(starts_with("scr_barrier_"))
-
-
-# Define the mapping
-likert_mapping <- c(
-    "Not a challenge at all",
-    "Makes it a little hard",
-    "Makes it hard",
-    "Makes it very hard",
-    "Makes it impossible")
-
-
-# Apply the mapping
-screening_barries <- screening_barries %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
-
-# Trim white spaces
-screening_barries <- screening_barries %>%
-  mutate_all(trimws)
-
-# Set factor levels
-levels <- c(
-    "Not a challenge at all",
-    "Makes it a little hard",
-    "Makes it hard",
-    "Makes it very hard",
-    "Makes it impossible")
-
-
-screening_barries <- screening_barries %>%
-  lapply(function(x) factor(x, levels = levels)) %>%
-  as.data.frame()
-
-
-gglikert(
-  screening_barries,
-  variable_labels = c(
-      scr_barrier_room = "Not having a private space to talk about mental health in the facilities",
-      scr_barrier_norm = "Having signs of depression and anxiety as normal to you thus you do not see a need to seek care",
-      scr_barrier_provide = "Not having a specific provider to talk about mental health issues in the facilities" ,
-      scr_barrier_special = "Lack of providers with specialized MH training",
-      scr_barrier_confi = "Fear of breach of confidentiality by providers",
-      scr_barrier_workload = "Provider not having time to ask about depression or anxiety as they are attending to many women",
-      scr_barrier_partner =  "Lack of male partner involvement and support",
-      scr_barrier_witch = "Women believing mental illness is as a result of witchcraft, hence they don't talk about it",
-      scr_barrier_stigmacom = "Fear of being judged by family members and community members",
-      scr_barrier_stigmahcw = "Fear of being judged by providers",
-      scr_barrier_aware = "Lack of awareness or knowledge on mental illnesses",
-      scr_barrier_avail = "Screening for MH not being available and you not being asked by the healthcare provider about your MH during the visits",
-      scr_barrier_atti = "Providers being inapproachable"),
-  sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05)+
-    labs(title = "Criticality of Screening Barriers",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5))+  # Center the footnote
-  scale_fill_brewer(palette = "RdYlBu")
-
-```
-
+\pagebreak
 
 # Diagnosis and Treatment
+
 ```{r Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-dia_treat_ppw <- ppw_data %>% 
+dia_treat_ppw <- data %>% 
   dplyr::select(record_id, starts_with("dx_"), starts_with("trt_"), starts_with("dxt_"), diagnosis_and_treatment_complete) %>% 
     mutate(dx_access = dplyr::recode(dx_access,
                                      "1" = "Yes - both depression and anxiety",
@@ -398,8 +577,8 @@ trt_times <- ppw_data %>%
 ```
 
 
+## Criticality of Diagnosis and Treatment Barriers 
 
-### Criticality of Diagnosis and Treatment Barriers 
 ```{r criticality of barriers to Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE}
 criticality_df <- dia_treat_ppw %>% 
     select(starts_with("dxt_barrier_"))%>%
@@ -473,7 +652,8 @@ gglikert(
 ```
 
 
-### Impact of Diagnosis and Treatment Strategies
+## Impact of Diagnosis and Treatment Strategies
+
 ```{r Impact of strategies, echo=FALSE, message=FALSE, warning=FALSE}
 impact_df <- dia_treat_ppw %>% 
     select(starts_with("dxt_diff_"))%>%
@@ -519,8 +699,10 @@ gglikert(impact_df,
 
 ```
 
+\pagebreak
 
-## Referral And Remission
+# Referral And Remission
+
 ```{r Rerem, echo=F, warning=F, message=F}
 rerem_ppw <- ppw_data %>% 
     dplyr::select(record_id, refer_access, refer_facility___1, 
@@ -561,6 +743,7 @@ ppw_data %>%
 
 
 ## Frequency of Barriers
+
 ```{r Frequency of Barriers, echo = F, warning = F, message = F}
 freq_bar_ppw <- ppw_data %>% 
     dplyr::select(record_id, starts_with("freq_barr_"), frequency_of_barriers_complete) %>%
@@ -621,8 +804,11 @@ plot <- plot(results, text.size = 5, centered = FALSE)+
 plot
 ```
 
+\pagebreak
 
-## IPMH
+# IPMH
+
+## IPMH screening
 
 ```{r Criticality of IPMH barriers to Screning, echo=F, message=FALSE, warning=FALSE}
 ipmh_ppw <- ppw_data %>% 
@@ -755,7 +941,8 @@ gglikert(ipmh_strategies,
 ```
 
 
-#### Criticality of IPMH Barriers to PM+
+## IPMH PM+
+
 ```{r Criticality of IPMH Barriers to PM+, echo=FALSE, message=FALSE, warning=FALSE}
 ip_pm_barr <- ppw_data %>% 
     select(starts_with("ip_trt_barr_"))
@@ -799,6 +986,7 @@ gglikert(ip_pm_barr,
 
 
 #### Frequency of IPMH Barriers Accessing PM+ Services
+
 ```{r Frequency of IPMH Barriers Accessing PM+ Services, echo=FALSE, message=FALSE, warning=FALSE}
 ip_pm_barr_freq <- ppw_data %>% 
     dplyr::select(freq_trt_transport, freq_trt_many, 
@@ -886,7 +1074,8 @@ gglikert(ip_pm_strategies,
 ```
 
 
-### Telepsychiatry
+## IPMH Telepsychiatry
+
 #### Criticality of IPMH barriers to Telepsychiatry
 ```{r Criticality of IPMH Telepsychiatry barriers, echo=FALSE, message=FALSE, warning=FALSE}
 criticality_barr <-ppw_data  %>%
@@ -1035,18 +1224,4 @@ gglikert(
 
 
 
-```{r GAD2 & PHQ2 Results, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
-phq_gad2_scores <- ppw_demo %>% 
-    select(record_id, pmad_phq1, pmad_phq2, pmad_gad1, pmad_gad2)
-
-```
-
-```{r PPW age in months, include=FALSE}
-age_months <- ppw_data %>% 
-    select(record_id, women_dob_uk, women_dob, women_age, cal_age) %>%
-    mutate(age = as.numeric(case_when(
-        women_dob_uk == 1 ~ round(cal_age*12),
-        women_dob_uk == 0 ~ round(women_age * 12)))) %>% 
-    select(record_id, age)
-```
 
