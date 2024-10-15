@@ -13,133 +13,165 @@ pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr,
                funModeling, gt, gtExtras,likert, summarytools, 
                ggstats) 
 
-knitr::opts_chunk$set(fig.width = 12, fig.height = 10)
+knitr::opts_chunk$set(fig.width = 24, fig.height = 20)
 
 # read data
-data <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-10-02_0823.csv")
+source("REDCap_datapull.R")
+data <- aim1quant_data %>%
+  filter(pt_id < 15000000)
 
 # Quick overview of the selected columns
-data %>% 
-    dplyr::select(redcap_event_name, women_pregnancy, women_gestational, women_delivery, women_preg_before, women_preg_number, women_education, women_partner, women_employment) %>% 
-    dfSummary(
-        graph.col = TRUE,
-        style = "grid",
-        graph.magnif = 0.75
-    ) %>% 
-    stview()
+# data %>% 
+#     dplyr::select(women_pregnancy, women_gestational, women_delivery, women_preg_before, women_preg_number, women_education, women_partner, women_employment) %>% 
+#     dfSummary(
+#         graph.col = TRUE,
+#         style = "grid",
+#         graph.magnif = 0.75
+#     ) %>% 
+#     stview()
 ```
 
 ## Women Demographics
 
-Altogether, we currently have data for  `r sum(data$redcap_event_name == "survey_arm_1")` participants.
+Altogether, we currently have data for  `r nrow(data)` participants.
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
-ppw_data <- data %>% 
-    filter(redcap_event_name == "survey_arm_1")
-
-ppw_demo <- ppw_data %>%
-  dplyr::select(record_id, cal_age, starts_with("women_"), demographics_perinatal_women_complete, pmad_phq1, pmad_phq2, 
+ppw_demo <- data %>%
+  dplyr::select(record_id, cal_age, starts_with("women_"), 
+                demographics_perinatal_women_complete, pmad_phq1, pmad_phq2, 
          pmad_gad1, pmad_gad2) %>%
-  filter(!is.na(women_participant_id)) %>% 
-    mutate(age = as.numeric(case_when(women_dob_uk == 1 ~ floor(cal_age),
-                         women_dob_uk == 0 ~ women_age))) %>% 
-  mutate(women_pregnancy = dplyr::recode(women_pregnancy,
-                                         "1" = "Pregnant",
-                                         "0" = "Postpartum")) %>% 
-    mutate(phq2_scores = pmad_phq1 + pmad_phq2,
-           gad2_scores = pmad_gad1 + pmad_gad2,
+  filter(!is.na(women_participant_id)) 
+
+ppw_demo <- ppw_demo %>% 
+    mutate(age = case_when(
+        women_dob_uk == "No / <u>Ooyo</u> /<i>La</i>" ~ women_age,
+        women_dob_uk == "Yes / <u>Ee</u> /<i>Ndio</i>" & !is.na(cal_age) ~ floor(cal_age),
+        women_dob_uk == "Yes / <u>Ee</u> /<i>Ndio</i>" & is.na(cal_age) ~ NA_real_, 
+        TRUE ~ NA_real_ )) %>% 
+    mutate(women_pregnancy_recode = dplyr::recode(women_pregnancy,
+                                         "Pregnant / <u>An gi ich</u> /<i>Mjamzito</i>" = "Pregnant",
+                                         "Postpartum / <u>Asenyuol</u> /<i>Baada ya kujifungua</i>" = "Postpartum")) %>% 
+    mutate(pmad_phq1_score = case_when(
+        str_detect(pmad_phq1, "Not at all") ~ 0,
+        str_detect(pmad_phq1, "Several days") ~ 1,
+        str_detect(pmad_phq1, "More than half the days") ~ 2,
+        str_detect(pmad_phq1, "Nearly every day") ~ 3,
+        TRUE ~ NA_real_  # Handle any unmatched cases
+    )) %>% 
+    mutate(pmad_phq2_score = case_when(
+        str_detect(pmad_phq2, "Not at all") ~ 0,
+        str_detect(pmad_phq2, "Several days") ~ 1,
+        str_detect(pmad_phq2, "More than half the days") ~ 2,
+        str_detect(pmad_phq2, "Nearly every day") ~ 3,
+        TRUE ~ NA_real_  # Handle any unmatched cases
+    )) %>% 
+    mutate(pmad_gad1_score = case_when(
+        str_detect(pmad_gad1, "Not at all") ~ 0,
+        str_detect(pmad_gad1, "Several days") ~ 1,
+        str_detect(pmad_gad1, "More than half the days") ~ 2,
+        str_detect(pmad_gad1, "Nearly every day") ~ 3,
+        TRUE ~ NA_real_  # Handle any unmatched cases
+    )) %>% 
+    mutate(pmad_gad2_score = case_when(
+        str_detect(pmad_gad2, "Not at all") ~ 0,
+        str_detect(pmad_gad2, "Several days") ~ 1,
+        str_detect(pmad_gad2, "More than half the days") ~ 2,
+        str_detect(pmad_gad2, "Nearly every day") ~ 3,
+        TRUE ~ NA_real_  # Handle any unmatched cases
+    )) %>% 
+    mutate(phq2_scores = pmad_phq1_score + pmad_phq2_score,
+           gad2_scores = pmad_gad1_score + pmad_gad2_score,
            pmad = ifelse(phq2_scores >= 3 | gad2_scores >= 3, 1, 0))
 
 ppw_demo <- ppw_demo %>% 
   mutate(women_education = dplyr::recode(women_education, 
-                                       "1" = "No formal education",
-                                       "2" = "Primary - not completed",
-                                       "3" = "Primary completed", 
-                                       "4" = "Secondary - not completed", 
-                                       "5" = "Secondary - completed",
-                                       "6" = "Above secondary / tertiary"),
+                                       "No formal education / <u>Aonge somo</u> /<i>Hakuna elimu rasmi</i>" = "No formal education",
+                                       "Primary - not completed /<u>Okatieko praimar </u> /<i>Shule ya msingi - sijamaliza</i>" = "Primary - not completed",
+                                       "Primary completed / <u>Atieko somo mar praimar </u> /<i>Kumaliza shule ya msingi </i>" = "Primary completed", 
+                                       "Secondary - not completed / <u> Okatieko sekondar </u> /<i>Sekondari -  Sijamaliza </i>" = "Secondary - not completed", 
+                                       "Secondary - completed /<u>Atieko somo mar sekondar </u> /<i>Sekondari - nimemaliza </i>" = "Secondary - completed",
+                                       "Above secondary / tertiary / <u> Akalo sekondar/mbalariany</u> /<i>Zaidi ya sekondari/vyuo vikuu</i>" = "Above secondary / tertiary"),
          women_education = fct_relevel(women_education,
-                                       "Above secondary / tertiary", "Primary completed", "Secondary - not completed", "Secondary - completed", "Primary - not completed", "No formal education")) %>%
-  mutate(women_service = dplyr::case_when(
-      women_service___1 == "1" ~ "First Antenatal care visit",
-      women_service___2 == "1" ~ "Follow-up antenatal care visit",
-      women_service___3 == "1" ~  "Postnatal care",
-      women_service___4 == "1"~ "Immunization for my baby",
-      women_service___5 == "1" ~ "PMTCT",
-      women_service___6 == "1"~ "Family planning",
-      women_service___7 == "1" ~ "Other",)) %>%
+                                       "Above secondary / tertiary", "Primary completed", 
+                                       "Secondary - not completed", "Secondary - completed", "Primary - not completed", "No formal education")) %>%
     mutate(women_facility = dplyr::recode(women_facility, 
-                                    "0" = "Specialist",
-                                   "1" = "Rwambwa Sub-county Hospital",
-                                   "2" = "Sigomere Sub County Hospital",
-                                   "3" = "Uyawi Sub County Hospital",
-                                   "4" = "Got Agulu Sub-District Hospital",
-                                   "5" = "Ukwala Sub County Hospital",
-                                   "6" = "Madiany Sub County Hospital",
-                                   "7" = "Kabondo Sub County Hospital",
-                                   "8" = "Mbita Sub-County Hospital",
-                                   "11" = "Nyandiwa Level IV Hospital",
-                                   "13" = "Ober Kamoth Sub County Hospital",
-                                   "14" = "Gita Sub County Hospital",
-                                   "15" = "Akala Health Centre",
-                                   "16" = "Usigu Health Centre",
-                                   "17" = "Ramula Health Centre",
-                                   "18" = "Simenya Health Centre",
-                                   "19" = "Airport Health Centre (Kisumu)",
-                                   "20" = "Nyalenda Health Centre",
-                                   "21" = "Mirogi Health Centre",
-                                   "22" = "Ndiru Level 4 Hospital"),
-           women_partner = dplyr::recode(women_partner,
-                                         "1" = 	"No partner, single",
-                                         "2" = "Unsteady boyfriend (on and off)",
-                                         "3" = "Steady boyfriend",
-                                         "4" = "Married, monogamous",
-                                         "5" = "Married, polygamous",
-                                         "6" = "Divorced/widowed",
-                                         "7" = "Separated",
-                                         "8" = "Prefer not to answer"),
-            women_partner = fct_relevel(women_partner,
-                                      "Married, monogamous", "No partner, single", "Married, polygamous", "Divorced/widowed", "Steady boyfriend")) %>% 
+                                   "01, Rwambwa Sub-county Hospital" = "Rwambwa Sub-county Hospital",
+                                   "02, Sigomere Sub County Hospital" = "Sigomere Sub County Hospital",
+                                   "03, Uyawi Sub County Hospital" = "Uyawi Sub County Hospital",
+                                   "04, Got Agulu Sub-District Hospital" = "Got Agulu Sub-District Hospital",
+                                   "05, Ukwala Sub County Hospital" = "Ukwala Sub County Hospital",
+                                   "06, Madiany Sub County Hospital" = "Madiany Sub County Hospital",
+                                   "07, abondo Sub County Hospital" = "Kabondo Sub County Hospital",
+                                   "08, Mbita Sub-County Hospital" = "Mbita Sub-County Hospital",
+                                   "11, Nyandiwa Level IV Hospital" = "Nyandiwa Level IV Hospital",
+                                   "13, Ober Kamoth Sub County Hospital" = "Ober Kamoth Sub County Hospital",
+                                   "14, Gita Sub County Hospital" = "Gita Sub County Hospital",
+                                   "15, Akala Health Centre" = "Akala Health Centre",
+                                   "16, Usigu Health Centre" = "Usigu Health Centre",
+                                   "17, Ramula Health Centre" = "Ramula Health Centre",
+                                   "18, Simenya Health Centre" = "Simenya Health Centre",
+                                   "19, Airport Health Centre (Kisumu)" = "Airport Health Centre (Kisumu)",
+                                   "20, Nyalenda Health Centre" = "Nyalenda Health Centre",
+                                   "21, Mirogi Health Centre" = "Mirogi Health Centre",
+                                   "22, Ndiru Level 4 Hospital" = "Ndiru Level 4 Hospital")) %>% 
+          mutate(women_partner = case_when(
+              str_detect(women_partner, "No partner") ~ "No partner, single",
+              str_detect(women_partner, "Married, monogamous") ~ "Married, monogamous",
+              str_detect(women_partner, "Married, polygamous") ~ "Married, polygamous",
+              str_detect(women_partner, "Unsteady boyfriend") ~ "Unsteady boyfriend (on and off)",
+              str_detect(women_partner, "Steady boyfriend") ~ "Steady boyfriend",
+              str_detect(women_partner, "Divorced") ~ "Divorced/widowed",
+              str_detect(women_partner, "Separated") ~ "Separated",
+              str_detect(women_partner, "Prefer not to say") ~ "Prefer not to say")) %>% 
   mutate(women_gestational = as.numeric(women_gestational)) %>% 
   mutate(women_delivery = as.numeric(women_delivery)) %>% 
-    mutate(women_employment = dplyr::recode(women_employment,
-                                            "1" = "Unemployed",
-                                            "2" = "Salaried",
-                                            "3" = "On wages (Irregular salary, kibarua)",
-                                            "4" = "Self-employed",
-                                            "5" = "Student",
-                                            "6" = "Out of work and looking for work",
-                                            "7" = "Out of work but not currently looking for work",
-                                            "8" = "A homemaker",
-                                            "9" = "Other"),
-           women_employment = case_when(
-               women_employment == "Other" ~ women_employment_other,
-               TRUE ~ women_employment),
-           women_employment = fct_relevel(women_employment,
-                                          "Salaried", "Self-employed", "Unemployed", "Student", "On wages (Irregular salary, kibarua)", "A homemaker", "Out of work and looking for work","Out of work but not currently looking for work" )) %>% 
+    mutate(women_employment = case_when(
+              str_detect(women_employment, "Unemployed") ~ "Unemployed",
+              str_detect(women_employment, "Salaried") ~ "Salaried",
+              str_detect(women_employment, "On wages") ~ "On wages (Irregular salary)",
+              str_detect(women_employment, "Self-employed") ~ "Self-employed",
+              str_detect(women_employment, "Student") ~ "Student",
+              str_detect(women_employment, "Out of work and looking") ~ "Out of work and looking for work",
+              str_detect(women_employment, "Out of work but not") ~ "Out of work but not currently looking for work",
+              str_detect(women_employment, "A homemaker") ~ "A homemaker",
+               str_detect(women_employment, "Other") ~ women_employment_other)) %>% 
     mutate(women_residence = dplyr::recode(women_residence,
-                                           "1" = "Urban or city center",
-                                           "2" = "Peri-urban areas",
-                                           "3" = "Rural areas or countryside"),
+                                           "Urban or city center / <u> Boma</u> /<i>Mjini,/i>" = "Urban or city center",
+                                           "Peri-urban areas / <u> Aluora mag boma</u> /<i>Kandokando ya jiji</i>" = "Peri-urban areas",
+                                           "Rural areas or countryside / <u> Kuonde mabor gi boma</u> /<i>Maeneo ya vijijini</i>" = "Rural areas or countryside"),
            women_residence = fct_relevel(women_residence,
-                                         "Rural areas or countryside", "Peri-urban areas", "Urban or city center"),
-           women_distance = dplyr::recode(women_distance,
-                                          "0" = "< an hour",
-                                          "1" = ">= an hour")) %>% 
+                                         "Rural areas or countryside", "Peri-urban areas", "Urban or city center")) %>% 
+        mutate(women_distance = dplyr::recode(women_distance,
+                                          "less than one hour /<u>Matin ne saa achiel</u> /<i>chini ya saa moja</i>" = "< an hour",
+                                          "one hour or more than one hour / <u>Saa achiel kata moingo saa achiel</u> /<i>Saa moja au zaidi</i>" = ">= an hour")) %>% 
     mutate(women_hiv = dplyr::recode(women_hiv,
-                                     "1"  = "HIV negative",
-                                     "2" = "Living with HIV",
-                                     "99" = "Don't know",
-                                     "-2" =	"Prefer not to answer")) %>% 
-    mutate(women_art = dplyr::recode(women_art,
-                                     "1" = "Yes",
-                                     "0" = "No",
-                                     "-2" = "I prefer not to say"))
+                                     "HIV negative /<u>Aonge kute mag ayaki</u> /<i>Sina VVU</i>"  = "HIV negative",
+                                     "Living with HIV /<u>An gi ayaki </u> /<i>Naishi na VVU </i>" = "Living with HIV",
+                                     "Don't know /<u>Akia chalna</u> /<i>Sijui</i>" = "Don't know",
+                                     "Prefer not to answer /<u>Okdaher mar duoko penjoni</u> /<i>Ningependa nisiweke jibu</i>" =	"Prefer not to answer")) %>% 
+    mutate(women_art = case_when(
+        str_detect(women_art, "Yes") ~ "Yes",
+        str_detect(women_art, "No") ~ "No",
+        str_detect(women_art, "prefer") ~ "Prefer not to say")) %>% 
+    mutate(women_service___1 = case_when(women_service___1 == "Checked" ~ 1,
+                                         women_service___1 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___2 = case_when(women_service___2 == "Checked" ~ 1,
+                                         women_service___2 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___3 = case_when(women_service___3 == "Checked" ~ 1,
+                                         women_service___3 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___4 = case_when(women_service___4 == "Checked" ~ 1,
+                                         women_service___4 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___5 = case_when(women_service___5 == "Checked" ~ 1,
+                                         women_service___5 == "Unchecked" ~ 0)) %>%
+    mutate(women_service___6 = case_when(women_service___6 == "Checked" ~ 1,
+                                         women_service___6 == "Unchecked" ~ 0))
+    
 
 # basic demo table
 ppw_demo %>% tbl_summary(
   include=c(age, women_service___4, women_service___2, women_service___1,
-            women_service___3, women_pregnancy, women_gestational,
+            women_service___3, women_service___6, 
+            women_pregnancy_recode, women_gestational,
             women_delivery, women_preg_number, women_education, women_partner,
             women_employment,women_residence, women_distance, women_distance_0, 
             women_distance_1, women_hiv, women_hiv_history, women_art, pmad),
@@ -150,19 +182,20 @@ ppw_demo %>% tbl_summary(
                women_service___2 ~ "Follow-up antenatal care visit",
                women_service___3 ~ "Postnatal care",
                women_service___4 ~ "Immunization for my baby",
-               women_pregnancy ~ "Pregnancy Status",
+               women_service___6 ~ "Family planning",
+               women_pregnancy_recode ~ "Pregnancy Status",
                women_delivery ~ "Weeks since delivery",
                women_preg_number ~ "Total number of pregnancies",
                women_partner ~ "Kind of partner",
                women_employment ~ "Employment status",
                women_residence ~ "Residential area",
                women_distance ~ "Duration to the facility",
-               women_distance_0 ~ "Duration to the facility (Munites)",
+               women_distance_0 ~ "Duration to the facility (Minutes)",
                women_distance_1 ~ "Duration to the facility (Hours)",
                women_hiv ~ "HIV status",
                women_art ~ "Currently using antiretroviral therapy",
                women_hiv_history ~ "Duration known LHIV (years)",
-               pmad ~ "PHQ2 or QAD2 => 3"),
+               pmad ~ "PHQ2 or QAD2 >= 3"),
   missing = "no",
   digits = list(all_continuous() ~ 1), 
   type = list(age ~ "continuous", 
@@ -171,8 +204,12 @@ ppw_demo %>% tbl_summary(
               women_preg_number ~ "continuous",
               women_distance_0 ~ "continuous",
               women_distance_1 ~ "continuous",
-              women_hiv_history ~ "continuous"),
-  statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+              women_hiv_history ~ "continuous"
+              ),
+  statistic = list(
+    all_continuous() ~ "{median} [IQR: {p25}, {p75}]",
+    all_categorical() ~ "{n} ({p}%)"
+  ))%>% 
   bold_labels() %>%
     add_n() %>% 
     italicize_levels() %>%
@@ -187,28 +224,196 @@ ppw_demo %>% tbl_summary(
 ```
 
 
-## SCREENING
+\pagebreak
+
+# Screening
+
 ```{r PMAD Screening Summary, echo=FALSE, message=FALSE, warning=FALSE}
-screen_ppw <- ppw_data  %>%
+screen_ppw <- data  %>%
   dplyr::select(record_id, starts_with("scr_diff_"), screening_access, screening_strategy_other, screening_complete, screening_times, starts_with("scr_barrier"))
+
+#basic screening table
+screen_ppw <- screen_ppw %>% 
+    mutate(screening_access = dplyr::recode(screening_access,
+                                           "No /<u>Ooyo</u> /<i>Hapana</i>" = "No",
+                                           "Yes /<u> Ee</u> /<i>Ndio</i>" = "Yes")) %>% 
+    mutate(screening_times = dplyr::recode(screening_times,
+                                          "Less than 2 times /<u>Matin ne 2</u> /<i>Chini ya mara 2</i>" = "Less than 2 times",
+                                          "3 to 4 times /<u>3 kata 4</u> /<i>Mara 3 au 4</i>" = "3-4 times",
+                                          "5 to 6 times /<u>5 kata 6</u> /<i>Mara 5 au 6</i>" = "5-6 times",
+                                          "More than 6 times /<u>Moingo 6</u> /<i>Zaidi ya mara 6</i>" = "More than 6 times"))
+
+screen_ppw %>% tbl_summary(
+  include=c(screening_access, screening_times),
+  label = list(screening_access ~ "Service access",
+               screening_times ~ "Times of access"),
+  missing = "no",
+  digits = list(all_continuous() ~ 1),
+  statistic = list(
+    all_categorical() ~ "{n} ({p}%)"
+  ))%>% 
+  bold_labels() %>%
+    add_n() %>% 
+    italicize_levels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 2: Basic Screening Summary for Women") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) 
 ```
 
+## Criticality of Screening Barriers
+
+```{r Screening Barriers, echo=F, message=FALSE, warning=FALSE}
+screening_barriers <- screen_ppw %>% 
+    dplyr::select(starts_with("scr_barrier_"))
+
+# Define the mapping
+likert_mapping <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+# Apply the mapping
+screening_barriers <- screening_barriers %>%
+  mutate(across(everything(), ~ likert_mapping[.])) 
+
+# Trim white spaces
+screening_barriers <- screening_barriers %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+screening_barriers <- screening_barriers %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+# gglikert(
+#   screening_barriers,
+#   variable_labels = c(
+#       scr_barrier_room = "Not having a private space to talk about MH in the facilities",
+#       scr_barrier_norm = "Having signs of depression and anxiety is normal to you thus you do not see a need to seek care",
+#       scr_barrier_provide = "Not having a specific provider to talk about MH in the facilities" ,
+#       scr_barrier_special = "Lack of providers with specialized MH training",
+#       scr_barrier_confi = "Fear of breach of confidentiality by providers",
+#       scr_barrier_workload = "Provider not having time to ask as they are attending too many women",
+#       scr_barrier_partner =  "Lack of male partner involvement and support",
+#       scr_barrier_witch = "Women believing mental illness is as a result of witchcraft, hence they don't talk about it",
+#       scr_barrier_stigmacom = "Fear of being judged by family members and community members",
+#       scr_barrier_stigmahcw = "Fear of being judged by providers",
+#       scr_barrier_aware = "Lack of awareness or knowledge on mental illnesses",
+#       scr_barrier_avail = "Screening for MH not being available and you not being asked by providers about MH during visits",
+#       scr_barrier_atti = "Providers being inapproachable"),
+#   sort = "descending",
+#          sort_prop_include_center = FALSE,
+#          labels_accuracy = 1,
+#          labels_hide_below = 0.01)+
+#     labs(title = "Criticality of Screening Barriers",
+#          caption = "Note: n = 190") +  # Add a footnote
+#       theme(
+#     plot.caption = element_text(hjust = 0.5),
+#     plot.title = element_text(hjust = 0.5),
+#     axis.text.x = element_blank(),  # Remove x-axis text
+#     axis.ticks.x = element_blank(),  # Remove x-axis ticks
+#     axis.title.x = element_blank()  # Remove x-axis title
+#   ) +
+#   scale_fill_brewer(palette = "RdYlBu", direction = -1)  # Reverse the color direction
 
 
-### Impact of Screening Strategies
+# Reshape the data to long format for ggplot2 and remove NA values
+screening_barriers_long <- screening_barriers %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c("Not a challenge at all", 
+                                      "Makes it a little hard", 
+                                      "Makes it hard", 
+                                      "Makes it very hard", 
+                                      "Makes it impossible"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
+
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+barrier_order <- screening_barriers_long %>%
+  filter(Response == "Makes it impossible") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Barrier)  # Get the ordered Barrier levels
+
+# Reorder the Barrier factor in the original data
+screening_barriers_long <- screening_barriers_long %>%
+  mutate(Barrier = factor(Barrier, levels = barrier_order))  # Relevel the Barrier factor based on ranking
+
+# Define labels for the barriers
+barrier_labels <- c(
+  scr_barrier_room = "Not having a private space to talk about MH in the facilities",
+  scr_barrier_norm = "Having signs of depression and anxiety is normal to you,\n so you do not seek care",
+  scr_barrier_provide = "Not having a specific provider to \ntalk about MH in the facilities",
+  scr_barrier_special = "Lack of providers with specialized MH training",
+  scr_barrier_confi = "Fear of breach of confidentiality by providers",
+  scr_barrier_workload = "Provider not having time to ask \n due to attending too many women",
+  scr_barrier_partner = "Lack of male partner involvement and support",
+  scr_barrier_witch = "Belief that mental illness is a result\n of witchcraft, hence not discussed",
+  scr_barrier_stigmacom = "Fear of being judged by family and community members",
+  scr_barrier_stigmahcw = "Fear of being judged by providers",
+  scr_barrier_aware = "Lack of awareness or knowledge on mental illnesses",
+  scr_barrier_avail = "Screening for MH not available and\n not asked about during visits",
+  scr_barrier_atti = "Providers being inapproachable"
+)
+
+# Plot with ggplot2 (non-centered, left-aligned bars)
+ggplot(screening_barriers_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill") +  # Stacked bar chart with fill
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Criticality of Screening Barriers"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 25), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20)
+  ) +
+  scale_x_discrete(labels = barrier_labels) +  # Apply custom labels for the barriers
+  coord_flip()  # Flip the coordinates for horizontal bars
+```
+
+## Impact of Screening Strategies
+
 ```{r Screening Strategies, echo=F, message=FALSE, warning=FALSE}
 screening_strategies <- screen_ppw %>% 
     dplyr::select(starts_with("scr_diff_"))
 
-
 # Define the mapping
 likert_mapping <- c(
     "Major negative impact",
     "Some negative impact",
     "No impact",
-    "Some positive impact ",
+    "Some positive impact",
     "Major positive impact")
-
 
 # Apply the mapping
 screening_strategies <- screening_strategies %>%
@@ -223,158 +428,163 @@ levels <- c(
     "Major negative impact",
     "Some negative impact",
     "No impact",
-    "Some positive impact ",
+    "Some positive impact",
     "Major positive impact")
-
 
 screening_strategies <- screening_strategies %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# gglikert(
+#   screening_strategies,
+#   variable_labels = c(
+#       scr_diff_service = "Integrating screening as part of routine care in the clinic",
+#       scr_diff_trainexist = "Training existing providers on how to handle patients with mental illnesses",
+#       scr_diff_room = "Having a dedicated private place for MH screening" ,
+#       scr_diff_provide = "Having providers whose work is dedicated to offering mental health support",
+#       scr_diff_special = "Having providers and counsellors with specialized mental health training",
+#       scr_diff_aware = "Creating awareness on mental health in the community for example using community health promoters or through churches",
+#       scr_diff_confi =  "Assuring confidentiality in mental health services",
+#       scr_diff_stigma = "Not talking to providers I already know about mental health issues",
+#       scr_diff_atti = "[Having friendly and respectful providers"
+#   ),
+#   sort = "descending",
+#          sort_prop_include_center = TRUE,
+#          labels_accuracy = 1,
+#          labels_hide_below = 0.05)+
+#     labs(title = "Impact of Screening Strategies",
+#          caption = "Note: n = 190") +  # Add a footnote
+#     theme(plot.caption = element_text(hjust = 0.5),
+#           plot.title = element_text(hjust = 0.5))+  # Center the footnote
+#   scale_fill_brewer(palette = "RdYlBu")
 
-gglikert(
-  screening_strategies,
-  variable_labels = c(
-      scr_diff_service = "Integrating screening as part of routine care in the clinic",
-      scr_diff_trainexist = "Training existing providers on how to handle patients with mental illnesses",
+# Reshape the data to long format for ggplot2 and remove NA values
+screening_strategies_long <- screening_strategies %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Strategy", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact"))) %>%
+  group_by(Strategy, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
+
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+strategy_order <- screening_strategies_long %>%
+  filter(Response == "Major positive impact") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Strategy)  # Get the ordered levels
+
+# Reorder the Barrier factor in the original data
+screening_strategies_long <- screening_strategies_long %>%
+  mutate(Strategy = factor(Strategy, levels = strategy_order))  # Relevel the Barrier factor based on ranking
+
+# Define labels for the barriers
+Strategy_labels <- c(
+  scr_diff_service = "Integrating screening as part of routine care in the clinic",
+      scr_diff_trainexist = "Training existing providers on \nhow to handle patients with mental illnesses",
       scr_diff_room = "Having a dedicated private place for MH screening" ,
-      scr_diff_provide = "Having providers whose work is dedicated to offering mental health support",
-      scr_diff_special = "Having providers and counsellors with specialized mental health training",
-      scr_diff_aware = "Creating awareness on mental health in the community for example using community health promoters or through churches",
-      scr_diff_confi =  "Assuring confidentiality in mental health services",
-      scr_diff_stigma = "Not talking to providers I already know about mental health issues",
-      scr_diff_atti = "[Having friendly and respectful providers" 
-  ),
-  sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05)+
-    labs(title = "Impact of Screening Strategies",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5))+  # Center the footnote
-  scale_fill_brewer(palette = "RdYlBu")
+      scr_diff_provide = "Having providers whose work is dedicated \n to offering mental health support",
+      scr_diff_special = "Having providers and counsellors \n with specialized mental health training",
+      scr_diff_aware = "Creating awareness on MH in the community \n for example using CHPs or through churches",
+      scr_diff_confi =  "Assuring confidentiality in MH services",
+      scr_diff_stigma = "Not talking to providers I already know about MH issues",
+      scr_diff_atti = "Having friendly and respectful providers"
+)
 
+# Plot with ggplot2 (non-centered, left-aligned bars)
+ggplot(screening_strategies_long, aes(x = Strategy, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill") +  # Stacked bar chart with fill
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Impact of Screening Strategies"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 25), 
+    axis.title.y = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20) 
+  ) +
+  scale_x_discrete(labels = Strategy_labels) +  # Apply custom labels for the barriers
+  coord_flip() 
 ```
 
-
-### Criticality of  Screening Barriers
-```{r Screening Barriers, echo=F, message=FALSE, warning=FALSE}
-screening_barries <- screen_ppw %>% 
-    dplyr::select(starts_with("scr_barrier_"))
-
-
-# Define the mapping
-likert_mapping <- c(
-    "Not a challenge at all",
-    "Makes it a little hard",
-    "Makes it hard",
-    "Makes it very hard",
-    "Makes it impossible")
-
-
-# Apply the mapping
-screening_barries <- screening_barries %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
-
-# Trim white spaces
-screening_barries <- screening_barries %>%
-  mutate_all(trimws)
-
-# Set factor levels
-levels <- c(
-    "Not a challenge at all",
-    "Makes it a little hard",
-    "Makes it hard",
-    "Makes it very hard",
-    "Makes it impossible")
-
-
-screening_barries <- screening_barries %>%
-  lapply(function(x) factor(x, levels = levels)) %>%
-  as.data.frame()
-
-
-gglikert(
-  screening_barries,
-  variable_labels = c(
-      scr_barrier_room = "Not having a private space to talk about mental health in the facilities",
-      scr_barrier_norm = "Having signs of depression and anxiety as normal to you thus you do not see a need to seek care",
-      scr_barrier_provide = "Not having a specific provider to talk about mental health issues in the facilities" ,
-      scr_barrier_special = "Lack of providers with specialized MH training",
-      scr_barrier_confi = "Fear of breach of confidentiality by providers",
-      scr_barrier_workload = "Provider not having time to ask about depression or anxiety as they are attending to many women",
-      scr_barrier_partner =  "Lack of male partner involvement and support",
-      scr_barrier_witch = "Women believing mental illness is as a result of witchcraft, hence they don't talk about it",
-      scr_barrier_stigmacom = "Fear of being judged by family members and community members",
-      scr_barrier_stigmahcw = "Fear of being judged by providers",
-      scr_barrier_aware = "Lack of awareness or knowledge on mental illnesses",
-      scr_barrier_avail = "Screening for MH not being available and you not being asked by the healthcare provider about your MH during the visits",
-      scr_barrier_atti = "Providers being inapproachable"),
-  sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05)+
-    labs(title = "Criticality of Screening Barriers",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5))+  # Center the footnote
-  scale_fill_brewer(palette = "RdYlBu")
-
-```
-
+\pagebreak
 
 # Diagnosis and Treatment
+
 ```{r Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-dia_treat_ppw <- ppw_data %>% 
+dia_treat_ppw <- data %>% 
   dplyr::select(record_id, starts_with("dx_"), starts_with("trt_"), starts_with("dxt_"), diagnosis_and_treatment_complete) %>% 
-    mutate(dx_access = dplyr::recode(dx_access,
-                                     "1" = "Yes - both depression and anxiety",
-                                     "2" = "Yes - only depression",
-                                     "3" = "Yes - only anxiety",
-                                     "0" = "No"),
-           dx_access = fct_relevel(dx_access, "No", "Yes - only depression",
-                                   "Yes - only anxiety", "Yes - both depression and anxiety"),
-           dx_depression = dplyr::recode(dx_depression,
-                                         "0" = "During the pregnancy",
-                                         "1" = "After delivery"),
-           dx_depression = fct_relevel(dx_depression,
-                                       "During the pregnancy", "After delivery"),
-           dx_anxiety = dplyr::recode(dx_anxiety,
-                                      "0" = "During the pregnancy",
-                                      "1" = "After delivery"),
-           trt_times = dplyr::recode(trt_times,
-                                     "1" = "Less than 2 times",
-                                     "2" = "Less than 2 times"))
+    mutate(dx_access = case_when(
+        str_detect(dx_access, "depression and anxiety") ~ "Both depression and anxiety",
+        str_detect(dx_access, "only depression") ~ "Depression",
+        str_detect(dx_access, "only anxiety") ~ "Anxiety",
+        str_detect(dx_access, "No") ~ "No")) %>%
+    mutate(dx_depression = case_when(
+        str_detect(dx_depression, "During the pregnancy") ~ "During the pregnancy",
+        str_detect(dx_depression, "After delivery") ~ "After delivery")) %>%
+    mutate(dx_anxiety = case_when(
+        str_detect(dx_anxiety, "During the pregnancy") ~ "During the pregnancy",
+        str_detect(dx_anxiety, "After delivery") ~ "After delivery")) %>%
+    mutate(trt_times = case_when(
+        str_detect(trt_times, "Less than 2 times") ~ "Less than 2 times",
+        str_detect(trt_times, "3 to 4 times") ~ "3-4 times",
+        str_detect(trt_times, "5 to 6 times") ~ "5-6 times",
+        str_detect(trt_times, "More than 6 times") ~ "More than 6 times"))
+
+dia_treat_ppw <- dia_treat_ppw %>% 
+    mutate(trt_caretype___1 = case_when(
+        trt_caretype___1 == "Checked" ~1,
+        trt_caretype___1 == "Unchecked" ~0)) %>%
+     mutate(trt_caretype___2 = case_when(
+        trt_caretype___2 == "Checked" ~1,
+        trt_caretype___2 == "Unchecked" ~0)) 
 
 dia_treat_ppw <- dia_treat_ppw %>%
-  mutate(trt_type_counseling = case_when(
-    grepl("general counselling", trt_type_counseling, TRUE ~ trt_type_counseling) ~ "General Counselling",
-    grepl("Interpersonal counselling.|Interpersonal counselling", trt_type_counseling, ignore.case = TRUE) ~ "Interpersonal Counselling",
-    grepl("supportive counselling", trt_type_counseling, ignore.case = TRUE) ~ "Supportive Counselling",
-    grepl("unspecified counselling|Unspecified counselling|unspecified counselling", trt_type_counseling, ignore.case = TRUE) ~ "Unspecified Counselling",
-    trt_type_counseling == "" | is.na(trt_type_counseling) ~ NA_character_,  # Set to NA if empty or NA
-    TRUE ~ trt_type_counseling  # Keep original value if no match
-  ))%>% 
-    mutate(trt_type_counseling = fct_relevel(trt_type_counseling,
-                                             "Unspecified Counselling", "Interpersonal Counselling", "General Counselling", "Supportive Counselling"))
-
+  mutate(trt_type_counseling_recode = case_when(
+      str_detect(trt_type_counseling, "general counselling") ~ "General Counselling",
+      str_detect(trt_type_counseling, "interpersonal counselling") ~ "Interpersonal Counselling",
+      str_detect(trt_type_counseling, "supportive counselling") ~ "Supportive Counselling",
+      str_detect(trt_type_counseling, "unspecified counselling") ~ "Unspecified Counselling",
+      str_detect(trt_type_counseling, "Unspecified counselling") ~ "Unspecified Counselling",
+            str_detect(trt_type_counseling, "Interpersonal counselling") ~ "Interpersonal Counselling",
+      str_detect(trt_type_counseling, "Interpersonal counselling.") ~ "Interpersonal Counselling"))
 
 dia_treat_ppw %>% 
     tbl_summary(
         include = c(dx_access, dx_depression, dx_depression_before,
-                    dx_depression_after, dx_anxiety, dx_anxiety_before,
-                    trt_caretype___1, trt_type_counseling,
+                    dx_depression_after, dx_anxiety, dx_anxiety_before, dx_anxiety_after,
+                    trt_caretype___1, trt_caretype___2, trt_type_counseling_recode,
                     trt_times),
-        label = list(dx_access ~ "Ever been diagnosed with depression and/or anxiety",
-               dx_depression ~ "Diagnosed depression during or after pregnancy",
+        label = list(dx_access ~ "Ever been diagnosed",
+               dx_depression ~ "Time of depression diagnosis",
                trt_caretype___1 ~ "Counselling",
-               dx_anxiety ~ "Diagnosed anxiety during or after pregnancy",
+               trt_caretype___2 ~ "Medication",
+               dx_anxiety ~ "Time of anxiety diagnosis",
                dx_anxiety_before ~ "Gestational age (month) diagnosed with anxiety",
-               trt_times ~ "Times treated of depression and/or anxiety in last 2 months",
-               trt_type_counseling ~ "Type of counselling",
+               trt_times ~ "PMAD treatment in last 2 months",
+               trt_type_counseling_recode ~ "Type of counselling",
                dx_depression_before ~ "Gestational age (month) diagnosed with depression",
-               dx_depression_after ~ "Diagnosed with depression after delivery in Month"),
+               dx_depression_after ~ "Diagnosed with depression after delivery (month)",
+               dx_anxiety_after ~ "Diagnosed with anxiety after delivery (month)"),
     digits = list(all_continuous() ~ 1), 
   type = list(dx_depression_before ~ "continuous",
               dx_depression_after ~ "continuous",
@@ -386,26 +596,17 @@ dia_treat_ppw %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header("Table 2: Diagnosis and Treatment Summary for PPW") %>% 
+  gt::tab_header("Table 3: Diagnosis and Treatment Summary for PPW") %>% 
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) 
-
-trt_times <- ppw_data %>% 
-    dplyr::select(record_id, dx_access, trt_times) %>% 
-    filter(!is.na(trt_times))
-
 ```
 
+## Criticality of Diagnosis and Treatment Barriers 
 
-
-### Criticality of Diagnosis and Treatment Barriers 
 ```{r criticality of barriers to Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE}
-criticality_df <- dia_treat_ppw %>% 
-    select(starts_with("dxt_barrier_"))%>%
-  mutate(across(where(is.numeric), ~ na_if(., 99))) %>% 
-     select(-dxt_barrier_other)
-
+dxt_barriers <- dia_treat_ppw %>% 
+    dplyr::select(starts_with("dxt_barrier_"), -dxt_barrier_other)
 
 # Define the mapping
 likert_mapping <- c(
@@ -415,13 +616,12 @@ likert_mapping <- c(
     "Makes it very hard",
     "Makes it impossible")
 
-
 # Apply the mapping
-criticality_df <- criticality_df %>%
+dxt_barriers <- dxt_barriers %>%
   mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
-criticality_df <- criticality_df %>%
+dxt_barriers <- dxt_barriers %>%
   mutate_all(trimws)
 
 # Set factor levels
@@ -432,114 +632,270 @@ levels <- c(
     "Makes it very hard",
     "Makes it impossible")
 
-
-criticality_df <- criticality_df %>%
+dxt_barriers <- dxt_barriers %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# gglikert(
+#   criticality_df,
+#   variable_labels = c(
+#       dxt_barrier_service = "Not being asked about mental health during the visits",
+#       dxt_barrier_atti = "Providers being inapproachable",
+#       dxt_barrier_stigmahcw = "Fear of being judged by providers" ,
+#       dxt_barrier_stigmacom = "Fear of being judged by family members and community members",
+#       dxt_barrier_room = "Not having a private space for mental health treatment in the facilities",
+#       dxt_barrier_where = "Not knowing where to seek help for depression or anxiety",
+#       dxt_barrier_provide =  "Not having a specific provider to talk about mental health issues in the facilities",
+#       dxt_barrier_special = "Lack of providers with specialized MH training",
+#       dxt_barrier_transport = "Transport to get care is difficult",
+#       dxt_barrier_confi = "Fear of breach of confidentiality by providers", 
+#       dxt_barrier_fear = "Fear of not getting the mental health support or treatment needed",
+#       dxt_barrier_priority = "Having conflicting priorities such as work",
+#       dxt_barrier_norm = "Having signs of depression and anxiety is normal to you thus you do not see a need to seek care",
+#       dxt_barrier_finan = "Getting care is expensive",
+#       dxt_barrier_workload = "Provider not having time to provide depression or anxiety treatment or not keeping appointments as scheduled",
+#      dxt_barrier_religion = "Prefer going for traditional medicine or prayers instead of speaking with a provider",
+#      dxt_barrier_witch = "Women believing that mental illness is as a result of witchcraft and as such they don't go for treatment",
+#      dxt_barrier_partner = "Lack of male partner involvement and support",
+#      dxt_barrier_drug = "Lack of drugs in the facility"  
+#   ),
+#   sort = "descending",
+#          sort_prop_include_center = TRUE,
+#          labels_accuracy = 1,
+#          labels_hide_below = 0.05)+
+#     labs(title = "Criticality of Diagnosis and Treatment Barriers",
+#          caption = "Note: n = 190") +  # Add a footnote
+#     theme(plot.caption = element_text(hjust = 0.5),
+#           plot.title = element_text(hjust = 0.5))+  # Center the footnote
+#   scale_fill_brewer(palette = "RdYlBu")
 
-gglikert(
-  criticality_df,
-  variable_labels = c(
-      dxt_barrier_service = "Not being asked about mental health during the visits",
+# Reshape the data to long format, calculate counts and percentages for each Response within each Barrier
+dxt_barriers_long <- dxt_barriers %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c("Not a challenge at all", 
+                                      "Makes it a little hard", 
+                                      "Makes it hard", 
+                                      "Makes it very hard", 
+                                      "Makes it impossible"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n(), .groups = 'drop') %>%
+  mutate(percentage = n / sum(n) * 100) %>% 
+    ungroup() %>% 
+    group_by(Barrier) %>% 
+    mutate(percentage = n / sum(n) * 100) %>%
+    ungroup()
+
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+barrier_order <- dxt_barriers_long %>%
+  filter(Response == "Makes it impossible") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Barrier)  # Get the ordered Barrier levels
+
+# Reorder the Barrier factor in the original data
+dxt_barriers_long <- dxt_barriers_long %>%
+  mutate(Barrier = factor(Barrier, levels = barrier_order))  # Relevel the Barrier factor based on ranking
+
+barrier_labels <- c(
+      dxt_barrier_service = "Not being asked about MH during the visits",
       dxt_barrier_atti = "Providers being inapproachable",
       dxt_barrier_stigmahcw = "Fear of being judged by providers" ,
       dxt_barrier_stigmacom = "Fear of being judged by family members and community members",
-      dxt_barrier_room = "Not having a private space for mental health treatment in the facilities",
-      dxt_barrier_where = "Not knowing where to seek help for depression or anxiety",
-      dxt_barrier_provide =  "Not having a specific provider to talk about mental health issues in the facilities",
+      dxt_barrier_room = "Not having a private space for \n MH treatment in the facilities",
+      dxt_barrier_where = "Not knowing where to seek help",
+      dxt_barrier_provide =  "Not having a specific provider to \b talk about MH issues in the facilities",
       dxt_barrier_special = "Lack of providers with specialized MH training",
       dxt_barrier_transport = "Transport to get care is difficult",
-      dxt_barrier_confi = "Fear of breach of confidentiality by providers", 
-      dxt_barrier_fear = "Fear of not getting the mental health support or treatment needed",
+      dxt_barrier_confi = "Fear of breach of confidentiality by providers",
+      dxt_barrier_fear = "Fear of not getting the MH support or treatment needed",
       dxt_barrier_priority = "Having conflicting priorities such as work",
-      dxt_barrier_norm = "Having signs of depression and anxiety is normal to you thus you do not see a need to seek care",
+      dxt_barrier_norm = "Having signs of depression and anxiety is normal to you \n thus you do not see a need to seek care",
       dxt_barrier_finan = "Getting care is expensive",
-      dxt_barrier_workload = "Provider not having time to provide depression or anxiety treatment or not keeping appointments as scheduled",
-     dxt_barrier_religion = "Prefer going for traditional medicine or prayers instead of speaking with a provider",
-     dxt_barrier_witch = "Women believing that mental illness is as a result of witchcraft and as such they don't go for treatment",
+      dxt_barrier_workload = "Provider not having time to provide depression \n or anxiety treatment or not keeping appointments as scheduled",
+     dxt_barrier_religion = "Prefer going for traditional medicine \n or prayers instead of a provider",
+     dxt_barrier_witch = "Women believing that mental illness is as a result \n of witchcraft and as such they don't go for treatment",
      dxt_barrier_partner = "Lack of male partner involvement and support",
-     dxt_barrier_drug = "Lack of drugs in the facility"  
-  ),
-  sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05)+
-    labs(title = "Criticality of Diagnosis and Treatment Barriers",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5))+  # Center the footnote
-  scale_fill_brewer(palette = "RdYlBu")
+     dxt_barrier_drug = "Lack of drugs in the facility"
+  )
+
+# Plot with ggplot2 using the reordered Barriers
+ggplot(dxt_barriers_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill") +  # Stacked bar chart with fill
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Criticality of Diagnosis and Treatment Barriers"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+    scale_x_discrete(labels = barrier_labels) +
+  coord_flip()  # Flip the coordinates for horizontal bars
 ```
 
+## Impact of Diagnosis and Treatment Strategies
 
-### Impact of Diagnosis and Treatment Strategies
 ```{r Impact of strategies, echo=FALSE, message=FALSE, warning=FALSE}
-impact_df <- dia_treat_ppw %>% 
-    select(starts_with("dxt_diff_"))%>%
-  mutate(across(where(is.numeric), ~ na_if(., 99)))
+dxt_strategies <- dia_treat_ppw %>% 
+    dplyr::select(starts_with("dxt_diff_"))
 
 # Define the mapping
-likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
+likert_mapping <- c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact")
 
 # Apply the mapping
-impact_df <- impact_df %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
+dxt_strategies <- dxt_strategies %>%
+  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
-impact_df <- impact_df %>%
+dxt_strategies <- dxt_strategies %>%
   mutate_all(trimws)
 
 # Set factor levels
-levels <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
+levels <- c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact")
 
-impact_df <- impact_df %>%
+dxt_strategies <- dxt_strategies %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
-gglikert(impact_df,
-         variable_labels = c(
-             dxt_diff_service ="Integrating MH treatment routine care",
+# Reshape the data to long format for ggplot2 and remove NA values
+dxt_strategies_long <- dxt_strategies %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Strategy", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact"))) %>%
+  group_by(Strategy, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
+
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+strategy_order <- dxt_strategies_long %>%
+  filter(Response == "Major positive impact") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Strategy)  # Get the ordered levels
+
+# Reorder the Barrier factor in the original data
+dxt_strategies_long <- dxt_strategies_long %>%
+  mutate(Strategy = factor(Strategy, levels = strategy_order))  # Relevel the Barrier factor based on ranking
+
+# Define labels for the barriers
+Strategy_labels <- c(
+  dxt_diff_service ="Integrating MH treatment routine care",
              dxt_diff_trainexist = "MH training to existing providers",
              dxt_diff_room = "Private room for HM treatment", 
              dxt_diff_provide = "Having mental health providers",
              dxt_diff_transport = "Transport facilitation",
              dxt_diff_aware = "MH community awareness",
              dxt_diff_chv = "Using CHVs to support MH",
-             dxt_diff_special = "Having MH specialized providers"),
-         sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05,
-         width = 0.5)+
-    labs(title = "Impact of Diagnosis and Treatment Strategies",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+             dxt_diff_special = "Having MH specialized providers")
 
+# Plot with ggplot2 (non-centered, left-aligned bars)
+ggplot(dxt_strategies_long, aes(x = Strategy, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill") +  # Stacked bar chart with fill
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Impact of Diagnosis and Treatment Strategies"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+  scale_x_discrete(labels = Strategy_labels) +  # Apply custom labels for the barriers
+  coord_flip() 
 ```
 
+\pagebreak
 
-## Referral And Remission
+# Referral And Remission
+
 ```{r Rerem, echo=F, warning=F, message=F}
-rerem_ppw <- ppw_data %>% 
+rerem_ppw <- data %>% 
     dplyr::select(record_id, refer_access, refer_facility___1, 
                   refer_facility___2, refer_facility___3, 
                   refer_facility___4, refer_facility___5, 
                   refer_facility_other, rem_access, starts_with("rerem_"),
                   referral_and_remission_complete)
 
-
+rerem_ppw <- rerem_ppw %>% 
+    mutate(refer_access = case_when(
+        str_detect(refer_access, "Yes") ~ "Yes",
+        str_detect(refer_access, "No") ~ "No")) %>%
+    mutate(rem_access = case_when(
+        str_detect(rem_access, "Yes") ~ "Yes",
+        str_detect(rem_access, "No") ~ "No")) %>%
+    mutate(refer_facility___1 = case_when(
+        refer_facility___1 == "Checked" ~ "1",
+        refer_facility___1 == "Unchecked" ~ "0")) %>%
+    mutate(refer_facility___2 = case_when(
+        refer_facility___2 == "Checked" ~ "1",
+        refer_facility___2 == "Unchecked" ~ "0")) %>%
+    mutate(refer_facility___3 = case_when(
+        refer_facility___3 == "Checked" ~ "1",
+        refer_facility___3 == "Unchecked" ~ "0")) %>%
+    mutate(refer_facility___4 = case_when(
+        refer_facility___4 == "Checked" ~ "1",
+        refer_facility___4 == "Unchecked" ~ "0")) %>%
+    mutate(refer_facility___5 = case_when(
+        refer_facility___5 == "Checked" ~ "1",
+        refer_facility___5 == "Unchecked" ~ "0")) 
+                   
 #Referral Summary
-ppw_data %>% 
+rerem_ppw %>% 
     tbl_summary(
-  include=c(refer_access, refer_facility___1, refer_facility___2, refer_facility___3, refer_facility___4, refer_facility___5, rem_access),
+  include=c(refer_access, 
+            #refer_facility___1, refer_facility___2, 
+            #refer_facility___3, refer_facility___4, refer_facility___5, 
+            rem_access),
   label = list(refer_access ~ "Refered to receive care for PMAD",
-               refer_facility___1 ~ "Jaramogi Oginga Odinga TRH",
-               refer_facility___2 ~ "Homa Bay TRH",
-               refer_facility___3 ~ "Siaya TRH",
-               refer_facility___4 ~	"Kisumu CRH",
-               refer_facility___5 ~	"Other",
+               # refer_facility___1 ~ "Jaramogi Oginga Odinga TRH",
+               # refer_facility___2 ~ "Homa Bay TRH",
+               # refer_facility___3 ~ "Siaya TRH",
+               # refer_facility___4 ~	"Kisumu CRH",
+               # refer_facility___5 ~	"Other",
                rem_access ~ "Received treatment multiple times with the provider monitoring symptoms"),
   missing = "no",
   digits = list(all_continuous() ~ 1),
@@ -550,47 +906,218 @@ ppw_data %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header("Table 1: Referral and Remission Summary for PPW") %>% 
+  gt::tab_header("Table 4: Referral and Remission Summary for PPW") %>% 
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) 
-    
-
 ```
 
 
+## Criticality of Referral and Remission Barriers 
 
-## Frequency of Barriers
-```{r Frequency of Barriers, echo = F, warning = F, message = F}
-freq_bar_ppw <- ppw_data %>% 
-    dplyr::select(record_id, starts_with("freq_barr_"), frequency_of_barriers_complete) %>%
-  mutate(across(where(is.numeric), ~ na_if(., 99)))
-
-freq_bar_df <- freq_bar_ppw %>% 
-    dplyr::select(2:21)%>% 
-  dplyr::rename("Not being asked during the visits" = freq_barr_service,
-          "Inapproachable providers" = freq_barr_atti,
-          "Lack of private room" = freq_barr_room,
-         "Having signs isnormal" = freq_barr_norm,
-         "Lack of specilaist communication in facility" = freq_barr_provide,
-         "Lack of specialized MH providers" = freq_barr_special,
-         "Confidentiality by providers" = freq_barr_confi,
-         "Providers lack of time to provide MH services)" = freq_barr_workload,
-         "Lack of male partner involvement" = freq_barr_partner,
-         "Believing it is witchcraft" = freq_barr_witch,
-          "Fear family members and community judgement " = freq_barr_stigmacom,
-          "Fear of being judged by providers" = freq_barr_stigmahcw,
-         "Lack of awareness or knowledge" = freq_barr_aware,
-         "Not knowing where to seek help" = freq_barr_where,
-         "Transport to get care is difficult" = freq_barr_transport,
-        "Fear of not getting treatment needed" = freq_barr_fear,
-        "Having conflicting priorities" = freq_barr_priority,
-        "Getting care is expensive" = freq_barr_finan,
-        "Prefer traditional medicine or prayers " = freq_barr_religion,
-        "Lack of drugs in the facility" = freq_barr_drug)
+```{r criticality of barriers to rerem, echo=FALSE, message=FALSE, warning=FALSE}
+rerem_barriers <- rerem_ppw %>% 
+    dplyr::select(starts_with("rerem_barrier_"), -rerem_barrier_other)
 
 # Define the mapping
-likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
+likert_mapping <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+# Apply the mapping
+rerem_barriers <- rerem_barriers %>%
+  mutate(across(everything(), ~ likert_mapping[.]))
+
+# Trim white spaces
+rerem_barriers <- rerem_barriers %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c(
+    "Not a challenge at all",
+    "Makes it a little hard",
+    "Makes it hard",
+    "Makes it very hard",
+    "Makes it impossible")
+
+rerem_barriers <- rerem_barriers %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+# Reshape the data to long format, calculate counts and percentages for each Response within each Barrier
+rerem_barriers_long <- rerem_barriers %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c("Not a challenge at all", 
+                                      "Makes it a little hard", 
+                                      "Makes it hard", 
+                                      "Makes it very hard", 
+                                      "Makes it impossible"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n(), .groups = 'drop') %>%
+  mutate(percentage = n / sum(n) * 100) %>% 
+    ungroup() %>% 
+    group_by(Barrier) %>% 
+    mutate(percentage = n / sum(n) * 100) %>%
+    ungroup()
+
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+barrier_order <- rerem_barriers_long %>%
+  filter(Response == "Makes it impossible") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Barrier)  # Get the ordered Barrier levels
+
+# Reorder the Barrier factor in the original data
+rerem_barriers_long <- rerem_barriers_long %>%
+  mutate(Barrier = factor(Barrier, levels = barrier_order))  # Relevel the Barrier factor based on ranking
+
+barrier_labels <- c(
+  rerem_barrier_finan = "Going for referral and ongoing appointments is expensive",
+  rerem_barrier_transport = "Transporting to referral and ongoing care is difficult",
+  rerem_barrier_priority = "Having conflicting priorities such as work",
+  rerem_barrier_atti = "Providers being inapproachable",
+  rerem_barrier_religion = "Prefer going for traditional medicine \n or prayers instead of a provider",
+  rerem_barrier_partner = "Lack of partner involvement and support",
+  rerem_barrier_stigmacom = "Fear of being judged by family members and community members")
+
+# Plot with ggplot2 using the reordered Barriers
+ggplot(rerem_barriers_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill") +  # Stacked bar chart with fill
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Criticality of Diagnosis and Treatment Barriers"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+    scale_x_discrete(labels = barrier_labels) +
+  coord_flip()  # Flip the coordinates for horizontal bars
+```
+
+## Impact of Referral and Remission Strategies
+
+```{r Impact of strategies to rerem, echo=FALSE, message=FALSE, warning=FALSE}
+rerem_strategies <- rerem_ppw %>% 
+    dplyr::select(starts_with("rerem_diff_"))
+
+# Define the mapping
+likert_mapping <- c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact")
+
+# Apply the mapping
+rerem_strategies <- rerem_strategies %>%
+  mutate(across(everything(), ~ likert_mapping[.])) 
+
+# Trim white spaces
+rerem_strategies <- rerem_strategies %>%
+  mutate_all(trimws)
+
+# Set factor levels
+levels <- c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact")
+
+rerem_strategies <- rerem_strategies %>%
+  lapply(function(x) factor(x, levels = levels)) %>%
+  as.data.frame()
+
+# Reshape the data to long format for ggplot2 and remove NA values
+rerem_strategies_long <- rerem_strategies %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Strategy", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact"))) %>%
+  group_by(Strategy, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
+
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+strategy_order <- rerem_strategies_long %>%
+  filter(Response == "Major positive impact") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Strategy)  # Get the ordered levels
+
+# Reorder the Barrier factor in the original data
+rerem_strategies_long <- rerem_strategies_long %>%
+  mutate(Strategy = factor(Strategy, levels = strategy_order))  # Relevel the Barrier factor based on ranking
+
+# Define labels for the barriers
+Strategy_labels <- c(
+  rerem_diff_integrate ="Integrating MH referral and ongoing care \n as a part of routine care",
+             rerem_diff_chv = "Using CHVs to support MH in the community")
+
+# Plot with ggplot2 (non-centered, left-aligned bars)
+ggplot(rerem_strategies_long, aes(x = Strategy, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = position_fill(), width = 0.3) +  # Narrower bars
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) + 
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Impact of Referral and Remission Strategies"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+  scale_x_discrete(labels = Strategy_labels) +  # Apply custom labels for the strategies
+  coord_flip() 
+```
+
+\pagebreak
+
+# Frequency of Barriers Across All Steps
+
+```{r Frequency of Barriers, echo = F, warning = F, message = F}
+freq_bar_df <- data %>% 
+    dplyr::select(starts_with("freq_barr_")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+# Define the mapping
+likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Always')
 
 # Apply the mapping
 freq_bar_df <- freq_bar_df %>%
@@ -601,34 +1128,102 @@ freq_bar_df <- freq_bar_df %>%
   mutate_all(trimws)
 
 # Set factor levels
-levels <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
+levels <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Always')
 
 freq_bar_df <- freq_bar_df %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+bar_long <- freq_bar_df %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Never",
+    "Rarely",
+    "Occasionaly",
+    "Frequently",
+    "Always"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
 
-results <- likert(freq_bar_df)
+order <- bar_long %>%
+  filter(Response == "Always") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Barrier)  # Get the ordered levels
 
-plot <- plot(results, text.size = 5, centered = FALSE)+
-    theme_bw(base_size = 10)+
-    theme(legend.position = "right")+
-    labs(title = "How frequently have you experienced these Barriers to receiving MH services since your most recent pregnancy?",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5),)  # Center the footnote
-    
-plot
+bar_long <- bar_long %>%
+  mutate(Barrier = factor(Barrier, levels = order))  
+
+bar_labels <- c(
+  freq_barr_service = "Not being asked during the visits",
+  freq_barr_atti = "Inapproachable providers",
+  freq_barr_room = "Lack of private room",
+  freq_barr_norm = "Having signs is normal",
+  freq_barr_provide = "Lack of specialist communication in facility",
+  freq_barr_special = "Lack of specialized MH providers",
+  freq_barr_confi = "Confidentiality by providers",
+  freq_barr_workload = "Providers lack of time to provide MH services",
+  freq_barr_partner = "Lack of male partner involvement",
+  freq_barr_witch = "Believing it is witchcraft",
+  freq_barr_stigmacom = "Fear of family members and community judgement",
+  freq_barr_stigmahcw = "Fear of being judged by providers",
+  freq_barr_aware = "Lack of awareness or knowledge",
+  freq_barr_where = "Not knowing where to seek help",
+  freq_barr_transport = "Transport to get care is difficult",
+  freq_barr_fear = "Fear of not getting treatment needed",
+  freq_barr_priority = "Having conflicting priorities",
+  freq_barr_finan = "Getting care is expensive",
+  freq_barr_religion = "Prefer traditional medicine or prayers",
+  freq_barr_drug = "Lack of drugs in the facility"
+)
+
+ggplot(bar_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = position_fill(), width = 0.5) +  # Narrower bars
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) + 
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Frequencies of Barriers Across All Steps"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+  scale_x_discrete(labels = bar_labels) +  # Apply custom labels for the strategies
+  coord_flip() 
+
 ```
 
+\pagebreak
 
-## IPMH
+# IPMH
+
+## IPMH screening
+
+### Criticality of IPMH Screening Barriers
 
 ```{r Criticality of IPMH barriers to Screning, echo=F, message=FALSE, warning=FALSE}
-ipmh_ppw <- ppw_data %>% 
+ipmh_ppw <- data %>% 
     dplyr::select(record_id, starts_with("ip_scre_"), 
                   starts_with("freq_scre_"),
                   starts_with("ip_"),
+                  starts_with("freq_trt_"),
+                  starts_with("freq_tele_"),
                   	ipmh_complete)
 
 ipmh_screening_barriers <- ipmh_ppw %>% 
@@ -652,31 +1247,77 @@ ipmh_screening_barriers <- ipmh_screening_barriers %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# Reshape the data to long format, calculate counts and percentages for each Response within each Barrier
+ipmh_screening_barriers_long <- ipmh_screening_barriers %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c("Not a challenge at all", 
+                                      "Makes it a little hard", 
+                                      "Makes it hard", 
+                                      "Makes it very hard", 
+                                      "Makes it impossible"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n(), .groups = 'drop') %>%
+  mutate(percentage = n / sum(n) * 100) %>% 
+  ungroup() %>%
+  group_by(Barrier) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
 
-gglikert(ipmh_screening_barriers,
-         variable_labels = c(
-             ip_scre_barr_workload ="Increased provider workload therefore screening using PHQ9/GAD7 may not be done well",
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+barrier_order <- ipmh_screening_barriers_long %>%
+  filter(Response == "Makes it impossible") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Barrier)  # Get the ordered Barrier levels
+
+# Reorder the Barrier factor in the original data
+ipmh_screening_barriers_long <- ipmh_screening_barriers_long %>%
+  mutate(Barrier = factor(Barrier, levels = barrier_order))  # Relevel the Barrier factor based on ranking
+
+barrier_labels <- c(
+             ip_scre_barr_workload ="Increased provider workload therefore \n screening using PHQ9/GAD7 may not be done well",
              ip_scre_barr_confi = "Fear of breach of confidentiality by providers",
-             ip_scre_barr_familiar = "Familiarity with the provider may prevent women from accepting the intervention"),
-         sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05,
-         width = 0.5)+
-    labs(title = "Criticality of IPMH Barriers to Screening",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+             ip_scre_barr_familiar = "Familiarity with the provider may prevent \n women from accepting the intervention")
 
+# Plot with ggplot2 using the reordered Barriers
+ggplot(ipmh_screening_barriers_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill", width = 0.5) +  # Stacked bar chart with fill
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Criticality of IPMH Screening Barriers"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+    scale_x_discrete(labels = barrier_labels) +
+  coord_flip()  # Flip the coordinates for horizontal bars
 ```
 
+### Frequency of IPMH Screening Barriers
 
 ```{r Frequency of IPMH barriers to Screning, echo=F, message=FALSE, warning=FALSE}
+# Select and transform the data, ensuring NAs are dropped correctly
 screen_barriers_fre <- ipmh_ppw %>% 
     select(starts_with("freq_scre_"))
 
 # Define the mapping
-likert_mapping <- c('Never', 'Rarely(once)', 'Occasionally', 'Frequently', 'Always')
+likert_mapping <- c('Never', 'Rarely', 'Occasionally', 'Frequently', 'Always')
 
 # Apply the mapping
 screen_barriers_fre <- screen_barriers_fre %>%
@@ -687,77 +1328,184 @@ screen_barriers_fre <- screen_barriers_fre %>%
   mutate_all(trimws)
 
 # Set factor levels
-levels <- c('Never', 'Rarely(once)', 'Occasionally', 'Frequently', 'Always')
+levels <- c('Never', 'Rarely', 'Occasionally', 'Frequently', 'Always')
 
+# Ensure factors are applied correctly
 screen_barriers_fre <- screen_barriers_fre %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# Reshape the data and remove NAs
+screen_barriers_fre_long <- screen_barriers_fre %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%  # Drop any NAs
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Never",
+    "Rarely",
+    "Occasionally",  # Corrected spelling of "Occasionally"
+    "Frequently",
+    "Always"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n(), .groups = 'drop') %>%
+  filter(n > 0) %>%  # Remove any rows where count is 0
+  mutate(percentage = n / sum(n) * 100) %>% 
+  ungroup() %>% 
+  group_by(Barrier) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
 
-gglikert(screen_barriers_fre,
-         variable_labels = c(
-             freq_scre_workload ="Increased provider workload therefore screening using PHQ9/GAD7 may not be done well",
-             freq_scre_confi = "Fear of breach of confidentiality by providers",
-             freq_scre_familiar = "Familiarity with the provider may prevent women from accepting the intervention"),
-         sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05,
-         width = 0.5)+
-    labs(title = "Frequency of IPMH Barriers to Screening",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+# Order barriers based on "Always" responses
+order <- screen_barriers_fre_long %>%
+  filter(Response == "Always") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Barrier)  # Get the ordered levels
 
+# Reorder Barrier levels
+screen_barriers_fre_long <- screen_barriers_fre_long %>%
+  mutate(Barrier = factor(Barrier, levels = order))
 
+# Custom labels for the barriers
+barrier_labels <- c(
+  freq_scre_workload ="Increased provider workload therefore \n screening using PHQ9/GAD7 may not be done well",
+  freq_scre_confi = "Fear of breach of confidentiality by providers",
+  freq_scre_familiar = "Familiarity with the provider may prevent \nwomen from accepting the intervention"
+)
+
+# Plot the data
+ggplot(screen_barriers_fre_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = position_fill(), width = 0.5) +  # Narrower bars
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) + 
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Frequencies of IPMH Screening Barriers"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+  scale_x_discrete(labels = barrier_labels) +  # Apply custom labels for the strategies
+  coord_flip() 
 ```
 
+### Impact of IPMH Screening Strategies
 
 ```{r Impact of IPMH Strategies to Screning, echo=F, message=FALSE, warning=FALSE}
 ipmh_strategies <- ipmh_ppw %>% 
     select(starts_with("ip_scre_diff_"))
 
 # Define the mapping
-likert_mapping <- c('Major negative impact', 'Some negative impact', 'No impact', 'Some positive impact', 'Major positive impact')
+likert_mapping <- c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact")
 
 # Apply the mapping
 ipmh_strategies <- ipmh_strategies %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
+  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 ipmh_strategies <- ipmh_strategies %>%
   mutate_all(trimws)
 
 # Set factor levels
-levels <- c('Major negative impact', 'Some negative impact', 'No impact', 'Some positive impact', 'Major positive impact')
+levels <- c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact")
 
 ipmh_strategies <- ipmh_strategies %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# Reshape the data to long format for ggplot2 and remove NA values
+ipmh_strategies <- ipmh_strategies %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Strategy", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact"))) %>%
+  group_by(Strategy, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
 
-gglikert(ipmh_strategies,
-         variable_labels = c(
-             ip_scre_diff_entrance ="Providing IPMH screening at the entrance of the facility or at the triage area",
-             ip_scre_diff_familiar = "Recruiting new healthcare workers with whom clients have no familiarity with",
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+strategy_order <- ipmh_strategies %>%
+  filter(Response == "Major positive impact") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Strategy)  # Get the ordered levels
+
+# Reorder the Barrier factor in the original data
+ipmh_strategies <- ipmh_strategies %>%
+  mutate(Strategy = factor(Strategy, levels = strategy_order))  # Relevel the Barrier factor based on ranking
+
+strategy_label<- c(
+             ip_scre_diff_entrance ="Providing IPMH screening at the entrance \n of the facility or at the triage area",
+             ip_scre_diff_familiar = "Recruiting new healthcare workers with \n whom clients have no familiarity with",
              ip_scre_diff_atti = "Having friendly and respectful providers",
-             ip_scre_diff_provide = "Have providers whose work is dedicated to offering MH support"),
-         sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05,
-         width = 0.5)+
-    labs(title = "Impact of IPMH Strategies to Screening",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+             ip_scre_diff_provide = "Have providers whose work is dedicated to offering MH support")
+
+# Plot with ggplot2 (non-centered, left-aligned bars)
+ggplot(ipmh_strategies, aes(x = Strategy, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = position_fill(), width = 0.3) +  # Narrower bars
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) + 
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Impact of IPMH Screening Strategies"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+  scale_x_discrete(labels = strategy_label) +  # Apply custom labels for the strategies
+  coord_flip() 
+
 
 ```
 
+\pagebreak
 
-#### Criticality of IPMH Barriers to PM+
+## IPMH PM+
+
+### Criticality of IPMH PM+ Barriers
+
 ```{r Criticality of IPMH Barriers to PM+, echo=FALSE, message=FALSE, warning=FALSE}
-ip_pm_barr <- ppw_data %>% 
+ip_pm_barr <- data %>% 
     select(starts_with("ip_trt_barr_"))
 
 # Define the mapping
@@ -778,32 +1526,74 @@ ip_pm_barr <- ip_pm_barr %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
-
-gglikert(ip_pm_barr,
-         variable_labels = c(
+barrier_label <- c(
              ip_trt_barr_transport ="Transporting to attend sessions is difficult",
              ip_trt_barr_many = "Having many sessions",
-             ip_trt_barr_atti = "Providers being inapproachable"),
-         sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05,
-         width = 0.5)+
-    labs(title = "Criticality of IPMH Barriers to PM+",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+             ip_trt_barr_atti = "Providers being inapproachable")
 
+# Reshape the data to long format, calculate counts and percentages for each Response within each Barrier
+ip_pm_barr_long <- ip_pm_barr %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c("Not a challenge at al", 
+                                      "Makes it a little hard", 
+                                      "Makes it hard", 
+                                      "Makes it very hard", 
+                                      "Makes it impossible"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n(), .groups = 'drop') %>%
+  mutate(percentage = n / sum(n) * 100) %>% 
+  ungroup() %>%
+  group_by(Barrier) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
+
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+barrier_order <- ip_pm_barr_long %>%
+  filter(Response == "Makes it impossible") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Barrier)  # Get the ordered Barrier levels
+
+# Reorder the Barrier factor in the original data
+ip_pm_barr_long <- ip_pm_barr_long %>%
+  mutate(Barrier = factor(Barrier, levels = barrier_order))  # Relevel the Barrier factor based on ranking
+
+# Plot with ggplot2 using the reordered Barriers
+ggplot(ip_pm_barr_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill", width = 0.5) +  # Stacked bar chart with fill
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Criticality of IPMH PM+ Barriers"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+    scale_x_discrete(labels = barrier_label) +
+  coord_flip()  # Flip the coordinates for horizontal bars
 ```
 
+### Frequency of IPMH PM+ Barriers
 
-
-#### Frequency of IPMH Barriers Accessing PM+ Services
 ```{r Frequency of IPMH Barriers Accessing PM+ Services, echo=FALSE, message=FALSE, warning=FALSE}
-ip_pm_barr_freq <- ppw_data %>% 
+ip_pm_barr_freq <- data %>% 
     dplyr::select(freq_trt_transport, freq_trt_many, 
                   freq_trt_atti)
-
 
 # Define the mapping
 likert_mapping <- c('Never', 'Rarely', 'Occasionally', 'Frequently', 'Always')
@@ -823,30 +1613,75 @@ ip_pm_barr_freq <- ip_pm_barr_freq %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# Reshape the data to long format for ggplot2 and remove NA values
+ip_pm_barr_freq_long <- ip_pm_barr_freq %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Never",
+    "Rarely",
+    "Occasionally",
+    "Frequently",
+    "Always"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
 
-gglikert(ip_pm_barr_freq,
-         variable_labels = 
-             c(
-             freq_trt_transport = "Transporting to attend sessions is difficult",
-             freq_trt_many = "Having many sessions",
-             freq_trt_atti = "Providers being inapproachable"),
-         sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05,
-         width = 0.5)+
-    labs(title = "Frequency of IPMH Barriers to Accessing PM+ Services",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+# Filter for "always" and rank Barriers by the percentage in ascending order
+barrier_order <- ip_pm_barr_freq_long %>%
+  filter(Response == "Always") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Barrier)  # Get the ordered levels
+
+# Reorder the Barrier factor in the original data
+ip_pm_barr_freq_long <- ip_pm_barr_freq_long %>%
+  mutate(Barrier = factor(Barrier, levels = barrier_order))  # Relevel the Barrier factor based on ranking
+
+# Custom labels for the barriers
+barrier_label <- c(
+  freq_trt_transport = "Transporting to attend sessions is difficult",
+  freq_trt_many = "Having many sessions",
+  freq_trt_atti = "Providers being inapproachable"
+)
+
+# ggplot2 plot
+ggplot(ip_pm_barr_freq_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = position_fill(), width = 0.5) +  # Narrower bars
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) + 
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Frequency of IPMH PM+ Barriers"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+  scale_x_discrete(labels = barrier_label) +  # Apply custom labels for the strategies
+  coord_flip() 
+
 ```
 
 
-#### Impact of IPMH Strategies on Accessing PM+ Services
-```{r Impact of IPMH Strategies on Accessing PM+ Services, echo=FALSE, message=FALSE, warning=FALSE}
-ip_pm_strategies <- ppw_data %>% 
-    dplyr::select(starts_with("ip_trt_diff_"))
+### Impact of IPMH PM+ Strategies
 
+```{r Impact of IPMH Strategies on Accessing PM+ Services, echo=FALSE, message=FALSE, warning=FALSE}
+ip_pm_strategies <- data %>% 
+    dplyr::select(starts_with("ip_trt_diff_"))
 
 # Define the mapping
 likert_mapping <- c('Major negative impact', 'Some negative impact', 'No impact', 'Some positive impact', 'Major positive impact')
@@ -866,36 +1701,77 @@ ip_pm_strategies <- ip_pm_strategies %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# Reshape the data to long format for ggplot2 and remove NA values
+ip_pm_strategies <- ip_pm_strategies %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Strategy", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact"))) %>%
+  group_by(Strategy, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
 
-gglikert(ip_pm_strategies,
-         variable_labels = 
-             c(
+strategy_order <- ip_pm_strategies %>%
+  filter(Response == "Major positive impact") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Strategy)  # Get the ordered levels
+
+ip_pm_strategies <- ip_pm_strategies %>%
+  mutate(Strategy = factor(Strategy, levels = strategy_order))  # Relevel the Barrier factor based on ranking
+
+strategy_label <- c(
+             ip_trt_diff_provide ="Having providers whose work \n is dedicated to offering MH support",
+             ip_trt_diff_hcw = "Recruiting new healthcare workers with \n whom clients have no familiarity with",
              ip_trt_diff_atti = "Having friendly and respectful providers",
-             ip_trt_diff_train = "Training healthcare providers",
-             ip_trt_diff_hcw = "Recruiting new healthcare workers with whom clients have no familiarity with",
-             ip_trt_diff_provide = "Having providers whose work is dedicated to offering MH support"),
-         sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05,
-         width = 0.5)+
-    labs(title = "Impact of Strategies on Accessing PM+ Services",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5),)  # Center the footnote
+             ip_trt_diff_train = "Training healthcare providers")
+
+# Plot with ggplot2 (non-centered, left-aligned bars)
+ggplot(ip_pm_strategies, aes(x = Strategy, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = position_fill(), width = 0.3) +  # Narrower bars
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) + 
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Impact of IPMH PM+ Strategies"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+  scale_x_discrete(labels = strategy_label) +  # Apply custom labels for the strategies
+  coord_flip() 
 ```
 
+\pagebreak
 
-### Telepsychiatry
-#### Criticality of IPMH barriers to Telepsychiatry
+## IPMH Telepsychiatry
+
+### Criticality of IPMH barriers to Telepsychiatry
+
 ```{r Criticality of IPMH Telepsychiatry barriers, echo=FALSE, message=FALSE, warning=FALSE}
-criticality_barr <-ppw_data  %>%
+criticality_barr <-data  %>%
     dplyr::select(starts_with("ip_tele_barr_"))
-
 
 # Define the mapping
 likert_mapping <- c('Not a challenge at all', 'Makes it a little hard', 'Makes it hard', 'Makes it very hard', 'Makes it impossible')
-
 
 # Apply the mapping
 criticality_barr <- criticality_barr %>%
@@ -908,45 +1784,85 @@ criticality_barr <- criticality_barr %>%
 # Set factor levels
 levels <- c('Not a challenge at all', 'Makes it a little hard', 'Makes it hard', 'Makes it very hard', 'Makes it impossible')
 
-
 criticality_barr <- criticality_barr %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
-
-gglikert(
-  criticality_barr,
-  variable_labels = c(
+barrier_label<- c(
       ip_tele_barr_internet = "Internet connectivity for telepsychiatry",
       ip_tele_barr_drug = "Difficult to get mental health medication",
       ip_tele_barr_prefer = "Not comfortable with video format for MH appointments",
-      ip_tele_barr_tech = "Challenge in using technology as women may experience technical di culties with doing the videocall",
-      ip_tele_barr_examine = "Difficulty showing the physical problem (the
- cause of the MH issue",
-      ip_tele_barr_finan = "The drugs recommended may be expensive"),
-  sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05)+
-    labs(title = "Criticality of IPMH barriers to Telepsychiatry",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5))+  # Center the footnote
-  scale_fill_brewer(palette = "RdYlBu",  
-                    guide = guide_legend(title = "Likert Scale"))
+      ip_tele_barr_tech = "Challenge in using technology as women may \n experience technical diffculties with doing the videocall",
+      ip_tele_barr_examine = "Difficulty showing the physical problem (the cause of the MH issue)",
+      ip_tele_barr_finan = "The drugs recommended may be expensive")
+
+# Reshape the data to long format, calculate counts and percentages for each Response within each Barrier
+criticality_barr_long <- criticality_barr %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c("Not a challenge at all", 
+                                      "Makes it a little hard", 
+                                      "Makes it hard", 
+                                      "Makes it very hard", 
+                                      "Makes it impossible"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n(), .groups = 'drop') %>%
+  group_by(Barrier) %>%
+  mutate(percentage = n / sum(n) * 100) %>%  # Calculate percentage based on total responses per Barrier
+  ungroup()
+
+# Filter for "Makes it impossible" and rank Barriers by the percentage in ascending order
+barrier_order <- criticality_barr_long %>%
+  filter(Response == "Makes it impossible") %>%
+  arrange(percentage) %>%
+  pull(Barrier)  # Get the ordered Barrier levels
+
+# Ensure all original Barrier levels are included, adding missing barriers at the bottom
+complete_barrier_order <- c(barrier_order, rev(setdiff(unique(criticality_barr_long$Barrier), barrier_order)))
+
+# Reorder the Barrier factor in the original data
+criticality_barr_long <- criticality_barr_long %>%
+  mutate(Barrier = factor(Barrier, levels = complete_barrier_order))  # Use the complete ordered levels
+
+# Plot with ggplot2 using the reordered Barriers
+ggplot(criticality_barr_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill", width = 0.5) +  # Stacked bar chart with fill
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Criticality of IPMH Barriers to Telepsychiatry"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+    scale_x_discrete(labels = barrier_label) +
+  coord_flip()  # Flip the coordinates for horizontal bars
 ```
 
+### Frequency of IPHM Barriers to Accessing Telepsychiatry Services
 
-#### Frequency of IPHM Barriers to Accessing Telepsychiatry Services
 ```{r Frequency of IPMH barriers to Telepsychiatry,  echo=FALSE, message=FALSE, warning=FALSE}
-tele_barr_df <-ppw_data  %>%
+tele_barr_df <- data  %>%
     dplyr::select(starts_with("freq_tele_"))
-
 
 # Define the mapping
 likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Always')
 
-
 # Apply the mapping
 tele_barr_df <- tele_barr_df %>%
   mutate(across(everything(), ~ likert_mapping[.])) 
@@ -956,46 +1872,88 @@ tele_barr_df <- tele_barr_df %>%
   mutate_all(trimws)
 
 # Set factor levels
-levels <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Alyways')
-
+levels <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Always')
 
 tele_barr_df <- tele_barr_df %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# Reshape the data to long format, calculate counts and percentages for each Response within each Barrier
+tele_barr_long <- tele_barr_df %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Barrier", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c("Never", 
+                                      "Rarely", 
+                                      "Occasionaly", 
+                                      "Frequently", 
+                                      "Always"))) %>%
+  group_by(Barrier, Response) %>%
+  dplyr::summarize(n = n(), .groups = 'drop') %>%
+  group_by(Barrier) %>%
+  mutate(percentage = n / sum(n) * 100) %>%  # Calculate percentage based on total responses per Barrier
+  ungroup()
 
-gglikert(
-  tele_barr_df,
-  variable_labels = c(
-      freq_tele_internet = "Internet connectivity for telepsychiatry",
-      freq_tele_drug = "Difficult to get mental health medication",
-      freq_tele_finan = "The drugs recommended may be expensive",
-      freq_tele_prefer = "Not comfortable with video format for MH appointments",
-      freq_tele_tech = "Technology Hurdles for Women in Video Calls",
-      freq_tele_examine = "Challenges in Demonstrating Physical Issues in Tele"),
-  sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05)+
-    labs(title = "Frequency of IPMH Barriers to receiving Telepsychiatry",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5))+  # Center the footnote
-  scale_fill_brewer(palette = "RdYlBu",  
-                    guide = guide_legend(title = "Likert Scale"))
+# Filter for "Always" and rank Barriers by the percentage in ascending order
+barrier_order <- tele_barr_long %>%
+  filter(Response == "Always") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Barrier)  # Get the ordered Barrier levels
+
+# Ensure all original Barrier levels are included, even those not in the "Always" response
+all_barriers <- unique(tele_barr_long$Barrier)
+complete_barrier_order <- c(barrier_order, setdiff(all_barriers, barrier_order))
+
+# Reorder the Barrier factor in the original data
+tele_barr_long <- tele_barr_long %>%
+  mutate(Barrier = factor(Barrier, levels = complete_barrier_order))  # Relevel the Barrier factor based on ranking
+
+# Custom labels for the barriers
+barrier_label <- c(
+  freq_tele_internet = "Internet connectivity for telepsychiatry",
+  freq_tele_drug = "Difficult to get mental health medication",
+  freq_tele_finan = "The drugs recommended may be expensive",
+  freq_tele_prefer = "Not comfortable with video format for MH appointments",
+  freq_tele_tech = "Challenge in using technology as women may \n experience technical difficulties with doing the videocall",
+  freq_tele_examine = "Difficulty showing the physical problem (the cause of the MH issue)")
+
+# Plot with ggplot2 using the reordered Barriers
+ggplot(tele_barr_long, aes(x = Barrier, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = "fill", width = 0.5) +  # Stacked bar chart with fill
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
+  scale_y_continuous(labels = scales::percent) +  
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Frequency of IPMH Barriers to Accessing Telepsychiatry Services"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+    scale_x_discrete(labels = barrier_label) +
+  coord_flip()  # Flip the coordinates for horizontal bars
 ```
 
+### Impact of IPMH Strategies on Telepsychiatry
 
-
-#### Impact of IPMH Strategies on Telepsychiatry
 ```{r Impact of IPMH Strategies on Telepsychiaty, echo=FALSE, message=FALSE, warning=FALSE}
-tele_stratergies <- ppw_data %>% 
+tele_stratergies <- data %>% 
     dplyr::select(starts_with("ip_tele_diff_"))
 
-
 # Define the mapping
-likert_mapping <- c('Major negative impact', 'Some negative impact', ' No impact', 'Some positive impact', ' Major positive impact')
-
+likert_mapping <- c('Major negative impact', 'Some negative impact', 'No impact', 'Some positive impact', 'Major positive impact')
 
 # Apply the mapping
 tele_stratergies <- tele_stratergies %>%
@@ -1006,35 +1964,73 @@ tele_stratergies <- tele_stratergies %>%
   mutate_all(trimws)
 
 # Set factor levels
-levels <- c('Major negative impact', 'Some negative impact', ' No impact', 'Some positive impact', ' Major positive impact')
-
+levels <- c('Major negative impact', 'Some negative impact', 'No impact', 'Some positive impact', 'Major positive impact')
 
 tele_stratergies <- tele_stratergies %>%
   lapply(function(x) factor(x, levels = levels)) %>%
   as.data.frame()
 
+# Reshape the data to long format for ggplot2 and remove NA values
+tele_stratergies <- tele_stratergies %>%
+  pivot_longer(cols = everything(), 
+               names_to = "Strategy", 
+               values_to = "Response") %>%
+  drop_na(Response) %>%
+  mutate(Response = factor(Response, 
+                           levels = c(
+    "Major negative impact",
+    "Some negative impact",
+    "No impact",
+    "Some positive impact",
+    "Major positive impact"))) %>%
+  group_by(Strategy, Response) %>%
+  dplyr::summarize(n = n()) %>%
+  mutate(percentage = n / sum(n) * 100) %>%
+  ungroup()
 
-gglikert(
-  tele_stratergies,
-  variable_labels = c(
-      ip_tele_diff_inperson = "Bringing the psychiatrist in-person regularly",
-      ip_tele_diff_internet = "Install strong internet connectivity",
-      ip_tele_diff_wifi = "Government to provide free WIFI"),
-  sort = "descending",
-         sort_prop_include_center = TRUE,
-         labels_accuracy = 1,
-         labels_hide_below = 0.05)+
-    labs(title = "Impact of IPMH Strategies on Telepsychiatry",
-         caption = "Note: n = 190") +  # Add a footnote
-    theme(plot.caption = element_text(hjust = 0.5),
-          plot.title = element_text(hjust = 0.5))+  # Center the footnote
-  scale_fill_brewer(palette = "RdYlBu",  
-                    guide = guide_legend(title = "Likert Scale"))
+strategy_order <- tele_stratergies %>%
+  filter(Response == "Major positive impact") %>%
+  arrange(percentage) %>%  # Arrange in ascending order
+  pull(Strategy)  # Get the ordered levels
 
+tele_stratergies <- tele_stratergies %>%
+  mutate(Strategy = factor(Strategy, levels = strategy_order))  # Relevel the Barrier factor based on ranking
+
+strategy_label <- c(
+             ip_tele_diff_inperson ="Bringing the psychiatrist in person regularly",
+             ip_tele_diff_internet = "Install strong internet connectivity",
+             ip_tele_diff_wifi = "Government to provide free WIFI")
+
+# Plot with ggplot2 (non-centered, left-aligned bars)
+ggplot(tele_stratergies, aes(x = Strategy, y = percentage, fill = Response)) +
+  geom_bar(stat = "identity", position = position_fill(), width = 0.3) +  # Narrower bars
+geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
+            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+  scale_fill_manual(values = c("#fee090", "#fc8d59", "#d73027"))  +  
+  scale_y_continuous(labels = scales::percent) + 
+  labs(
+    x = NULL, 
+    y = "Percentage",
+    fill = "Response",
+    title = "Impact of IPMH Strategies on Telepsychiatry"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    axis.title.y = element_blank(),
+    legend.title = element_text(size = 20),# Legend title font size
+    legend.text = element_text(size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
+    axis.title.x = element_text(size = 25),
+  ) +
+  scale_x_discrete(labels = strategy_label) +  # Apply custom labels for the strategies
+  coord_flip() 
 ```
 
 
 
+<<<<<<< HEAD
 ```{r GAD2 & PHQ2 Results, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 phq_gad2_scores <- ppw_demo %>% 
     select(record_id, pmad_gad1, pmad_gad2, pmad_phq1, pmad_phq2)
@@ -1057,4 +2053,6 @@ nda_df <- age_months %>%
 
     
 ```
+=======
+>>>>>>> f507cea728046a677a5d0ce36e5d9051040eca11
 
