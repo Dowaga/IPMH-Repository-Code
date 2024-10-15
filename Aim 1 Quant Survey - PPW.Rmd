@@ -1037,16 +1037,24 @@ gglikert(
 
 ```{r GAD2 & PHQ2 Results, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 phq_gad2_scores <- ppw_demo %>% 
-    select(record_id, pmad_phq1, pmad_phq2, pmad_gad1, pmad_gad2)
+    select(record_id, pmad_gad1, pmad_gad2, pmad_phq1, pmad_phq2)
 
 ```
 
 ```{r PPW age in months, include=FALSE}
 age_months <- ppw_data %>% 
-    select(record_id, women_dob_uk, women_dob, women_age, cal_age) %>%
+    select(record_id,  collect_time, women_dob_uk, women_dob, women_age, cal_age) %>%
     mutate(age = as.numeric(case_when(
         women_dob_uk == 1 ~ round(cal_age*12),
         women_dob_uk == 0 ~ round(women_age * 12)))) %>% 
-    select(record_id, age)
+    mutate(interview_age = format(as.Date(collect_time), "%m/%d/%Y"))%>% 
+    select(record_id, age, interview_age) 
+
+# Perform left join by 'record_id' to generate dataframe for NDA report
+nda_df <- age_months %>%
+  left_join(phq_gad2_scores, by = "record_id")
+
+
+    
 ```
 
