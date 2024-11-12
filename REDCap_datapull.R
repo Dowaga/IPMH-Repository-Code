@@ -3,7 +3,6 @@
 # Author(s): Yuwei Wang
 # Date: Jul 29, 2024
 # Description: This script pulls data from the REDCap projects and exports them as .csv files to the Raw Study Data folder on One Drive.
-# Notes: It will be useful to refer to https://github.com/CHV-NEO/rct_live/blob/main/REDCap_datapull.R for more information. We can consider adding cleaning codes in this script. Also, if longitudinal, we might need to export data based on the forms, not directly the whole dataset.
 
 # Setup ------------------------------------------------------------------------
 rm(list = ls())             
