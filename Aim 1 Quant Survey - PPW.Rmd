@@ -13,7 +13,7 @@ pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr,
                funModeling, gt, gtExtras,likert, summarytools, 
                ggstats, REDCapR) 
 
-knitr::opts_chunk$set(fig.width = 24, fig.height = 20)
+knitr::opts_chunk$set(fig.width = 18, fig.height = 18)
 
 # read data
 data <- read.csv("C:/Users/DAMARIS/UW/ngumbau - IPMH study/Data/4. Aim 1 quantitative data/Aim1_quant_data_2024-10-14.csv")
@@ -416,14 +416,15 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 25), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 10),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 15), 
     axis.title.y = element_blank(),
-    legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20)
-  ) +
+    legend.title = element_text(size = 10),# Legend title font size
+    legend.text = element_text(size = 10),
+    legend.position = "bottom", # Position legend at the bottom
+  legend.justification.left = "left" ) +
   scale_x_discrete(labels = barrier_labels) +  # Apply custom labels for the barriers
   coord_flip()  # Flip the coordinates for horizontal bars
 ```
@@ -530,16 +531,17 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 25), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 15), 
     axis.title.y = element_blank(),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
-    legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20) 
-  ) +
-  scale_x_discrete(labels = Strategy_labels) +  # Apply custom labels for the barriers
-  coord_flip() 
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
+    legend.title = element_text(size = 10),# Legend title font size
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",  # Position legend at the bottom
+  legend.justification.left = "left") +
+  scale_x_discrete(labels = Strategy_labels) +
+  coord_flip()  # Flip the coordinates for horizontal bars 
 ```
 
 \pagebreak
@@ -753,13 +755,15 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 15), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "left",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
     scale_x_discrete(labels = barrier_labels) +
   coord_flip()  # Flip the coordinates for horizontal bars
@@ -854,16 +858,16 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
-  ) +
+    legend.text = element_text(size = 10),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
+  legend.position = "bottom") +
   scale_x_discrete(labels = Strategy_labels) +  # Apply custom labels for the barriers
-  coord_flip() 
+  coord_flip()
 ```
 
 \pagebreak
@@ -1021,16 +1025,18 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "left",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
-    scale_x_discrete(labels = barrier_labels) +
-  coord_flip()  # Flip the coordinates for horizontal bars
+  scale_x_discrete(labels = Strategy_labels) +  # Apply custom labels for the strategies
+  coord_flip()   # Flip the coordinates for horizontal bars
 ```
 
 ## Impact of Referral and Remission Strategies
@@ -1116,13 +1122,15 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "left",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
   scale_x_discrete(labels = Strategy_labels) +  # Apply custom labels for the strategies
   coord_flip() 
@@ -1223,13 +1231,15 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "left",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
   scale_x_discrete(labels = bar_labels) +  # Apply custom labels for the strategies
   coord_flip() 
@@ -1330,13 +1340,15 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
     axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "right",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
     scale_x_discrete(labels = barrier_labels) +
   coord_flip()  # Flip the coordinates for horizontal bars
@@ -1428,13 +1440,14 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 15), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
   scale_x_discrete(labels = barrier_labels) +  # Apply custom labels for the strategies
   coord_flip() 
@@ -1524,17 +1537,18 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 15), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "left",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
   scale_x_discrete(labels = strategy_label) +  # Apply custom labels for the strategies
   coord_flip() 
-
 
 ```
 
@@ -1622,16 +1636,19 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "left",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
     scale_x_discrete(labels = barrier_label) +
   coord_flip()  # Flip the coordinates for horizontal bars
+
 ```
 
 ### Frequency of IPMH PM+ Barriers
@@ -1715,16 +1732,17 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
   scale_x_discrete(labels = barrier_label) +  # Apply custom labels for the strategies
-  coord_flip() 
+  coord_flip()
 
 ```
 
@@ -1806,16 +1824,18 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 15), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "left",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
   scale_x_discrete(labels = strategy_label) +  # Apply custom labels for the strategies
-  coord_flip() 
+  coord_flip()
 ```
 
 \pagebreak
@@ -1906,15 +1926,17 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
     axis.title.y = element_blank(),
-    legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.title = element_text(size = 20),  # Legend title font size
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",  # Position legend at the bottom
+    legend.justification.left = "left",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15)
   ) +
-    scale_x_discrete(labels = barrier_label) +
+  scale_x_discrete(labels = barrier_label) +  # Apply custom labels for the strategies
   coord_flip()  # Flip the coordinates for horizontal bars
 ```
 
@@ -1993,7 +2015,7 @@ barrier_label <- c(
 ggplot(tele_barr_long, aes(x = Barrier, y = percentage, fill = Response)) +
   geom_bar(stat = "identity", position = "fill", width = 0.5) +  # Stacked bar chart with fill
 geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
-            position = position_fill(vjust = 0.5), size = 10, color = "black") +  # Adjusted label size
+            position = position_fill(vjust = 0.5), size = 3, color = "black") +  # Adjusted label size
   scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
   scale_y_continuous(labels = scales::percent) +  
   labs(
@@ -2004,16 +2026,18 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 15, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 15), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "left",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    axis.title.x = element_text(size = 15),
   ) +
-    scale_x_discrete(labels = barrier_label) +
-  coord_flip()  # Flip the coordinates for horizontal bars
+  scale_x_discrete(labels = barrier_label) +  # Apply custom labels for the strategies
+  coord_flip()   # Flip the coordinates for horizontal bars
 ```
 
 ### Impact of IPMH Strategies on Telepsychiatry
@@ -2092,13 +2116,15 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   ) +
   theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, size = 30, face = "bold"),
-    axis.text.y = element_text(angle = 0, hjust = 1, size = 20), 
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 10), 
     axis.title.y = element_blank(),
     legend.title = element_text(size = 20),# Legend title font size
-    legend.text = element_text(size = 20),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 25),
-    axis.title.x = element_text(size = 25),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    legend.justification.left = "left",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 15),
+    xis.title.x = element_text(size = 15),
   ) +
   scale_x_discrete(labels = strategy_label) +  # Apply custom labels for the strategies
   coord_flip() 
