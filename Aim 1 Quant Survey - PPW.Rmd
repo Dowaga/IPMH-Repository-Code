@@ -11,14 +11,17 @@ rm(list = ls())
 pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
                openxlsx, gtsummary, kableExtra, ggrepel, UpSetR,
                funModeling, gt, gtExtras,likert, summarytools, 
-               ggstats) 
+               ggstats, REDCapR) 
 
 knitr::opts_chunk$set(fig.width = 24, fig.height = 20)
 
 # read data
-source("REDCap_datapull.R")
-data <- aim1quant_data %>%
-  filter(pt_id < 15000000)
+data <- read.csv("C:/Users/DAMARIS/UW/ngumbau - IPMH study/Data/4. Aim 1 quantitative data/Aim1_quant_data_2024-10-14.csv")
+
+# read data
+#source("REDCap_datapull.R")
+#data <- aim1quant_data %>%
+  #filter(pt_id < 15000000)
 
 # Quick overview of the selected columns
 # data %>% 
@@ -31,9 +34,11 @@ data <- aim1quant_data %>%
 #     stview()
 ```
 
+
 ## Women Demographics
 
 Altogether, we currently have data for  `r nrow(data)` participants.
+
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
 ppw_demo <- data %>%
@@ -166,6 +171,13 @@ ppw_demo <- ppw_demo %>%
     mutate(women_service___6 = case_when(women_service___6 == "Checked" ~ 1,
                                          women_service___6 == "Unchecked" ~ 0))
     
+df <- ppw_demo %>% 
+    select(age, women_service___4, women_service___2, women_service___1,
+            women_service___3, women_service___6, 
+            women_pregnancy_recode, women_gestational,
+            women_delivery, women_preg_number, women_education, women_partner,
+            women_employment,women_residence, women_distance, women_distance_0,
+            women_distance_1, women_hiv, women_hiv_history, women_art, pmad)
 
 # basic demo table
 ppw_demo %>% tbl_summary(
@@ -173,7 +185,7 @@ ppw_demo %>% tbl_summary(
             women_service___3, women_service___6, 
             women_pregnancy_recode, women_gestational,
             women_delivery, women_preg_number, women_education, women_partner,
-            women_employment,women_residence, women_distance, women_distance_0, 
+            women_employment,women_residence, women_distance, women_distance_0,
             women_distance_1, women_hiv, women_hiv_history, women_art, pmad),
   label = list(age ~ "Age (Years)",
                women_education ~ "Education level",
@@ -207,10 +219,10 @@ ppw_demo %>% tbl_summary(
               women_hiv_history ~ "continuous"
               ),
   statistic = list(
-    all_continuous() ~ "{median} [IQR: {p25}, {p75}]",
-    all_categorical() ~ "{n} ({p}%)"
+      all_continuous() ~ "{median} [IQR: {p25}, {p75}]",
+      all_categorical() ~ "{n} ({p}%)"
   ))%>% 
-  bold_labels() %>%
+    bold_labels() %>%
     add_n() %>% 
     italicize_levels() %>%
   # convert from gtsummary object to gt object
@@ -219,7 +231,7 @@ ppw_demo %>% tbl_summary(
   gt::tab_header("Table 1: Basic Demographic Summary for Women") %>% 
   gt::tab_options(
     table.font.size = "medium",
-    data_row.padding = gt::px(1)) 
+    data_row.padding = gt::px(1))
 
 ```
 
@@ -230,7 +242,33 @@ ppw_demo %>% tbl_summary(
 
 ```{r PMAD Screening Summary, echo=FALSE, message=FALSE, warning=FALSE}
 screen_ppw <- data  %>%
-  dplyr::select(record_id, starts_with("scr_diff_"), screening_access, screening_strategy_other, screening_complete, screening_times, starts_with("scr_barrier"))
+  dplyr::select(record_id, starts_with("scr_diff_"), screening_access, screening_strategy_other, screening_complete, screening_times, starts_with("scr_barrier")) %>% 
+    mutate(across(
+        starts_with("scr_barrier"),  
+        ~ case_when(
+            str_detect(., "Not a challenge at all") ~ "Not a challenge at all",
+            str_detect(., "Makes it a little hard") ~ "Makes it a little hard",
+            str_detect(., "Makes it hard") ~ "Makes it hard",
+            str_detect(., "Makes it very hard") ~ "Makes it very hard",
+            str_detect(., "Makes it impossible") ~ "Makes it impossible",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    )) %>% 
+    mutate(across(
+        starts_with("scr_diff_"),  
+        ~ case_when(
+            str_detect(., "Major negative impact") ~ "Major negative impact",
+            str_detect(., "Some negative impact") ~ "Some negative impact",
+            str_detect(., "No impact ") ~ "No impact",
+            str_detect(., "Some positive impact") ~ "Some positive impact",
+            str_detect(., "Major positive impact") ~ "Major positive impact",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
+    
+    
 
 #basic screening table
 screen_ppw <- screen_ppw %>% 
@@ -243,8 +281,9 @@ screen_ppw <- screen_ppw %>%
                                           "5 to 6 times /<u>5 kata 6</u> /<i>Mara 5 au 6</i>" = "5-6 times",
                                           "More than 6 times /<u>Moingo 6</u> /<i>Zaidi ya mara 6</i>" = "More than 6 times"))
 
-screen_ppw %>% tbl_summary(
-  include=c(screening_access, screening_times),
+screen_ppw %>% 
+    tbl_summary(
+  include = c(screening_access, screening_times),
   label = list(screening_access ~ "Service access",
                screening_times ~ "Times of access"),
   missing = "no",
@@ -269,18 +308,6 @@ screen_ppw %>% tbl_summary(
 ```{r Screening Barriers, echo=F, message=FALSE, warning=FALSE}
 screening_barriers <- screen_ppw %>% 
     dplyr::select(starts_with("scr_barrier_"))
-
-# Define the mapping
-likert_mapping <- c(
-    "Not a challenge at all",
-    "Makes it a little hard",
-    "Makes it hard",
-    "Makes it very hard",
-    "Makes it impossible")
-
-# Apply the mapping
-screening_barriers <- screening_barriers %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 screening_barriers <- screening_barriers %>%
@@ -407,17 +434,6 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 screening_strategies <- screen_ppw %>% 
     dplyr::select(starts_with("scr_diff_"))
 
-# Define the mapping
-likert_mapping <- c(
-    "Major negative impact",
-    "Some negative impact",
-    "No impact",
-    "Some positive impact",
-    "Major positive impact")
-
-# Apply the mapping
-screening_strategies <- screening_strategies %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 screening_strategies <- screening_strategies %>%
@@ -606,19 +622,20 @@ dia_treat_ppw %>%
 
 ```{r criticality of barriers to Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE}
 dxt_barriers <- dia_treat_ppw %>% 
-    dplyr::select(starts_with("dxt_barrier_"), -dxt_barrier_other)
+    dplyr::select(starts_with("dxt_barrier_"), -dxt_barrier_other) %>% 
+    mutate(across(
+        starts_with("dxt_barrier_"),  
+        ~ case_when(
+            str_detect(., "Not a challenge at all") ~ "Not a challenge at all",
+            str_detect(., "Makes it a little hard") ~ "Makes it a little hard",
+            str_detect(., "Makes it hard ") ~ "Makes it hard",
+            str_detect(., "Makes it very hard") ~ "Makes it very hard",
+            str_detect(., "Makes it impossible") ~ "Makes it impossible",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c(
-    "Not a challenge at all",
-    "Makes it a little hard",
-    "Makes it hard",
-    "Makes it very hard",
-    "Makes it impossible")
-
-# Apply the mapping
-dxt_barriers <- dxt_barriers %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
 dxt_barriers <- dxt_barriers %>%
@@ -752,19 +769,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 
 ```{r Impact of strategies, echo=FALSE, message=FALSE, warning=FALSE}
 dxt_strategies <- dia_treat_ppw %>% 
-    dplyr::select(starts_with("dxt_diff_"))
+    dplyr::select(starts_with("dxt_diff_")) %>% 
+    mutate(across(
+        starts_with("dxt_diff_"),  
+        ~ case_when(
+            str_detect(., "Major negative impact") ~ "Major negative impact",
+            str_detect(., "Some negative impact") ~ "Some negative impact",
+            str_detect(., "No impact ") ~ "No impact",
+            str_detect(., "Some positive impact") ~ "Some positive impact",
+            str_detect(., "Major positive impact ") ~ "Major positive impact ",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c(
-    "Major negative impact",
-    "Some negative impact",
-    "No impact",
-    "Some positive impact",
-    "Major positive impact")
-
-# Apply the mapping
-dxt_strategies <- dxt_strategies %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 dxt_strategies <- dxt_strategies %>%
@@ -917,19 +935,21 @@ rerem_ppw %>%
 
 ```{r criticality of barriers to rerem, echo=FALSE, message=FALSE, warning=FALSE}
 rerem_barriers <- rerem_ppw %>% 
-    dplyr::select(starts_with("rerem_barrier_"), -rerem_barrier_other)
+    dplyr::select(starts_with("rerem_barrier_"), -rerem_barrier_other)%>% 
+    mutate(across(
+        starts_with("rerem_barrier_"),  
+        ~ case_when(
+            str_detect(., "Not a challenge at all") ~ "Not a challenge at all",
+            str_detect(., "Makes it a little hard") ~ "Makes it a little hard",
+            str_detect(., "Makes it hard") ~ "Makes it hard",
+            str_detect(., "Makes it very hard") ~ "Makes it very hard",
+            str_detect(., "Makes it impossible") ~ "Makes it impossible",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c(
-    "Not a challenge at all",
-    "Makes it a little hard",
-    "Makes it hard",
-    "Makes it very hard",
-    "Makes it impossible")
 
-# Apply the mapping
-rerem_barriers <- rerem_barriers %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
 rerem_barriers <- rerem_barriers %>%
@@ -1017,19 +1037,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 
 ```{r Impact of strategies to rerem, echo=FALSE, message=FALSE, warning=FALSE}
 rerem_strategies <- rerem_ppw %>% 
-    dplyr::select(starts_with("rerem_diff_"))
+    dplyr::select(starts_with("rerem_diff_")) %>% 
+    mutate(across(
+        starts_with("rerem_diff_"),  
+        ~ case_when(
+            str_detect(., "Major negative impact") ~ "Major negative impact",
+            str_detect(., "Some negative impact") ~ "Some negative impact",
+            str_detect(., "No impact") ~ "No impact",
+            str_detect(., "Some positive impact") ~ "Some positive impact",
+            str_detect(., "Major positive impact") ~ "Major positive impact",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c(
-    "Major negative impact",
-    "Some negative impact",
-    "No impact",
-    "Some positive impact",
-    "Major positive impact")
-
-# Apply the mapping
-rerem_strategies <- rerem_strategies %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 rerem_strategies <- rerem_strategies %>%
@@ -1114,14 +1135,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 ```{r Frequency of Barriers, echo = F, warning = F, message = F}
 freq_bar_df <- data %>% 
     dplyr::select(starts_with("freq_barr_")) %>%
-  mutate(across(where(is.numeric), ~ na_if(., 99)))
+  mutate(across(where(is.numeric), ~ na_if(., 99))) %>% 
+    mutate(across(
+        starts_with("freq_barr_"),  
+        ~ case_when(
+            str_detect(., "Never") ~ "Never",
+            str_detect(., "Rarely") ~ "Rarely",
+            str_detect(., "Occasionally ") ~ "Occasionaly",
+            str_detect(., "Frequently") ~ "Frequently",
+            str_detect(., "Always") ~ "Always",
+            str_detect(., "Not applicable") ~ "Not applicable",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Always')
-
-# Apply the mapping
-freq_bar_df <- freq_bar_df %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
 freq_bar_df <- freq_bar_df %>%
@@ -1227,14 +1254,20 @@ ipmh_ppw <- data %>%
                   	ipmh_complete)
 
 ipmh_screening_barriers <- ipmh_ppw %>% 
-    select(starts_with("ip_scre_barr_"))
+    select(starts_with("ip_scre_barr_")) %>% 
+    mutate(across(
+        starts_with("ip_scre_barr_"),  
+        ~ case_when(
+            str_detect(., "Not a challenge at all") ~ "Not a challenge at all",
+            str_detect(., "Makes it very hard ") ~ "Makes it very hard ",
+            str_detect(., "Makes it a little hard") ~ "Makes it a little hard",
+            str_detect(., "Makes it hard") ~ "Makes it hard",
+            str_detect(., "Makes it impossible") ~ "Makes it impossible",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c('Not a challenge at all', 'Makes it a little hard', 'Makes it hard', 'Makes it very hard', 'Makes it impossible')
-
-# Apply the mapping
-ipmh_screening_barriers <- ipmh_screening_barriers %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
 ipmh_screening_barriers <- ipmh_screening_barriers %>%
@@ -1314,14 +1347,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 ```{r Frequency of IPMH barriers to Screning, echo=F, message=FALSE, warning=FALSE}
 # Select and transform the data, ensuring NAs are dropped correctly
 screen_barriers_fre <- ipmh_ppw %>% 
-    select(starts_with("freq_scre_"))
+    select(starts_with("freq_scre_")) %>% 
+    mutate(across(
+        starts_with("freq_scre_"),  
+        ~ case_when(
+            str_detect(., "Never") ~ "Never",
+            str_detect(., "Rarely") ~ "Rarely",
+            str_detect(., "Occasionally ") ~ "Occasionally",
+            str_detect(., "Frequently") ~ "Frequently",
+            str_detect(., "Always") ~ "Always",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c('Never', 'Rarely', 'Occasionally', 'Frequently', 'Always')
-
-# Apply the mapping
-screen_barriers_fre <- screen_barriers_fre %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
 screen_barriers_fre <- screen_barriers_fre %>%
@@ -1405,19 +1444,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 
 ```{r Impact of IPMH Strategies to Screning, echo=F, message=FALSE, warning=FALSE}
 ipmh_strategies <- ipmh_ppw %>% 
-    select(starts_with("ip_scre_diff_"))
+    select(starts_with("ip_scre_diff_")) %>% 
+    mutate(across(
+        starts_with("ip_scre_diff_"),  
+        ~ case_when(
+            str_detect(., "Major negative impact") ~ "Major negative impact",
+            str_detect(., "Some negative impact") ~ "Some negative impact",
+            str_detect(., "No impact") ~ "No impact",
+            str_detect(., "Some positive impact") ~ "Some positive impact",
+            str_detect(., "Major positive impact") ~ "Major positive impact",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c(
-    "Major negative impact",
-    "Some negative impact",
-    "No impact",
-    "Some positive impact",
-    "Major positive impact")
-
-# Apply the mapping
-ipmh_strategies <- ipmh_strategies %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 ipmh_strategies <- ipmh_strategies %>%
@@ -1506,14 +1546,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 
 ```{r Criticality of IPMH Barriers to PM+, echo=FALSE, message=FALSE, warning=FALSE}
 ip_pm_barr <- data %>% 
-    select(starts_with("ip_trt_barr_"))
+    select(starts_with("ip_trt_barr_")) %>% 
+    mutate(across(
+        starts_with("ip_trt_barr_"),  
+        ~ case_when(
+            str_detect(., "Not a challenge at all") ~ "Not a challenge at all",
+            str_detect(., "Makes it a little hard") ~ "Makes it a little hard",
+            str_detect(., "Makes it hard") ~ "Makes it hard",
+            str_detect(., "Makes it very hard") ~ "Makes it very hard",
+            str_detect(., "Makes it impossible") ~ "Makes it impossible",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c('Not a challenge at al', 'Makes it a little hard', 'Makes it hard', 'Makes it very hard', 'Makes it impossible')
-
-# Apply the mapping
-ip_pm_barr <- ip_pm_barr %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
 ip_pm_barr <- ip_pm_barr %>%
@@ -1593,14 +1639,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 ```{r Frequency of IPMH Barriers Accessing PM+ Services, echo=FALSE, message=FALSE, warning=FALSE}
 ip_pm_barr_freq <- data %>% 
     dplyr::select(freq_trt_transport, freq_trt_many, 
-                  freq_trt_atti)
+                  freq_trt_atti) %>% 
+    mutate(across(
+        starts_with("freq_trt_"),  
+        ~ case_when(
+            str_detect(., "Never") ~ "Never",
+            str_detect(., "Rarely") ~ "Rarely",
+            str_detect(., "Occasionally ") ~ "Occasionally",
+            str_detect(., "Frequently") ~ "Frequently",
+            str_detect(., "Always") ~ "Always",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c('Never', 'Rarely', 'Occasionally', 'Frequently', 'Always')
-
-# Apply the mapping
-ip_pm_barr_freq <- ip_pm_barr_freq %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
 ip_pm_barr_freq <- ip_pm_barr_freq %>%
@@ -1681,14 +1733,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 
 ```{r Impact of IPMH Strategies on Accessing PM+ Services, echo=FALSE, message=FALSE, warning=FALSE}
 ip_pm_strategies <- data %>% 
-    dplyr::select(starts_with("ip_trt_diff_"))
+    dplyr::select(starts_with("ip_trt_diff_")) %>% 
+    mutate(across(
+        starts_with("ip_trt_diff_"),  
+        ~ case_when(
+            str_detect(., "Major negative impact") ~ "Major negative impact",
+            str_detect(., "Some negative impact") ~ "Some negative impact",
+            str_detect(., "No impact") ~ "No impact",
+            str_detect(., "Some positive impact") ~ "Some positive impact",
+            str_detect(., "Major positive impact") ~ "Major positive impact",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c('Major negative impact', 'Some negative impact', 'No impact', 'Some positive impact', 'Major positive impact')
-
-# Apply the mapping
-ip_pm_strategies <- ip_pm_strategies %>%
-  mutate(across(everything(), ~ likert_mapping[.]))
 
 # Trim white spaces
 ip_pm_strategies <- ip_pm_strategies %>%
@@ -1768,14 +1826,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 
 ```{r Criticality of IPMH Telepsychiatry barriers, echo=FALSE, message=FALSE, warning=FALSE}
 criticality_barr <-data  %>%
-    dplyr::select(starts_with("ip_tele_barr_"))
+    dplyr::select(starts_with("ip_tele_barr_")) %>% 
+    mutate(across(
+        starts_with("ip_tele_barr_"),  
+        ~ case_when(
+            str_detect(., "Not a challenge at all") ~ "Not a challenge at all",
+            str_detect(., "Makes it a little hard") ~ "Makes it a little hard",
+            str_detect(., "Makes it hard") ~ "Makes it hard",
+            str_detect(., "Makes it very hard") ~ "Makes it very hard",
+            str_detect(., "Makes it impossible") ~ "Makes it impossible",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c('Not a challenge at all', 'Makes it a little hard', 'Makes it hard', 'Makes it very hard', 'Makes it impossible')
-
-# Apply the mapping
-criticality_barr <- criticality_barr %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 criticality_barr <- criticality_barr %>%
@@ -1858,14 +1922,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 
 ```{r Frequency of IPMH barriers to Telepsychiatry,  echo=FALSE, message=FALSE, warning=FALSE}
 tele_barr_df <- data  %>%
-    dplyr::select(starts_with("freq_tele_"))
+    dplyr::select(starts_with("freq_tele_")) %>% 
+    mutate(across(
+        starts_with("freq_tele_"),  
+        ~ case_when(
+            str_detect(., "Never") ~ "Never",
+            str_detect(., "Rarely") ~ "Rarely",
+            str_detect(., "Occasionaly ") ~ "Occasionaly",
+            str_detect(., "Frequently") ~ "Frequently",
+            str_detect(., "Always") ~ "Always",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c('Never', 'Rarely', 'Occasionaly', 'Frequently', 'Always')
-
-# Apply the mapping
-tele_barr_df <- tele_barr_df %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 tele_barr_df <- tele_barr_df %>%
@@ -1950,14 +2020,20 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
 
 ```{r Impact of IPMH Strategies on Telepsychiaty, echo=FALSE, message=FALSE, warning=FALSE}
 tele_stratergies <- data %>% 
-    dplyr::select(starts_with("ip_tele_diff_"))
+    dplyr::select(starts_with("ip_tele_diff_")) %>% 
+    mutate(across(
+        starts_with("ip_tele_diff_"),  
+        ~ case_when(
+            str_detect(., "Major negative impact") ~ "Major negative impact",
+            str_detect(., "Some negative impact") ~ "Some negative impact",
+            str_detect(., "No impact") ~ "No impact",
+            str_detect(., "Some positive impact") ~ "Some positive impact",
+            str_detect(., "Major positive impact") ~ "Major positive impact",
+            str_detect(., "I don't know") ~ "I don't know",
+            TRUE ~ NA_character_  # Use NA_character_ instead of NA_real_
+        )
+    ))
 
-# Define the mapping
-likert_mapping <- c('Major negative impact', 'Some negative impact', 'No impact', 'Some positive impact', 'Major positive impact')
-
-# Apply the mapping
-tele_stratergies <- tele_stratergies %>%
-  mutate(across(everything(), ~ likert_mapping[.])) 
 
 # Trim white spaces
 tele_stratergies <- tele_stratergies %>%
@@ -2027,32 +2103,4 @@ geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), 
   scale_x_discrete(labels = strategy_label) +  # Apply custom labels for the strategies
   coord_flip() 
 ```
-
-
-
-<<<<<<< HEAD
-```{r GAD2 & PHQ2 Results, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
-phq_gad2_scores <- ppw_demo %>% 
-    select(record_id, pmad_gad1, pmad_gad2, pmad_phq1, pmad_phq2)
-
-```
-
-```{r PPW age in months, include=FALSE}
-age_months <- ppw_data %>% 
-    select(record_id,  collect_time, women_dob_uk, women_dob, women_age, cal_age) %>%
-    mutate(age = as.numeric(case_when(
-        women_dob_uk == 1 ~ round(cal_age*12),
-        women_dob_uk == 0 ~ round(women_age * 12)))) %>% 
-    mutate(interview_age = format(as.Date(collect_time), "%m/%d/%Y"))%>% 
-    select(record_id, age, interview_age) 
-
-# Perform left join by 'record_id' to generate dataframe for NDA report
-nda_df <- age_months %>%
-  left_join(phq_gad2_scores, by = "record_id")
-
-
-    
-```
-=======
->>>>>>> f507cea728046a677a5d0ce36e5d9051040eca11
 
