@@ -1,25 +1,31 @@
 ---
-title: "IPMH Quant Survey Screening"
+title: "IPMH Quant Survey - HCW"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
-output: word_document
+output:
+  pdf_document: default
+  word_document: default
 ---
+
+*Warning: Please do not change the coding for the prioritization part without Yuwei's permission.*
 
 ```{r setup, echo = F, include = F}
 rm(list = ls())
 
 pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
-               openxlsx, gtsummary, kableExtra, ggrepel, UpSetR, funModeling, gt) 
+               openxlsx, gtsummary, kableExtra, ggrepel, UpSetR, funModeling, gt, mice) 
 
 knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 
+source("REDCap_datapull.R")
 # read data
-data <- read.csv("~/Desktop/uw/IPMH/data analysis/IPMHAim1Quantitative_DATA_2024-07-23_2308.csv")
+data <- aim1quant_data %>%
+  filter(pt_id > 14999999)
 ```
 
 ## Health Care Workers Demographics
 
-Altogether, we currently have data for  `r sum(data$redcap_event_name == "survey_arm_2")` participants.
+Altogether, we currently have data for `r nrow(data)` participants.
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
 hcw_demo <- data %>%
@@ -30,9 +36,11 @@ hcw_demo <- data %>%
     TRUE ~  hcw_terms_other
   ))
 
-hcw_demo <- hcw_demo %>% 
-  mutate(age = as.numeric(case_when(hcw_dob_uk == 1 ~ floor(hcw_cal_age),
-                         hcw_dob_uk == 0 ~ hcw_age))) %>% 
+hcw_demo <- hcw_demo %>%
+  mutate(age = case_when(
+      hcw_dob_uk == "Yes" ~ floor(as.numeric(hcw_cal_age)),  
+      hcw_dob_uk == "No" ~ as.numeric(hcw_age), 
+      TRUE ~ NA_real_)) %>% 
   mutate(hcw_sex = dplyr::recode(hcw_sex, "1" = "Male","2" = "Female")) %>% 
   mutate(hcw_education = dplyr::recode(hcw_education, 
                                        "1" = "No schooling completed",
@@ -42,21 +50,20 @@ hcw_demo <- hcw_demo %>%
                                        "5" = "Bachelor's degree or higher degree"),
          hcw_education = fct_relevel(hcw_education,
                                       "Diploma", "Bachelor's degree or higher degree", "Secondary school", "Primary school")) %>%
-  mutate(hcw_job = dplyr::case_when(hcw_job___1 == "1" ~ "Medical officer", 
-                                 hcw_job___2 == "1" ~ "Psychiatrists", 
-                                 hcw_job___3 == "1" ~  "Obstetrician/gynaecologist",
-                                 hcw_job___4 == "1"~ "Clinical officer", 
-                                 hcw_job___5 == "1" ~ "Nurses", 
-                                 hcw_job___6 == "1"~ "Psychologist", 
-                                 hcw_job___7 == "1" ~ "Mental health social worker", 
-                                 hcw_job___8 == "1" ~ "Other social worker", 
-                                 hcw_job___9 == "1" ~ "HTS counsellor", 
-                                 hcw_job___10 == "1" ~ "Community health worker", 
-                                 hcw_job___11 == "1" ~ "Mentor mother", 
-                                 hcw_job___12 == "1" ~ "Other"),
-         hcw_job = fct_relevel(hcw_job,
-                               "Nurses", "Clinical officer", "HTS counsellor", "Mentor mother", "Psychiatrists", "Psychologist", "Medical officer")) %>%
-  #This now works because no one choose two positions - check this next time
+  mutate(hcw_job = dplyr::case_when(hcw_job___1 == "Checked" ~ "Medical officer", 
+                                 hcw_job___2 == "Checked" ~ "Psychiatrists", 
+                                 hcw_job___3 == "Checked" ~  "Obstetrician/gynaecologist",
+                                 hcw_job___4 == "Checked"~ "Clinical officer", 
+                                 hcw_job___5 == "Checked" ~ "Nurses", 
+                                 hcw_job___6 == "Checked"~ "Psychologist", 
+                                 hcw_job___7 == "Checked" ~ "Mental health social worker", 
+                                 hcw_job___8 == "Checked" ~ "Other social worker", 
+                                 hcw_job___9 == "Checked" ~ "HTS counsellor", 
+                                 hcw_job___10 == "Checked" ~ "Community health worker", 
+                                 hcw_job___11 == "Checked" ~ "Mentor mother", 
+                                 hcw_job___12 == "Checked" ~ "Other",
+                                 TRUE ~ NA_character_),
+         hcw_job = fct_relevel(hcw_job, 'Medical officer', 'Psychiatrists', 'Obstetrician/gynaecologist', 'Clinical officer', 'Nurses', 'Psychologist', 'Mental health social worker', 'Other social worker', 'HTS counsellor', 'Community health worker', 'Mentor mother', 'Other')) %>%
   mutate(hcw_wlwh = dplyr::recode(hcw_wlwh, "0" = "No","1" = "Yes")) %>% 
   mutate(hcw_terms = dplyr::recode(hcw_terms, 
                                    "1" = "Permanent and pensionable", 
@@ -90,6 +97,8 @@ hcw_demo <- hcw_demo %>%
   mutate(hcw_yearjob = hcw_yrsjob/12) %>% 
   mutate(hcw_yearwork = hcw_monthswork/12) %>% 
   mutate(hcw_yearcare = hcw_yrscare/12)
+
+#propmiss(hcw_demo)
 
 # basic demo table
 hcw_demo %>% tbl_summary(
@@ -135,8 +144,8 @@ hcw_demo %>% tbl_summary(
 ```
 
 
-
 ## Screening
+
 ```{r Grouping others who should screen, echo=FALSE, message=FALSE, warning=FALSE}
 data <- data %>%
   mutate(screen_who_other = case_when(
@@ -183,8 +192,8 @@ data <- data %>%
 
 
 ```{r PMAD Screening Summary, echo=FALSE, message=FALSE, warning=FALSE}
-data %>% 
-    filter(hcw_care == 1) %>% 
+screening <- data %>% 
+    filter(hcw_care == "Yes") %>% 
     mutate(hcw_care = recode(hcw_care,
                              "1" = "Yes",
                              "0" = "No"),
@@ -211,8 +220,10 @@ data %>%
                                 "3" = "5 to 6 times",
                                 "4" = "More than 6 times"),
            screen_times = fct_relevel(screen_times,
-                                      "More than 6 times", "Less than 2 times", "3 to 4 times", "5 to 6 times")) %>% 
-  select(screen_provision, screen_hiv, screen_provision_now, screen_hiv_now,
+                                      "More than 6 times", "Less than 2 times", "3 to 4 times", "5 to 6 times")) 
+
+
+screening %>% select(screen_provision, screen_hiv, screen_provision_now, screen_hiv_now,
             screen_time, screen_time, screen_times, screen_tool___3, screen_tool___1, screen_tool___5, screen_tool___2, screen_tool___4, screen_tool___8, screen_tool_other,  screen_long,  screen_who___4,  screen_who___5,  screen_who___7,  screen_who___8,  screen_who___9,  screen_who___2,  screen_who___3,  screen_who___1,  screen_who___6,  screen_who___99,  screen_who___11,  screen_who___12, screen_who_other,  screen_who_hiv___4, screen_who_hiv___5, screen_who_hiv___7, screen_who_hiv___8, screen_who_hiv___9, screen_who_hiv___99, screen_who_hiv___11, screen_who_hiv___12, screen_who_other_hiv, screen_role) %>% 
      tbl_summary(
          percent = "cell",
@@ -271,8 +282,8 @@ data %>%
 
 ```{r PMAD screening tools used/do use, echo=FALSE, message=FALSE, warning=FALSE}
 data %>% 
-    filter(hcw_care == 1) %>%
-    filter(screen_provision_now == 1 | screen_hiv_now == 1) %>% 
+    filter(hcw_care == "Yes") %>%
+    filter(screen_provision_now == "Yes" | screen_hiv_now == "Yes") %>% 
     tbl_summary(
         include = c(screen_tool___3, screen_tool___1, screen_tool___5, 
                     screen_tool___2, screen_tool___4, screen_tool___8),
@@ -313,13 +324,27 @@ screen_barrier <- screen_hcw %>%
 long_data <- screen_barrier %>%
   pivot_longer(cols = -c(record_id, screen_barrier_other),
                names_to = c("type", "barrier"), 
-               names_pattern = "screen_(.*)_(.*)")
+               names_pattern = "screen_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "Not applicable" ~ NA_real_,
+                               value == "Not at all addressable" | value == "Not at all" ~ 1,
+                               value == "Somewhat addressable" | value == "A little" ~ 2,
+                               value == "Addressable" | value == "Somewhat" ~ 3,
+                               value == "Very addressable" | value == "Very much" ~ 4)) 
+
+cutoff_importance <- long_data %>% 
+  filter(type == "barrier") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_addressability <- long_data %>% 
+  filter(type == "add") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- long_data %>%
   group_by(barrier, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -348,33 +373,33 @@ stats <- stats %>%
                                    "stigma" = "Stigma: Stigma whereby women not wanting to be associated with mental illness",
                                    "language" =	"Language: Language barrier between women and HCW",
                                    "fear" =	"Fear: Women's fear of opening up to HCW",
-                                 "aware" = "Aware: Lack of community awareness/sensitization in MH such that women are unaware of the need for screening"))
+                                 "aware" = "Aware: Lack of community awareness/sensitization\n in MH such that women are unaware of the need for screening"))
 
 ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
   scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
   scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
-  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_addressability, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
+  annotate("text", x = cutoff_importance, y = 4, label = paste0("Cutoff: ", round(cutoff_importance, 2)), hjust = -0.1) +
+  annotate("text", x = 1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
   labs(title = "Barrier prioritization for screening",
        x = "Importance",
        y = "Addressability",
        color = "Barrier detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 4) + 
+  guides(size=F, color = guide_legend(ncol = 2, override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
-
 ```
 
 ### Strategies
@@ -387,13 +412,28 @@ screen_strategy <- screen_hcw %>%
 long_data <- screen_strategy %>%
   pivot_longer(cols = -c(record_id, screen_stra_other),
                names_to = c("type", "strategy"), 
-               names_pattern = "screen_(.*)_(.*)")
+               names_pattern = "screen_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "I don't know" ~ NA_real_,
+                               value == "Very hard" | value == "Major negative impact" ~ 1,
+                               value == "Somewhat hard" | value == "Some negative impact" ~ 2,
+                               value == "Neurtral" | value == "No impact" ~ 3,
+                               value == "Somewhat easy" | value == "Some positive impact" ~ 4,
+                               value == "Very easy" | value == "Major positive impact" ~ 5))
+
+cutoff_impact <- long_data %>% 
+  filter(type == "diff") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_feasiblity <- long_data %>% 
+  filter(type == "stra") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- long_data %>%
   group_by(strategy, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -427,33 +467,33 @@ stats <- stats %>%
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
-  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_x_continuous(breaks = 1:5, limits = c(4, 5)) +
   scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
-  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_feasiblity, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_impact, linetype = "dashed", color = "grey") +
+    annotate("text", x = cutoff_impact, y = 5, label = paste0("Cutoff: ", round(cutoff_impact, 2)), hjust = -0.1) +
+  annotate("text", x = 4, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
   labs(title = "Strategy prioritization for the screening phase",
        x = "Impact",
        y = "Feasibility",
        color = "Strategy detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 4) + 
+  guides(size=F, color = guide_legend(ncol = 2, override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
 ```
 
+#  Diagnosis and Treatment
 
-
-#  Diagnosis and Treatment Hcw
 ```{r Grouping other tools for PMAD Diagnosis, echo=FALSE, message=FALSE, warning=FALSE}
 data <- data %>%
   mutate(dx_way_other = case_when(
@@ -546,7 +586,7 @@ as <- data %>%
 
 ```{r Diagnosis and Treatment, echo=FALSE, message=FALSE, warning=FALSE}
 data %>% 
-    filter(hcw_care == 1) %>% 
+    filter(hcw_care == "Yes") %>% 
     mutate(dx_trt_time = recode(dx_trt_time,
                                 "1" = "This week",
                                 "2" =  "Last week",
@@ -688,10 +728,10 @@ data %>%
 ```
 
 
-```{r PW PMAD screening tools, echo=FALSE, message=FALSE, warning=FALSE}
+```{r PW PMAD screening tools, include = F, echo=FALSE, message=FALSE, warning=FALSE}
 screening_tools <- data %>% 
-    filter(hcw_care == 1) %>%
-    filter(dx_provision == 1 | dx_hiv == 1)
+    filter(hcw_care == "Yes") %>%
+    filter(dx_provision == "Yes" | dx_hiv == "Yes")
 
 screening_tools %>% 
     tbl_summary(
@@ -717,10 +757,10 @@ screening_tools %>%
 
 
 
-```{r PMAD screening Tools among PW in the current facility, echo=FALSE, message=FALSE, warning=FALSE}
+```{r PMAD screening Tools among PW in the current facility, echo=FALSE, message=FALSE, warning=FALSE, include =F}
  facility_tools <- data %>% 
-    filter(hcw_care == 1) %>%
-    filter(dx_provision_now == 1 | dx_hiv_now == 1)
+    filter(hcw_care == "Yes") %>%
+    filter(dx_provision_now == "Yes" | dx_hiv_now == "Yes")
 
 facility_tools %>% 
     tbl_summary(
@@ -744,9 +784,9 @@ facility_tools %>%
 
 
 
-```{r PMAD treatmet for PW, echo=FALSE, message=FALSE, warning=FALSE}
+```{r PMAD treatmet for PW, echo=FALSE, message=FALSE, warning=FALSE, include = F}
 data %>% 
-    filter(trt_provisions == 1| trt_hiv == 1) %>% 
+    filter(trt_provisions == "Yes" | trt_hiv == "Yes") %>% 
     tbl_summary(
         include = c(trt_type___3, trt_type___2, trt_type___1, trt_type___4),
         label = list(trt_type___1 ~ "Manualized counselling",
@@ -765,8 +805,8 @@ data %>%
 
 # PMAD Treatments used in the Current Facility
 data %>% 
-    filter(hcw_care == 1) %>%
-    filter(trt_provision_now == 1 | trt_hiv_now == 1) %>%
+    filter(hcw_care == "Yes") %>%
+    filter(trt_provision_now == "Yes" | trt_hiv_now == "Yes") %>%
     select(trt_type_now___1, trt_type_now___2, trt_type_now___3,
            trt_type_now___4) %>% 
     tbl_summary(
@@ -786,9 +826,9 @@ data %>%
 ```
 
 
-```{r PW PMAD Treatments, echo=FALSE, message=FALSE, warning=FALSE}
+```{r PW PMAD Treatments, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 data %>% 
-    filter(trt_provisions == 1|trt_hiv == 1) %>% 
+    filter(trt_provisions == "Yes" |trt_hiv == "Yes") %>% 
     tbl_summary(
         include = c(trt_type___3, trt_type___2, trt_type___1,  trt_type___4),
         label = list(
@@ -805,14 +845,11 @@ data %>%
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) 
-
 ```
 
-
-
-```{r Medications Prescribed, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r Medications Prescribed, echo=FALSE, message=FALSE, warning=FALSE, include=F}
 data %>% 
-    filter(trt_type___2 == 1) %>% 
+    filter(trt_type___2 == "Checked") %>% 
     select(trt_med___1, trt_med___2, trt_med___3, 
            trt_med___4, trt_med___5) %>% 
     tbl_summary(
@@ -833,9 +870,9 @@ data %>%
 ```
 
 
-```{r Different PMAD Medication for PWLHIV, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Different PMAD Medication for PWLHIV, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 data%>% 
-    filter(trt_type_hiv___2 == 1) %>% 
+    filter(trt_type_hiv___2 == "Checked") %>% 
     select(trt_med_hiv___1, trt_med_hiv___2, trt_med_hiv___3) %>% 
     tbl_summary(,
                 label = list(
@@ -876,14 +913,18 @@ long_data <- dxtrt_barrier %>%
     select(-dxtrt_add_deny) %>%  
   pivot_longer(cols = -c(record_id, dxtrt_barrier_other, dxt_barrier_other),
                names_to = c("type", "barrier"), 
-               names_pattern = "dxtrt_(.*)_(.*)") 
-  
+               names_pattern = "dxtrt_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "Not applicable" ~ NA_real_,
+                               value == "Not at all addressable" | value == "Not at all" ~ 1,
+                               value == "Somewhat addressable" | value == "A little" ~ 2,
+                               value == "Addressable" | value == "Somewhat" ~ 3,
+                               value == "Very addressable" | value == "Very much" ~ 4))
 
 stats <- long_data %>%
   group_by(barrier, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -893,8 +934,17 @@ stats <- long_data %>%
     mean_addressability = mean_value_add,
     se_addressability = se_value_add
   ) %>% 
-  mutate(se_average = (se_importance + se_addressability)/2)
+  mutate(se_average = (se_importance + se_addressability)/2) %>% 
+  filter(!is.na(mean_importance) & !is.na(mean_addressability))
 
+cutoff_importance <- long_data %>% 
+  filter(type == "barrier") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_addressability <- long_data %>% 
+  filter(type == "add") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- stats %>% 
   mutate(barrier_detail = dplyr::recode(barrier, 
@@ -911,35 +961,36 @@ stats <- stats %>%
                                   "stigma" = "Stigma: Stigmatization from the community",
                                    "workload" = "Workload: Having too many clients to see",
                                   "fear" =	"Fear: Women's fear of opening up to HCW",
-                                  "drug" = "Drug: lLmited drug supply to manage patients",
+                                  "drug" = "Drug: Lmited drug supply to manage patients",
                                   "psych" = "Psych: The unavailability of psychologists/counsellors", 
                                   "denial" = "Denial: Patients' denial of PMAD",
                                   "gap" = "Gap: Lack of knowledge among clients on\n where to seek treatment services",
                                   "adhere" = "Adhere: Poor patient adherence to treatment",
                                   "transport" = "Transport: Lack of funds for transport to seek treatment",
-                                  "compete" = "Patient's competing priorities"))
+                                  "compete" = "Compete: Patient's competing priorities"))
 
 ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
   scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
   scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
-  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_addressability, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
+  annotate("text", x = cutoff_importance, y = 4, label = paste0("Cutoff: ", round(cutoff_importance, 2)), hjust = -0.1) +
+  annotate("text", x = 1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
   labs(title = "Barrier prioritization for diagnosis and treatment",
        x = "Importance",
        y = "Addressability",
        color = "Barrier detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 4) + 
+  guides(size=F, color = guide_legend(ncol = 2, override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
@@ -951,7 +1002,7 @@ ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
 ```{r dxtrt_stra_hcw, echo=F, warning=F, message=F}
 dxtrt_strategy <- dxtrt_hcw %>% 
   select(record_id, matches("stra|diff")) %>%
-  mutate(across(where(is.numeric), ~ na_if(., 99)))
+  mutate(across(where(is.numeric), ~ na_if(., 99))) 
 
 long_data <- dxtrt_strategy %>%
   select(-trt_diff, -trt_diff_couns) %>% 
@@ -966,13 +1017,19 @@ long_data <- dxtrt_strategy %>%
          -dxtrt_stra_employ, -dxtrt_diff_employ) %>%
   pivot_longer(cols = -c(record_id, dxtrt_stra_other, dx_strategy_other),
                names_to = c("type", "strategy"), 
-               names_pattern = "dxtrt_(.*)_(.*)")
+               names_pattern = "dxtrt_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "I don't know" ~ NA_real_,
+                               value == "Very hard" | value == "Major negative impact" ~ 1,
+                               value == "Somewhat hard" | value == "Some negative impact" ~ 2,
+                               value == "Neurtral" | value == "No impact" ~ 3,
+                               value == "Somewhat easy" | value == "Some positive impact" ~ 4,
+                               value == "Very easy" | value == "Major positive impact" ~ 5))
 
 stats <- long_data %>%
   group_by(strategy, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -982,13 +1039,14 @@ stats <- long_data %>%
     mean_impact= mean_value_diff,
     se_impact = se_value_diff
   ) %>% 
-  mutate(se_average = (se_feasibility + se_impact)/2)
+  mutate(se_average = (se_feasibility + se_impact)/2) %>% 
+    filter(!is.na(mean_impact) & !is.na(mean_feasibility))
 
 stats <- stats %>% 
   mutate(strategy_detail = dplyr::recode(strategy, 
                                   "trainexist" = "Trainexist: Train existing HCWs\n on diagnosis and treatment modalities for PMAD",
                                   "trainmore" = "Trainmore: Train more providers to become mental health specialists",
-                                  "drug" = "Drug: procure required drugs",
+                                  "drug" = "Drug: Procure required drugs",
                                    "guideline" =	"Guideline: Provide guidelines for HCWs",
                                    "tool" = 	"Tool: Provide standardized tools for HCWs",
                                   "room" = "Room: Provide physical space/rooms",
@@ -1000,27 +1058,37 @@ stats <- stats %>%
                                   "empower" = "Empower: Soceio-economic empowerment of women",
                                   "group" = "Group: Provide group therapy"))
 
+cutoff_impact <- long_data %>% 
+  filter(type == "diff") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_feasiblity <- long_data %>% 
+  filter(type == "stra") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
-  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_x_continuous(breaks = 1:5, limits = c(4.5, 5)) +
   scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
-  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_feasiblity, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_impact, linetype = "dashed", color = "grey") +
+    annotate("text", x = cutoff_impact, y = 5, label = paste0("Cutoff: ", round(cutoff_impact, 2)), hjust = -0.1) +
+  annotate("text", x = 4.5, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
   labs(title = "Strategy prioritization for diagnosis and treatment",
        x = "Impact",
        y = "Feasibility",
        color = "Strategy detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 4) + 
+  guides(size=F, color = guide_legend(ncol=2, override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
@@ -1028,6 +1096,7 @@ ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
 
 
 ## Referral and Remission
+
 ```{r Inserting NA in remission others columns, echo=FALSE, message=FALSE, warning=FALSE}
 data <- data %>% 
     mutate(ref_where_other = case_when(
@@ -1062,7 +1131,7 @@ data <- data %>%
 
 ```{r Referral and Remission Summary, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 refremis_hcw <- data %>%
-    filter(hcw_care == 1) %>% 
+    filter(hcw_care == "Yes") %>% 
   filter(!is.na(hcw_participant_id)) %>% 
   select(record_id, starts_with("ref_"), starts_with("remis_"), starts_with("refremis_"),
          starts_with("refmis_"), referral_and_remission_hcw_complete) %>% 
@@ -1091,10 +1160,10 @@ refremis_hcw <- refremis_hcw %>%
 
 # convert 0 in HIV referral to NA iff referral currently ==0
 refremis_hcw <- refremis_hcw %>%
-  mutate(ref_provision_hiv = ifelse(ref_provision_now == 0, NA, ref_provision_hiv))
+  mutate(ref_provision_hiv = ifelse(ref_provision_now == "No", NA, ref_provision_hiv))
 
 other <- refremis_hcw %>% 
-    filter(ref_where___5 == 1) %>% 
+    filter(ref_where___5 == "Checked") %>% 
     select(ref_where_other)
 
 # Other referrals
@@ -1190,7 +1259,7 @@ refremis_hcw %>% tbl_summary(
 
 ```{r Where do you normally refer women to?, echo=FALSE, message=FALSE, warning=FALSE}
 refremis_hcw %>% 
-    filter(ref_provision_now == 1) %>% 
+    filter(ref_provision_now == "Yes") %>% 
     select(ref_where___3, ref_where___4, ref_where___2, ref_where___1, 
            ref_where___5) %>% 
     tbl_summary(
@@ -1228,13 +1297,18 @@ refremis_barrier <- refremis_hcw %>%
 long_data <- refremis_barrier %>%
   pivot_longer(cols = -c(record_id,ref_barrier_other),
                names_to = c("type", "barrier"), 
-               names_pattern = "refremis_(.*)_(.*)")
+               names_pattern = "refremis_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "Not applicable" ~ NA_real_,
+                               value == "Not at all addressable" | value == "Not at all" ~ 1,
+                               value == "Somewhat addressable" | value == "A little" ~ 2,
+                               value == "Addressable" | value == "Somewhat" ~ 3,
+                               value == "Very addressable" | value == "Very much" ~ 4))
 
 stats <- long_data %>%
   group_by(barrier, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -1246,14 +1320,22 @@ stats <- long_data %>%
   ) %>% 
   mutate(se_average = (se_importance + se_addressability)/2)
 
+cutoff_importance <- long_data %>% 
+  filter(type == "barrier") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_addressability <- long_data %>% 
+  filter(type == "add") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- stats %>% 
   mutate(barrier_detail = dplyr::recode(barrier, 
                                         "guideline" =	"Guideline: Lack of guidelines",
                                         "hcwstigma" = "HCWstigma: HCW stigmatization of patients with mental illnesses",
-                                        "track" = "Track: lack of systems to track PMAD treatment",
-                                        "relative" = "Relative: patients being influenced by relatives not to go for the referral",
-                                        "transport" = "Transport: patients' lack of transport\n to attend the referral/remission assessments",
+                                        "track" = "Track: Lack of systems to track PMAD treatment",
+                                        "relative" = "Relative: Patients being influenced by relatives not to go for the referral",
+                                        "transport" = "Transport: Patients' lack of transport\n to attend the referral/remission assessments",
                                         "stigma" = "Stigma: Stigma from the community",
                                         "honor" = "Honor: Patients do not honor the referral\n or remission assessment visits they have been given",
                                   "knowledge" = "Knowledge: Insufficient training or knowledge gap for HCWs",
@@ -1264,23 +1346,24 @@ ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
   scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
   scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
-  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_addressability, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
+  annotate("text", x = cutoff_importance, y = 4, label = paste0("Cutoff: ", round(cutoff_importance, 2)), hjust = -0.1) +
+  annotate("text", x = 1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
   labs(title = "Barrier prioritization for referral and remission assessment",
        x = "Importance",
        y = "Addressability",
        color = "Barrier detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 4) + 
+  guides(size=F, color = guide_legend(ncol = 2, override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
@@ -1300,13 +1383,28 @@ long_data <- refremis_strategy %>%
                          ref_where_diff_hiv___3, ref_where_diff_hiv___4,
                          ref_where_diff_hiv___5, ref_diff_other),
                names_to = c("type", "strategy"), 
-               names_pattern = "refremis_(.*)_(.*)")
+               names_pattern = "refremis_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "I don't know" ~ NA_real_,
+                               value == "Very hard" | value == "Major negative impact" ~ 1,
+                               value == "Somewhat hard" | value == "Some negative impact" ~ 2,
+                               value == "Neurtral" | value == "No impact" ~ 3,
+                               value == "Somewhat easy" | value == "Some positive impact" ~ 4,
+                               value == "Very easy" | value == "Major positive impact" ~ 5))
+
+cutoff_impact <- long_data %>% 
+  filter(type == "diff") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_feasiblity <- long_data %>% 
+  filter(type == "stra") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- long_data %>%
   group_by(strategy, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -1328,25 +1426,26 @@ stats <- stats %>%
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
-  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_x_continuous(breaks = 1:5, limits = c(4.5, 5)) +
   scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
-  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_feasiblity, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_impact, linetype = "dashed", color = "grey") +
+    annotate("text", x = cutoff_impact, y = 5, label = paste0("Cutoff: ", round(cutoff_impact, 2)), hjust = -0.1) +
+  annotate("text", x = 4.52, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
   labs(title = "Strategy prioritization for referral & remission assessment",
        x = "Impact",
        y = "Feasibility",
        color = "Strategy detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = strategy, color = strategy_detail),size = 5,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = strategy, color = strategy_detail),size = 4) + 
+  guides(size=F, color = guide_legend(ncol=2,override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
@@ -1371,13 +1470,18 @@ ipmh_screen_barrier <- ipmh_screen %>%
 long_data <- ipmh_screen_barrier %>%
   pivot_longer(cols = -c(record_id, ipmh_scre_barrier_other),
                names_to = c("type", "barrier"), 
-               names_pattern = "ipmh_scre_(.*)_(.*)")
+               names_pattern = "ipmh_scre_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "Not applicable" ~ NA_real_,
+                               value == "Not at all addressable" | value == "Not at all" ~ 1,
+                               value == "Somewhat addressable" | value == "A little" ~ 2,
+                               value == "Addressable" | value == "Somewhat" ~ 3,
+                               value == "Very addressable" | value == "Very much" ~ 4))
 
 stats <- long_data %>%
   group_by(barrier, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -1389,16 +1493,24 @@ stats <- long_data %>%
   ) %>% 
   mutate(se_average = (se_importance + se_addressability)/2)
 
+cutoff_importance <- long_data %>% 
+  filter(type == "bar") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_addressability <- long_data %>% 
+  filter(type == "add") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- stats %>% 
   mutate(barrier_detail = dplyr::recode(barrier, 
                                         "reach" = "Reach: Lay providers do not reach\n all PPW coming to the facility",
-                                        "workload" = "Workload: Having too many services to offer\n hence increasing the workload",
+                                        "workload" = "Workload: Increased staff workload",
                                         "staff" = "Staff: Shortage of staff",
                                         "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
-                                        "flow" = "Cumbersome flow from screening to diagnosis\n to getting PM+ leading to loss of patients",
+                                        "flow" = "Flow: Complex flow from screening to getting PM+, \nleading to loss of patients",
                                         "confi" = "Confi: Fear of breach of confidentiality",
-                                        "long" = "Long: The probability that patient visits\n may last longer than usual",
+                                        "long" = "Long: Lengthening of patient visits",
                                         "partner" = "Partner: Lack of partner involvement"))
                                         
 
@@ -1406,23 +1518,24 @@ ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
   scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
   scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
-  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_addressability, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
+  annotate("text", x = cutoff_importance, y = 4, label = paste0("Cutoff: ", round(cutoff_importance, 2)), hjust = -0.1) +
+  annotate("text", x = 1.1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
   labs(title = "Barrier prioritization for IPMH screening",
        x = "Importance",
        y = "Addressability",
        color = "Barrier detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 4) + 
+  guides(size=F, color = guide_legend(ncol = 2, override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
@@ -1440,13 +1553,31 @@ ipmh_screen_strategy <- ipmh_screen %>%
 long_data <- ipmh_screen_strategy %>%
   pivot_longer(cols = -c(record_id, ipmh_scre_strategy_other),
                names_to = c("type", "strategy"), 
-               names_pattern = "ipmh_scre_(.*)_(.*)")
+               names_pattern = "ipmh_scre_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "I don't know" ~ NA_real_,
+                               value == "Very hard" | value == "Major negative impact" ~ 1,
+                               value == "Somewhat hard" | value == "Some negative impact" ~ 2,
+                               value == "Neurtral" | value == "No impact" ~ 3,
+                               value == "Somewhat easy" | value == "Some positive impact" ~ 4,
+                               value == "Very easy" | value == "Major positive impact" ~ 5))
+
+long_data <- long_data %>%
+  mutate(strategy = ifelse(strategy == "plan", "streamline", strategy))
+
+cutoff_impact <- long_data %>% 
+  filter(type == "diff") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_feasiblity <- long_data %>% 
+  filter(type == "stra") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- long_data %>%
   group_by(strategy, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -1461,35 +1592,36 @@ stats <- long_data %>%
 stats <- stats %>% 
   mutate(strategy_detail = dplyr::recode(strategy, 
                                          "nurse" = "Nurse: Have the nurses screen at 1st contact",
-                                         "room" = "Room: Provide a specific area for screening",
+                                         "room" = "Room: Provide a specific area for screening at the facility",
                                          "incentive" = "Incentive: Provide financial incentives to HCWs",
-                                         "trainall" = "Trainall: train all HCWs",
-                                         "plan" = "Plan: Proper planning of activities",
-                                         "chv" = "CHV: Involve CHVs",
+                                         "trainall" = "Trainall: Train all HCWs",
+                                         "streamline" = "Streamline: Streamline workflow at the facility",
+                                         "chv" = "CHV: Involve community health promoters",
                                          "partner" = "Partner: Encourage male partner involvement",
                                          "info" = "Info: Provide IPMH information and \nreassurance at the triage desk"))
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
-  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_x_continuous(breaks = 1:5, limits = c(4, 5)) +
   scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
-  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_feasiblity, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_impact, linetype = "dashed", color = "grey") +
+    annotate("text", x = cutoff_impact, y = 5, label = paste0("Cutoff: ", round(cutoff_impact, 2)), hjust = -0.1) +
+  annotate("text", x = 4.05, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
   labs(title = "Strategy prioritization for IPMH screening",
        x = "Impact",
        y = "Feasibility",
        color = "Strategy detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 4) + 
+  guides(size=F, color = guide_legend(ncol =2, override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
@@ -1504,18 +1636,23 @@ ipmh_pm <- ipmh_hcw %>% select(record_id,starts_with("ipmh_trt_"))
 
 ipmh_pm_barrier <- ipmh_pm %>% 
   select(record_id, matches("bar|add")) %>%
-  mutate(across(where(is.numeric), ~ na_if(., 99)))
+  mutate(across(where(is.numeric), ~ na_if(., 99))) 
 
 long_data <- ipmh_pm_barrier %>%
   pivot_longer(cols = -c(record_id, ipmh_trt_barrier_other),
                names_to = c("type", "barrier"), 
-               names_pattern = "ipmh_trt_(.*)_(.*)")
+               names_pattern = "ipmh_trt_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "Not applicable" ~ NA_real_,
+                               value == "Not at all addressable" | value == "Not at all" ~ 1,
+                               value == "Somewhat addressable" | value == "A little" ~ 2,
+                               value == "Addressable" | value == "Somewhat" ~ 3,
+                               value == "Very addressable" | value == "Very much" ~ 4))
 
 stats <- long_data %>%
   group_by(barrier, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -1527,39 +1664,48 @@ stats <- long_data %>%
   ) %>% 
   mutate(se_average = (se_importance + se_addressability)/2)
 
+cutoff_importance <- long_data %>% 
+  filter(type == "bar") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_addressability <- long_data %>% 
+  filter(type == "add") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- stats %>% 
   mutate(barrier_detail = dplyr::recode(barrier, 
                                         "workload" = "Workload: Increased workload for lay providers",
                                         "staff" = "Staff: Shortage of staff",
-                                        "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
-                                        "flow" = "Cumbersome flow from pming to diagnosis\n to getting PM+ leading to loss of patients",
+                                        "incentive" = "Incentive: Lack of financial incentives to motivate HCWs",
+                                        "flow" = "Flow: Complex flow from pming to getting PM+, \nleading to loss of patients",
                                         "prefer" = "Prefer: Patients prefer to deal with\n one HCW as opposed to many",
                                         "confi" = "Confi: Fear of breach of confidentiality",
-                                        "long" = "Long: The probability that patient visits\n may last longer than usual",
+                                        "long" = "Long: Lengthening of patient visits",
                                         "partner" = "Partner: Lack of partner involvement"))
 
 ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
   scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
   scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
-  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_addressability, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
+  annotate("text", x = cutoff_importance, y = 4, label = paste0("Cutoff: ", round(cutoff_importance, 2)), hjust = -0.1) +
+  annotate("text", x = 1.1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
   labs(title = "Barrier prioritization for IPMH PM+",
        x = "Importance",
        y = "Addressability",
        color = "Barrier detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 4) + 
+  guides(size=F, color = guide_legend(ncol=2, override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
@@ -1578,13 +1724,27 @@ ipmh_pm_strategy <- ipmh_pm %>%
 long_data <- ipmh_pm_strategy %>%
   pivot_longer(cols = -c(record_id, ipmh_trt_strategy_other),
                names_to = c("type", "strategy"), 
-               names_pattern = "ipmh_trt_(.*)_(.*)")
+               names_pattern = "ipmh_trt_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "I don't know" ~ NA_real_,
+                               value == "Very hard" | value == "Major negative impact" ~ 1,
+                               value == "Somewhat hard" | value == "Some negative impact" ~ 2,
+                               value == "Neurtral" | value == "No impact" ~ 3,
+                               value == "Somewhat easy" | value == "Some positive impact" ~ 4,
+                               value == "Very easy" | value == "Major positive impact" ~ 5))
+cutoff_impact <- long_data %>% 
+  filter(type == "diff") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_feasiblity <- long_data %>% 
+  filter(type == "stra") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- long_data %>%
   group_by(strategy, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -1599,26 +1759,27 @@ stats <- long_data %>%
 stats <- stats %>% 
   mutate(strategy_detail = dplyr::recode(strategy, 
                                          "traincli" = "Traincli: Train cliniains on all IPMH processes",
-                                         "clin" = "Clin: Have clinicians in charge of PM+",
-                                         "stream" = "Stream: streamline the workflow at the facility",
+                                         "clin" = "Clin: Have clinicians in charge of PM+ instead of lay providers",
+                                         "stream" = "Stream: Streamline the workflow at the facility",
                                          "incentive" = "Incentive: Provide financial incentives to HCWs",
-                                         "chv" = "CHV: Involve CHVs",
+                                         "chv" = "CHV: Involve community health promoters",
                                          "partner" = "Partner: Encourage male partner involvement",
-                                         "info" = "Info: Provide IPMH information and \nreassurance at the triage desk"))
+                                         "info" = "Info: Provide IPMH information and reassurance \nat the triage desk to ensure confidentiality"))
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
-  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_x_continuous(breaks = 1:5, limits = c(4.5, 5)) +
   scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
-  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_feasiblity, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_impact, linetype = "dashed", color = "grey") +
+    annotate("text", x = cutoff_impact, y = 5, label = paste0("Cutoff: ", round(cutoff_impact, 2)), hjust = -0.1) +
+  annotate("text", x = 4.51, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
   labs(title = "Strategy prioritization for IPMH PM+",
        x = "Impact",
        y = "Feasibility",
        color = "Strategy detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 6,
-                  max.overlaps = 20) + 
+  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 4) + 
   guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
@@ -1626,7 +1787,7 @@ ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
@@ -1646,13 +1807,26 @@ ipmh_telepsy_barrier <- ipmh_telepsy %>%
 long_data <- ipmh_telepsy_barrier %>%
   pivot_longer(cols = -c(record_id, ipmh_telepsy_barrier_other),
                names_to = c("type", "barrier"), 
-               names_pattern = "ipmh_telepsy_(.*)_(.*)")
+               names_pattern = "ipmh_telepsy_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "Not applicable" ~ NA_real_,
+                               value == "Not at all addressable" | value == "Not at all" ~ 1,
+                               value == "Somewhat addressable" | value == "A little" ~ 2,
+                               value == "Addressable" | value == "Somewhat" ~ 3,
+                               value == "Very addressable" | value == "Very much" ~ 4))
+cutoff_importance <- long_data %>% 
+  filter(type == "bar") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_addressability <- long_data %>% 
+  filter(type == "add") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
 
 stats <- long_data %>%
   group_by(barrier, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -1667,38 +1841,39 @@ stats <- long_data %>%
 
 stats <- stats %>% 
   mutate(barrier_detail = dplyr::recode(barrier, 
-                                        "sche" = "Sche: Scheduling process of telepsychiatry",
-                                        "drug" = "Drug: Inadequate or lack of access to the medication prescribed",
-                                        "setup" = "Setup:User challenges in setting up and using telepsychiatry",
+                                        "sche" = "Sche: Complex scheduling process of telepsychiatry",
+                                        "drug" = "Drug: Inadequate or lack of access \n to the medication prescribed",
+                                        "setup" = "Setup: User challenges in setting \n up and using telepsychiatry",
                                         "internet" = "Internet: Internet connectivity for telepsychiatry",
-                                        "port" = "Port: Portability of the gadgets used for telepsychiatry",
-                                        "gadget" = "Gadget: Lack of required gadgets to conduct telepsychiatry",
+                                        "port" = "Port: Portability of the device \n used for telepsychiatry",
+                                        "gadget" = "Gadget: Lack of required gadgets \nto conduct telepsychiatry",
                                         "inte" = "Inte: Challenging process of integration\n with the care at the facility",
-                                        "language" = "Language: Language barrier between women and HCWs",
+                                        "language" = "Language: Language barrier \n between women and psychiatrists",
                                         "confi" = "Confi: Fear of breach of confidentiality",
-                                        "physical" = "Clients unwillingness to talk to psychiatrist \n over the online platform as opposed to in-person"))
+                                        "physical" = "Physical: Clients' preference to talk to psychiatrists \nin person instead of online"))
 
 ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
   scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
   scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
-  geom_hline(yintercept = 2.5, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 2.5, linetype = "dashed", color = "grey") +
+    geom_hline(yintercept = cutoff_addressability, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
+  annotate("text", x = cutoff_importance, y = 4, label = paste0("Cutoff: ", round(cutoff_importance, 2)), hjust = -0.1) +
+  annotate("text", x = 1.1, y = cutoff_addressability, label = paste0("Cutoff: ", round(cutoff_addressability, 2)), vjust = -1) +
   labs(title = "Barrier prioritization for IPMH telepsychiatry",
        x = "Importance",
        y = "Addressability",
        color = "Barrier detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 6,
-                  max.overlaps = 20) + 
-  guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
+  geom_text_repel(aes(label = barrier, color = barrier_detail), size = 4) + 
+  guides(size=F, color = guide_legend(ncol =2, override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
         axis.text.x = element_text(size = 12),
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
@@ -1715,13 +1890,19 @@ ipmh_telepsy_strategy <- ipmh_telepsy %>%
 long_data <- ipmh_telepsy_strategy %>%
   pivot_longer(cols = -c(record_id, ipmh_telepsy_stra_other),
                names_to = c("type", "strategy"), 
-               names_pattern = "ipmh_telepsy_(.*)_(.*)")
+               names_pattern = "ipmh_telepsy_(.*)_(.*)") %>% 
+    mutate(value_1 = case_when(value == "I don't know" ~ NA_real_,
+                               value == "Very hard" | value == "Major negative impact" ~ 1,
+                               value == "Somewhat hard" | value == "Some negative impact" ~ 2,
+                               value == "Neurtral" | value == "No impact" ~ 3,
+                               value == "Somewhat easy" | value == "Some positive impact" ~ 4,
+                               value == "Very easy" | value == "Major positive impact" ~ 5))
 
 stats <- long_data %>%
   group_by(strategy, type) %>%
   summarise(
-    mean_value = mean(value, na.rm = TRUE),
-    se_value = sd(value, na.rm = TRUE) / sqrt(sum(!is.na(value))),
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
     .groups = "drop"
   ) %>%
   pivot_wider(names_from = type, values_from = c(mean_value, se_value)) %>%
@@ -1733,9 +1914,18 @@ stats <- long_data %>%
   ) %>% 
   mutate(se_average = (se_feasibility + se_impact)/2)
 
+cutoff_impact <- long_data %>% 
+  filter(type == "diff") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+cutoff_feasiblity <- long_data %>% 
+  filter(type == "stra") %>% 
+  summarise(mean_value = mean(value_1, na.rm = TRUE)) %>% 
+  pull(mean_value)
+
 stats <- stats %>% 
   mutate(strategy_detail = dplyr::recode(strategy, 
-                                         "align" = "Align: Align psychiatry appointment with routine clinic visits",
+                                         "align" = "Align: Align psychiatry appointments with routine clinic visits",
                                          "mm" = "MM: Have mentor mothers sit in during telepsychiatry",
                                          "lang" = "Lang: Involve translators for language barrier or those who are deaf",
                                          "partner" = "Partner: Have a support partner during telepsychiatry",
@@ -1743,17 +1933,18 @@ stats <- stats %>%
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility )) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
-  scale_x_continuous(breaks = 1:5, limits = c(2.5, 6)) +
+  scale_x_continuous(breaks = 1:5, limits = c(4.5, 5)) +
   scale_y_continuous(breaks = 1:5, limits = c(1, 5)) +
-  geom_hline(yintercept = 3, linetype = "dashed", color = "grey") +
-  geom_vline(xintercept = 3, linetype = "dashed", color = "grey") +
+  geom_hline(yintercept = cutoff_feasiblity, linetype = "dashed", color = "grey") +
+  geom_vline(xintercept = cutoff_impact, linetype = "dashed", color = "grey") +
+    annotate("text", x = cutoff_impact, y = 5, label = paste0("Cutoff: ", round(cutoff_impact, 2)), hjust = -0.1) +
+  annotate("text", x = 4.51, y = cutoff_feasiblity, label = paste0("Cutoff: ", round(cutoff_feasiblity, 2)), vjust = -1) +
   labs(title = "Strategy prioritization for IPMH telepsychiatry",
        x = "Impact",
        y = "Feasibility",
        color = "Strategy detail",
        size = "Average SE") +
-  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 6,
-                  max.overlaps = 20) + 
+  geom_text_repel(aes(label = strategy, color = strategy_detail), size = 4) + 
   guides(size=F, color = guide_legend(override.aes = list(shape = 16, size = 6)))+
   theme_minimal() + 
   theme(axis.text.y = element_text(size = 12),
@@ -1761,7 +1952,7 @@ ggplot(stats, aes(x = mean_impact, y = mean_feasibility )) +
         axis.title.y = element_text(size = 12, face = "bold"),
         axis.title.x = element_text(size = 12, face = "bold"),
         plot.title = element_text(size = 18, face = "bold"),
-        legend.text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.direction = "vertical",
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
