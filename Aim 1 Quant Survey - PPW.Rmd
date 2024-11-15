@@ -2015,7 +2015,7 @@ barrier_label <- c(
 ggplot(tele_barr_long, aes(x = Barrier, y = percentage, fill = Response)) +
   geom_bar(stat = "identity", position = "fill", width = 0.5) +  # Stacked bar chart with fill
 geom_text(aes(label = ifelse(percentage > 5, paste0(round(percentage, 1), "%"), "")), 
-            position = position_fill(vjust = 0.5), size = 3, color = "black") +  # Adjusted label size
+            position = position_fill(vjust = 0.5), size = 8, color = "black") +  # Adjusted label size
   scale_fill_brewer(palette = "RdYlBu", direction = -1) +  
   scale_y_continuous(labels = scales::percent) +  
   labs(
