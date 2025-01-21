@@ -13,7 +13,9 @@ pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr,
                openxlsx, gtsummary, kableExtra) 
 
 #read data
-demographic_df <-read.csv("IPMHAim1QualDemograp_DATA_2024-06-10_0619.csv") 
+source("REDCap_datapull.R")
+
+demographic_df <- aim1qual_demo 
 ```
 
 ## Health Care Workers Demographics
