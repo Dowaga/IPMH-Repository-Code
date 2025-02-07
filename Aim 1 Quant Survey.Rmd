@@ -3,7 +3,6 @@ title: "IPMH Quant Survey - HCW"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
-  pdf_document: default
   word_document: default
 ---
 
@@ -11,7 +10,6 @@ output:
 
 ```{r setup, echo = F, include = F}
 rm(list = ls())
-
 pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
                openxlsx, gtsummary, kableExtra, ggrepel, UpSetR, funModeling, gt, mice) 
 
