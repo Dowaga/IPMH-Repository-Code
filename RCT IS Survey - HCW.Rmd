@@ -1,0 +1,585 @@
+---
+title: "IPMH Quant Survey - HCW"
+author: "David Owaga & Yuwei Wang"
+date: "`r Sys.Date()`"
+output:
+  word_document
+---
+
+```{r setup, echo = F, include = F}
+rm(list = ls())
+
+pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
+               openxlsx, gtsummary, kableExtra, ggrepel, UpSetR, funModeling, gt, mice) 
+
+knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
+
+is_survey_df <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/RCT/IS HCWs Survey/IPMHAim23RCTISSurvey_DATA_2025-02-07_0605.csv")
+
+```
+
+## Health Care Workers Demographics
+
+Altogether, we currently have data for `r nrow(is_survey_df)` participants.
+
+```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
+is_survey_df <- is_survey_df %>%
+    mutate(arm = ifelse(facility_id %in% 
+                         c(1, 3, 4, 7, 9, 13, 16, 17, 19, 22), 
+                     "Intervention", "Control"))
+
+demogra <- is_survey_df %>% 
+  select(arm, part_id,  pt_type, calculated_pt_id, dob_uk, dob, age, cal_age, sex, education, 
+         dpt___1, dpt___2, dpt___3, dpt___4, dpt___5, dpt___6, dpt___7, 
+          job_arm14___1,  job_arm14___2,  job_arm25___1,  job_arm25___2, 
+         job_arm25___3, job_arm25___4,  job_arm25___5,  job_arm25___6, 
+         job_arm25___7, job_arm36___1,  job_arm36___2,  job_arm36___3,  
+         job_arm7___1, job_arm7___2,
+          monthsjob, monthswork, terms, care,  wlwh, monthscare,
+          hrscare, wlwh,  demographic_complete)%>% 
+    filter(demographic_complete == "2") %>% 
+    mutate(age = case_when(
+        dob_uk == "1" ~ floor(as.numeric(cal_age)),  
+        dob_uk == "0" ~ as.numeric(age), 
+        TRUE ~ NA_real_))
+
+
+demogra <- demogra %>% 
+    mutate(sex = dplyr::recode(sex, 
+                               "1" = "Male",
+                               "2" = "Female")) %>% 
+  mutate(education = dplyr::recode(education, 
+                                       "1" = "No schooling completed",
+                                       "2" = "Primary school",
+                                       "3" = "Secondary school", 
+                                       "4" = "Diploma", 
+                                       "5" = "Bachelor's degree or higher degree"),
+         education = fct_relevel(education,
+                                 "Diploma", "Bachelor's degree or higher degree",
+                                 "Secondary school", "Primary school")) %>%
+  mutate(designation = dplyr::case_when(
+      job_arm14___1 == "1" ~ "HTS counsellor",
+      job_arm14___2 == 1 ~ "Mentor Mother",
+      job_arm25___1 == "1" ~ "Medical officer",
+      job_arm25___2 == "1" ~ "Obstetrician/gynaecologist",
+      job_arm25___3 == "1" ~ "Clinical Officer",
+      job_arm25___4 == "1" ~ "Nurses",
+      job_arm25___6 == "1" ~  "Other social worker",
+      job_arm25___7 == "1" ~ "Others",
+      job_arm36___1 == "1" ~ "Medical officer",
+      job_arm36___2 == "1" ~ "Clinical Officer",
+      job_arm36___3 == "1" ~ "Nurses",
+      job_arm7___1 == "1" ~ "Psychologist",
+      job_arm7___2 == "1" ~ "Psychiatrist",
+      TRUE ~ NA_character_)) %>%
+  mutate(care = dplyr::recode(care, 
+                                "0" = "No",
+                                "1" = "Yes"),
+           wlwh = dplyr::recode(wlwh,
+                                "0" = "No",
+                                "1" = "Yes")) %>% 
+    mutate(terms = dplyr::recode(terms, 
+                                 "1" = "Permanent and pensionable", 
+                                 "2" = "Contract",
+                                 "3" = "Volunteer", 
+                                 "4" = "Other"),
+           terms = fct_relevel(terms,
+                                 "Contract", "Permanent and pensionable", 
+                                 "Volunteer", "Other")) %>% 
+  mutate(monthsjob = as.numeric(monthsjob, monthswork,  monthscare, hrscare),
+         pt_type = recode(pt_type,
+                          "22" = "Lay providers",
+                          "23" = "Facility-in-charge",
+                          "24" = "Nurses/COs/MOs",
+                          "25" = "Psychiatrists/Psychologists"))%>% 
+  mutate(yearjob = monthsjob/12) %>% 
+    mutate(yearwork = monthswork/12) %>% 
+    mutate(yearcare = monthscare/12)
+
+
+
+# basic demo table
+demogra %>% tbl_summary(
+    by = "arm",
+    include=c(arm, age, sex, education, dpt___1, dpt___2, 
+            dpt___3, dpt___4, dpt___5, dpt___6, dpt___7,
+            designation,  yearjob, yearwork, yearcare, 
+            hrscare, terms, care,  wlwh),
+    label = list(age ~ "Age (Years)",
+               sex ~ "Gender",
+               education ~ "Education level",
+               dpt___1 ~ "Working in antenatal care",
+               dpt___2 ~ "Working in postnatal care",
+               dpt___3 ~ "Working in immunization clinic",
+               dpt___4 ~ "Working in PMTCT",
+               dpt___5 ~ "Working in family planning clinic",
+               dpt___6 ~ " Psychological/Psychiatric care",
+               dpt___7 ~ "Working in other department",
+               designation ~ "Current Designation",
+               yearjob ~ "Current job duration (Years)",
+               yearwork ~ "Duration in the facility (Years)",
+               terms ~ "Terms of engagement in the facility",
+               care ~ "Offering care to perinatal women (Yes)",
+               yearcare ~ "Duration of offering care to PW in the facility (Years)",
+               hrscare ~ "Hours/week taking care of PW in the facility", 
+               wlwh ~ "Currently providing care to PW living with HIV (Yes)"),
+    missing = "no",
+    digits = list(all_continuous() ~ 1), 
+    type = list(age ~ "continuous", 
+              yearjob ~ "continuous",
+              yearwork ~ "continuous", 
+              yearcare ~ "continuous", 
+              hrscare ~ "continuous"),
+  statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+  bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 1: Basic Demographic Summary") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+```
+
+```{r Participants Interviewed by cadre per facility, echo=FALSE, message=FALSE, warning=FALSE}
+suveys_done <- is_survey_df %>% 
+    select(part_id, facility_id, pt_type) %>% 
+    mutate(pt_type = recode(pt_type,
+                            "22" = "Lay providers",
+                            "23" = "Facility-in-charge",
+                            "24" = "Nurses/COs/medical officers",
+                            "25" = "Psychiatrists/psychologists"),
+           facility_id = dplyr::recode(facility_id, 
+                                   "01" = "Rwambwa Sub-county Hospital",
+                                   "02" = "Sigomere Sub County Hospital",
+                                   "03" = "Uyawi Sub County Hospital",
+                                   "04" = "Got Agulu Sub-District Hospital",
+                                   "05" = "Ukwala Sub County Hospital",
+                                   "06" = "Madiany Sub County Hospital",
+                                   "07" = "Kabondo Sub County Hospital",
+                                   "08" = "Mbita Sub-County Hospital",
+                                   "09" = "Miriu Health Centre",
+                                   "11" = "Nyandiwa Level IV Hospital",
+                                   "13" = "Ober Kamoth Sub County Hospital",
+                                   "14" = "Gita Sub County Hospital",
+                                   "15" = "Akala Health Centre",
+                                   "16" = "Usigu Health Centre",
+                                   "17" = "Ramula Health Centre",
+                                   "18" = "Simenya Health Centre",
+                                   "19" = "Airport Health Centre (Kisumu)",
+                                   "20" = "Nyalenda Health Centre",
+                                   "21" = "Mirogi Health Centre",
+                                   "22" = "Ndiru Level 4 Hospital")) %>%
+    group_by(facility_id, pt_type) %>%
+  summarise(count = n(), .groups = "drop")%>%
+  pivot_wider(names_from = pt_type, values_from = count, values_fill = 0)%>%
+  mutate(`Total_Facility` = rowSums(across(where(is.numeric)))) %>%  # Add row totals
+  arrange(desc(Total_Facility)) %>%  # Arrange in descending order
+    bind_rows(summarise(., across(where(is.numeric), sum), facility_id = "Total"))%>%  # Add column totals
+    gt() %>%
+  tab_header(
+    title = "Summary of HCWs Surveyed by Facility",
+    subtitle = "Showing counts of each HCWs type per facility"
+  ) %>%
+  cols_label(
+    facility_id = "Facility",
+    Total_Facility = "Total"
+  ) %>%
+  tab_options(
+    table.font.size = px(12)
+  )
+suveys_done
+```
+
+
+## Organizational readiness - HCW
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+hcw_readiness_df <- is_survey_df %>% 
+    select(part_id, facility_id, pt_type, arm, oric_needed_1, oric_needed_2,
+    oric_motivated_1, oric_motivated_2, oric_motivated_3, oric_motivated_4, 
+    oric_expectancy_1, oric_expectancy_2, oric_demand_1, oric_demand_2, 
+    oric_demand_3, oric_demand_4, oric_resource_1, oric_resource_2, 
+    oric_context_1, oric_context_2, oric_capacity_1, oric_capacity_2, 
+    oric_capacity_3, oric_flex_1, oric_flex_2, oric_flex_3, oric_flex_4, 
+    oric_politic, organizational_readiness_hcw_complete) %>% 
+    filter(!pt_type == "23")%>%
+    mutate(across(starts_with("oric_"), 
+                  ~case_when(. == 1 ~ "Completely Disagree",
+                             . == 2 ~ "Disagree",
+                             . == 3 ~ "Neutral",
+                             . == 4 ~ "Agree",
+                             . == 5 ~ "Completely Agree",
+                             . == 99 ~ "Prefer Not to Answer",
+                             TRUE ~ as.character(.))))
+
+hcw_readiness_df %>% 
+    tbl_summary(
+        by = arm,
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include = c(arm, oric_needed_1, oric_needed_2,
+    oric_motivated_1, oric_motivated_2, oric_motivated_3, oric_motivated_4, 
+    oric_expectancy_1, oric_expectancy_2, oric_demand_1, oric_demand_2, 
+    oric_demand_3, oric_demand_4, oric_resource_1, oric_resource_2, 
+    oric_context_1, oric_context_2, oric_capacity_1, oric_capacity_2, 
+    oric_capacity_3, oric_flex_1, oric_flex_2, oric_flex_3, oric_flex_4, 
+    oric_politic),
+        label = list(oric_needed_1 ~ "Our facility needs to implement IPMH for PPW",
+                     oric_needed_2 ~ "Co-workers believe facility needs IPMH for PPW",
+                      oric_motivated_1 ~ "Supportive of implementing IPMH for PPW",
+                      oric_motivated_2 ~ "Co-workers support IPMH implementation for PPW",
+                      oric_motivated_3 ~ "Clinic personnel likely to support IPMH for PPW",
+                     oric_motivated_4 ~ "Facility receives sufficient resources for IPMH implementation",
+                    oric_expectancy_1 ~ "Implementing IPMH can reduce depression and anxiety among PPW",
+                     oric_expectancy_2 ~ "Co-workers believe that providing IPMH can reduce depression and anxiety among PPW",
+                    oric_demand_1 ~ "Clinic in-charges provide good guidance
+ to implement IPMH among PPW",
+ oric_demand_2 ~ "Clinic staff need additional training to effectively implement IPMH for PPW",
+ oric_demand_3 ~ "Additional mental health practitioners are needed to implement IPMH for PPW",
+ oric_demand_4 ~ "In my experience, co-workers at the clinic can implement IPMH for PPW",
+ oric_resource_1 ~ "Our facility has the non-financial resources and tools needed to implement IPMH for PPW",
+ oric_resource_2 ~ "In my experience, there is a platform for in-service training of HCWs to implement interventions like IPMH at my facility",
+ oric_context_1 ~ "I have observed a collaborative network of external stakeholders supporting the facility to implement IPMH for PPW",
+ oric_context_2 ~ "PPW are resistant to receiving mental health interventions like IPMH at the clinic",
+ oric_capacity_1 ~ "In my experience, IPMH can be implemented as intended",
+ oric_capacity_2 ~ "Treatment data are often incorrectly recorded during the implementation of IPMH for PPW",
+ oric_capacity_3 ~ "In my experience, clinic staff have the skills to effectively implement IPMH among PPW",
+ oric_flex_1 ~ "It is challenging to present new ideas to my supervisor",
+ oric_flex_2 ~ "My supervisors feel comfortable receiving feedback and recommendations on improving intervention delivery",
+ oric_flex_3 ~ "My colleagues generally feel comfortable providing
+ feedback and recommendations on how to improve the
+ delivery of interventions",
+ oric_flex_4 ~ "This clinic is flexible - can quickly adapt procedures to meet new conditions and solve problems as they arise",
+ oric_politic ~ "In my experience, Kenya's national policies and guidelines for MCH support delivering mental health interventions for PPW and provide sufficient implementation details"), 
+    missing = "ifany") %>%
+  bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 2: HCWs Organizational Readiness Summary") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+incharge_readiness_df <- is_survey_df %>% 
+    select(part_id,pt_type, facility_id, arm,
+            oric_needed_1_fic, oric_needed_2_fic, oric_motivated_1_fic,
+           oric_motivated_2_fic,
+           oric_motivated_3_fic, oric_motivated_4_fic, leadership_fic,
+           politic_fic, oric_expectancy_1_fic, oric_expectancy_2_fic, 
+           oric_demand_2_fic, oric_demand_3_fic, oric_demand_4_fic, oric_demand_4_fic,
+           oric_resource_3_fic, oric_resource_1_fic, oric_resource_4_fic,  
+           oric_resource_2_fic,oric_context_1_fic, oric_context_2_fic, 
+           oric_capacity_1_fic, oric_capacity_2_fic, oric_capacity_3_fic, 
+           oric_flex_1_fic, oric_flex_2_fic, oric_flex_3_fic,
+           organizational_readiness_facilityincharge_complete) %>% 
+    filter(pt_type == "23") %>%
+    mutate(across(starts_with("oric_"),
+                  ~case_when(. == 1 ~ "Completely Disagree",
+                             . == 2 ~ "Disagree",
+                             . == 3 ~ "Neutral",
+                             . == 4 ~ "Agree",
+                             . == 5 ~ "Completely Agree",
+                             . == 99 ~ "Prefer Not to Answer",
+                             TRUE ~ as.character(.)))) %>% 
+    mutate(leadership_fic = dplyr::recode(leadership_fic,
+                                   "1" = "Completely Disagree",
+                                   "2" = "Disagree",
+                                   "3" = "Neutral",
+                                   "4" = "Agree",
+                                   "5" = "Completely Agree",
+                                   "99" = "Prefer Not to Answer"),
+             politic_fic = dplyr::recode(politic_fic,
+                                   "1" = "Completely Disagree",
+                                   "2" = "Disagree",
+                                   "3" = "Neutral",
+                                   "4" = "Agree",
+                                   "5" = "Completely Agree",
+                                   "99" = "Prefer Not to Answer")                      
+           )
+
+
+incharge_readiness_df %>% 
+    tbl_summary(
+        by = arm,
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include = c(oric_needed_1_fic, oric_needed_2_fic, 
+                    oric_motivated_1_fic, oric_motivated_2_fic,
+           oric_motivated_3_fic, oric_motivated_4_fic, leadership_fic,
+           politic_fic, oric_expectancy_1_fic, oric_expectancy_2_fic, 
+           oric_demand_2_fic, oric_demand_3_fic, oric_demand_4_fic, oric_demand_4_fic,
+           oric_resource_3_fic, oric_resource_1_fic, oric_resource_4_fic,  
+           oric_resource_2_fic,oric_context_1_fic, oric_context_2_fic, 
+           oric_capacity_1_fic, oric_capacity_2_fic, oric_capacity_3_fic, 
+           oric_flex_1_fic, oric_flex_2_fic, oric_flex_3_fic),
+        label = list(oric_needed_1_fic ~ "Our facility needs to implement IPMH for PPW",
+                     oric_needed_2_fic ~ "Co-workers believe facility needs IPMH for PPW",
+                     oric_motivated_1_fic ~ "Supportive of implementing IPMH for PPW",
+                     oric_motivated_2_fic ~ "Co-workers support IPMH implementation for PPW",
+                       oric_motivated_3_fic ~ "Policymakers at County level or MOH would likely support the implementation of IPMH for PPW",
+                      oric_motivated_4_fic ~ "Facility receives sufficient resources for IPMH implementation among PPW",
+                     leadership_fic ~ "MCH program leadership is effectively
+ implementing clinic level perinatal mental health
+ programs",
+                     politic_fic ~ "Kenya's national policies and guidelines
+ for MCH support delivering mental health interventions for adolescents and youth with HIV and provide sufficient detail for implementation",
+                    oric_expectancy_1_fic ~ "Implementing IPMH can reduce depression and anxiety among PPW at my facility",
+ oric_expectancy_2_fic ~ "My clinic staff generally believe that
+ providing IPMH can reduce depression and anxiety among
+ PPW at my facility",
+  oric_demand_2_fic ~ " Facility staff will need additional training (beyond the original IPMH training) to effectively implement IPMH among PPW",
+  oric_demand_3_fic ~ " Additional mental health practitioners are needed at the care clinic to implement IPMH among PPW",
+ oric_demand_4_fic ~ "clinic staff at my facility have demonstrated that they can implement IPMH among PPW",
+  oric_resource_3_fic ~ "Not worried about whether the facility has sufficient
+ future funding for implementing IPMH among PPW",
+  oric_resource_1_fic ~ "Our facility currently has the non-financial resources and tools needed to implement IPMH among PPW",
+  oric_resource_4_fic ~ "My health facility is given financial
+ and/or non-financial resources by the county (or implementing partners) that would be sufficient for implementing IPMH among PPW",
+  oric_resource_2_fic ~ "There is a platform for doing in-service
+ training for HCW to implement an intervention like IPMH at my facility",
+  oric_context_1_fic ~ "There is a collaborative network of external stakeholders (NGOs or technical/financial partners) that would support the facility to implement IPMH among PPW",
+  oric_context_2_fic ~ "Perinatal women are resistant to receiving mental health interventions like IPMH at your clinic",
+  oric_capacity_1_fic ~ "IPMH is currently being implemented as
+ intended",
+  oric_capacity_2_fic ~ "Treatment data are often incorrectly recorded during the implementation of IPMH among perinatal women",
+  oric_capacity_3_fic ~ "Clinic staff have the skills to effectively implement IPMH among PPW",
+  oric_flex_1_fic ~ "When MCH programs / implementing partners are presented with new ideas, research activities, or pilot projects, they are generally receptive",
+  oric_flex_2_fic ~ "My subordinates generally feel comfortable providing
+ feedback and recommendations on how to improve the delivery of interventions",
+ oric_flex_3_fic ~ "This clinic is flexible - can quickly adapt procedures to meet new conditions and solve problems as they arise"), 
+    missing = "ifany") %>%
+  bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 4: Facility In-Charge Organizational Readiness Summary") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1))
+```
+
+## Implementation intention
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+imple_intention <- is_survey_df %>% 
+    select(part_id,pt_type, facility_id, arm,starts_with("intention_"),  implementation_intention_complete)%>%
+    mutate(across(starts_with("intention_"),
+                  ~case_when(. == 1 ~ "Not at all",
+                             . == 2 ~ "To a slight extent",
+                             . == 3 ~ "To a moderate extent",
+                             . == 4 ~ "To a great extent",
+                             . == 5 ~ "To a very great extent",
+                             . == 99 ~ "Prefer Not to Answer",
+                             TRUE ~ as.character(.))))
+
+
+```
+
+
+## Acceptability, appropriateness, and feasibility
+
+### IPMH Acceptability
+```{r Acceptability, echo=FALSE, message=FALSE}
+acceptability <- is_survey_df %>% 
+    select(part_id,pt_type, facility_id, arm, aim_1, aim_2,
+           aim_3, aim_4) %>% 
+    filter(arm == "Intervention") %>% 
+    mutate(across(starts_with("aim_"),
+                  ~case_when(. == 1 ~ "Completely disagree",
+                             . == 2 ~ "Disagree",
+                             . == 3 ~ "Neither agree nor disagree",
+                             . == 4 ~ "Agree",
+                             . == 5 ~ "Completely agree",
+                             . == 99 ~ "Prefer Not to Answer",
+                             TRUE ~ as.character(.))))%>% 
+    mutate(pt_type = recode(pt_type,
+                            "22" = "Lay Providers",
+                            "23" = "Facility In-charge",
+                            "24" = "Nurses/COs/MOs",
+                            "25" = "Psychiatrists/Psychologists"))
+
+acceptability %>% 
+    tbl_summary(
+        by = "pt_type",
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include = c(aim_1, aim_2, aim_3, aim_4),
+        label = list(aim_1 ~ "IPMH meets my approval", 
+                     aim_2 ~ "IPMH is appealing to me", 
+                     aim_3 ~ "I like IPMH.", 
+                     aim_4 ~ "I welcome IPMH")) %>% 
+    bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 6: IPMH Acceptability") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+```
+
+### IPMH Appropriateness
+```{r appropriateness, echo=FALSE, message=FALSE, warning=FALSE}
+appropriateness <- is_survey_df %>% 
+    select(part_id,pt_type, facility_id, arm, iam_1, iam_2, iam_3, iam_4) %>% 
+    filter(arm == "Intervention") %>% 
+    mutate(across(starts_with("iam_"),
+                  ~case_when(. == 1 ~ "Completely disagree",
+                             . == 2 ~ "Disagree",
+                             . == 3 ~ "Neither agree nor disagree",
+                             . == 4 ~ "Agree",
+                             . == 5 ~ "Completely agree",
+                             . == 99 ~ "Prefer Not to Answer",
+                             TRUE ~ as.character(.)))) %>% 
+    mutate(pt_type = recode(pt_type,
+                            "22" = "Lay Providers",
+                            "23" = "Facility In-charge",
+                            "24" = "Nurses/COs/MOs",
+                            "25" = "Psychiatrists/Psychologists"))
+
+appropriateness %>% 
+    tbl_summary(
+        by = "pt_type",
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include = c(iam_1, iam_2, iam_3, iam_4),
+        label = list(iam_1 ~ "IPMH seems fitting", 
+                     iam_2 ~ "IPMH seems suitable", 
+                     iam_3 ~ "IPMH seems applicable", 
+                     iam_4 ~ "IPMH seems like a good match")) %>% 
+    bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 7: IPMH Appropriateness") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+```
+
+
+### IPMH Feasibility
+```{r Feasibility, echo=FALSE, message=FALSE, warning=FALSE}
+feasibility <- is_survey_df %>% 
+    select(part_id,pt_type, facility_id, arm,  fim_1,  fim_2,  fim_3,  fim_4) %>% 
+    filter(arm == "Intervention") %>% 
+    mutate(across(starts_with("fim_"),
+                  ~case_when(. == 1 ~ "Completely disagree",
+                             . == 2 ~ "Disagree",
+                             . == 3 ~ "Neither agree nor disagree",
+                             . == 4 ~ "Agree",
+                             . == 5 ~ "Completely agree",
+                             . == 99 ~ "Prefer Not to Answer",
+                             TRUE ~ as.character(.)))) %>% 
+    mutate(pt_type = recode(pt_type,
+                            "22" = "Lay Providers",
+                            "23" = "Facility In-charge",
+                            "24" = "Nurses/COs/MOs",
+                            "25" = "Psychiatrists/Psychologists"))
+
+feasibility %>% 
+    tbl_summary(
+        by = "pt_type",
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include = c( fim_1,  fim_2,  fim_3,  fim_4),
+        label = list( fim_1 ~ "IPMH seems implementable", 
+                      fim_2 ~ "IPMH seems possible", 
+                      fim_3 ~ "IPMH seems doable", 
+                      fim_4 ~ "IPMH seems easy to use")) %>% 
+    bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 8: IPMH Feasibility") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+```
+
+
+## Stigma scale
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+stigma_scale <- is_survey_df %>% 
+    select(arm, part_id, social_distance_1, diagnostic, social_distance_2,
+           starts_with("disclose_"), starts_with("recovery_"), 
+           starts_with("responsibility_"), recovery_3, danger, 
+           social_distance_3,  social_distance_4,  social_distance_5, 
+           responsibility_4, responsibility_5)%>% 
+    mutate(across(c(starts_with("disclose_"), starts_with("social_"),
+                    starts_with("recovery_"), starts_with("responsibility_")),
+                  ~case_when(. == 1 ~ "Completely disagree",
+                             . == 2 ~ "Disagree",
+                             . == 3 ~ "Neither agree nor disagree",
+                             . == 4 ~ "Agree",
+                             . == 5 ~ "Completely agree",
+                             . == 99 ~ "Prefer Not to Answer",
+                             TRUE ~ as.character(.)))) %>%
+    mutate(across(c(starts_with("diagnostic"), starts_with("danger")),
+                  ~case_when(. == 1 ~ "Completely disagree",
+                             . == 2 ~ "Disagree",
+                             . == 3 ~ "Neither agree nor disagree",
+                             . == 4 ~ "Agree",
+                             . == 5 ~ "Completely agree",
+                             . == 99 ~ "Prefer Not to Answer",
+                             TRUE ~ as.character(.))))
+
+stigma_scale %>% 
+    tbl_summary(
+        by = "arm",
+        include = c(social_distance_1, diagnostic, social_distance_2,
+           starts_with("disclose_"), starts_with("recovery_"), 
+           starts_with("responsibility_"), recovery_3, danger, 
+           social_distance_3,  social_distance_4,  social_distance_5, 
+           responsibility_4, responsibility_5),
+  sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+  label = list(social_distance_1 ~ " I am more comfortable helping a person who has a physical illness than I am helping a person who has a mental illness",
+               diagnostic ~ " If a person with a mental illness complains of physical symptoms (e.g. nausea, back pain or headache), I would likely attribute this to their mental illness",
+                social_distance_2 ~ "If a colleague with whom I work told me they had a managed mental illness, I would be as willing to work with him/her",
+                disclose_1 ~ "If I were under treatment for a mental illness I would not disclose this to any of my colleagues",
+                disclose_2 ~ "I would be more inclined to seek help for a mental illness if my treating healthcare provider was not associated with
+ my workplace",
+  disclose_3 ~ "I would see myself as weak if I had a mental illness and
+ could not fix it myself",
+ disclose_4 ~ "I would be reluctant to seek help if I had a mental illness",
+ recovery_1 ~  "Employers should hire a person with a managed mental
+ illness if he/she is the best person for the job",
+ recovery_2 ~ "I would still go to a physician if I knew that the physician
+ had been treated for a mental illness",
+ disclose_5 ~ "If I had a mental illness, I would tell my friends",
+ responsibility_1 ~ "It is the responsibility of health care providers to inspire hope in people with mental illness",
+  responsibility_2 ~ " Despite my professional beliefs, I have negative reactions towards people who have mental illness",
+  responsibility_3 ~ "There is little I can do to help people with mental illness", 
+ recovery_3 ~ "More than half of people with mental illness don't try hard
+ enough to get better",
+ danger ~ "People with mental illness seldom pose a risk to the
+ public",
+ social_distance_3 ~ "The best treatment for mental illness is medication",
+  social_distance_4 ~ "I would not want a person with a mental illness, even if it were appropriately managed, to work with children",
+ responsibility_4 ~ "Healthcare providers do not need to be advocates for
+ people with mental illness",
+  social_distance_5 ~ "I would not mind if a person with a mental illness lived next door to me",
+  responsibility_5 ~ "I struggle to feel compassion for a person with a mental
+ illness")
+    ) %>% 
+    bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Table 9: Summary of Opening Minds Stigma 
+Scale for Health Care Providers") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+```
+
