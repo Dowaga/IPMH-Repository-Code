@@ -1,5 +1,5 @@
 ---
-title: "IPMH Quant Survey - HCW"
+title: "IPMH RCT IS Survey - HCW"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
@@ -364,21 +364,6 @@ incharge_readiness_df %>%
     data_row.padding = gt::px(1))
 ```
 
-## Implementation intention
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-imple_intention <- is_survey_df %>% 
-    select(part_id,pt_type, facility_id, arm,starts_with("intention_"),  implementation_intention_complete)%>%
-    mutate(across(starts_with("intention_"),
-                  ~case_when(. == 1 ~ "Not at all",
-                             . == 2 ~ "To a slight extent",
-                             . == 3 ~ "To a moderate extent",
-                             . == 4 ~ "To a great extent",
-                             . == 5 ~ "To a very great extent",
-                             . == 99 ~ "Prefer Not to Answer",
-                             TRUE ~ as.character(.))))
-
-
-```
 
 
 ## Acceptability, appropriateness, and feasibility
