@@ -480,7 +480,7 @@ incharge_readiness_df <- incharge_readiness_df %>%
     )
 ```
 
-```{r, continuous, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, continuous in-charge, echo=FALSE, message=FALSE, warning=FALSE}
 #show the mean score of each domain by arm using tbl_summary
 incharge_readiness_df %>% 
     tbl_summary(
@@ -540,7 +540,7 @@ incharge_readiness_df %>%
         table.font.size = px(12))
 ```
 
-```{r, binary, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, binary in-charge, echo=FALSE, message=FALSE, warning=FALSE}
 #making the scores binary
 incharge_readiness_df <- incharge_readiness_df %>% 
     mutate(across(c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
