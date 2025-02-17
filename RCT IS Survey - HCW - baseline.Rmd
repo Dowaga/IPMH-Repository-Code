@@ -29,7 +29,7 @@ rct_hcw_consenting_baseline <- rct_hcw_consenting %>%
 
 ## Health Care Workers Demographics
 
-Altogether, we currently have data for `r nrow(is_survey_df)` participants.
+Altogether, we currently have data for `r nrow(is_survey_df)` participants. 
 
 ```{r check ID, echo=F, message=FALSE, warning=FALSE, include= F}
 #check the IDs in the consenting database
@@ -43,18 +43,14 @@ survey_id <- is_survey_df %>%
     distinct()
 
 #compare
-setdiff(consent_id$screen_id, survey_id$pt_id) #2 IDs in the consenting database are not in the survey database
-setdiff(survey_id$pt_id, consent_id$screen_id) #2 IDs in the survey database are not in the consenting database
+setdiff(consent_id$screen_id, survey_id$pt_id) #0 IDs in the consenting database are not in the survey database
+setdiff(survey_id$pt_id, consent_id$screen_id) #1 ID in the survey database is not in the consenting database
+# 24140190 this is in the wrong arm as well.
 
-
-rct_hcw %>% count(pt_id) %>% filter(n > 1)
-#23010026 has two record in the survey database
-
-#compare the whole row for this ID
-rct_hcw %>% filter(pt_id == "23010026")
+rct_hcw %>% count(pt_id) %>% filter(n > 1) #0
 ```
 
-```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
+```{r, arm, echo=F, message=FALSE, warning=FALSE, including =F}
 is_survey_df <- is_survey_df %>%
     mutate(
         facility_num = str_extract(facility_id, "^[0-9]+"),  # Extracts only the leading number
@@ -63,6 +59,20 @@ is_survey_df <- is_survey_df %>%
             TRUE ~ "Control"
         ))
 
+# extracts "Arm x" from redcap_event_name
+is_survey_df$arm_redcap <- str_extract(is_survey_df$redcap_event_name, "Arm [0-9]+")
+
+#examine number of participants in each arm by facility
+is_survey_df %>% 
+    count(arm_redcap, facility_id) %>% 
+    pivot_wider(names_from = arm_redcap, values_from = n, values_fill = 0) %>%
+    gt() %>%
+    tab_header(
+        title = "Number of Participants by Arm and Facility")
+#Again, this is showing the there are two facility-in-charge for Gita Sub County Hospital (facility 14), caused by ID: 24140190
+```
+
+```{r, Basic Demographic Summary, echo=FALSE, message=FALSE, warning=FALSE}
 demogra <- is_survey_df %>% 
   select(arm, part_id,  pt_type, facility_id, calculated_pt_id, 
          dob_uk, age, cal_age, sex, education, 
@@ -164,7 +174,7 @@ demogra %>% tbl_summary(
               yearwork ~ "continuous", 
               yearcare ~ "continuous", 
               hrscare ~ "continuous"),
-  statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+  statistic = list(all_continuous() ~ "{mean} ({SD})")) %>% 
     add_overall() %>% 
     add_p() %>% 
   bold_labels() %>%
@@ -227,8 +237,8 @@ suveys_done <- is_survey_df %>%
     table.font.size = px(12)
   )
 suveys_done
+##pending 2 facility-in-charges from 03, Uyawi Sub County Hospital & 04, Got Agulu Sub-District Hospital	
 ```
-
 
 ## Organizational readiness - HCW
 
@@ -287,7 +297,7 @@ hcw_readiness_df %>%
                      oric_flex ~ "Flexibility",
                      oric_org ~ "Organizational structure"),
         missing = "no",
-        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+        statistic = list(all_continuous() ~ "{median} ({sd})")) %>% 
     add_overall() %>% add_p() %>% 
     bold_labels() %>%
   # convert from gtsummary object to gt object
@@ -311,7 +321,7 @@ hcw_readiness_df %>%
                      oric_capacity ~ "Capacity",
                      oric_flex ~ "Flexibility",
                      oric_org ~ "Organizational structure"),
-        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]"),
+        statistic = list(all_continuous() ~ "{median} ({sd})"),
         missing = "no") %>% 
     add_overall() %>% add_p() %>% 
     bold_labels() %>%
@@ -336,7 +346,7 @@ hcw_readiness_df %>%
                      oric_capacity ~ "Capacity",
                      oric_flex ~ "Flexibility",
                      oric_org ~ "Organizational structure"),
-        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]"),
+        statistic = list(all_continuous() ~ "{median} ({sd})"),
         missing = "no") %>% 
     add_overall() %>% add_p() %>% 
     bold_labels() %>%
@@ -497,7 +507,7 @@ incharge_readiness_df %>%
                      oric_flex ~ "Flexibility",
                      oric_org ~ "Organizational structure"),
         missing = "no",
-        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+        statistic = list(all_continuous() ~ "{mean} ({sd})")) %>% 
     add_overall() %>% add_p() %>% 
     bold_labels() %>%
   # convert from gtsummary object to gt object
@@ -526,8 +536,8 @@ incharge_readiness_df %>%
                      oric_flex ~ "Flexibility",
                      oric_org ~ "Organizational structure"),
         missing = "no",
-        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
-    add_overall() %>% add_p() %>% 
+        statistic = list(all_continuous() ~ "{mean}")) %>% 
+    add_overall() %>% 
     bold_labels() %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
@@ -616,7 +626,6 @@ intention_df <- is_survey_df %>%
     filter(!is.na(facility_id)) %>% 
     mutate(facility_id = droplevels(factor(facility_id))) 
     
-
 #by arm
 intention_df %>% 
     tbl_summary(
@@ -668,7 +677,7 @@ intention_df %>%
                      intention_2 ~ "Using IPMH is a high priority to me",
                      intention_3 ~ "I will use IPMH step relevant to my current role"),
         missing = "no") %>% 
-    add_overall() %>% add_p() %>% 
+    add_overall() %>% 
     bold_labels() %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
@@ -695,6 +704,7 @@ acceptability <- is_survey_df %>%
     filter(!is.na(facility_id)) %>% 
     mutate(facility_id = droplevels(factor(facility_id))) 
     
+#by py_type
 acceptability %>% 
     tbl_summary(
         by = "pt_type",
@@ -905,7 +915,7 @@ stigma_scale %>%
                      danger ~ "Danger",
                      total ~ "Total score"),
         missing = "no",
-        statistic = list(all_continuous() ~ "{mean} [SD: {sd}]")) %>% 
+        statistic = list(all_continuous() ~ "{mean} [{sd}]")) %>% 
     add_overall() %>% add_p() %>% 
     bold_labels() %>%
   # convert from gtsummary object to gt object
@@ -936,7 +946,7 @@ stigma_scale %>%
                      danger ~ "Danger",
                      total ~ "Total score"),
         missing = "no",
-        statistic = list(all_continuous() ~ "{mean} [SD: {sd}]")) %>% 
+        statistic = list(all_continuous() ~ "{mean} [{sd}]")) %>% 
     add_overall() %>% add_p() %>% 
     bold_labels() %>%
   # convert from gtsummary object to gt object
@@ -967,7 +977,7 @@ stigma_scale %>%
                      danger ~ "Danger",
                      total ~ "Total score"),
         missing = "no",
-        statistic = list(all_continuous() ~ "{mean} [SD: {sd}]")) %>% 
+        statistic = list(all_continuous() ~ "{mean} [{sd}]")) %>% 
     add_overall() %>% add_p() %>% 
     bold_labels() %>%
   # convert from gtsummary object to gt object
@@ -980,4 +990,3 @@ stigma_scale %>%
   tab_options(
         table.font.size = px(12))
 ```
-
