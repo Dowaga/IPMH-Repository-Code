@@ -1,0 +1,25 @@
+---
+title: "IPMH_Audit_Feedback"
+author: "Yuwei Wang"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, echo = F, include = F, warning=F}
+rm(list = ls())
+
+knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
+
+#Read data using datapull
+source("REDCap_datapull.R")
+source("Dependencies.R")
+
+##### main databse needed
+
+#Data close out survey
+#PHQ2/GAD2 abstraction database
+#PHQ9/GAD7 abstraction form in the PPW longitudinal database
+#PM+ session survey
+#Telepsychiatry session survey
+```
+
