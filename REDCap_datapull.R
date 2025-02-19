@@ -182,7 +182,8 @@ redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
 
 ### Import the REDCap dataset ###
 rct_ppw <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
-                                    records = NULL, events = NULL, survey = FALSE, factors = FALSE, 
+                                    records = NULL, events = NULL, 
+                              survey = FALSE, factors = FALSE, 
                                     dag = FALSE, checkboxLabels = TRUE)
 
 ### Creating datafile ###
