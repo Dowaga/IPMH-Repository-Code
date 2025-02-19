@@ -3,8 +3,7 @@
 # Author(s): Yuwei Wang
 # Date: Jul 29, 2024
 # Description: This script pulls data from the REDCap projects and exports them as .csv files to the Raw Study Data folder on One Drive.
-# Update in Feb 13, 2025: Added the REDCap connection for Aim 2 and 3 databases (HCW, PPW, and daily close-out).
-# Update in Feb 13, 2025: Tokens for other databases (EQUIP, PM+, telepsychiatry, and abstraction for PHQ2/GAD2) are requested today.
+# Update in Feb 19, 2025: Added all REDCap databases so far.
 
 # Setup ------------------------------------------------------------------------
 rm(list = ls())             
@@ -25,11 +24,14 @@ rct_hcw_consenting_token <- token_df[7,2]
 rct_ppw_consenting_token <- token_df[8,2]
 rct_ppw_token <- token_df[9,2]
 daily_closeout_token <- token_df[10,2]
-
+equip_hcw_token <- token_df[11,2]
+equip_ro_token <- token_df[12,2]
+phq2_gad2_abstract_token <- token_df[13,2]
+pm_token <- token_df[14,2]
+telepsych_token <- token_df[15,2]
 
 # Display the first few rows of the dataframe to confirm successful loading
 head(token_df)
-
 
 ############ AIM 1 ##############---------------------------------------------
 #Aim1 qual consenting database----------------
@@ -223,3 +225,103 @@ daily_closeout <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL,
 
 ### Creating datafile ###
 write.csv(daily_closeout, paste0(ipmh_filepath,"/Data/7. RCT admin data/Daily_closeout_",Sys.Date(),".csv"))
+
+
+############ EQUIP ##############---------------------------------------------
+#Equip lay provider database----------------
+# Set file paths: Use this section to set input and output filepaths
+data_equip_hcw_dir <- file.path(ipmh_filepath, "/Data/8. EQUIP data")
+
+# Create a REDCap database connection ###
+httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
+
+redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+                            token = equip_hcw_token)
+
+### Import the REDCap dataset ###
+equip_hcw <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
+                                    records = NULL, events = NULL, 
+                                survey = FALSE, factors = FALSE, 
+                                    dag = FALSE, checkboxLabels = TRUE)
+
+### Creating datafile ###
+write.csv(equip_hcw, paste0(ipmh_filepath,"/Data/8. EQUIP data/Equip_HCW_",Sys.Date(),".csv"))
+
+#Equip RO database----------------
+# Set file paths: Use this section to set input and output filepaths
+data_equip_ro_dir <- file.path(ipmh_filepath, "/Data/8. EQUIP data")
+
+# Create a REDCap database connection ###
+httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
+
+redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+                            token = equip_ro_token)
+
+### Import the REDCap dataset ###
+equip_ro <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
+                                    records = NULL, events = NULL, 
+                                survey = FALSE, factors = FALSE, 
+                                    dag = FALSE, checkboxLabels = TRUE)
+
+### Creating datafile ###
+write.csv(equip_ro, paste0(ipmh_filepath,"/Data/8. EQUIP data/Equip_RO_",Sys.Date(),".csv"))
+
+############ RCT ADMIN ##############---------------------------------------------
+#PHQ2/GAD2 abstraction database----------------
+# Set file paths: Use this section to set input and output filepaths
+data_phq2_gad2_abstract_dir <- file.path(ipmh_filepath, "/Data/7. RCT admin data")
+
+# Create a REDCap database connection ###
+httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
+
+redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+                            token = phq2_gad2_abstract_token)
+
+### Import the REDCap dataset ###
+phq2_gad2_abstract <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
+                                    records = NULL, events = NULL, 
+                                survey = FALSE, factors = FALSE, 
+                                    dag = FALSE, checkboxLabels = TRUE)
+
+### Creating datafile ###
+write.csv(phq2_gad2_abstract, paste0(ipmh_filepath,"/Data/7. RCT admin data/PHQ2_GAD2_abstract_",Sys.Date(),".csv"))
+
+#PM+ database----------------
+# Set file paths: Use this section to set input and output filepaths
+data_pm_dir <- file.path(ipmh_filepath, "/Data/7. RCT admin data")
+
+# Create a REDCap database connection ###
+httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
+
+redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+                            token = pm_token)
+
+### Import the REDCap dataset ###
+pm <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
+                                    records = NULL, events = NULL, 
+                                survey = FALSE, factors = FALSE, 
+                                    dag = FALSE, checkboxLabels = TRUE)
+
+### Creating datafile ###
+write.csv(pm, paste0(ipmh_filepath,"/Data/7. RCT admin data/PM_",Sys.Date(),".csv"))
+
+
+#Telepsych database----------------
+# Set file paths: Use this section to set input and output filepaths
+data_telepsych_dir <- file.path(ipmh_filepath, "/Data/7. RCT admin data")
+
+# Create a REDCap database connection ###
+httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
+
+redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+                            token = telepsych_token)
+
+### Import the REDCap dataset ###
+telepsych <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
+                                    records = NULL, events = NULL, 
+                                survey = FALSE, factors = FALSE, 
+                                    dag = FALSE, checkboxLabels = TRUE)
+
+### Creating datafile ###
+write.csv(telepsych, paste0(ipmh_filepath,"/Data/7. RCT admin data/Telepsych_",Sys.Date(),".csv"))
+
