@@ -12,14 +12,278 @@ knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 
 #Read data using datapull
 source("REDCap_datapull.R")
-source("Dependencies.R")
 
-##### main databse needed
-
-#Data close out survey
+##### main database needed
+#Data close out survey 
 #PHQ2/GAD2 abstraction database
 #PHQ9/GAD7 abstraction form in the PPW longitudinal database
 #PM+ session survey
 #Telepsychiatry session survey
+
+#drop all other datasets
+rm(list = ls()[! ls() %in% c("daily_closeout", "phq2_gad2_abstract", "rct_ppw", "pm", "telepsych", "rct_ppw_consenting")])
+
+#Ensure date columns are in proper format
+daily_closeout$rct_dcr_date <- as.Date(daily_closeout$rct_dcr_date)
+phq2_gad2_abstract$screening_date <- as.Date(phq2_gad2_abstract$screening_date)
+rct_ppw$clt_timestamp <- as.Date(rct_ppw$clt_timestamp)
+pm$pm_date <- as.Date(pm$pm_date)
+telepsych$telepsych_date <- as.Date(telepsych$telepsych_date)
+
+#uniform study site number for all datasets
+phq2_gad2_abstract <- phq2_gad2_abstract %>%
+  mutate(study_site = str_replace(study_site, "^\\d+,\\s*", ""))
+
+rct_ppw <- rct_ppw %>%
+  mutate(clt_study_site = str_replace(clt_study_site, "^\\d+,\\s*", ""))
+```
+
+This script generates the audit and feedback report for each facility based on the calendar months. The report includes the following sections:
+
+# 1. PHQ2 and GAD2 Screening Rate Per Facility (Per day & Per month)
+
+```{r, first screening, echo = F, warning=F}
+###### This is using the n_total of abstraction data##########
+###### We should use this part of the code to cross-check data accuracy#####
+
+# #Aggregate PHQ2/GAD2 screening rate per study site and day
+# screening_rate <- phq2_gad2_abstract %>%
+#   mutate(day = floor_date(screening_date, "day")) %>%
+#   group_by(study_site, day) %>%
+#   summarise(num_screened = n(), .groups = "drop")
+# 
+# # Aggregate total ANC clients from daily closeout data
+# total_anc_clients <- daily_closeout %>%
+#   mutate(day = floor_date(rct_dcr_date, "day")) %>%
+#   group_by(rct_facility_name, day) %>%
+#   summarise(total_anc_clients = sum(rct_anc_number, na.rm=T), .groups = "drop")
+# 
+# # Merge the two datasets
+# screening_rate <- left_join(screening_rate, total_anc_clients, by = c("study_site" = "rct_facility_name", "day" = "day"))
+# 
+# #calculate screening rate
+# screening_rate <- screening_rate %>%
+#   mutate(screening_rate = num_screened / total_anc_clients * 100)
+# 
+# ggplot(screening_rate, aes(x = day, y = screening_rate, color = study_site)) +
+#   geom_line() + 
+#   geom_point() +
+#   labs(title = "Daily Screening Rate by Facility",
+#        x = "Date", 
+#        y = "Screening Rate (%)") +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+###another way of checking###
+# get the total number of clients screened per facility per day using abstraction dataset
+# num_screened <- phq2_gad2_abstract %>%
+#   group_by(study_site, screening_date) %>%
+#   summarise(num_screened = n(), .groups = "drop")
+
+#compare this with rct_screening in daily closeout data
+# daily_closeout %>%
+#   mutate(day = floor_date(rct_dcr_date, "day")) %>%
+#   group_by(rct_facility_name, day) %>%
+#   summarise(rct_screening = sum(rct_screening, na.rm = TRUE), .groups = "drop") %>%
+#   left_join(num_screened, by = c("rct_facility_name" = "study_site", "day" = "screening_date")) %>%
+#   mutate(diff = rct_screening - num_screened) %>%
+#   filter(diff != 0)
+
+############using daily closeout data only ################
+#Aggregate PHQ2/GAD2 screening rate per study site and day
+screening_rate_daily <- daily_closeout %>%
+  mutate(day = floor_date(rct_dcr_date, "day")) %>%
+  group_by(rct_facility_name, day) %>%
+  summarise(screening_rate = rct_screening/rct_anc_number, .groups = "drop")
+
+ggplot(screening_rate_daily, aes(x = day, y = screening_rate, 
+                                 color = rct_facility_name)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Daily Screening Rate by Facility",
+       x = "Date", 
+       y = "Screening Rate (%)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r, line plots for all facilities, echo = F, warning=F}
+facilities <- unique(screening_rate_daily$rct_facility_name)
+
+for (facility in facilities) {
+  facility_data <- screening_rate_daily %>% filter(rct_facility_name == facility)
+  
+  p <- ggplot(facility_data, aes(x = day, y = screening_rate)) +
+    geom_line(color = "blue") + 
+    geom_point(color = "red") +
+    labs(title = paste("Daily Screening Rate -", facility),
+         x = "Date", 
+         y = "Screening Rate (%)") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  print(p)  # This will generate separate plots for each facility
+}
+```
+
+```{r, monthly screening rate table, echo = F, warning=F}
+monthly_screening_summary <- daily_closeout %>%
+  mutate(month = format(rct_dcr_date, "%Y-%m")) %>%
+  group_by(rct_facility_name, month) %>%
+  summarise(
+    num_screened = sum(rct_screening, na.rm = TRUE),
+    total_anc_clients = sum(rct_anc_number, na.rm = TRUE),
+    screening_rate = (num_screened / total_anc_clients) * 100,
+    .groups = "drop"
+  )
+kable(monthly_screening_summary[c(1,2,5)], caption = "Monthly Screening Rate by Facility",
+      digits = 2)
+```
+
+# 2. PHQ9 and GAD7 Screening Rate Among Study Participants Per Facility (Per day and Per month)
+
+```{r, second screening, echo = F, warning=F}
+#first change the options to numeric
+phq2_gad2_abstract <- phq2_gad2_abstract %>%
+  mutate(across(c(abs_rct_phq2_1, abs_rct_phq2_2, abs_rct_gaq2_1, abs_rct_gaq2_2), 
+                ~ case_when(
+                  . == "Not at all (0 days)" ~ 0,
+                  . == "Several days (1-7 days)" ~ 1,
+                  . == "More than half of the days (8-11 days)" ~ 2,
+                  . == "Nearly every day (12-14 days)" ~ 3,
+                  TRUE ~ NA_real_
+                ), 
+                .names = "{.col}_number"))  # Creates new columns with '_number' suffix
+#calculate PHQ2/GAD2 score in the abstraction dataset
+phq2_gad2_abstract <- phq2_gad2_abstract %>%
+  mutate(score_phq2 = abs_rct_phq2_1_number + abs_rct_phq2_2_number,
+         score_gad2 = abs_rct_gaq2_1_number + abs_rct_gaq2_2_number)
+
+# Aggregate total women with PHQ2/GAD2 scores ??? 3 (Denominator)
+phq2_high_scores <- phq2_gad2_abstract %>%
+  filter(score_phq2 >= 3 | score_gad2 >= 3) %>%
+  mutate(day = floor_date(screening_date, "day")) %>%
+  group_by(study_site, day) %>%
+  summarise(total_high_scores = n(),
+            anc_number = record_id,
+            .groups = "drop")
+
+# get a list of anc numbers in the rct_ppw_consenting dataset who are enrolled in the study
+enroll_anc_number <- rct_ppw_consenting %>%
+    filter(rct_enrolling == "Yes") %>%
+    select(anc_num)
+
+# filter those who can find a matching anc number in the rct_ppw_consenting dataset
+phq2_high_scores <- phq2_high_scores %>%
+  filter(anc_number %in% enroll_anc_number)
+
+#######Here we can cross-check if this number is consistent with the rct_eligible in the daily_closeout dataset########
+
+# get the numerator from rct_ppw dataset
+phq9_screening <- rct_ppw %>%
+  filter(abstraction_phq9_complete == "Complete" & 
+             abstraction_gad7_complete == "Complete") %>%
+  mutate(day = floor_date(clt_timestamp, "day")) %>%
+  group_by(clt_study_site, day) %>%
+  summarise(num_screened = n(), .groups = "drop")
+
+# Merge the two datasets
+phq9_screening <- left_join(phq9_screening, phq2_high_scores, by = c("clt_study_site" = "study_site", "day" = "day"))
+
+#calculate screening rate
+phq9_screening <- phq9_screening %>%
+  mutate(screening_rate = num_screened / total_high_scores * 100)
+
+ggplot(phq9_screening, aes(x = day, y = screening_rate, 
+                           color = clt_study_site)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Daily Screening Rate by Facility",
+       x = "Date", 
+       y = "Screening Rate (%)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r, phq9 line plots for all facilities, echo = F, warning=F}
+facilities <- unique(phq9_screening$clt_study_site)
+
+for (facility in facilities) {
+  facility_data <- phq9_screening %>% filter(clt_study_site == facility)
+  
+  p <- ggplot(facility_data, aes(x = day, y = screening_rate)) +
+    geom_line(color = "blue") + 
+    geom_point(color = "red") +
+    labs(title = paste("Daily Screening Rate -", facility),
+         x = "Date", 
+         y = "Screening Rate (%)") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  print(p)  # This will generate separate plots for each facility
+}
+```
+
+```{r, monthly secondary screening rate table, echo = F, warning=F}
+monthly_screening_summary <- rct_ppw %>%
+  filter(abstraction_phq9_complete == "Complete" & 
+           abstraction_gad7_complete == "Complete") %>%
+  mutate(month = format(clt_timestamp, "%Y-%m")) %>%
+  group_by(clt_study_site, month) %>%
+  summarise(
+    num_screened = sum(abstraction_phq9_complete == "Complete" & 
+                         abstraction_gad7_complete == "Complete"),
+    total_high_scores = sum(abs_rct_phq2_1_number + abs_rct_phq2_2_number >= 3 | 
+                              abs_rct_gaq2_1_number + abs_rct_gaq2_2_number >= 3),
+    screening_rate = (num_screened / total_high_scores) * 100,
+    .groups = "drop"
+  )
+kable(monthly_screening_summary[c(1,2,5)], caption = "Monthly Screening Rate by Facility",
+      digits = 2)
+```
+
+# 3. PM+ Referral Rate Per Facility (Per day & Per month)
+
+```{r, pm referral rate, echo = F, warning=F}
+#first change the options to numeric
+rct_ppw <- rct_ppw %>%
+  mutate(across(c(starts_with("abs_phq")), 
+                ~ case_when(
+                  . == "not at all" ~ 0,
+                  . == "several days" ~ 1,
+                  . == "more than half the days" ~ 2,
+                  . == "nearly every day" ~ 3,
+                  TRUE ~ NA_real_
+                ), 
+                .names = "{.col}_number")) 
+rct_ppw <- rct_ppw %>%
+  mutate(across(c(starts_with("abs_gad")), 
+                ~ case_when(
+                  . == "Not at all" ~ 0,
+                  . == "Several days" ~ 1,
+                  . == "More than half the days" ~ 2,
+                  . == "Nearly every day" ~ 3,
+                  TRUE ~ NA_real_
+                ), 
+                .names = "{.col}_number")) 
+
+#calculate PHQ9/GAD7 score
+rct_ppw <- rct_ppw %>%
+  mutate(
+    score_phq9 = rowSums(across(starts_with("abs_phq") & ends_with("_number")), na.rm = TRUE),
+    score_gad7 = rowSums(across(starts_with("abs_gad") & ends_with("_number")), na.rm = TRUE)
+  )
+
+# Aggregate total women with PHQ9/GAD7 scores ??? 10 and < 15 (Denominator)
+phq9_high_scores <- rct_ppw %>%
+  filter((score_phq9 >= 10 & score_phq9 <15 )| 
+             (score_gad7 >= 10 & score_gad7 <15)) %>%
+  mutate(day = floor_date(clt_timestamp, "day")) %>%
+  group_by(clt_study_site, day) %>%
+  summarise(total_high_scores = n(),
+            .groups = "drop")
+
+# get the numerator from pm dataset
+
 ```
 
