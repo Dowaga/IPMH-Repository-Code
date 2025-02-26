@@ -25,7 +25,7 @@ rm(list = ls()[! ls() %in% c("daily_closeout", "phq2_gad2_abstract", "rct_ppw", 
 
 #Ensure date columns are in proper format
 daily_closeout$rct_dcr_date <- as.Date(daily_closeout$rct_dcr_date)
-phq2_gad2_abstract$screening_date <- as.Date(phq2_gad2_abstract$screening_date)
+phq2_gad2_abstract$screening_date <- as.Date(phq2_gad2_abstract$screening_date) 
 rct_ppw$clt_timestamp <- as.Date(rct_ppw$clt_timestamp)
 pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$telepsych_date)
@@ -39,6 +39,15 @@ rct_ppw <- rct_ppw %>%
 
 rct_ppw <- rct_ppw %>% 
     filter(is.na(redcap_repeat_instrument))
+
+head(daily_closeout)
+head(phq2_gad2_abstract)
+head(rct_ppw)
+head(pm)
+head(telepsych)
+
+#manually making sure record_id in abstraction database do not have space
+phq2_gad2_abstract$record_id <- str_replace(phq2_gad2_abstract$record_id, " ", "")
 ```
 
 This script generates the audit and feedback report for each facility based on the calendar months. The report includes the following sections:
@@ -91,6 +100,16 @@ daily_closeout %>%
   left_join(num_screened, by = c("rct_facility_name" = "study_site", "day" = "screening_date")) %>%
   mutate(diff = rct_screening - num_screened) %>%
   filter(diff != 0) %>% knitr::kable()
+#rct_screening is the number of clients screened in the daily closeout data
+#num_screened is the number of clients screened in the abstraction data
+
+##total number per facility [comparison]
+daily_closeout %>%
+  group_by(rct_facility_name) %>%
+  summarise(total_anc_clients = sum(rct_anc_number, na.rm = TRUE), .groups = "drop")
+
+
+
 
 ############using daily closeout data only ################
 #Aggregate PHQ2/GAD2 screening rate per study site and day
@@ -108,6 +127,7 @@ ggplot(screening_rate_daily, aes(x = day, y = screening_rate,
        y = "Screening Rate (%)") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 ```
 
 ```{r, line plots for all facilities, echo = F, warning=F}
@@ -143,9 +163,17 @@ kable(monthly_screening_summary, caption = "Monthly Screening Rate by Facility",
       digits = 2)
 ```
 
+\newpage
+
 # 2. PHQ9 and GAD7 Screening Rate Among Study Participants Per Facility (Per day and Per month)
 
 ```{r, second screening, echo = F, warning=F}
+
+#denomintor should just be the number of participants
+
+
+
+
 #first change the options to numeric
 phq2_gad2_abstract <- phq2_gad2_abstract %>%
   mutate(across(c(abs_rct_phq2_1, abs_rct_phq2_2, abs_rct_gaq2_1, abs_rct_gaq2_2), 
@@ -173,7 +201,8 @@ rct_ppw <- rct_ppw %>%
 # filter those in phq2_gad2_abstract who can find a matching anc number in the rct_ppw dataset
 phq2_gad2_abstract_enroll <- phq2_gad2_abstract %>%
   filter(record_id %in% rct_ppw$anc_num)
-    
+#technically n of this dataset should be the same as the n of rct_ppw, but it is way less (ANC number change might be one reason).
+
 # Aggregate total women with PHQ2/GAD2 scores ??? 3 (Denominator)
 phq2_high_scores <- phq2_gad2_abstract_enroll %>%
   filter(score_phq2 >= 3 | score_gad2 >= 3) %>%
@@ -192,7 +221,7 @@ daily_closeout %>%
   mutate(diff = rct_enrollment - total_high_scores) %>%
   filter(diff != 0) %>% knitr::kable()
 
-# get the numerator from rct_ppw dataset
+# get the numerator from rct_ppw dataset [n participant got screened]
 phq9_screening <- rct_ppw %>%
   filter(!is.na(rct_ppw$abs_phq_tired)) %>%
   mutate(day = floor_date(clt_timestamp, "day")) %>%
@@ -200,9 +229,10 @@ phq9_screening <- rct_ppw %>%
   summarise(num_screened = n(), 
             pt_id = clt_ptid,
             .groups = "drop")
+nrow(phq9_screening) #42
 
 # Merge the two datasets
-phq9_screening <- left_join(phq9_screening, phq2_high_scores, 
+phq9_screening <- left_join(phq9_screening, phq2_high_scores[, -4], 
                             by = c("clt_study_site" = "study_site", "day" = "day"))
 ####This does not make any sense - so much missing data in this merged dataset.
 ####Basically what this tells me is that we don't have all phq2/gad2 data
@@ -258,7 +288,11 @@ monthly_screening_summary <- phq9_screening %>%
 monthly_screening_summary
 ```
 
-# 3. PM+ Referral Rate Per Facility (Per day & Per month)
+\newpage
+
+# 3. PM+ Referral Rate Per Facility (Per month)
+
+We don't have many participants who need referral for PM+ every day so we will calculate the referral rate per month only.
 
 ```{r, pm referral rate, echo = F, warning=F}
 #first change the options to numeric
@@ -312,39 +346,21 @@ pm_referral <- pm_referral %>%
 # Merge the two datasets
 pm_referral <- left_join(pm_referral, phq9_high_scores, 
                          by = c("clt_study_site" = "clt_study_site", "day" = "day"))
+#there are missing data in the merged dataset. And it's impossible to have a total_high_scores bigger than num_referred.
 
 #calculate referral rate
 pm_referral <- pm_referral %>%
   mutate(referral_rate = num_referred / total_high_scores * 100)
 
-ggplot(pm_referral, aes(x = day, y = referral_rate, 
-                        color = clt_study_site)) +
-  geom_line() +
-  geom_point() +
-  labs(title = "Daily Referral Rate by Facility",
-       x = "Date", 
-       y = "Referral Rate (%)") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-```
-
-```{r, pm referral line plots for all facilities, echo = F, warning=F}
-facilities <- unique(pm_referral$clt_study_site)
-
-for (facility in facilities) {
-  facility_data <- pm_referral %>% filter(clt_study_site == facility)
-  
-  p <- ggplot(facility_data, aes(x = day, y = referral_rate)) +
-    geom_line(color = "blue") + 
-    geom_point(color = "red") +
-    labs(title = paste("Daily Referral Rate -", facility),
-         x = "Date", 
-         y = "Referral Rate (%)") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
-  print(p)  # This will generate separate plots for each facility
-}
+# ggplot(pm_referral, aes(x = day, y = referral_rate, 
+#                         color = clt_study_site)) +
+#   geom_line() +
+#   geom_point() +
+#   labs(title = "Daily Referral Rate by Facility",
+#        x = "Date", 
+#        y = "Referral Rate (%)") +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 ```{r, monthly pm referral rate table, echo = F, warning=F}
@@ -366,7 +382,139 @@ kable(monthly_referral_summary, caption = "Monthly Referral Rate by Facility",
       digits = 2)
 ```
 
-# 4. Telepsychiatry Referral Rate Per Facility (Per day & Per month)
+\newpage
+
+# 4. Telepsychiatry Referral Rate Per Facility (Per month)
+
+We don't have many participants who need referral for telepsychiatry every day so we will calculate the referral rate per month only.
+
+```{r, telepsych referral rate, echo = F, warning=F}
+# Aggregate total women with PHQ9/GAD7 scores ??? 15 (Denominator)
+phq9_high_scores_tele <- rct_ppw %>%
+  filter((score_phq9 >= 15)| 
+             (score_gad7 >=15)) %>%
+  mutate(day = floor_date(clt_timestamp, "day")) %>%
+  group_by(clt_study_site, day) %>%
+  summarise(total_high_scores = n(),
+            .groups = "drop")
+
+# get the numerator from rct_ppw database
+tele_referral <- rct_ppw %>% 
+    filter(abs_phq_ref_tele == "Yes" | abs_gad7_ref_tele == "Yes") 
+### this might not work (people might check one but not the other)
+
+tele_referral <- tele_referral %>%
+  mutate(day = floor_date(clt_timestamp, "day")) %>%
+  group_by(clt_study_site, day) %>%
+  summarise(num_referred = n(), .groups = "drop")
+
+# Merge the two datasets
+tele_referral <- left_join(tele_referral, phq9_high_scores_tele, 
+                         by = c("clt_study_site" = "clt_study_site", "day" = "day"))
+#there are missing data in the merged dataset. And it's impossible to have a total_high_scores bigger than num_referred.
+
+#calculate referral rate
+tele_referral <- tele_referral %>%
+  mutate(referral_rate = num_referred / total_high_scores * 100)
+
+# ggplot(tele_referral, aes(x = day, y = referral_rate, 
+#                         color = clt_study_site)) +
+#   geom_line() +
+#   geom_point() +
+#   labs(title = "Daily Referral Rate by Facility",
+#        x = "Date", 
+#        y = "Referral Rate (%)") +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r, monthly telepsych referral rate table, echo = F, warning=F}
+#make tele_referral have one row per day per facility
+tele_referral <- tele_referral %>%
+  distinct(clt_study_site, day, .keep_all = TRUE)
+
+monthly_referral_summary_tele <- tele_referral %>%
+  mutate(month = format(day, "%Y-%m")) %>%
+  group_by(clt_study_site, month) %>%
+  summarise(
+    num_referred = sum(num_referred, rm.na = TRUE),
+    total_high_scores = sum(total_high_scores, rm.na = TRUE),
+    referral_rate = (num_referred / total_high_scores) * 100,
+    .groups = "drop"
+  )
+
+kable(monthly_referral_summary_tele, caption = "Monthly Referral Rate by Facility",
+      digits = 2)
+```
+
+\newpage
+
+# 5. PM+ initiation rate per facility (Per month)
+
+```{r, pm initiation rate, echo = F, warning=F}
+#numerator is the number of participants who initiated PM+ [get from pm dataset]
+pm_initiation <- pm %>%
+    filter(pm_ptid == "Yes") %>%
+    select(pm_facility, pm_date, pm_ptid, pm_session, pm_explain, pm_adv,
+           pm_stress, pm_prob, pm_activ, pm_social, pm_stay, pm_nonresponse, pm_psycholops) %>% 
+    mutate(month = format(pm_date, "%Y-%m")) 
+
+#calculate the number of participants per facility per month and pm_session == "Pre-intervention PSYCHLOPS measurement"
+pm_summary <- pm_initiation %>%
+  filter(pm_session == "Pre-intervention PSYCHLOPS measurement") %>%
+  group_by(pm_facility, month) %>%
+  summarise(num_participants = n(), .groups = "drop")
+
+#calculate the number of participants per facility per month and pm_session == "Session 1"
+pm_summary_session1 <- pm_initiation %>%
+  filter(pm_session == "Session 1") %>%
+  group_by(pm_facility, month) %>%
+  summarise(num_initiated = n(), .groups = "drop")
+
+#denominator is the number of participants who are referred to PM+ [utilizing monthly_referral_summary]
+pm_summary <- left_join(pm_summary, monthly_referral_summary, by = c("pm_facility" = "clt_study_site", "month" = "month"))
 
 
+```
+\newpage
 
+# 6. PM+ completion rate per facility (Per month)
+
+\newpage
+
+# 7. Telepsychiatry initiation rate per facility (Per month)
+
+\newpage
+
+# 8. Frequency of conducting health talks & use of flipbook per facility (Per month)
+
+```{r health talks, echo = F, warning=F}
+# extract the health talk data from the daily closeout dataset
+health_talks <- daily_closeout %>%
+  select(rct_facility_name, rct_dcr_date, rct_health_talk, rct_flipbook) 
+health_talks <- health_talks %>% 
+    mutate(rct_health_talk = case_when(
+      rct_health_talk == "Yes" ~ 1,
+      rct_health_talk == "No" ~ 0,
+      TRUE ~ NA_real_
+    ),
+    rct_flipbook = case_when(
+      rct_flipbook == "Yes" ~ 1,
+      rct_flipbook == "No" ~ 0,
+      TRUE ~ NA_real_
+    ))
+
+# Aggregate the number of health talks and flipbook usage per facility per month
+health_talks <- health_talks %>%
+  mutate(month = format(rct_dcr_date, "%Y-%m")) %>%
+  group_by(rct_facility_name, month) %>%
+  summarise(
+    num_health_talks = sum(rct_health_talk, na.rm = TRUE),
+    num_flipbook = sum(rct_flipbook, na.rm = TRUE),
+    percentage_flipbook = num_flipbook / num_health_talks * 100,
+    .groups = "drop"
+  )
+
+kable(health_talks, caption = "Monthly Health Talks & Flipbook Usage by Facility")
+
+```
