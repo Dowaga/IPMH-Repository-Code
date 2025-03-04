@@ -154,7 +154,7 @@ ggplot(screening_rate, aes(x = day, y = screening_rate, color = study_site)) +
 
 ```
 
-```{r, line plots for all facilities, echo = F, warning=F, fig.width = 12, fig.height = 4}
+```{r, line plots for each facility, echo = F, warning=F, fig.width = 12, fig.height = 4}
 facilities <- unique(screening_rate$study_site)
 
 for (facility in facilities) {
@@ -167,7 +167,9 @@ for (facility in facilities) {
          x = "Date", 
          y = "Screening Rate (%)") +
     theme_minimal() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      scale_x_date(date_breaks = "1 day", date_labels = "%Y-%m-%d") +
+      scale_y_continuous(limits = c(20, 150))
   
   print(p)  # This will generate separate plots for each facility
 }
@@ -258,7 +260,7 @@ kable(monthly_screening_summary, caption = "Monthly Screening Rate by Facility",
 # ####Basically what this tells me is that we don't have all phq2/gad2 data
 ```
 
-```{r, second screening, echo = F, warning=F, fig.width = 12, fig.height = 4}
+```{r, second screening plot, echo = F, warning=F, fig.width = 12, fig.height = 4}
 # filter only intervention sites
 rct_ppw_int <- rct_ppw %>% 
     filter(clt_study_site == "Rwambwa Sub-county Hospital"|
@@ -344,7 +346,8 @@ monthly_screening_summary <- phq9_screening %>%
     screening_rate = (num_phq9_screened / n_part) * 100,
     .groups = "drop"
   )
-monthly_screening_summary
+kable(monthly_screening_summary, caption = "Monthly Screening Rate by Facility",
+      digits = 2)
 ```
 
 \newpage
