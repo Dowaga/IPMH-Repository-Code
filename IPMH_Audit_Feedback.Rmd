@@ -48,6 +48,10 @@ head(telepsych)
 
 #manually making sure record_id in abstraction database do not have space
 phq2_gad2_abstract$record_id <- str_replace(phq2_gad2_abstract$record_id, " ", "")
+
+#mirogi is spelt wrong in the daily close out
+daily_closeout <- daily_closeout %>%
+  mutate(rct_facility_name = str_replace(rct_facility_name, "Mirogi Heath Centre", "Mirogi Health Centre"))
 ```
 
 This script generates the audit and feedback report for each facility based on the calendar months. The report includes the following sections:
