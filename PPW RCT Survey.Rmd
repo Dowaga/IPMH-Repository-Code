@@ -17,16 +17,10 @@ knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 #Read all datasets needed
 # read data
 source("Datateam_ipmh.R")
-ppw_rct_df <- read.csv(file.path(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_2025-03-10.csv")) %>% 
-    filter(is.na(redcap_repeat_instance))
-
-screening_consent_df <- read.csv(file.path(ipmh_filepath, "/Data/2. Consenting database/RCT_PPW_consenting_2025-03-10.csv")) 
-
-pm_survey_df <- read.csv(file.path(ipmh_filepath, "Data/7. RCT admin data/PM_2025-03-10.csv"))
-
-daily_closeout_df <- read.csv(file.path(ipmh_filepath, "Data/7. RCT admin data/Daily_closeout_2025-03-10.csv"))
-
+source("Dependencies.R")
+source("data_import.R")
 ```
+
 
 Altogether, we currently have data for `r nrow(ppw_rct_df)` participants.
 
@@ -121,6 +115,7 @@ not_enrolled %>%
         table.font.size = px(12))
 ```
 
+
 ```{r Summary of Study Enrollment by Facility, echo=FALSE, message=FALSE, warning=FALSE}
 Enrollments <- screening_consent_df %>%
     group_by(study_site) %>%
@@ -128,6 +123,8 @@ Enrollments <- screening_consent_df %>%
             `Eligible` = sum(rct_eligible == 1),
             `Enrolled` = sum(rct_enrolling == "Yes", na.rm = "TRUE"),
             `% Enrolled (of Eligible)` = round((Enrolled / Eligible) * 100)) %>%
+    # Remove the facility code
+    mutate(study_site = gsub("^[0-9]+,\\s*", "", study_site)) %>% 
     rename(`Facility` = study_site)  %>%
     bind_rows(summarise(.,Facility = "Overall",
                         Screened = sum(Screened),
