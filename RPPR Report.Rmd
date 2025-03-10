@@ -16,18 +16,19 @@ qual_demographic_df <-read.csv("C:/Users/DAMARIS/Desktop/IPMH/Qual Demographics/
 
 
 #Read Quantitative data
-quant_demographic_df <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-06-14_0523.csv") 
+quant_demographic_df <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-11-15_0516.csv") 
 ```
 
 
 ```{r Quant age range, echo=FALSE, message=FALSE, warning=FALSE}
+## HCW age range
 hcw_demo <- quant_demographic_df %>%
   select(record_id, starts_with("hcw_"), demographic_hcws_complete) %>%
   filter(!is.na(hcw_participant_id))
 
 hcw_demo <- hcw_demo %>% 
-  mutate(age = as.numeric(case_when(hcw_dob_uk==1~floor(hcw_cal_age),
-                         hcw_dob_uk==0~hcw_age)))
+  mutate(age = as.numeric(case_when(hcw_dob_uk == 1~floor(hcw_cal_age),
+                         hcw_dob_uk == 0 ~ hcw_age)))
 
 quant_age_df <- hcw_demo %>% 
     select(record_id, age, hcw_sex) %>% 
@@ -39,6 +40,33 @@ quant_age_df <- hcw_demo %>%
        age >75 ~ "> 76+"))
 
 quant_age_summary <- quant_age_df %>% 
+    group_by(age_range) %>% 
+    rename(`Age Categories` = age_range ) %>% 
+    summarise(Total = n())
+
+## PPW age range
+ppw_demo <- quant_demographic_df %>%
+  select(record_id, starts_with("women_"),cal_age,  demographics_perinatal_women_complete) %>%
+  filter(!is.na(women_participant_id))
+
+ppw_demo <- ppw_demo %>% 
+  mutate(age = as.numeric(case_when(women_dob_uk == 1~floor(cal_age),
+                         women_dob_uk == 0 ~ women_age)))
+
+ppw_demo <- ppw_demo %>% 
+    select(record_id, age) %>% 
+    mutate(age_range = case_when(
+        age >=15 & age<=17 ~ "15-17",
+        age >= 18 & age <=25 ~ "18-25",
+        age >= 26 & age <= 45 ~ "26-45",
+        age >= 46 & age <= 64 ~ "46-64",
+        age >= 65 & age <= 75 ~ "65-75",
+        age >75 ~ "> 76+"))
+## Filter those <18 Yrs
+minors <- ppw_demo %>% 
+    filter(age < 18)
+
+ppw_age_summary <- ppw_demo %>% 
     group_by(age_range) %>% 
     rename(`Age Categories` = age_range ) %>% 
     summarise(Total = n())
@@ -111,5 +139,6 @@ quant_gender <- quant_age_df %>%
 enro_gender <- rbind(qual_gender, quant_gender)
 
 write_xlsx(enro_gender, "Enrollment Gender and Age.xlsx")
+write_xlsx(enro_gender, paste0("Enrollment_Gender_and_Age_", Sys.Date(), ".xlsx"))
 ```
 
