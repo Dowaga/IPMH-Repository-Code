@@ -14,30 +14,27 @@ pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr,
 
 knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 
-ppw_rct_df <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/RCT/PPW RCT Survey/IPMHAim23Questionnai_DATA_2025-03-04_2036.csv")
+#Read all datasets needed
+# read data
+source("Datateam_ipmh.R")
+ppw_rct_df <- read.csv(file.path(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_2025-03-10.csv")) %>% 
+    filter(is.na(redcap_repeat_instance))
 
-screening_consent_df <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/RCT/PPW RCT Survey/IPMHRCTScreeningEnro_DATA_2025-03-04_2032.csv")
+screening_consent_df <- read.csv(file.path(ipmh_filepath, "/Data/2. Consenting database/RCT_PPW_consenting_2025-03-10.csv")) 
 
-pm_survey_df <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/PM+/IPMHProblemManagemen_DATA_2025-02-27_0917.csv")
+pm_survey_df <- read.csv(file.path(ipmh_filepath, "Data/7. RCT admin data/PM_2025-03-10.csv"))
 
-daily_closeout_df <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/RCT/Daily Close Out/IPMHFacilityDailyClo_DATA_2025-03-04_1236.csv")
-
-ppw_rct_df <- ppw_rct_df %>%
-    filter(!is.na(clt_ptid)) %>% 
-    mutate(arm = ifelse(clt_study_site %in% 
-                         c(1, 3, 4, 7, 9, 13, 16, 17, 19, 22), 
-                     "Intervention", "Control"))
-
+daily_closeout_df <- read.csv(file.path(ipmh_filepath, "Data/7. RCT admin data/Daily_closeout_2025-03-10.csv"))
 
 ```
 
-
+Altogether, we currently have data for `r nrow(ppw_rct_df)` participants.
 
 ```{r check ID, message=FALSE, warning=FALSE, include=FALSE}
 # check the IDs in the consenting database
 
 consent_df <- screening_consent_df %>% 
-    filter(ipmh_rct_enrollment_consent_complete == 2)
+    filter(ipmh_rct_enrollment_consent_complete == "Complete")
 
 consent_id <-consent_df %>% 
     select(partipant_id) %>% 
@@ -49,13 +46,24 @@ survey_id <- ppw_rct_df %>%
     distinct()
 
 #compare -------------------------------------------------------------------
-### Those that are in the RCT, but not in the Consent database
+### Those that are in the Consent, but not in the RCT database
 setdiff(consent_id$partipant_id, survey_id$clt_ptid)
-### Those that are in the consent, while missing in RCT database
+
+### Those that are in the RCT, while missing in Consent database
 setdiff(survey_id$clt_ptid, consent_id$partipant_id) 
 
 ```
 
+## Consort Diagram
+
+```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE}
+Attendees <- daily_closeout_df %>% 
+    summarise(`ANC Attendees` = sum(rct_anc_number))
+
+n_eligible  <- screening_consent_df %>% 
+    filter(rct_eligible == 0)%>% 
+    summarise(`Not Eligible` = n())
+```
 
 ```{r Reasons for ineligibility or not enrolled, echo=FALSE, message=FALSE, warning=FALSE}
 ineligible <- screening_consent_df %>% 
@@ -66,15 +74,15 @@ ineligible <- screening_consent_df %>%
              rct_eligible_phq2,  rct_eligible_gad2,  rct_eligible_harm, 
             rct_eligible, rct_enrolling, rct_decline_reason,  
             rct_other_reasons) %>% 
-    filter(rct_eligible == 0 |rct_enrolling == 0) %>% 
+    filter(rct_eligible == 0 |rct_enrolling == "No") %>% 
     mutate(reasons = case_when(
         calc_gestation < 28 ~ "Gestation <28 Weeks",
-        rct_eligible == 0 & rct_enrolling == 0 ~ NA_character_,
-        rct_delusions == 1 ~ "Holds unusual beliefs",
-        rct_memory_problem == 1 ~ "Difficulty with memory",
-        rct_harm_thought == 1 ~ "Thought of Self Harm",
-         rct_paranoia == 1 ~ "Paranoia",
-        rct_eligible_gestation == 0 ~ "Gestation <28 Weeks",
+        rct_eligible == 0 & rct_enrolling == "No" ~ NA_character_,
+        rct_delusions == "Yes" ~ "Holds unusual beliefs",
+        rct_memory_problem == "Yes" ~ "Difficulty with memory",
+        rct_harm_thought == "Yes" ~ "Thought of Self Harm",
+         rct_paranoia == "Yes" ~ "Paranoia",
+        rct_eligible_gestation == "No" ~ "Gestation <28 Weeks",
         TRUE ~ NA_character_  # Assign NA if none of the conditions match
   ))
 
@@ -99,17 +107,10 @@ ineligible_df %>%
         table.font.size = px(12))
 
 not_enrolled <- ineligible %>% 
-    filter(rct_eligible == 1 & rct_enrolling == 0) %>%
-    mutate(rct_decline_reason = recode(rct_decline_reason,
-                                       "1"= "Not interested",
-                                       "2"= "Not enough time",
-                                       "3"= "Consult spouse",
-                                       "4"= "Concerns about confidentiality",
-                                       "5" ="Time to think about it",
-                                       "6" ="Other (specify) ___"))
+    filter(rct_eligible == 1 & rct_enrolling == "No")
 
 not_enrolled %>%
-    filter(rct_enrolling == 0) %>% 
+    filter(rct_enrolling == "No") %>% 
     tbl_summary(include = c(rct_decline_reason),
                 sort = list(all_categorical() ~ "frequency"),# Sort categorical levels by frequency in descending order
                 label = list(rct_decline_reason ~ "Reasons for declining Enrollment")) %>% 
@@ -124,39 +125,14 @@ not_enrolled %>%
         table.font.size = px(12))
 ```
 
-
-## Consort
-
-
 ```{r Summary of Study Enrollment by Facility, echo=FALSE, message=FALSE, warning=FALSE}
 Enrollments <- screening_consent_df %>%
     group_by(study_site) %>%
     reframe(Screened = n(),
             `Eligible` = sum(rct_eligible == 1),
-            `Enrolled` = sum(rct_enrolling == 1, na.rm = "TRUE"),
+            `Enrolled` = sum(rct_enrolling == "Yes", na.rm = "TRUE"),
             `% Enrolled (of Eligible)` = round((Enrolled / Eligible) * 100)) %>%
-    rename(`Facility` = study_site) %>%
-    mutate(Facility = recode(Facility,
-                             "01" = "Rwambwa SCH",
-                               "02" = "Sigomere SCH",
-                               "03" = "Uyawi SCH",
-                               "04" = "Got Agulu SCH",
-                               "05" = "Ukwala SCH",
-                               "06" = "Madiany SCH",
-                               "07" = "Kabondo SCH",
-                               "08" = "Mbita SCH",
-                               "09" = "Miriu HC",
-                               "11" = "Nyandiwa Level 4",
-                               "13" = "Ober Kamoth SCH",
-                               "14" = "Gita SCH",
-                               "15" = "Akala HC",
-                               "16" = "Usigu HC",
-                               "17" = "Ramula HC",
-                               "18" = "Simenya HC",
-                               "19" = "Airport HC (Kisumu)",
-                               "20" = "Nyalenda HC",
-                               "21" = "Mirogi HC",
-                               "22" = "Ndiru Level 4")) %>%
+    rename(`Facility` = study_site)  %>%
     bind_rows(summarise(.,Facility = "Overall",
                         Screened = sum(Screened),
                         Eligible = sum(Eligible),Enrolled = sum(Enrolled),
@@ -170,41 +146,18 @@ Enrollments <- screening_consent_df %>%
 Enrollments
 ```
 
-
-
 ## Enrollment Per Facility
 
 ```{r Enrolment Per Facility, echo=FALSE, message=FALSE, warning=FALSE}
 enrolled <- screening_consent_df %>% 
-        filter(rct_enrolling == 1) %>% 
+        filter(rct_enrolling == "Yes") %>% 
     select(study_site, rct_enrolling) %>% 
     group_by(study_site) %>% 
-    reframe(Actual = sum(rct_enrolling)) %>% 
-    mutate(study_site = recode(study_site,
-                               "01" = "Rwambwa SCH",
-                               "02" = "Sigomere SCH",
-                               "03" = "Uyawi SCH",
-                               "04" = "Got Agulu SCH",
-                               "05" = "Ukwala SCH",
-                               "06" = "Madiany SCH",
-                               "07" = "Kabondo SCH",
-                               "08" = "Mbita SCH",
-                               "09" = "Miriu HC",
-                               "11" = "Nyandiwa Level 4",
-                               "13" = "Ober Kamoth SCH",
-                               "14" = "Gita SCH",
-                               "15" = "Akala HC",
-                               "16" = "Usigu HC",
-                               "17" = "Ramula HC",
-                               "18" = "Simenya HC",
-                               "19" = "Airport HC (Kisumu)",
-                               "20" = "Nyalenda HC",
-                               "21" = "Mirogi HC",
-                               "22" = "Ndiru Level 4")) %>% 
+    reframe(Actual = n())  %>% 
     rename(Facility = study_site)
 
 # Set a constant target value based on the period
-target_value <- 10
+target_value <- 15
 
 # Use mutate with the pipe operator to add the target column
 enrolled <- enrolled %>%
@@ -244,61 +197,16 @@ Altogether, we currently have data for `r nrow(ppw_rct_df)` participants.
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
 demographics_df <- ppw_rct_df %>% 
-  select(clt_date, arm, starts_with("dem_"), demographics_complete)%>% 
+  select(clt_date,starts_with("dem_"), demographics_complete)%>% 
      mutate(dem_age = if_else(
-         dem_dob_uk == 1,
+         dem_dob_uk == "Yes",
          floor(time_length(interval(dem_dob, clt_date), "years")),
     dem_age
   ))
 
 
-demographics_df <- demographics_df %>% 
-    mutate(dem_current_partner = dplyr::recode(dem_current_partner, 
-                               "1" = "Yes",
-                               "0" = "No",
-                               "-2" = "Don't know/No Answer")) %>% 
-  mutate(dem_maritalstat = dplyr::recode(dem_maritalstat, 
-                                       "1" = "Currently married",
-                                       "2" = "Divorced/separated",
-                                       "3" = "Come we stay", 
-                                       "4" = "Steady boyfriend", 
-                                       "5" = "Never married",
-                                       "6" = "Widow",
-                                       "7" = "Single",
-                                       "8" = "Prefer not to answer"
-                                       ),
-         dem_marriage = recode(dem_marriage,
-                               "1" = "Monogamous",
-                               "2" = "Polygamous",
-                               "77" = "Prefer not to answer"),
-         dem_currentpartner_father = recode(dem_currentpartner_father,
-                                            "1"= "Yes",
-                                            "0" = "No",
-                                            "2" = "Unsure",
-                                            "-2" = "No Answer"),
-         dem_partner_financial = recode(dem_partner_financial,
-                                        "1" = "Yes",
-                                        "0" = "No",
-                                        "-2" = "No Answer"),
-         dem_pc_residence = recode(dem_pc_residence,
-                                   "1" = "Yes",
-                                   "0" = "No",
-                                   "77" = "Prefer not to answer"),
-         dem_employment = recode(dem_employment,
-                                 "1" ="Yes",
-                                 "0" = "No",
-                                 "77" = "Prefer not to answer"),
-         dem_pc_residence = recode(dem_pc_residence,
-                                   "1" = "Yes",
-                                   "0" = "No",
-                                   "77" = "Prefer not to answer"))
-
-
-
 # basic demo table
 demographics_df %>% tbl_summary(
-    
-    #by = "arm",
     sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
     include=c(dem_age, dem_current_partner, dem_maritalstat,
     dem_marriage, dem_currentpartner_father, dem_partner_financial, 
@@ -341,10 +249,40 @@ demographics_df %>% tbl_summary(
 ```
 
 ## PM+ and Telepsychiatry Referrals
+
 ```{r PM+ and Telepsychiatry Referrals, echo=FALSE, message=FALSE, warning=FALSE}
 pm_telep_df <- ppw_rct_df %>% 
-    filter(redcap_event_name == "enrollment_arm_1") %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
+    filter(!is.na(clt_date)) 
+
+# Define PHQ9 recoding
+phq9_labels <- c(
+  "not at all" = 0,
+  "several days" = 1,
+  "more than half the days" = 2,
+  "nearly every day" = 3
+)
+
+gad7_labels <-c(
+    "Not at all" = 0,
+    "Several days" = 1,
+    "Over half the days"= 2,
+    "Nearly every day" = 3)
+
+
+# Recode PHQ9 variables
+pm_telep_df <- pm_telep_df %>%
+  mutate(across(c(abs_phq_interest, abs_phq_down, abs_phq_sleep,
+                  abs_phq_tired, abs_phq_appetite, abs_phq_bad,
+                  abs_phq_concentrate, abs_phq_slow, abs_phq_dead), ~ recode(., !!!phq9_labels)),
+         across(c(abs_gad7_nerve, abs_gad7_uncontrol, 
+                  abs_gad7_worry, abs_gad7_relax, abs_gad7_restless,
+                  abs_gad7_annoyed, abs_gad7_afraid), ~ recode(., !!!gad7_labels)))
+
+
+
+pm_telep_df <- pm_telep_df %>% 
     mutate(phq9_scores = rowSums(select(., abs_phq_interest, abs_phq_down,
                                         abs_phq_sleep, abs_phq_tired, 
                                         abs_phq_appetite, abs_phq_bad,
@@ -355,8 +293,63 @@ pm_telep_df <- ppw_rct_df %>%
                                         abs_gad7_restless, abs_gad7_annoyed,
                                         abs_gad7_afraid), na.rm = TRUE))%>% 
     filter(phq9_scores >= 10|gad7_scores >= 10) %>% 
-    mutate(clt_study_site = recode(clt_study_site,
-                               "01" = "Rwambwa SCH",
+    mutate(
+    max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
+    eligible_for = case_when(
+      (max_score >= 10 & max_score < 15 & 
+       (max_score == phq9_scores | 
+        max_score == gad7_scores)) ~ "PM+",
+      max_score >= 15 ~ "Telepsychiatry"),
+       referred_to = case_when(abs_phq_ref_pm == "Yes"|abs_gad7_ref_pm == "Yes" ~ "PM+",
+      abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
+      TRUE ~ NA_character_)) %>%
+  select(-max_score)  # Remove max_score if not needed
+
+## Not referred to PM_
+not_referred <- pm_telep_df %>% 
+    filter(is.na(referred_to))
+
+## Study participants eligible for PM+
+pm_eligible <- pm_telep_df %>% 
+    group_by(clt_study_site) %>% 
+    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
+    summarise(total = n_distinct(record_id)) %>% 
+    adorn_totals()
+
+## Total study participants in PM+ Survey 
+    # Count of unique participant IDs 
+pm_counts <- pm_survey_df %>%
+    filter(ipmh_participant == "Yes") %>%
+    group_by(pm_facility) %>% 
+    mutate(pm_facility = gsub("^[0-9]+,\\s*", "", pm_facility)) %>% 
+  summarise(`PM+ Abstracted` = n_distinct(pm_ptid))  %>%
+    adorn_totals()
+
+merged_pm <- pm_eligible %>% 
+    full_join(pm_counts, by = c("clt_study_site" = "pm_facility"))
+
+
+# Study participant PM+ Sessions
+pm_sessions <- 
+    pm_survey_df %>% 
+    filter(ipmh_participant == "Yes") %>% 
+    select(pm_facility, pm_ptid, pm_session)
+
+# Duplicates Sessions
+duplicates_sessions <- pm_sessions %>%
+  group_by(pm_ptid, pm_session) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  filter(count > 1)  # Filter those with more than one attendance per session
+
+
+# Transforming data: One column for ptid, each session as a separate column
+pm_session_wide <- pm_sessions %>%
+  distinct(pm_ptid, pm_session) %>%  # Remove duplicate sessions per ptid
+  mutate(attended = 1) %>%  # Assign 1 for attended
+  pivot_wider(names_from = pm_session, values_from = attended, values_fill = list(attended = 0)) %>%   # Fill non-attended sessions with 0
+mutate(facility = str_sub(pm_ptid, 3, 4)) %>% 
+    mutate(facility = recode(facility,
+                                "01" = "Rwambwa SCH",
                                "03" = "Uyawi SCH",
                                "04" = "Got Agulu SCH",
                                "07" = "Kabondo SCH",
@@ -365,38 +358,23 @@ pm_telep_df <- ppw_rct_df %>%
                                "16" = "Usigu HC",
                                "17" = "Ramula HC",
                                "19" = "Airport HC (Kisumu)",
-                               "22" = "Ndiru Level 4")) %>% 
-    mutate(referred_to = case_when(
-    (phq9_scores >= 10 & phq9_scores < 15 & abs_phq_ref_pm == 1) |
-    (gad7_scores > 9 & gad7_scores < 15 & abs_gad7_ref_pm == 1) ~ "PM+",
-    
-    (phq9_scores >= 15 & abs_phq_ref_tele == 1) |
-    (gad7_scores >= 15 & abs_gad7_ref_tele == 1) ~ "Telepsychiatry",
-    TRUE ~ NA_character_  # Assigns NA if none of the conditions are met
-  ))
-
-pm_sessions <- 
-    pm_survey_df %>% 
-    group_by(pm_ptid) %>% 
-    reframe(sessions_attended = n()-1) # Take away Pre-intervention PSYCHLOPS measurement
-
-pm_telep_df <- pm_telep_df %>% 
-    left_join(pm_sessions, by = c("record_id" = "pm_ptid"))
+                               "22" = "Ndiru Level 4"))
     
 
 
-pm_telep_df %>% 
-    tbl_summary(by = "referred_to",
-                sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
-        include = c(clt_study_site, sessions_attended),
-        label = list(clt_study_site ~ "Facility",
-                     sessions_attended ~ "PM+ Sessions Attended")
-    ) %>% 
-    bold_labels() %>% 
+# Rename session columns
+#colnames(pm_session_wide) <- c("ptid", paste0("Session_", colnames(pm_session_wide)[-1]))
+
+pm_session_wide %>% 
+    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1`),
+                label = list(facility = "Facility",
+                             `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
+        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+        )%>% 
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header(
+    gt::tab_header(
       title = "Table 3: PM+ and Telepsychiatry referrals",
       subtitle = "Showing Participants Referred to PM+ or Telepsychiatry") %>%
   gt::tab_options(
@@ -407,23 +385,25 @@ pm_telep_df %>%
 
 ```
 
-
 ```{r PM+ and Telepsychiatry Referral QCs, message=FALSE, warning=FALSE, include=FALSE}
 referral_qc <- pm_telep_df %>% 
-    filter(phq9_scores > 9 & abs_phq_ref_pm == 0 | gad7_scores > 9 & 
-               abs_gad7_ref_pm == 0) %>% 
-    select(record_id, clt_study_site, clt_date, phq9_scores, abs_phq_ref_pm,
-           gad7_scores, abs_gad7_ref_pm)
+    filter(phq9_scores > 9 & abs_phq_ref_pm == "No" | gad7_scores > 9 & abs_gad7_ref_pm == "No") %>% 
+    select(record_id, clt_study_site, clt_date, phq9_scores,
+           abs_phq_ref_pm, gad7_scores, abs_gad7_ref_pm)
 
 ```
 
+```{r PM+ Follow-Up, message=FALSE, warning=FALSE, include=FALSE}
+none_study_part <- pm_survey_df %>% 
+    filter(is.na(pm_ptid))
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
 pm_follow_up <- pm_survey_df %>% 
-    select(pm_ptid, pm_facility, pm_date) %>%
+    select(pm_ptid, pm_facility, pm_date, pm_session) %>%
     right_join(pm_telep_df %>% 
                   select(record_id, clt_date), by = c("pm_ptid" = "record_id")) %>% 
-    select(pm_ptid, clt_date, pm_date, )
+    select(pm_ptid, clt_date, pm_date, pm_session) %>% 
+    filter(!is.na(pm_date)) %>% 
+    arrange(pm_ptid)
 
 # Function to generate weekly visit status
 generate_weekly_visits <- function(pm_follow_up) {
@@ -460,4 +440,3 @@ weekly_visits %>%
   )
 
 ```
-
