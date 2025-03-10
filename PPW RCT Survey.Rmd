@@ -57,12 +57,8 @@ setdiff(survey_id$clt_ptid, consent_id$partipant_id)
 ## Consort Diagram
 
 ```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE}
-Attendees <- daily_closeout_df %>% 
-    summarise(`ANC Attendees` = sum(rct_anc_number))
-
-n_eligible  <- screening_consent_df %>% 
-    filter(rct_eligible == 0)%>% 
-    summarise(`Not Eligible` = n())
+source("weekly_consort.R")
+weekly_consort
 ```
 
 ```{r Reasons for ineligibility or not enrolled, echo=FALSE, message=FALSE, warning=FALSE}
@@ -385,6 +381,7 @@ pm_session_wide %>%
 
 ```
 
+
 ```{r PM+ and Telepsychiatry Referral QCs, message=FALSE, warning=FALSE, include=FALSE}
 referral_qc <- pm_telep_df %>% 
     filter(phq9_scores > 9 & abs_phq_ref_pm == "No" | gad7_scores > 9 & abs_gad7_ref_pm == "No") %>% 
@@ -392,6 +389,7 @@ referral_qc <- pm_telep_df %>%
            abs_phq_ref_pm, gad7_scores, abs_gad7_ref_pm)
 
 ```
+
 
 ```{r PM+ Follow-Up, message=FALSE, warning=FALSE, include=FALSE}
 none_study_part <- pm_survey_df %>% 
