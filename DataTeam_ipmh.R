@@ -11,7 +11,7 @@ da_users <- data.frame(Analyst = c("David Owaga", "Lincoln Pothan", "Yuwei Wang"
 ### Defining OneDrive data filepath based on analyst ###
 current_wd <- getwd()
 
-if (grepl("Dowaga", current_wd)) {
+if (grepl("DAMARIS", current_wd)) {
   ipmh_filepath <- "C:/Users/DAMARIS/UW/ngumbau - IPMH study"
 } else if (grepl("Lincolnpothan", current_wd)) {
     ipmh_filepath <- "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/IPMH study"
