@@ -19,6 +19,7 @@ knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 source("Datateam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
+
 ```
 
 
@@ -51,9 +52,14 @@ setdiff(survey_id$clt_ptid, consent_id$partipant_id)
 ## Consort Diagram
 
 ```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE}
-source("weekly_consort.R")
-weekly_consort
+#source("weekly_consort.R")
+source("Consort.R")
+#weekly_consort
+consort_diagram
+
 ```
+
+
 
 ```{r Reasons for ineligibility or not enrolled, echo=FALSE, message=FALSE, warning=FALSE}
 ineligible <- screening_consent_df %>% 
@@ -411,6 +417,7 @@ generate_weekly_visits <- function(pm_follow_up) {
                   .groups = "drop") %>%
         rowwise() %>%
         mutate(
+            week_0 = as.integer(any(pm_dates == clt_date)),
             week_1 = as.integer(any(pm_dates > clt_date & pm_dates <= clt_date + 7)),
             week_2 = as.integer(any(pm_dates > clt_date + 7 & pm_dates <= clt_date + 14)),
             week_3 = as.integer(any(pm_dates > clt_date + 14 & pm_dates <= clt_date + 21)),
@@ -418,8 +425,9 @@ generate_weekly_visits <- function(pm_follow_up) {
             week_5 = as.integer(any(pm_dates > clt_date + 28 & pm_dates <= clt_date + 35)),
             week_6 = as.integer(any(pm_dates > clt_date + 35 & pm_dates <= clt_date + 42))
         ) %>%
-        select(pm_ptid, clt_date, week_1, week_2, week_3, week_4, week_5, week_6)
+        select(pm_ptid, clt_date, week_0,week_1, week_2, week_3, week_4, week_5, week_6)
 }
+
 # Apply function
 weekly_visits <- generate_weekly_visits(pm_follow_up)
 
