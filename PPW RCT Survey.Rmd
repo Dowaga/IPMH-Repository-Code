@@ -7,7 +7,7 @@ output:
 ---
 
 ```{r setup, echo = F, include = F}
-rm(list = ls())
+#rm(list = ls())
 
 pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
                openxlsx, gtsummary, kableExtra, ggrepel, UpSetR, funModeling, gt, mice) 
@@ -147,47 +147,9 @@ Enrollments
 
 ## Enrollment Per Facility
 
-```{r Enrolment Per Facility, echo=FALSE, message=FALSE, warning=FALSE}
-enrolled <- screening_consent_df %>% 
-        filter(rct_enrolling == "Yes") %>% 
-    select(study_site, rct_enrolling) %>% 
-    group_by(study_site) %>% 
-    reframe(Actual = n())  %>% 
-    rename(Facility = study_site)
+```{r Weekly Enrollment Trends, echo=FALSE, message=FALSE, warning=FALSE}
 
-# Set a constant target value based on the period
-target_value <- 15
-
-# Use mutate with the pipe operator to add the target column
-enrolled <- enrolled %>%
-  mutate(target = target_value)
-
-# Reorder Facility factor based on descending Actual values
-enrolled <- enrolled %>%
-  mutate(Facility = factor(Facility, levels = Facility[order(-Actual)]))
-
-# Calculate total Actual
-total_actual <- sum(enrolled$Actual, na.rm = TRUE)
-
-
-
-ggplot(enrolled, aes(x = Facility, y = Actual, fill = Facility)) +
-  geom_bar(stat = "identity") +  # Bar plot for actual values, filled by Facility
-  geom_hline(yintercept = target_value, linetype = "dashed", color = "magenta", size = 1) +  # Target line
-  geom_text(aes(label = Actual), vjust = -0.5) +  # Add labels on bars
-  annotate("text", x = 3, y = target_value + 0.2, label = as.character(target_value), color = "black") +  # Label for target
-  labs(
-    title = paste("Enrollment Per Facility (n =", total_actual, ")"),
-    y = "",
-    x = ""
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    plot.title = element_text(face = "bold", hjust = 0.5),
-    legend.position = "none"   # Remove the legend
-  )
-
+source("Enrollment Progress.R")
 ```
 
 ## PPW Demographics

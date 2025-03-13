@@ -1,14 +1,57 @@
 # Header ------------------------------------------------------------------
 
 # Author(s): David
-# Date: March 10, 2025
+# Date: March 13, 2025
 # Enrollment Progress Script
 
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
-#--------------------------------------------------------------------------
 
+#--------------------------------------------------------------------------
+## Figure 1: Enrollment progress since the beginning of the study to today
+enrollment_progress <- screening_consent_df %>% 
+    filter(rct_enrolling == "Yes") %>% 
+    select(study_site, consent_date_auto)
+
+## Convert consent_date_auto column to date format
+enrollment_progress <- enrollment_progress %>%
+    mutate(consent_date_auto = as.Date(consent_date_auto, origin = "1899-12-30"))
+
+# Aggregate weekly enrollments per site
+weekly_count <- enrollment_progress %>%
+    mutate(week = floor_date(consent_date_auto, "week")) %>%  # Group by week
+    group_by(study_site, week) %>%
+    summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
+
+# Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
+date_seq <- seq(as.Date("2025-02-17"), as.Date("2025-03-14"), by = "week")
+
+# Convert to a dataframe
+dateSeq_df <- data.frame(week = date_seq)
+
+weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
+    arrange(week) %>%  # Ensure weeks are in order
+    mutate(enrollment_count = ifelse(is.na(enrollment_count), 
+                                     0, enrollment_count)) %>%   # Fill missing counts with 0
+    filter(!is.na(study_site))
+
+# Compute cumulative enrollment per site
+weekly_enrollment <- weekly_enrollment %>%
+    group_by(study_site) %>%
+    mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+    ungroup()
+
+
+ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, color = study_site, group = study_site)) +
+    geom_line(size = 1) +  # Line plot for trends
+    geom_point(size = 2) +  # Add points for clarity
+    labs(title = "Weekly Enrollment Trends by Study Site",
+         x = "Week",
+         y = "Number of Enrollments",
+         color = "Study Site") +
+    theme_minimal() +
+    theme(legend.position = "right")  # Adjust legend placement
 
 
