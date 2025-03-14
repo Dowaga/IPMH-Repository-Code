@@ -55,6 +55,7 @@ setdiff(survey_id$clt_ptid, consent_id$partipant_id)
 #source("weekly_consort.R")
 source("Consort.R")
 #weekly_consort
+
 consort_diagram
 
 ```
@@ -150,6 +151,7 @@ Enrollments
 ```{r Weekly Enrollment Trends, echo=FALSE, message=FALSE, warning=FALSE}
 
 source("Enrollment Progress.R")
+figure_1
 ```
 
 ## PPW Demographics
@@ -359,6 +361,7 @@ referral_qc <- pm_telep_df %>%
 ```{r PM+ Follow-Up, message=FALSE, warning=FALSE, include=FALSE}
 none_study_part <- pm_survey_df %>% 
     filter(is.na(pm_ptid))
+
 
 pm_follow_up <- pm_survey_df %>% 
     select(pm_ptid, pm_facility, pm_date, pm_session) %>%

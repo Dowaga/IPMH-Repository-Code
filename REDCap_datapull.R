@@ -216,7 +216,7 @@ data_daily_closeout_dir <- file.path(ipmh_filepath, "/Data/7. RCT admin data")
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon <- redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
                             token = daily_closeout_token)
 
 ### Import the REDCap dataset ###
