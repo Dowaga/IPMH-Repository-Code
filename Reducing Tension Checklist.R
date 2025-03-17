@@ -35,18 +35,23 @@ summary_table <- summary_table %>%
     mutate(Statement = recode(Statement,
                               rtc_1 = "Helped friends or family with difficulties",
                               rtc_2 = "Asked friends or family, to help with difficulties",
-                              rtc_3 = "Listened to friends or family when talking about their stress",
+                              rtc_3 = "Listened to friends or family when talking \n about their stress",
                               rtc_4 = "Told friends or family about stress",
-                              rtc_5 = "Time spend meeting with and talking to your relatives and friends",
-                              rtc_6 = "Tried to do deep or slow breathing to manage your stress",
+                              rtc_5 = "Time spend meeting with and talking to your \n relatives and friends",
+                              rtc_6 = "Tried to do deep or slow breathing to \n manage your stress",
                               rtc_7 = "Done something that energizes you ",
-                              rtc_8 = "Tried to distinguish between which of your problems can be solved and which of your problems cannot be solved",
+                              rtc_8 = "Tried to distinguish between which of your \n problems can be solved and which of your \n problems cannot be solved",
                               rtc_9 = "Tried to brainstorm different ways to manage your problems",
-                              rtc_10 = "Separated/broken down your problems into small manageable steps"))
+                              rtc_10 = "Separated problems into small manageable steps"))
 
-summary_table <- summary_table %>%
-    flextable() %>%
-        autofit()  # Adjust table to fit content
+
+# Convert to flextable
+summary_table <- flextable(summary_table) %>%
+    theme_vanilla() %>%  # Apply a clean theme
+    autofit() %>%  # Adjust column widths
+    set_table_properties(layout = "autofit", width = 0.9) %>%   # Ensure it fits inside margins
+    set_caption(paste("Reducing Tension Checklist Table"))  # Add title
+
 
 summary_table
 
