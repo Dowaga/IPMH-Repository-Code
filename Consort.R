@@ -8,7 +8,6 @@ source("data_import.R")
 Attendees <- daily_closeout_df %>% 
     summarise(`ANC Attendees` = sum(rct_anc_number))
 
-
 pm_refers <- pm_survey_df %>% 
     select(record_id, ipmh_participant) %>% 
     filter(ipmh_participant == "Yes")

@@ -11,42 +11,30 @@ source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
-#### Define Variables ####
+pm_follow_up <- pm_survey_df %>% 
+    select(pm_ptid, pm_facility, pm_date, pm_session) %>%
+    right_join(pm_telep_df %>% 
+                   select(record_id, clt_date), by = c("pm_ptid" = "record_id")) %>% 
+    select(pm_ptid, clt_date, pm_date, pm_session) %>% 
+    filter(!is.na(pm_date)) %>% 
+    arrange(pm_ptid)
 
-Attendees <- daily_closeout_df %>% 
-    summarise(`ANC Attendees` = sum(rct_anc_number))
+# Sample data: Ensure dates are in Date format
+pm_follow_up <- pm_follow_up %>%
+    mutate(clt_date = as.Date(clt_date),
+           pm_date = as.Date(pm_date))  
 
-eligibility_assess <- screening_consent_df %>% 
-    reframe(`Assessed for Eligibility` = n())
-
-enrolled <- ppw_rct_df %>% 
-    reframe(Enrolled = n())
-
-n_eligible  <- screening_consent_df %>% 
-    filter(rct_eligible == 0)%>% 
-    summarise(`Not Eligible` = n())
-
-### Build Consort ###
-font_size = 2.5
-
-weekly_consort <- tibble(x= 1:100, y= 1:100)
-
-weekly_consort %>% 
-  ggplot(aes(x, y)) +
-  scale_x_continuous(minor_breaks = seq(10, 100, 10)) +
-  scale_y_continuous(minor_breaks = seq(10, 100, 10)) +
-  theme_linedraw() -> p
-
-
-    ## ANC ATTENDANCE BOX & ARROW DOWN
- weekly_consort <- p +
-     geom_rect(xmin = 40, xmax=60, ymin=90, ymax=100, color='black',
-            fill='white', size=0.25, size=0.25) +
-  annotate('text', x= 50, y=95,label= paste("ANC attendance\n(n = ",Attendees,")", sep=""), size=2.5) +
-    geom_segment(
-    x=50, xend=50, y=90, yend=80, 
-    size=0.15, linejoin = "mitre", lineend = "butt", linetype = "dashed",
-    arrow = arrow(length = unit(1, "mm"), type= "closed")) +
-    ###
-    theme_void()
-  
+# Define expected visit date (one week after enrollment)
+pm_follow_up <- pm_follow_up %>%
+    mutate(session1_date = clt_date + weeks(1),
+           `Session 1` = case_when(
+               !is.na(pm_date) ~ "Attended",  # If visit_date is available
+               Sys.Date() >= expected_visit_date & is.na(pm_date) ~ "Missed",  # If due but not attended
+               Sys.Date() < expected_visit_date & is.na(pm_date) ~ "Due"  # If upcoming but not attended
+           )) %>% 
+    mutate(session2_date = clt_date + weeks(2),
+           `Session 2` = case_when(
+               !is.na(pm_date) ~ "Attended",  # If visit_date is available
+               Sys.Date() >= session2_date & is.na(pm_date) ~ "Missed",  # If due but not attended
+               Sys.Date() < session2_date & is.na(pm_date) ~ "Due"  # If upcoming but not attended
+           ))
