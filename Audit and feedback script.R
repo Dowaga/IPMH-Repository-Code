@@ -158,10 +158,18 @@ screening_rate_monthly <- screening_rate %>%
     mutate(month = format(day, "%Y-%m")) %>%
     group_by(study_site, month) %>%
     summarise(
-        num_screened_monthly = sum(num_screened, na.rm = TRUE),
-        total_anc_clients_monthly = sum(total_anc_clients, na.rm = TRUE),
-        screening_rate = (num_screened_monthly / total_anc_clients_monthly) * 100,
+        `Monthly screening` = sum(num_screened, na.rm = TRUE),
+        `Monthly ANC clients` = sum(total_anc_clients, na.rm = TRUE),
+        `PHQ2/GAD2 screening rate` = (`Monthly screening`/ `Monthly ANC clients`) * 100,
         .groups = "drop"
+    )
+#method 4 - total rate
+total_screening_rate <- screening_rate %>%
+    group_by(study_site) %>% 
+    summarise(
+        `Total screening` = sum(num_screened, na.rm = TRUE),
+        `Total ANC clients` = sum(total_anc_clients, na.rm = TRUE),
+        `PHQ2/GAD2 screening rate` = (`Total screening`/`Total ANC clients`) * 100
     )
 
 #2. PHQ9/GAD7 screening---------------
@@ -193,12 +201,16 @@ phq9_screening <- rct_ppw_int %>%
 #merge the two datasets
 phq9_screening <- full_join(phq9_screening, n_part, by = c("clt_study_site" = "clt_study_site", "clt_timestamp" = "clt_timestamp"))
 
-#transform NA to 0
-phq9_screening[is.na(phq9_screening)] <- 0
-
-#calculate screening rate
-phq9_screening <- phq9_screening %>%
-    mutate(screening_rate = num_screened / n_part * 100)
+#weekly data
+phq9_screening_weekly <- phq9_screening %>%
+    mutate(week = floor_date(clt_timestamp, "week", week_start = 1)) %>%
+    group_by(clt_study_site, week) %>%
+    summarise(
+        `Weekly PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
+        `Weekly study participants` = sum(n_part, na.rm = TRUE),
+        `PHQ9/GAD7 screening rate` = (`Weekly PHQ9/GAD7 screening`/ `Weekly study participants`) * 100,
+        .groups = "drop"
+    )
 
 #monthly data
 #make phq9_screening have one row per day per facility
@@ -206,9 +218,19 @@ phq9_screening_monthly <- phq9_screening %>%
     mutate(month = format(clt_timestamp, "%Y-%m")) %>%
     group_by(clt_study_site, month) %>%
     summarise(
-        num_phq9_screened = sum(num_screened, rm.na = TRUE),
-        n_part = sum(n_part, rm.na = TRUE),
-        screening_rate = (num_phq9_screened / n_part) * 100,
+        `Monthly PHQ9/GAD7 screening` = sum(num_screened, rm.na = TRUE),
+        `Monthly study participants` = sum(n_part, rm.na = TRUE),
+        `PHQ9/GAD7 monthly screening rate` = (`Monthly PHQ9/GAD7 screening` / `Monthly study participants`) * 100,
+        .groups = "drop"
+    )
+
+#total data
+phq9_screening_total <- phq9_screening %>%
+    group_by(clt_study_site) %>%
+    summarise(
+        `Total PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
+        `Total study participants` = sum(n_part, na.rm = TRUE),
+        `PHQ9/GAD7 total screening rate` = (`Total PHQ9/GAD7 screening` / `Total study participants`) * 100,
         .groups = "drop"
     )
 
@@ -245,7 +267,7 @@ rct_ppw_int <- rct_ppw_int %>%
 # Aggregate total women with PHQ9/GAD7 scores > 10 and < 15 or suicidal (Denominator)
 phq9_high_scores <- rct_ppw_int %>%
     filter((score_phq9 >= 10 & score_phq9 <15 )| 
-               (score_gad7 >= 10 & score_gad7 <15) | abs_phq_dead_number >0) %>%
+               (score_gad7 >= 10 & score_gad7 <15)) %>%
     mutate(day = floor_date(clt_timestamp, "day")) %>%
     group_by(clt_study_site, day) %>%
     summarise(total_high_scores = n(),
@@ -269,15 +291,27 @@ pm_referral <- pm_referral %>%
     mutate(referral_rate = num_referred / total_high_scores * 100)
 #### based on the abstraction form, there are three participants being referred to PM+ but their score is not high enough to be referred.
 
+#monthly data
 pm_referral_monthly <- pm_referral %>%
     mutate(month = format(day, "%Y-%m")) %>%
     group_by(clt_study_site, month) %>%
     summarise(
-        num_referred_month = sum(num_referred, na.rm = TRUE),
-        total_high_scores_month = sum(total_high_scores, na.rm = TRUE),
-        referral_rate = (num_referred_month / total_high_scores_month) * 100,
+        `Monthly PM+ referral` = sum(num_referred, na.rm = TRUE),
+        `Monthly PHQ9/GAD7 >=10 and <15` = sum(total_high_scores, na.rm = TRUE),
+        `Monthly PM+ referral rate` = (`Monthly PM+ referral` / `Monthly PHQ9/GAD7 >=10 and <15`) * 100,
         .groups = "drop"
     )
+
+#total data
+pm_referral_total <- pm_referral %>%
+    group_by(clt_study_site) %>%
+    summarise(
+        `Total PM+ referral` = sum(num_referred, na.rm = TRUE),
+        `Total PHQ9/GAD7 >=10 and <15` = sum(total_high_scores, na.rm = TRUE),
+        `Total PM+ referral rate` = (`Total PM+ referral` / `Total PHQ9/GAD7 >=10 and <15`) * 100,
+        .groups = "drop"
+    )
+
 
 #4. Telepsychiatry session referral---------------
 # Aggregate total women with PHQ9/GAD7 scores > 15 (Denominator)
@@ -305,13 +339,24 @@ tele_referral <- full_join(tele_referral, phq9_high_scores_tele,
 tele_referral <- tele_referral %>%
     mutate(referral_rate = num_referred / total_high_scores * 100)
 
+#monthly data
 monthly_referral_summary_tele <- tele_referral %>%
     mutate(month = format(clt_timestamp, "%Y-%m")) %>%
     group_by(clt_study_site, month) %>%
     summarise(
-        num_referred_mon = sum(num_referred, na.rm = TRUE),
-        total_high_scores_mon = sum(total_high_scores, na.rm = TRUE),
-        referral_rate = (num_referred_mon / total_high_scores_mon) * 100,
+        `Monthly telepsych referral` = sum(num_referred, na.rm = TRUE),
+        `Monthly PHQ9/GAD7 >=15` = sum(total_high_scores, na.rm = TRUE),
+        `Monthly telepsych referral rate` = (`Monthly telepsych referral` / `Monthly PHQ9/GAD7 >=15`) * 100,
+        .groups = "drop"
+    )
+
+#total data
+total_referral_summary_tele <- tele_referral %>%
+    group_by(clt_study_site) %>%
+    summarise(
+        `Total telepsych referral` = sum(num_referred, na.rm = TRUE),
+        `Total PHQ9/GAD7 >=15` = sum(total_high_scores, na.rm = TRUE),
+        `Total telepsych referral rate` = (`Total telepsych referral` / `Total PHQ9/GAD7 >=15`) * 100,
         .groups = "drop"
     )
 
@@ -340,6 +385,11 @@ pm_summary_session1 <- pm_initiation %>%
 pm_summary <- full_join(pm_summary, pm_referral_monthly, by = c("pm_facility" = "clt_study_site", "month" = "month"))
 
 pm_summary_session1 <- full_join(pm_summary_session1, pm_referral_monthly, by = c("pm_facility" = "clt_study_site", "month" = "month"))
+
+#change num_initiated to 0 if NA
+pm_summary[is.na(pm_summary)] <- 0
+
+pm_summary_session1[is.na(pm_summary_session1)] <- 0
 
 #calculate initiation rate
 pm_summary <- pm_summary %>%
@@ -386,20 +436,22 @@ pm_initiation_all_merge <- pm_initiation_all_merge %>%
 pm_initiation_all_merge_session1 <- pm_initiation_all_merge_session1 %>%
     mutate(initiation_rate = num_initiated / num_referred * 100)
 
-#6. Telepsychiatry session initiation---------------
+#6. PM+ session completion---------------
 #6.1 this is per month
-#numerator is the number of participants who initiated telepsychiatry [get from telepsych dataset]
-#[placeholder]
-
-#denominator is the number of participants who are referred to telepsychiatry
-
-#7. PM+ session completion---------------
-#7.1 this is per week
-pm_week <- pm %>%
+pm_month <- pm %>%
     filter(ipmh_participant == "Yes") %>%
     select(pm_facility, pm_date, pm_ptid, pm_session, pm_explain, pm_adv,
            pm_stress, pm_prob, pm_activ, pm_social, pm_stay, pm_nonresponse, pm_psychlops) %>% 
-    mutate(week = floor_date(pm_date, "week", week_start = 1)) 
+    mutate(month = format(pm_date, "%Y-%m"))
+
+#calculate the number of participants per facility per month and pm_session == "Session 1"
+
+#7. Telepsychiatry session initiation---------------
+#7.1 this is per month
+#numerator is the number of participants who initiated telepsychiatry [get from telepsych dataset]
+
+
+#denominator is the number of participants who are referred to telepsychiatry
 
 
 
@@ -425,9 +477,18 @@ health_talks <- health_talks %>%
     mutate(month = format(rct_dcr_date, "%Y-%m")) %>%
     group_by(rct_facility_name, month) %>%
     summarise(
-        num_health_talks = sum(rct_health_talk, na.rm = TRUE),
-        num_flipbook = sum(rct_flipbook, na.rm = TRUE),
-        percentage_flipbook = num_flipbook / num_health_talks * 100,
+        `Monthly monthly health talks` = sum(rct_health_talk, na.rm = TRUE),
+        `Monthly flipbook usage` = sum(rct_flipbook, na.rm = TRUE),
+        `Monthly flipbook usage rate` = (`Monthly flipbook usage` / `Monthly monthly health talks`) * 100,
         .groups = "drop"
     )
 
+#total data
+total_health_talks <- health_talks %>%
+    group_by(rct_facility_name) %>%
+    summarise(
+        `Total health talks` = sum(num_health_talks, na.rm = TRUE),
+        `Total flipbook usage` = sum(num_flipbook, na.rm = TRUE),
+        `Total flipbook usage rate` = (`Total flipbook usage` / `Total health talks`) * 100,
+        .groups = "drop"
+    )
