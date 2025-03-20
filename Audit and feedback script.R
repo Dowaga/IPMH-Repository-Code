@@ -473,7 +473,7 @@ health_talks <- health_talks %>%
     ))
 
 # Aggregate the number of health talks and flipbook usage per facility per month
-health_talks <- health_talks %>%
+health_talks_monthly <- health_talks %>%
     mutate(month = format(rct_dcr_date, "%Y-%m")) %>%
     group_by(rct_facility_name, month) %>%
     summarise(
