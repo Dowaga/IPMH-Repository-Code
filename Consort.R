@@ -1,4 +1,10 @@
-pacman::p_load(consort)
+# Header ------------------------------------------------------------------
+
+# Author(s): Owaga
+# Date: March 10, 2025
+# Consort Diagram for weekly report
+
+# Setup ------------------------------------------------------------------------
 
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
@@ -8,7 +14,7 @@ source("data_import.R")
 Attendees <- daily_closeout_df %>% 
     summarise(`ANC Attendees` = sum(rct_anc_number))
 
-pm_refers <- pm_survey_df %>% 
+pm_abstractions <- pm_survey_df %>% 
     select(record_id, ipmh_participant) %>% 
     filter(ipmh_participant == "Yes")
 
@@ -27,12 +33,20 @@ consort_data <- screening_consent_df %>%
         rct_harm_thought == "Yes" & rct_memory_problem == "No" ~"Self harm",
         rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~"Self harm and memory problem",
         rct_eligible == 0 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
+        rct_memory_problem == "Yes" ~"Memory problem",
+        rct_delusions == "Yes" ~ "Holding unusual beliefs",
         TRUE ~ NA_character_)) %>% 
     mutate(rct_decline_reason = case_when(
             rct_decline_reason == "Other (specify) ___" ~ "Relocate post delivery",
             TRUE ~ rct_decline_reason  # Keep other values unchanged
         ))
-        
+
+elig <- consort_data %>% 
+    filter(is.na(eligible)) %>% 
+    filter(is.na(exclusion))
+
+decline_reason <- consort_data %>% 
+    filter(!is.na(rct_decline_reason))
 
 consort_diagram <- consort_plot(data = consort_data,
                     orders = c(record_id = "Assessed for Eligibility ",
