@@ -1,12 +1,12 @@
 # Header ------------------------------------------------------------------
 
 # Author(s): Yuwei Wang
-# Date: March 5, 2025
+# Date: March 20, 2025
 # Description: This script is used to generate data reports for the monthly audit and feedback meetings. 
 # The following indicators are calculated:
-# 1. PHQ2/GAD2 screening (among all sites for all women)
-# 2. PHQ9/GAD7 screening (among intervention sites for study participants)
-# 3. PM+ session referral (among intervention sites for study participants)
+# 1. PHQ2/GAD2 screening (among all sites for all women) [weekly/monthly]
+# 2. PHQ9/GAD7 screening (among intervention sites for study participants) [weekly/monthly]
+# 3. PM+ session referral (among intervention sites for study participants) 
 # 4. Telepsychiatry session referral (among intervention sites for study participants)
 # 5. PM+ session initiation (among intervention sites for study participants)
 # 6. Telepsychiatry session initiation (among intervention sites for study participants)
@@ -15,6 +15,7 @@
 
 # Setup ------------------------------------------------------------------------
 rm(list = ls())             
+
 
 # Reference source codes & other dependencies: Use this section to reference other scripts and dependencies
 source("DataTeam_ipmh.R")
@@ -37,6 +38,13 @@ phq2_gad2_abstract$screening_date <- as.Date(phq2_gad2_abstract$screening_date)
 rct_ppw$clt_timestamp <- as.Date(rct_ppw$clt_timestamp)
 pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$telepsych_date)
+
+#time period for the data
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date <= "2025-03-15")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date <= "2025-03-15")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-03-15")
+pm <- pm %>% filter(pm_date <= "2025-03-15")
+#telepsych <- telepsych %>% filter(tele_date <= "2025-03-15")
 
 #uniform study site number for all datasets
 phq2_gad2_abstract <- phq2_gad2_abstract %>%
