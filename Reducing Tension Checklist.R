@@ -45,13 +45,14 @@ summary_table <- summary_table %>%
                               rtc_10 = "Separated problems into small manageable steps"))
 
 
-# Convert to flextable
-summary_table <- flextable(summary_table) %>%
-    theme_vanilla() %>%  # Apply a clean theme
-    autofit() %>%  # Adjust column widths
-    set_table_properties(layout = "autofit", width = 0.9) %>%   # Ensure it fits inside margins
-    set_caption(paste("Reducing Tension Checklist Table"))  # Add title
-
+# Convert to gt
+summary_table %>% 
+    gt() %>%
+    tab_header(
+        title = "Reducing Tension Checklist Table") %>%
+    tab_options(
+        table.font.size = px(12)
+    )
 
 summary_table
 
