@@ -13,7 +13,7 @@ source("data_import.R")
 
 pm_follow_up <- pm_survey_df %>% 
     select(pm_ptid, pm_facility, pm_date, pm_session) %>%
-    right_join(pm_telep_df %>% 
+    right_join(ppw_rct_df %>% 
                    select(record_id, clt_date), by = c("pm_ptid" = "record_id")) %>% 
     select(pm_ptid, clt_date, pm_date, pm_session) %>% 
     filter(!is.na(pm_date)) %>% 
@@ -42,6 +42,7 @@ generate_weekly_visits <- function(pm_follow_up) {
 # Apply function
 weekly_visits <- generate_weekly_visits(pm_follow_up)
 
+library(gt)
 # View result
 weekly_visits %>% 
     gt() %>%
@@ -77,7 +78,7 @@ pm_retention <- pm_retention %>%
         week5_closer = clt_date + days(42))
 
 pm_visits <- pm_survey_df %>% 
-    select(pm_facility,pm_ptid,pm_date, pm_session)
+    select(pm_facility, pm_ptid, pm_date, pm_session)
 
 retention <- left_join(pm_visits, pm_retention, by='pm_ptid')
 
