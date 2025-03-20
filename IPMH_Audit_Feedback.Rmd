@@ -143,7 +143,7 @@ No initiation data yet. Kabondo Sub County Hospital has two referrals for teleps
 # 8. Frequency of conducting health talks & use of flipbook per facility (Per month & Total)
 
 ```{r health talks, echo = F, warning=F}
-kable(health_talks, caption = "Monthly Health Talks & Flipbook Usage by Facility",
+kable(health_talks_monthly, caption = "Monthly Health Talks & Flipbook Usage by Facility",
       digits = 2)
 kable(total_health_talks, caption = "Total Health Talks & Flipbook Usage by Facility",
       digits = 2)
