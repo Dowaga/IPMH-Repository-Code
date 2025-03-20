@@ -29,7 +29,8 @@ packages <- c("redcapAPI",
               #              "taskscheduleR", 
               "janitor", 
               "gmodels",
-              "data.table")
+              "data.table",
+              "consort")
 
 # Check for duplicates in list 
 if(length(packages[duplicated(packages)])>0){
