@@ -369,12 +369,6 @@ pm_initiation <- pm %>%
            pm_stress, pm_prob, pm_activ, pm_social, pm_stay, pm_nonresponse, pm_psychlops) %>% 
     mutate(month = format(pm_date, "%Y-%m")) 
 
-#calculate the number of participants per facility per month and pm_session == "Pre-intervention PSYCHLOPS measurement"
-pm_summary <- pm_initiation %>%
-    filter(pm_session == "Pre-intervention PSYCHLOPS measurement") %>%
-    group_by(pm_facility, month) %>%
-    summarise(num_initiated = n(), .groups = "drop")
-
 #calculate the number of participants per facility per month and pm_session == "Session 1"
 pm_summary_session1 <- pm_initiation %>%
     filter(pm_session == "Session 1") %>%
@@ -382,21 +376,15 @@ pm_summary_session1 <- pm_initiation %>%
     summarise(num_initiated = n(), .groups = "drop")
 
 #denominator is the number of participants who are referred to PM+ [utilizing monthly_referral_summary]
-pm_summary <- full_join(pm_summary, pm_referral_monthly, by = c("pm_facility" = "clt_study_site", "month" = "month"))
-
-pm_summary_session1 <- full_join(pm_summary_session1, pm_referral_monthly, by = c("pm_facility" = "clt_study_site", "month" = "month"))
+pm_summary_session1 <- full_join(pm_summary_session1, pm_referral_monthly, 
+                                 by = c("pm_facility" = "clt_study_site", "month" = "month"))
 
 #change num_initiated to 0 if NA
-pm_summary[is.na(pm_summary)] <- 0
-
 pm_summary_session1[is.na(pm_summary_session1)] <- 0
 
 #calculate initiation rate
-pm_summary <- pm_summary %>%
-    mutate(initiation_rate = num_initiated / num_referred_month * 100)
-
 pm_summary_session1 <- pm_summary_session1 %>%
-    mutate(initiation_rate = num_initiated / num_referred_month * 100)
+    mutate(initiation_rate = num_initiated / `Monthly PM+ referral` * 100)
 
 #5.2 this is across all time
 #numerator is the number of participants who initiated PM+ [get from pm dataset]
@@ -404,12 +392,6 @@ pm_initiation_all <- pm %>%
     filter(ipmh_participant == "Yes") %>%
     select(pm_facility, pm_date, pm_ptid, pm_session, pm_explain, pm_adv,
            pm_stress, pm_prob, pm_activ, pm_social, pm_stay, pm_nonresponse, pm_psychlops)
-
-#calculate the number of participants per facility and pm_session == "Pre-intervention PSYCHLOPS measurement"
-pm_summary_all <- pm_initiation_all %>%
-    filter(pm_session == "Pre-intervention PSYCHLOPS measurement") %>%
-    group_by(pm_facility) %>%
-    summarise(num_initiated = n(), .groups = "drop")
 
 #calculate the number of participants per facility and pm_session == "Session 1"
 pm_summary_session1_all <- pm_initiation_all %>%
@@ -423,16 +405,12 @@ pm_referral_all <- rct_ppw_int %>%
     group_by(clt_study_site) %>%
     summarise(num_referred = n(), .groups = "drop")
 
-pm_initiation_all_merge <- full_join(pm_summary_all, pm_referral_all, by = c("pm_facility" = "clt_study_site"))
-
 pm_initiation_all_merge_session1 <- full_join(pm_summary_session1_all, pm_referral_all, by = c("pm_facility" = "clt_study_site"))
+
 #change num_initiated to 0 if NA
 pm_initiation_all_merge_session1[is.na(pm_initiation_all_merge_session1)] <- 0
 
 #calculate initiation rate
-pm_initiation_all_merge <- pm_initiation_all_merge %>%
-    mutate(initiation_rate = num_initiated / num_referred * 100)
-
 pm_initiation_all_merge_session1 <- pm_initiation_all_merge_session1 %>%
     mutate(initiation_rate = num_initiated / num_referred * 100)
 
