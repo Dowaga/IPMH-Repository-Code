@@ -465,8 +465,8 @@ health_talks_monthly <- health_talks %>%
 total_health_talks <- health_talks %>%
     group_by(rct_facility_name) %>%
     summarise(
-        `Total health talks` = sum(num_health_talks, na.rm = TRUE),
-        `Total flipbook usage` = sum(num_flipbook, na.rm = TRUE),
+        `Total health talks` = sum(rct_health_talk, na.rm = TRUE),
+        `Total flipbook usage` = sum(rct_flipbook, na.rm = TRUE),
         `Total flipbook usage rate` = (`Total flipbook usage` / `Total health talks`) * 100,
         .groups = "drop"
     )
