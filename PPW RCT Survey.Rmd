@@ -47,6 +47,12 @@ setdiff(consent_id$partipant_id, survey_id$clt_ptid)
 ### Those that are in the RCT, while missing in Consent database
 setdiff(survey_id$clt_ptid, consent_id$partipant_id) 
 
+# First Enrollment Date
+first_enrollment <- ppw_rct_df %>%
+  pull(clt_date) %>%  # Extract the enrollment_date column
+  min(na.rm = TRUE)     # Find the minimum date
+
+first_enrollment
 ```
 
 ## Consort Diagram
@@ -147,6 +153,7 @@ Enrollments
 ```
 
 ## Enrollment Per Facility
+###Assumption for enrollment rate: 5 enrollment per week per facility
 
 ```{r Weekly Enrollment Trends, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -155,8 +162,6 @@ figure_1
 ```
 
 ## PPW Demographics
-
-Altogether, we currently have data for `r nrow(ppw_rct_df)` participants.
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
 demographics_df <- ppw_rct_df %>% 
@@ -211,6 +216,13 @@ demographics_df %>% tbl_summary(
         table.font.size = px(14))
 ```
 
+
+```{r}
+source("Medical and Obstetric History.R")
+moh_summary
+```
+
+
 ## PM+ and Telepsychiatry Referrals
 
 ```{r PM+ and Telepsychiatry Referrals, echo=FALSE, message=FALSE, warning=FALSE}
@@ -235,6 +247,7 @@ gad7_labels <-c(
 
 
 # Recode PHQ9 variables
+
 pm_telep_df <- pm_telep_df %>%
   mutate(across(c(abs_phq_interest, abs_phq_down, abs_phq_sleep,
                   abs_phq_tired, abs_phq_appetite, abs_phq_bad,
@@ -254,7 +267,9 @@ pm_telep_df <- pm_telep_df %>%
         gad7_scores = rowSums(select(., abs_gad7_nerve, abs_gad7_uncontrol,
                                         abs_gad7_worry, abs_gad7_relax, 
                                         abs_gad7_restless, abs_gad7_annoyed,
-                                        abs_gad7_afraid), na.rm = TRUE))%>% 
+                                        abs_gad7_afraid), na.rm = TRUE))
+
+pm_telep_df <- pm_telep_df %>% 
     filter(phq9_scores >= 10|gad7_scores >= 10) %>% 
     mutate(
     max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
@@ -272,25 +287,55 @@ pm_telep_df <- pm_telep_df %>%
 not_referred <- pm_telep_df %>% 
     filter(is.na(referred_to))
 
+telepsych_referrals <- pm_telep_df %>% 
+    filter(phq9_scores>=15|gad7_scores>=19)
+
+##
+scores <- pm_telep_df %>% 
+    filter(clt_study_site == "17, Ramula Health Centre")
+
+
 ## Study participants eligible for PM+
-pm_eligible <- pm_telep_df %>% 
+eligible_pm <- pm_telep_df %>% 
     group_by(clt_study_site) %>% 
-    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
-    summarise(total = n_distinct(record_id)) %>% 
-    adorn_totals()
+    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site))
+
+pm_eligible <- eligible_pm %>%
+    summarise(`PM+ Eligible` = n_distinct(record_id)) %>% 
+    adorn_totals() %>% 
+    arrange(desc(`PM+ Eligible`))
 
 ## Total study participants in PM+ Survey 
+
     # Count of unique participant IDs 
 pm_counts <- pm_survey_df %>%
     filter(ipmh_participant == "Yes") %>%
     group_by(pm_facility) %>% 
     mutate(pm_facility = gsub("^[0-9]+,\\s*", "", pm_facility)) %>% 
   summarise(`PM+ Abstracted` = n_distinct(pm_ptid))  %>%
+    arrange(desc(`PM+ Abstracted`)) %>% 
     adorn_totals()
 
+###### PM+ referral QCs
 merged_pm <- pm_eligible %>% 
     full_join(pm_counts, by = c("clt_study_site" = "pm_facility"))
 
+abs <- pm_survey_df %>% 
+    filter(pm_facility == "Ramula Health Centre")
+
+
+### Those that are eligible to PM+, but not in the PM+ Survey
+setdiff(eligible_pm$record_id, pm_survey_df$pm_ptid)
+
+no_pm_survey <- eligible_pm %>%
+  filter(!record_id %in% pm_survey_df$pm_ptid) %>% 
+    filter(referred_to == "PM+")
+
+### Those that are in the PM+ Survey, while not Eligible
+setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
+
+xc <- pm_survey_df %>% 
+    filter(pm_ptid == "21094016")
 
 # Study participant PM+ Sessions
 pm_sessions <- 
@@ -304,6 +349,9 @@ duplicates_sessions <- pm_sessions %>%
   summarise(count = n(), .groups = "drop") %>%
   filter(count > 1)  # Filter those with more than one attendance per session
 
+### Duplicated PM+ Surveys
+duplicate_record <- pm_survey_df %>% 
+    filter(pm_ptid == "21229510")
 
 # Transforming data: One column for ptid, each session as a separate column
 pm_session_wide <- pm_sessions %>%
@@ -329,7 +377,7 @@ mutate(facility = str_sub(pm_ptid, 3, 4)) %>%
 #colnames(pm_session_wide) <- c("ptid", paste0("Session_", colnames(pm_session_wide)[-1]))
 
 pm_session_wide %>% 
-    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1`),
+    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1`, `Session 2`),
                 label = list(facility = "Facility",
                              `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
@@ -408,3 +456,11 @@ weekly_visits %>%
   )
 
 ```
+
+
+## Reducing Tension Checklist Table
+```{r Reducing Tension Checklist, echo=FALSE}
+source("Reducing Tension Checklist.R")
+summary_table
+```
+
