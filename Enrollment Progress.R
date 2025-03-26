@@ -31,7 +31,7 @@ weekly_count <- enrollment_progress %>%
     summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
 
 # Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
-date_seq <- seq(as.Date("2025-02-16"), as.Date("2025-03-21"), by = "week")
+date_seq <- seq(as.Date("2025-02-16"), as.Date("2025-03-29"), by = "week")
 
 # Convert to a dataframe
 dateSeq_df <- data.frame(week = date_seq)
@@ -81,3 +81,4 @@ Enrollment_wide_ft <- Enrollment_wide %>%
     autofit()  # Adjust table to fit content
 
 Enrollment_wide_ft
+
