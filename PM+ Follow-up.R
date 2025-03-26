@@ -1,14 +1,17 @@
 # Header ------------------------------------------------------------------
 
-# Author(s): Owaga
-# Date: March 11, 2025
+# Author(s): David Owaga & Yuwei Wang
+# Date: March 25, 2025
 # PM+ Follow-Up for weekly report
 
 # Setup ------------------------------------------------------------------------
 
-# Reference source codes & other dependencies:
+rm(list = ls())             
+
+# Reference source codes & other dependencies: Use this section to reference other scripts and dependencies
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
+#source("REDCap_datapull.R")
 source("data_import.R")
 
 pm_follow_up <- pm_survey_df %>% 
@@ -19,6 +22,7 @@ pm_follow_up <- pm_survey_df %>%
     filter(!is.na(pm_date)) %>% 
     arrange(pm_ptid)
 
+#David's code-------------
 # Function to generate weekly visit status
 generate_weekly_visits <- function(pm_follow_up) {
     pm_follow_up %>%
@@ -137,3 +141,62 @@ V_week3 <- retention %>%
               Expected = sum(week3_closer < today()),
               Attended = sum(pm_date <= week3_closer & pm_session == "Session 3"),
               percentage_attended = Attended / Expected * 100)
+
+#Yuwei's code--------------
+pm_intervals <- pm_follow_up %>%
+    mutate(
+        clt_date = as.Date(clt_date),
+        pm_date = as.Date(pm_date)
+    ) %>%
+    arrange(pm_ptid, pm_session) %>%
+    group_by(pm_ptid) %>%
+    mutate(
+        session_order = row_number(),
+        ref_date = if_else(session_order == 1, clt_date, lag(pm_date)),
+        days_since_previous = as.numeric(pm_date - ref_date)
+    ) %>%
+    ungroup()
+
+pm_intervals <- pm_intervals %>%
+    mutate(attendance_timing = case_when(
+        days_since_previous < 0              ~ "early attendance",
+        days_since_previous >= 0 & days_since_previous <= 14 ~ "on time",
+        days_since_previous > 14             ~ "delay",
+        TRUE                                 ~ NA_character_
+    ))
+
+#table for attendance timing (type)
+attendance_table <- pm_intervals %>%
+    filter(!is.na(attendance_timing)) %>%
+    group_by(pm_session, attendance_timing) %>%
+    summarise(n = n(), .groups = "drop") %>%
+    group_by(pm_session) %>%
+    mutate(
+        total = sum(n),
+        percent = round(100 * n / total, 1),
+        label = paste0(n, " (", percent, "%)")
+    ) %>%
+    select(pm_session, attendance_timing, label) %>%
+    pivot_wider(
+        names_from = attendance_timing,
+        values_from = label,
+        values_fill = "-"
+    )
+kable(attendance_table)
+
+#table for average interval (day)
+average_interval <- pm_intervals %>%
+    filter(!is.na(days_since_previous)) %>%
+    group_by(pm_session) %>%
+    summarise(
+        n = n(),
+        mean_days = round(mean(days_since_previous, na.rm = TRUE), 1),
+        sd_days = round(sd(days_since_previous, na.rm = TRUE), 1),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        label = paste0(mean_days, " (±", sd_days, ")")
+    ) %>%
+    select(pm_session, n, average_interval = label)
+
+average_interval %>% kable()
