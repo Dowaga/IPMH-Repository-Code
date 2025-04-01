@@ -16,17 +16,17 @@ source("data_import.R")
 
 pm_follow_up <- pm_survey_df %>% 
     select(pm_ptid, pm_facility, pm_date, pm_session) %>%
-    right_join(pm_telep_df %>% 
-                   select(record_id, clt_date), by = c("pm_ptid" = "record_id")) %>% 
+    right_join(ppw_rct_df %>% 
+                   select(record_id, clt_date), 
+               by = c("pm_ptid" = "record_id")) %>% 
     select(pm_ptid, clt_date, pm_date, pm_session) %>% 
     filter(!is.na(pm_date)) %>% 
     arrange(pm_ptid)
 
-<<<<<<< HEAD
 
-=======
+
 #David's code-------------
->>>>>>> 7f8dad3b0c16f7a41bd9fb4a00a54edbb4c7e67a
+
 # Function to generate weekly visit status
 generate_weekly_visits <- function(pm_follow_up) {
     pm_follow_up %>%
@@ -138,8 +138,14 @@ pm_intervals <- pm_follow_up %>%
         clt_date = as.Date(clt_date),
         pm_date = as.Date(pm_date)
     ) %>%
-    arrange(pm_ptid, pm_session) %>%
-    group_by(pm_ptid) %>%
+    arrange(pm_ptid, pm_session, pm_date) %>%
+    group_by(pm_ptid, pm_session) %>%
+    mutate(
+        round = row_number()  # round number within the same session
+    ) %>%
+    ungroup() %>%
+    arrange(pm_ptid, pm_date) %>%
+    group_by(pm_ptid, round) %>%
     mutate(
         session_order = row_number(),
         ref_date = if_else(session_order == 1, clt_date, lag(pm_date)),
@@ -155,29 +161,42 @@ pm_intervals <- pm_intervals %>%
         TRUE                                 ~ NA_character_
     ))
 
+pm_intervals <- pm_intervals %>%
+    arrange(pm_ptid, pm_session, round, pm_date) %>%
+    group_by(pm_ptid) %>%
+    mutate(
+        last_session_date = lag(pm_date),
+        interval_since_last_round = if_else(round > 1 & session_order == 1,
+                                            as.numeric(pm_date - last_session_date),
+                                            NA_real_)
+    ) %>%
+    ungroup()
+
 #table for attendance timing (type)
 attendance_table <- pm_intervals %>%
     filter(!is.na(attendance_timing)) %>%
-    group_by(pm_session, attendance_timing) %>%
+    group_by(pm_session, round, attendance_timing) %>%
     summarise(n = n(), .groups = "drop") %>%
-    group_by(pm_session) %>%
+    group_by(pm_session, round) %>%
     mutate(
         total = sum(n),
         percent = round(100 * n / total, 1),
         label = paste0(n, " (", percent, "%)")
     ) %>%
-    select(pm_session, attendance_timing, label) %>%
+    select(pm_session, round, attendance_timing, label) %>%
     pivot_wider(
         names_from = attendance_timing,
         values_from = label,
         values_fill = "-"
-    )
+    ) %>%
+    arrange(pm_session, round)
+
 kable(attendance_table)
 
 #table for average interval (day)
 average_interval <- pm_intervals %>%
     filter(!is.na(days_since_previous)) %>%
-    group_by(pm_session) %>%
+    group_by(pm_session, round) %>%
     summarise(
         n = n(),
         mean_days = round(mean(days_since_previous, na.rm = TRUE), 1),
@@ -187,6 +206,7 @@ average_interval <- pm_intervals %>%
     mutate(
         label = paste0(mean_days, " (±", sd_days, ")")
     ) %>%
-    select(pm_session, n, average_interval = label)
+    select(pm_session, round, n, average_interval = label) %>%
+    arrange(pm_session, round)
 
 average_interval %>% kable()
