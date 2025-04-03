@@ -26,7 +26,7 @@ enrollment_progress <- enrollment_progress %>%
 
 # Aggregate weekly enrollments per site
 weekly_count <- enrollment_progress %>%
-    mutate(week = floor_date(consent_date_auto, "week")) %>%  # Group by week
+    mutate(week = floor_date(consent_date_auto, "week", week_start = 1)) %>%  # Group by week
     group_by(study_site, week) %>%
     summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
 
@@ -36,7 +36,7 @@ date_seq <- seq(as.Date("2025-02-16"), as.Date("2025-03-29"), by = "week")
 # Convert to a dataframe
 dateSeq_df <- data.frame(week = date_seq)
 
-weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
+weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week", week_start = 1) %>%
     arrange(week) %>%  # Ensure weeks are in order
     mutate(enrollment_count = ifelse(is.na(enrollment_count), 
                                      0, enrollment_count)) %>%   # Fill missing counts with 0
