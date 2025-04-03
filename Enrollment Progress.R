@@ -31,12 +31,12 @@ weekly_count <- enrollment_progress %>%
     summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
 
 # Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
-date_seq <- seq(as.Date("2025-02-16"), as.Date("2025-03-29"), by = "week")
+date_seq <- seq(as.Date("2025-02-16"), as.Date("2025-03-29"), by = "week", week_start = 1)
 
 # Convert to a dataframe
 dateSeq_df <- data.frame(week = date_seq)
 
-weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week", week_start = 1) %>%
+weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
     arrange(week) %>%  # Ensure weeks are in order
     mutate(enrollment_count = ifelse(is.na(enrollment_count), 
                                      0, enrollment_count)) %>%   # Fill missing counts with 0
@@ -50,7 +50,7 @@ weekly_enrollment <- weekly_enrollment %>%
 
 
 figure_1 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, color = study_site, group = study_site)) +
-    geom_line(size = 1) +  # Line plot for trends
+    geom_line(linewidth = 1) +  # Line plot for trends
     geom_point(size = 2) +  # Add points for clarity
     labs(title = "Weekly Enrollment Trends by Study Site",
          x = "Week",
@@ -71,6 +71,7 @@ Enrollment_wide <- weekly_enrollment %>%
     ) %>% 
     adorn_totals(where = c("row","col")) %>% 
     arrange(desc(Total))
+
 pacman::p_load(dplyr, tidyr, janitor, flextable)
 
 # Convert to flextable and format totals
