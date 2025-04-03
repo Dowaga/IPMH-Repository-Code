@@ -1,17 +1,14 @@
 # Header ------------------------------------------------------------------
 
-# Author(s): David Owaga & Yuwei Wang
-# Date: March 25, 2025
+# Author(s): Owaga
+# Date: March 11, 2025
 # PM+ Follow-Up for weekly report
 
 # Setup ------------------------------------------------------------------------
 
-rm(list = ls())             
-
-# Reference source codes & other dependencies: Use this section to reference other scripts and dependencies
+# Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
-#source("REDCap_datapull.R")
 source("data_import.R")
 
 pm_follow_up <- pm_survey_df %>% 
@@ -22,11 +19,7 @@ pm_follow_up <- pm_survey_df %>%
     filter(!is.na(pm_date)) %>% 
     arrange(pm_ptid)
 
-<<<<<<< HEAD
 
-=======
-#David's code-------------
->>>>>>> 7f8dad3b0c16f7a41bd9fb4a00a54edbb4c7e67a
 # Function to generate weekly visit status
 generate_weekly_visits <- function(pm_follow_up) {
     pm_follow_up %>%
@@ -62,11 +55,12 @@ weekly_visits %>%
     )
 
 
-pm_retention <- weekly_visits %>% 
+#### Generate target dates and visit window ####################################
+
+pm_enrollment_dates <- weekly_visits %>% 
     select(pm_ptid, clt_date)
 
-#### Generate target dates and visit window ####################################
-pm_retention <- pm_retention %>%
+pm_visit_dates <- pm_enrollment_dates %>%
     mutate(
         clt_date = ymd(clt_date),
         week1_open = clt_date + days(7),
@@ -80,10 +74,39 @@ pm_retention <- pm_retention %>%
         week5_open = clt_date + days(35),
         week5_closer = clt_date + days(42))
 
-pm_visits <- pm_survey_df %>% 
-    select(pm_facility,pm_ptid,pm_date, pm_session)
 
-retention <- left_join(pm_visits, pm_retention, by='pm_ptid')
+pm_visits <- pm_survey_df %>% 
+    filter(ipmh_participant == "Yes") %>%
+    select(pm_facility,pm_ptid,pm_date, pm_session) %>% 
+    filter(pm_ptid == "21166521")
+
+# Duplicates Sessions
+duplicates_visit <- pm_visits %>%
+    group_by(pm_ptid, pm_session) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    filter(count > 1)  # Filter those with more than one attendance per session
+
+
+# Transforming data: One column for ptid, each session as a separate column
+pm_visits_wide <- pm_visits %>%
+    distinct(pm_ptid, pm_session) %>%  # Remove duplicate sessions per ptid
+    mutate(attended = 1) %>%  # Assign 1 for attended
+    pivot_wider(names_from = pm_session, values_from = attended, values_fill = list(attended = 0)) %>%   # Fill non-attended sessions with 0
+    mutate(facility = str_sub(pm_ptid, 3, 4)) %>% 
+    mutate(facility = recode(facility,
+                             "01" = "Rwambwa SCH",
+                             "03" = "Uyawi SCH",
+                             "04" = "Got Agulu SCH",
+                             "07" = "Kabondo SCH",
+                             "09" = "Miriu HC",
+                             "13" = "Ober Kamoth SCH",
+                             "16" = "Usigu HC",
+                             "17" = "Ramula HC",
+                             "19" = "Airport HC (Kisumu)",
+                             "22" = "Ndiru Level 4"))
+
+retention <- left_join(pm_session_wide, pm_visit_dates, by='pm_ptid')
+
 
 ################################################################################
 cv <- retention %>% 
@@ -95,7 +118,8 @@ cv <- retention %>%
             pm_date >= week3_open & pm_date <= week3_closer ~ "Week 3",
             pm_date >= week4_open & pm_date <= week4_closer ~ "Week 4",
             pm_date >= week5_open & pm_date <= week5_closer ~ "Week 5",
-            TRUE ~ "Outside Expected Range"))
+            TRUE ~ "Outside Expected Range")) %>% 
+    filter(!is.na(pm_ptid))#filter out none study participants
 
 
 ################################################################################
@@ -105,88 +129,45 @@ duplicates <- retention %>%
     janitor::get_dupes(c(pm_ptid, pm_session))
 
 V_week1 <- retention %>%
-    mutate(across(c(week1_closer, pm_date, week1_open), ymd)) %>%
-    #filter(pm_session == "Session 1") %>% 
-    group_by(pm_facility) %>%
-    summarise(Week_not_closed = sum(week1_closer > today()),
-              Expected = sum(week1_open <= today() & week1_closer <= today()),
-              attended = sum(pm_date <= week1_closer & pm_session == "Session 1"),
-              percentage_attended = attended / Expected * 100) %>% 
+     mutate(across(c(week1_closer, clt_date, week1_open), ymd)) %>%
+    group_by(facility) %>%
+    summarise(Week_not_closed = sum(week1_closer >= Sys.Date()),
+              Expected = sum(week1_closer < today()),
+              Attended = sum(`Session 1 content` == "1"),
+              percentage_attended = Attended / Expected * 100) %>% 
     adorn_totals("row", fill = "Total")
     
 
-
 V_week2 <- retention %>%
-    mutate(across(c(week2_closer, pm_date, week2_open), ymd)) %>%
-    group_by(pm_facility) %>%
-    summarise(Week_not_closed = sum(week2_closer > today()),
-              Expected = sum(week2_open <= today() & week2_closer < today()),
-              Attended = sum(pm_date <= week2_closer & pm_session == "Session 2"),
-              percentage_attended = Attended / Expected * 100)
+    mutate(across(c(week2_closer, clt_date, week2_open), ymd)) %>%
+    group_by(facility) %>%
+    summarise(Week_not_closed = sum(week2_closer >= today()),
+              Expected = sum(week2_closer < today()),
+              Attended = sum(`Session 2 content` == "1"),
+              percentage_attended = ifelse(Expected > 0, Attended / Expected * 100, NA))
+
+
 
 V_week3 <- retention %>%
-    mutate(across(c(week3_closer, pm_date, week3_open), ymd)) %>%
-    group_by(pm_facility) %>%
+    mutate(across(c(week3_closer, clt_date, week3_open), ymd)) %>%
+    group_by(facility) %>%
     summarise(Week_not_closed = sum(week3_closer > today()),
-              Expected = sum(week3_closer < today()),
-              Attended = sum(pm_date <= week3_closer & pm_session == "Session 3"),
+              Expected = sum(week3_closer <= today()),
+              Attended = sum(`Session 3 content` == "1"),
               percentage_attended = Attended / Expected * 100)
 
-#Yuwei's code--------------
-pm_intervals <- pm_follow_up %>%
-    mutate(
-        clt_date = as.Date(clt_date),
-        pm_date = as.Date(pm_date)
-    ) %>%
-    arrange(pm_ptid, pm_session) %>%
-    group_by(pm_ptid) %>%
-    mutate(
-        session_order = row_number(),
-        ref_date = if_else(session_order == 1, clt_date, lag(pm_date)),
-        days_since_previous = as.numeric(pm_date - ref_date)
-    ) %>%
-    ungroup()
+V_week4 <- retention %>%
+    mutate(across(c(week4_closer, clt_date, week4_open), ymd)) %>%
+    group_by(facility) %>%
+    summarise(Week_not_closed = sum(week4_closer >= today()),
+              Expected = sum(week4_closer < today()),
+              Attended = sum(`Session 4 content` == "1"),
+              percentage_attended = Attended / Expected * 100)
 
-pm_intervals <- pm_intervals %>%
-    mutate(attendance_timing = case_when(
-        days_since_previous < 0              ~ "early attendance",
-        days_since_previous >= 0 & days_since_previous <= 14 ~ "on time",
-        days_since_previous > 14             ~ "delay",
-        TRUE                                 ~ NA_character_
-    ))
-
-#table for attendance timing (type)
-attendance_table <- pm_intervals %>%
-    filter(!is.na(attendance_timing)) %>%
-    group_by(pm_session, attendance_timing) %>%
-    summarise(n = n(), .groups = "drop") %>%
-    group_by(pm_session) %>%
-    mutate(
-        total = sum(n),
-        percent = round(100 * n / total, 1),
-        label = paste0(n, " (", percent, "%)")
-    ) %>%
-    select(pm_session, attendance_timing, label) %>%
-    pivot_wider(
-        names_from = attendance_timing,
-        values_from = label,
-        values_fill = "-"
-    )
-kable(attendance_table)
-
-#table for average interval (day)
-average_interval <- pm_intervals %>%
-    filter(!is.na(days_since_previous)) %>%
-    group_by(pm_session) %>%
-    summarise(
-        n = n(),
-        mean_days = round(mean(days_since_previous, na.rm = TRUE), 1),
-        sd_days = round(sd(days_since_previous, na.rm = TRUE), 1),
-        .groups = "drop"
-    ) %>%
-    mutate(
-        label = paste0(mean_days, " (±", sd_days, ")")
-    ) %>%
-    select(pm_session, n, average_interval = label)
-
-average_interval %>% kable()
+V_week5 <- cv %>%
+    mutate(across(c(week5_closer, clt_date, week5_open), ymd)) %>%
+    group_by(pm_facility) %>%
+    summarise(Week_not_closed = sum(week5_closer > today()),
+              Expected = sum(week5_closer < today()),
+              Attended = sum(`Session 5 content` == "1"),
+              percentage_attended = Attended / Expected * 100)
