@@ -14,7 +14,7 @@ source("data_import.R")
 # Summarise ANC attendees and extract the sum as a numeric value
 Attendees <- daily_closeout_df %>%
     summarise(`anc attendees` = sum(rct_anc_number, na.rm = TRUE)) %>%
-    pull(`annnc attendees`)  # Extract the sum value as a number
+    pull(`anc attendees`)  # Extract the sum value as a number
 
 # Create a new data frame with anc_count rows, value = "Yes"
 anc_attendees_df <- data.frame(
