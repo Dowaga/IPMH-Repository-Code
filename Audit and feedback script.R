@@ -40,10 +40,10 @@ pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$telepsych_date)
 
 #time period for the data
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date <= "2025-03-25")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date <= "2025-03-25")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-03-25")
-pm <- pm %>% filter(pm_date <= "2025-03-25")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date <= "2025-03-15")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date <= "2025-03-15")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-03-15")
+pm <- pm %>% filter(pm_date <= "2025-03-15")
 #telepsych <- telepsych %>% filter(tele_date <= "2025-03-15")
 
 #uniform study site number for all datasets
