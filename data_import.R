@@ -29,3 +29,9 @@ screening_consent_df <- read.csv(paste0(ipmh_filepath,
 pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_", 
                                 file_date, ".csv", sep="" ))
 
+ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
+                                             file_date, ".csv", sep="")) %>% 
+    filter(redcap_repeat_instrument == "ADMIN: Adverse Experience")
+
+
+
