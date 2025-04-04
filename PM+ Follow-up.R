@@ -171,13 +171,13 @@ V_week4 <- retention %>%
                                    round(pmin(sum(Attended) / sum(Expected) * 100, 100), 2), 
                                    round(`% Attendance`, 2)))
 
-V_week5 <- retention %>%
-    mutate(across(c(week5_closer, clt_date, week5_open), ymd)) %>%
-    group_by(Facility = facility) %>%
-    summarise(`Active Sessions` = sum(week5_closer > today()),
-              Expected = sum(week5_closer < today()),
-              Attended = sum(`Session 5 content` == "1"),
-              `% Attendance` = ifelse(Expected > 0, Attended / Expected * 100, NA))
+#V_week5 <- retention %>%
+  #  mutate(across(c(week5_closer, clt_date, week5_open), ymd)) %>%
+   # group_by(Facility = facility) %>%
+    #summarise(`Active Sessions` = sum(week5_closer > today()),
+             # Expected = sum(week5_closer < today()),
+             # Attended = sum(`Session 5 content` == "1"),
+              #`% Attendance` = ifelse(Expected > 0, Attended / Expected * 100, NA))
 
 #Yuwei's code--------------
 pm_intervals <- pm_follow_up %>%
@@ -249,12 +249,7 @@ average_interval <- pm_intervals %>%
         mean_days = round(mean(days_since_previous, na.rm = TRUE), 1),
         sd_days = round(sd(days_since_previous, na.rm = TRUE), 1),
         .groups = "drop"
-    ) %>%
-    mutate(
-        label = paste0(mean_days, " (±", sd_days, ")")
-    ) %>%
-    select(pm_session, round, n, average_interval = label) %>%
-    arrange(pm_session, round)
+    ) 
 
 average_interval %>% 
     kable()
@@ -309,10 +304,12 @@ weekly_pm_retention <- weekly_pm_retention %>%
                             "Week 2" = "Session 2",
                             "Week 3" = "Session 3",
                             "Week 4" = "Session 4",
-                            "Week 5" = "Session 5")) %>% 
+                            #"Week 5" = "Session 5"
+                            )) %>% 
                       gt() %>%
     tab_header(title = "Table 5: Summary of PM+ Retention",
                subtitle = "Showing PM+ Participants Who Attended Scheduled Sessions") %>%
     tab_options(table.font.size = px(12))
 
 weekly_pm_retention
+
