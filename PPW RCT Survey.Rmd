@@ -153,12 +153,11 @@ Enrollments
 ```
 
 ## Enrollment Per Facility
-### Assumption for enrollment rate: 5 enrollment per week per facility
 
-```{r Weekly Enrollment Trends, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Weekly Enrollment Trends, message=FALSE, warning=FALSE, include=FALSE}
 
 source("Enrollment Progress.R")
-figure_1
+#figure_1
 ```
 
 ## PPW Demographics
@@ -170,24 +169,34 @@ demographics_df <- ppw_rct_df %>%
          dem_dob_uk == "Yes",
          floor(time_length(interval(dem_dob, clt_date), "years")),
     dem_age
-  ))
+  ),
+  dem_current_partner = recode(dem_current_partner,
+                               "Yes" = 1,
+                               "No" = 0),
+  dem_maritalstat = ifelse(dem_maritalstat == "Currently married", 1, 0),
+  dem_marriage = ifelse(dem_marriage == "Monogamous", 1, 
+                               ifelse(is.na(dem_marriage), NA, 0)),
+  dem_employment = recode(dem_employment,
+                          `Prefer not to answer` = "Yes"),
+  dem_pc_residence = recode(dem_pc_residence,
+                            "Yes (Ndio) [Kamano]" = "Yes",
+                            "No (La) [Ooyo]" = "No")
+  )
 
 
 # basic demo table
 demographics_df %>% tbl_summary(
     sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
     include=c(dem_age, dem_current_partner, dem_maritalstat,
-    dem_marriage, dem_currentpartner_father, dem_partner_financial, 
-    dem_pc_residence, dem_current_school, dem_school, dem_employment,
-    dem_household_num, dem_housesleep, dem_houserooms, dem_traveltime_min),
+    dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
+    dem_employment, dem_household_num, dem_housesleep, 
+    dem_houserooms,dem_traveltime_min),
     label = list(dem_age ~ "Age (Years)",
                  dem_current_partner ~ "Do you currently have a partner (Yes)",
-                 dem_partner_financial ~ "Does your partner provide financial support to you?",
-                 dem_employment ~ "Do you have regular employment? (Yes)",
-                 dem_maritalstat ~ "Marital status",
-                 dem_currentpartner_father ~ "Is your current partner the father of this baby",
-                 dem_pc_residence ~ "Shares residence with partner",
-                 dem_marriage ~ "Type of marriage",
+                 dem_employment ~ "Do you have regular employment (Yes)",
+                 dem_maritalstat ~ "Currently Married (Yes)",
+                 dem_pc_residence ~ "Shares residence with partner (Yes)",
+                 dem_marriage ~ "Marriage(Monogamous)",
                  dem_current_school ~ "Currently in School",
                  dem_school ~ "Completed years in School",
                  dem_household_num ~ "Number of people in Household",
@@ -208,7 +217,7 @@ demographics_df %>% tbl_summary(
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header("Table 1: Basic Demographic Summary") %>% 
+  gt::tab_header("Table 2: Basic Demographic Summary") %>% 
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
@@ -217,7 +226,7 @@ demographics_df %>% tbl_summary(
 ```
 
 
-```{r Medical and Obstetric History, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Medical and Obstetric History, message=FALSE, warning=FALSE, include=FALSE}
 source("Medical and Obstetric History.R")
 moh_summary
 ```
@@ -247,7 +256,6 @@ gad7_labels <-c(
 
 
 # Recode PHQ9 variables
-
 pm_telep_df <- pm_telep_df %>%
   mutate(across(c(abs_phq_interest, abs_phq_down, abs_phq_sleep,
                   abs_phq_tired, abs_phq_appetite, abs_phq_bad,
@@ -269,18 +277,22 @@ pm_telep_df <- pm_telep_df %>%
                                         abs_gad7_restless, abs_gad7_annoyed,
                                         abs_gad7_afraid), na.rm = TRUE))
 
+# Endorsed PHQ9 Question 9
+self_harm <- pm_telep_df %>% 
+    filter(abs_phq_dead > 0)
+
 pm_telep_df <- pm_telep_df %>% 
-    filter(phq9_scores >= 10|gad7_scores >= 10) %>% 
+    filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
     mutate(
     max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
     eligible_for = case_when(
       (max_score >= 10 & max_score < 15 & 
-       (max_score == phq9_scores | 
-        max_score == gad7_scores)) ~ "PM+",
+       ((max_score == phq9_scores)|(max_score == gad7_scores))) ~ "PM+",
       max_score >= 15 ~ "Telepsychiatry"),
        referred_to = case_when(abs_phq_ref_pm == "Yes"|abs_gad7_ref_pm == "Yes" ~ "PM+",
       abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
       TRUE ~ NA_character_))
+
 
 #PM+ participants
 pm_plus_df <- pm_telep_df %>% 
@@ -326,6 +338,16 @@ no_pm_survey <- eligible_pm %>%
   filter(!record_id %in% pm_survey_df$pm_ptid) %>% 
     filter(referred_to == "PM+")
 
+# Filter eligible_pm for those records and select necessary columns
+eligible_no_survey <- eligible_pm %>%
+  filter(record_id %in% no_pm_survey) %>%
+  select(record_id, clt_study_site) %>%
+  mutate(
+    # Remove the first 2 digits and the comma from clt_study_site
+    clt_study_site = gsub("^.{2},", "", clt_study_site)  # Remove first 2 characters and comma
+  )
+
+
 ### Those that are in the PM+ Survey, while not Eligible
 setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
 
@@ -363,7 +385,7 @@ mutate(facility = str_sub(pm_ptid, 3, 4)) %>%
 
 
 pm_session_wide %>% 
-    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1`, `Session 2`, `Session 3`),
+    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`),
                 label = list(facility = "Facility",
                              `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
@@ -393,6 +415,7 @@ nsp_pm <- pm_survey_df %>%
     arrange(desc(`PM+ Abstracted`)) %>% 
     adorn_totals()
 
+
 # Study participant PM+ Sessions
 pm_session <- 
     pm_survey_df %>% 
@@ -413,7 +436,7 @@ session_wide <- pm_session %>%
 
 
 session_wide %>% 
-    tbl_summary(include = c(pm_facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1`, `Session 2`, `Session 3`),
+    tbl_summary(include = c(pm_facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`),
                 label = list(pm_facility = "Facility",
                              `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
@@ -435,7 +458,7 @@ session_wide %>%
 
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
 telepsych_referrals <- pm_telep_df %>% 
-    filter(phq9_scores>=15|gad7_scores>=19)
+    filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
 
 telepsych_referrals %>% 
     tbl_summary(
@@ -458,11 +481,12 @@ telepsych_referrals %>%
 
 ```{r PM+ and Telepsychiatry Referral QCs, message=FALSE, warning=FALSE, include=FALSE}
 referral_qc <- pm_telep_df %>% 
-    filter(phq9_scores > 9 & abs_phq_ref_pm == "No" | gad7_scores > 9 & abs_gad7_ref_pm == "No") %>% 
+    filter((phq9_scores > 9 & abs_phq_ref_pm == "No" )|(gad7_scores > 9 & abs_gad7_ref_pm == "No")) %>% 
     select(record_id, clt_study_site, clt_date, phq9_scores,
            abs_phq_ref_pm, gad7_scores, abs_gad7_ref_pm)
 
 ```
+
 
 
 ```{r PM+ Follow-Up, message=FALSE, warning=FALSE, include=FALSE}
@@ -521,5 +545,48 @@ weekly_visits %>%
 ```{r Reducing Tension Checklist, echo=FALSE}
 source("Reducing Tension Checklist.R")
 # summary_table
+```
+
+
+## Overall PM+ Retention
+```{r PM+ Retention, echo=FALSE, message=FALSE, warning=FALSE}
+source("PM+ Follow-up.R")
+weekly_pm_retention
+```
+
+
+```{r PM+ Weekly Retention, message=FALSE, warning=FALSE, include=FALSE}
+source("PM+ Follow-up.R")
+V_week1 %>% 
+    gt()
+
+V_week2 %>% 
+    gt()
+
+V_week3 %>% 
+    gt()
+
+V_week4 %>% 
+    gt()
+```
+
+## Percent of SAEs reported to ERC
+```{r SAES, echo=FALSE, message=FALSE, warning=FALSE}
+sae_df <- ppw_sae_df %>% 
+    select(record_id, redcap_repeat_instance, starts_with("ae_")) %>% 
+    filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
+
+sae_report <- sae_df %>% 
+    group_by(ae_cat) %>% 
+    mutate(ae_cat = if_else(record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)",
+                          "Death (Infant or Maternal) (SAE)",
+                          ae_cat)) %>% 
+    rename(Event = ae_cat) %>% 
+    summarise(`Number of Events` = n(),
+              `SAE Reported` = n(),
+              `% Reported` = ifelse(`Number of Events` > 0, round((`Number of Events` / `SAE Reported`)) * 100, 1)) %>% 
+    gt()
+
+sae_report
 ```
 
