@@ -7,6 +7,7 @@
 # Setup ------------------------------------------------------------------------
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
+source("REDCap_datapull.R")
 file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
 file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
 file_date <- gsub("^.*?_2","2",file_date)
