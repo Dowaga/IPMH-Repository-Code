@@ -22,9 +22,16 @@ anc_attendees_df <- data.frame(
     anc_attendees = rep("Yes", Attendees)
 )
 
-pm_abstractions <- pm_survey_df %>% 
-    select(record_id, ipmh_participant) %>% 
-    filter(ipmh_participant == "Yes")
+#Study participants in the PM+ Survey
+pm_abstractions <- pm_survey_df %>%
+    mutate(pm_ptid = as.numeric(pm_ptid)) %>%       # if needed
+    filter(ipmh_participant == "Yes") %>%
+    distinct(pm_ptid, .keep_all = TRUE)
+
+pm_df <- pm_abstractions %>% 
+    select(pm_ptid, ipmh_participant)
+
+
 
 consort_data <- screening_consent_df %>% 
     select(record_id, partipant_id, rct_harm_thought, rct_aud_hallucinations, 
@@ -54,6 +61,11 @@ consort_data <- screening_consent_df %>%
             TRUE ~ rct_decline_reason  # Keep other values unchanged
         )) 
 
+# Merge consort data with pm_df
+consort_data <- consort_data %>% 
+    left_join(pm_df, by = c("partipant_id"="pm_ptid"))
+
+
 consort_data <- bind_rows(anc_attendees_df, consort_data)
 
 elig <- consort_data %>% 
@@ -63,17 +75,18 @@ elig <- consort_data %>%
 decline_reason <- consort_data %>% 
     filter(!is.na(rct_decline_reason))
 
+
 consort_diagram <- consort_plot(data = consort_data,
                     orders = c(anc_attendees = "ANC Attendees",
-                        record_id = "Assessed for Eligibility ",
+                               arm = "Assessed for Eligibility",
+                        #record_id = "Assessed for Eligibility",
                                exclusion = "Excluded",
                                eligible = "Eligible",
                                rct_decline_reason = "Declined Enrollment",
                                rct_enrolling = "Enrolled",
-                               arm = "Arm"),
+                        ipmh_participant = "Study Nurse PM+ Yields"),
                     side_box = c("exclusion", "rct_decline_reason"),
-                    allocation = "arm",
-                    cex = 0.7)
+                    allocation = "arm")
 
 
 
