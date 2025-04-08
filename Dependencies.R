@@ -32,7 +32,9 @@ packages <- c("redcapAPI",
               "data.table",
               "consort",
               "flowchart",
-              "officer")
+              "officer",
+              "webshot2",
+              "gtExtras")
 
 # Check for duplicates in list 
 if(length(packages[duplicated(packages)])>0){
