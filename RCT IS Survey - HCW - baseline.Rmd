@@ -48,6 +48,14 @@ setdiff(survey_id$pt_id, consent_id$screen_id) #1 ID in the survey database is n
 # 24140190 this is in the wrong arm as well.
 
 rct_hcw %>% count(pt_id) %>% filter(n > 1) #0
+
+# First and last date for Old Batch
+Dates_summary <- rct_hcw %>%
+     arrange(collect_time) %>%
+    reframe(
+    start_date = min(collect_time, na.rm = TRUE),
+    end_date = max(collect_time, na.rm = TRUE)
+  )
 ```
 
 ```{r, arm, echo=F, message=FALSE, warning=FALSE}
