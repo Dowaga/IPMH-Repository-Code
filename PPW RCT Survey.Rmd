@@ -9,12 +9,6 @@ output:
 ```{r setup, echo = F, include = F}
 #rm(list = ls())
 
-pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
-               openxlsx, gtsummary, kableExtra, ggrepel, UpSetR, funModeling, gt, mice) 
-
-knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
-
-#Read all datasets needed
 # read data
 source("Datateam_ipmh.R")
 source("Dependencies.R")
