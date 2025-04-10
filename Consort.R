@@ -1,7 +1,7 @@
 # Header ------------------------------------------------------------------
 
-# Author(s): Owaga
-# Date: March 10, 2025
+# Author(s): Owaga & Yuwei
+# Date: Apr 10, 2025
 # Consort Diagram for weekly report
 
 # Setup ------------------------------------------------------------------------
@@ -88,6 +88,32 @@ consort_diagram <- consort_plot(data = consort_data,
                     side_box = c("exclusion", "rct_decline_reason"),
                     allocation = "arm")
 
+library(grid)
+options(txt_gp = gpar(cex = 0.8)) 
+txt_anc <- c("ANC Attendees (n=3,354)")
+txt_ass <- c("Assessed for Eligibility\n (n=877, 26.15%)") 
+txt_arm <- c("Control\n (n=457, 52.11%)", "Intervention\n (n=420, 47.89%)")
+txt_ex_control <- "Excluded (n=166, 36.32%):\n\u2022 Gestation < 28 weeks (n=150, 90.36%)\n\u2022 Hearing voices that others cannot hear (n=3, 1.81%)\n\u2022 Holding unusual beliefs (n=4, 2.41%)\n\u2022 Memory problem (n=3, 1.81%)\n\u2022 Self harm (n=5, 3.01%)\n\u2022 Self harm and memory problem (n=1, 0.60%)"
+txt_ex_intervention <- "Excluded (n=168, 40.00%):\n\u2022 Gestation < 28 weeks (n=163, 97.02%)\n\u2022 Memory problem (n=1, 0.60%)\n\u2022 Self harm (n=4, 2.38%)"
+txt_ex <- c(txt_ex_control, txt_ex_intervention)
+txt_eli <- c("Eligible\n (n=291, 63.68%)", "Eligible\n (n=252, 60.00%)")
+txt_decline_control <- "Declined Enrollment (n=16, 5.50%)\n\u2022 Consult spouse (n=2, 12.50%)\n\u2022 Not enough time (n=3, 18.75%)\n\u2022 Not interested (n=3, 18.75%)\n\u2022 Relocate post delivery (n=5, 31.25%)\n\u2022 Time to think about it (n=3, 18.75%)"
+txt_decline_intervention <- "Declined Enrollment (n=11, 4.37%)\n\u2022 Not enough time (n=4, 36.36%)\n\u2022 Relocate post delivery (n=7, 63.64%)"
+txt_decline <- c(txt_decline_control, txt_decline_intervention)
+txt_enrol <- c("Enrolled (n=275, 94.50%)", 
+               "Enrolled (n=241, 95.63%)")
+txt_pm <- c("Study Nurse PM+ Yields\n (n=0, 0%)", 
+            "Study Nurse PM+ Yields\n (n=59, 24.48%)")
 
+consort_per <- add_box(txt = txt_anc) |>
+    add_box(txt = txt_ass) |>
+    add_split(txt = txt_arm) |>
+    add_side_box(txt = txt_ex) |>
+    add_box(txt = txt_eli) |>
+    add_side_box(txt = txt_decline) |>
+    add_box(txt = txt_enrol) |>
+    add_box(txt= txt_pm)
+
+plot(consort_per)
 
 
