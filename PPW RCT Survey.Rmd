@@ -598,7 +598,9 @@ sae_report
 
 
 ```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE}
-source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
+source
+fc_yield_summary
+
 yield_summary
 ```
 

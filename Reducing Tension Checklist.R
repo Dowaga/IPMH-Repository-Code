@@ -47,12 +47,13 @@ summary_table <- summary_table %>%
 
 # Convert to gt
 summary_table %>% 
-    gt() %>%
-    tab_header(
-        title = "Reducing Tension Checklist Table") %>%
-    tab_options(
-        table.font.size = px(12)
-    )
+    gt %>% 
+    tab_header(title = "Table 5: Reducing Tension Checklist Table",
+               subtitle = "Showing Participants enrollments") %>%
+    #tab_style(style = cell_text(weight = "bold"),locations = cells_body(rows = Facility == "Overall")) %>%
+    tab_options(table.font.size = px(12))
 
+
+   
 summary_table
 
