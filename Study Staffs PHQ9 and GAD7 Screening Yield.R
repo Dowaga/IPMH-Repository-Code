@@ -61,7 +61,7 @@ study_yield_df <- study_yield_df %>%
 self_harm <- study_yield_df %>% 
     filter(phq_dead > 0)
 
-pm_telep_df <- study_yield_df %>% 
+study_yield_df <- study_yield_df %>% 
     filter((phq9_scores >= 10)|(gad7_scores >= 10)) %>% 
     mutate(
         max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
