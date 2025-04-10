@@ -62,7 +62,7 @@ self_harm <- study_yield_df %>%
     filter(phq_dead > 0)
 
 study_yield_df <- study_yield_df %>% 
-    filter((phq9_scores >= 10)|(gad7_scores >= 10)) %>% 
+    #filter((phq9_scores >= 10)|(gad7_scores >= 10)) %>% 
     mutate(
         max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
         eligible_for = case_when(
@@ -88,6 +88,7 @@ yield_summary <- yield_df %>%
     group_by(arm, clt_study_site) %>%
     summarise(
         screened_phq9 = sum(!is.na(phq9_scores)),
+        #Overall = sum(phq9_positive | gad7_positive, na.rm = TRUE),
         phq9_positive = sum(phq9_positive, na.rm = TRUE),
         screened_gad7 = sum(!is.na(gad7_scores)),
         gad7_positive = sum(gad7_positive, na.rm = TRUE)
