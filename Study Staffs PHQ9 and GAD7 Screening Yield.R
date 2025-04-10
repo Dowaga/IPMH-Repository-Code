@@ -12,8 +12,7 @@ source("data_import.R")
 
 # Intervention Screening Yield for Facility administred Survey
 yield_df <- ppw_rct_df %>% 
-    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
-    select(starts_with(""))
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)")
 
 
 
