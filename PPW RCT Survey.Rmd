@@ -57,7 +57,9 @@ first_enrollment
 source("Consort.R")
 #weekly_consort
 
-consort_diagram
+#consort_diagram
+
+consort_per
 
 ```
 
@@ -598,7 +600,7 @@ sae_report
 
 
 ```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE}
-source
+source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
 fc_yield_summary
 
 yield_summary
