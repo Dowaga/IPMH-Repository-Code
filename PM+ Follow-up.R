@@ -70,13 +70,13 @@ pm_visit_dates <- pm_enrollment_dates %>%
     mutate(
         clt_date = ymd(clt_date),
         week1_open = clt_date + days(7),
-        week1_closer = clt_date + days(14),
+        week1_closer = clt_date + days(21),
         week2_open = clt_date + days(14),
-        week2_closer = clt_date + days(21),
+        week2_closer = clt_date + days(28),
         week3_open = clt_date + days(21),
-        week3_closer = clt_date + days(28),
+        week3_closer = clt_date + days(35),
         week4_open = clt_date + days(28),
-        week4_closer = clt_date + days(35),
+        week4_closer = clt_date + days(42),
         week5_open = clt_date + days(35),
         week5_closer = clt_date + days(42))
 
