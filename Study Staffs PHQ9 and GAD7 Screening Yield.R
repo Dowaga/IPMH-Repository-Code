@@ -63,8 +63,7 @@ facility_yield <- facility_yield_df %>%
         phq9_positive = if_else(phq9_scores >= 10, 1, 0),  # common cutoff is ???10
         gad7_positive = if_else(gad7_scores >= 10, 1, 0)
     ) %>% 
-    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>% 
-    mutate
+    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site))
 
 fc_yield_summary <- facility_yield %>%
     group_by(clt_study_site) %>%
@@ -98,6 +97,31 @@ fc_yield_summary <- facility_yield %>%
 
 fc_yield_summary
 
+#-------------------------------------------------------------------------------
+### Depressive symptoms profile across facilities
+phq9_distribution <- facility_yield %>%
+    tbl_summary(by = "clt_study_site",
+                include = c(phq9_positive, phq9_scores, abs_phq_interest, abs_phq_down, abs_phq_sleep,
+                            abs_phq_tired, abs_phq_appetite, abs_phq_bad,
+                            abs_phq_concentrate, abs_phq_slow, abs_phq_dead),
+                label = list(abs_phq_interest ~ "Little interest or pleasure in doing things",
+                             abs_phq_down ~ "Feeling down, depressed, or hopeless",
+                             abs_phq_sleep ~ "Trouble falling or staying asleep, or sleeping too much ",
+                             abs_phq_tired ~ "Feeling tired or having little energy ",
+                             abs_phq_appetite ~ "Poor appetite or overeating",
+                             abs_phq_bad ~ "Feeling bad about yourself - or that you are a failure or have let yourself or y",
+                             abs_phq_concentrate ~ "Trouble concentrating on things, such as reading the newspaper or watching telev",
+                             abs_phq_slow ~ "Moving or speaking so slowly that other people could have noticed. Or the opposi",
+                             abs_phq_dead ~ "Thoughts that you would be better off dead, or of hurting yourself?",
+                             phq9_scores ~ "Median PHQ9 Scores")) %>% 
+                    bold_labels()%>% 
+                    as_gt() %>% 
+                    tab_header(title = "Depressive Symptom Profile Across Facilities",
+               subtitle = "Item-Level PHQ-9 Frequency and Proportion of Depressive Symptoms Across Health Facilities") %>%
+                   gt::tab_options(
+                       table.font.size = "medium",
+                       data_row.padding = gt::px(1))
+phq9_distribution
 #--------------------------------------------------------------------------
 # Study Staff Screening Yields(PHQ9 and GAD7)
 study_yield_df <- ppw_rct_df %>% 
