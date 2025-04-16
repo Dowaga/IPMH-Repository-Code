@@ -439,6 +439,7 @@ pm_month <- pm %>%
 # extract the health talk data from the daily closeout dataset
 health_talks <- daily_closeout %>%
     select(rct_facility_name, rct_dcr_date, rct_health_talk, rct_flipbook) 
+
 health_talks <- health_talks %>% 
     mutate(rct_health_talk = case_when(
         rct_health_talk == "Yes" ~ 1,
@@ -471,3 +472,4 @@ total_health_talks <- health_talks %>%
         `Total flipbook usage rate` = (`Total flipbook usage` / `Total health talks`) * 100,
         .groups = "drop"
     )
+
