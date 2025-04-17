@@ -35,14 +35,16 @@ rm(list = ls()[! ls() %in% c("daily_closeout", "phq2_gad2_abstract", "rct_ppw", 
 #Ensure date columns are in proper format
 daily_closeout$rct_dcr_date <- as.Date(daily_closeout$rct_dcr_date)
 phq2_gad2_abstract$screening_date <- as.Date(phq2_gad2_abstract$screening_date) 
-rct_ppw$clt_timestamp <- as.Date(rct_ppw$clt_timestamp)
+
+rct_ppw <- rct_ppw %>%
+    mutate(clt_timestamp = as.Date(clt_timestamp, format = "%Y-%m-%d"))
 pm$pm_date <- as.Date(pm$pm_date)
-telepsych$telepsych_date <- as.Date(telepsych$telepsych_date)
+telepsych$telepsych_date <- as.Date(telepsych$tele_date)
 
 #time period for the data
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date <= "2025-03-15")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date <= "2025-03-15")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-03-15")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date <= "2025-04-15")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date <= "2025-04-15")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-004-15")
 pm <- pm %>% filter(pm_date <= "2025-03-15")
 #telepsych <- telepsych %>% filter(tele_date <= "2025-03-15")
 
@@ -291,6 +293,7 @@ pm_referral <- full_join(pm_referral, phq9_high_scores,
 pm_referral <- pm_referral %>%
     mutate(referral_rate = num_referred / total_high_scores * 100)
 #### based on the abstraction form, there are three participants being referred to PM+ but their score is not high enough to be referred.
+
 
 #monthly data
 pm_referral_monthly <- pm_referral %>%
