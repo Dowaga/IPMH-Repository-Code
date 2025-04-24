@@ -87,23 +87,24 @@ consort_diagram <- consort_plot(data = consort_data,
                         ipmh_participant = "Study Nurse PM+ Yields"),
                     side_box = c("exclusion", "rct_decline_reason"),
                     allocation = "arm")
+consort_diagram
 
 library(grid)
 options(txt_gp = gpar(cex = 0.8)) 
-txt_anc <- c("ANC Attendees (n=3,383)")
-txt_ass <- c("Assessed for Eligibility\n (n=886, 26.19%)") 
-txt_arm <- c("Control\n (n=461, 52.03%)", "Intervention\n (n=425, 47.97%)")
-txt_ex_control <- "Excluded (n=168, 36.44%):\n\u2022 Gestation < 28 weeks (n=152, 90.48%)\n\u2022 Hearing voices that others cannot hear (n=3, 1.89%)\n\u2022 Holding unusual beliefs (n=4, 2.38%)\n\u2022 Memory problem (n=3, 1.89%)\n\u2022 Self harm (n=5, 2.98%)\n\u2022 Self harm and memory problem (n=1, 0.60%)"
-txt_ex_intervention <- "Excluded (n=170, 40.00%):\n\u2022 Gestation < 28 weeks (n=165, 97.06%)\n\u2022 Memory problem (n=1, 0.59%)\n\u2022 Self harm (n=4, 2.35%)"
+txt_anc <- c("ANC Attendees (n=4,089)")
+txt_ass <- c("Assessed for Eligibility\n (n=1,018, 24.90%)") 
+txt_arm <- c("Control\n (n=527, 51.77%)", "Intervention\n (n=491, 48.23%)")
+txt_ex_control <- "Excluded (n=194, 36.81%):\n\u2022 Gestation < 28 weeks (n=177, 91.24%)\n\u2022 Hearing voices that others cannot hear (n=3, 1.55%)\n\u2022 Holding unusual beliefs (n=4, 2.06%)\n\u2022 Memory problem (n=3, 1.55%)\n\u2022 Self harm (n=5, 2.58%)\n\u2022 Self harm and memory problem (n=1, 0.52%)"
+txt_ex_intervention <- "Excluded (n=203, 41.34%):\n\u2022 Gestation < 28 weeks (n=198, 97.54%)\n\u2022 Memory problem (n=1, 0.49%)\n\u2022 Self harm (n=4, 1.97%)"
 txt_ex <- c(txt_ex_control, txt_ex_intervention)
-txt_eli <- c("Eligible\n (n=293, 63.56%)", "Eligible\n (n=255, 60.00%)")
-txt_decline_control <- "Declined Enrollment (n=16, 5.46%)\n\u2022 Consult spouse (n=2, 12.50%)\n\u2022 Not enough time (n=3, 18.75%)\n\u2022 Not interested (n=3, 18.75%)\n\u2022 Relocate post delivery (n=5, 31.25%)\n\u2022 Time to think about it (n=3, 18.75%)"
-txt_decline_intervention <- "Declined Enrollment (n=11, 4.31%)\n\u2022 Not enough time (n=4, 36.36%)\n\u2022 Relocate post delivery (n=7, 63.64%)"
+txt_eli <- c("Eligible\n (n=332, 63.00%)", "Eligible\n (n=288, 58.66%)")
+txt_decline_control <- "Declined Enrollment (n=17, 5.12%)\n\u2022 Consult spouse (n=2, 11.76%)\n\u2022 Not enough time (n=3, 17.65%)\n\u2022 Not interested (n=3, 17.65%)\n\u2022 Relocate post delivery (n=6, 35.29%)\n\u2022 Time to think about it (n=3, 17.65%)"
+txt_decline_intervention <- "Declined Enrollment (n=12, 4.17%)\n\u2022 Not enough time (n=5, 41.67%)\n\u2022 Relocate post delivery (n=7, 58.33%)"
 txt_decline <- c(txt_decline_control, txt_decline_intervention)
-txt_enrol <- c("Enrolled (n=277, 94.54%)", 
-               "Enrolled (n=244, 95.69%)")
+txt_enrol <- c("Enrolled (n=315, 94.88%)", 
+               "Enrolled (n=276, 95.83%)")
 txt_pm <- c("Study Nurse PM+ Yields\n (n=0, 0%)", 
-            "Study Nurse PM+ Yields\n (n=59, 21.31%)")
+            "Study Nurse PM+ Yields\n (n=65, 23.55%)")
 
 consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = txt_ass) |>
