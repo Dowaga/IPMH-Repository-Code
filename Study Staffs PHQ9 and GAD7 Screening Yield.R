@@ -87,8 +87,8 @@ fc_yield_summary <- facility_yield %>%
     gt() %>%
     # modify with gt functions
     gt::tab_header(
-        title = "Table 3: Facility Administered PHQ9 and GAD7 Screening Yields",
-        subtitle = "Showing Facility Staff PHQ9 and GAD& Yieds") %>%
+        title = "Facility Administered PHQ9 and GAD7 Screening Yields",
+        subtitle = "Showing Facility Staff PHQ9 and GAD7 Yields") %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>%
@@ -212,8 +212,8 @@ yield_summary <- yield_df %>%
     gt() %>%
     # modify with gt functions
     gt::tab_header(
-        title = "Table 3: Study Administered PHQ9 and GAD7 Screening Yields",
-        subtitle = "Showing Study Staff PHQ9 and GAD& Yieds") %>%
+        title = "Study Administered PHQ9 and GAD7 Screening Yields",
+        subtitle = "Showing Study Staff PHQ9 and GAD7 Yields") %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>%
