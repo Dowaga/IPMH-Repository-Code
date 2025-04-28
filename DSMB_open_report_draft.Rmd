@@ -1,5 +1,5 @@
 ---
-title: "CHV-NEO: Community-based digital communication to support neonatal health"
+title: "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics"
 
 subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report '
 date: "`r format(Sys.time(), '%d %B %Y')`"
@@ -23,36 +23,55 @@ library(flextable)
 rm(list = ls())             
 
 # Reference source codes & other dependencies:
-source("DataTeam.R")
+source("DataTeam_ipmh.R")
 source("Dependencies.R")
-source("morcohort_linegraphs.R") 
-source("enroll_linegraph_ppw.R")
 
 # Set file paths: Use this section to set input and output filepaths
-data_dir <- file.path(rctact_filepath, "/Data Management/Processed Study Data") # Processed data from R
+file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
+file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
+file_date <- gsub("^.*?_2","2",file_date)
+file_date <- str_remove(file_date,".csv")
+file_date <- format(file_date, format="%d %B %Y")
+ppw_rct_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
+                              file_date, ".csv", sep="")) %>% 
+    filter(is.na(redcap_repeat_instance)) #PPW data
 
-data_freeze <- fileSnapshot(file.path(rctact_filepath,"eCHISdata/3_eCHIS_data_pull/data/tabular/archive"))
-data_freeze <- rownames(data_freeze$info[which.max(data_freeze$info$mtime),])
+daily_closeout_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/Daily_closeout_", 
+                                     file_date, ".csv", sep=""))
+
+screening_consent_df <- read.csv(paste0(ipmh_filepath, 
+                                        "/Data/2. Consenting database/RCT_PPW_consenting_", 
+                                        file_date, ".csv", sep=""))
+
+pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_", 
+                                file_date, ".csv", sep="" ))
+
+ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
+                                             file_date, ".csv", sep="")) %>% 
+    filter(redcap_repeat_instrument == "ADMIN: Adverse Experience")
+
+data_freeze <- file_date
 
 data_freeze <- format(data_freeze, format="%d %B %Y")
 options(scipen = 0)
-
 ```
 
 
 ```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
 
-knitr::include_graphics(paste0(file.path(rctact_filepath, "/Data Management/Logo/logo chvneo.png")))
+knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 
 ```
 
 \newpage
 
-Keshet Ronen, PhD, MPH, University of Washington
-
 John Kinuthia, MBChD MMed MPH, Kenyatta National Hospital
 
-Report prepared by: Lincoln Pothan
+Keshet Ronen, PhD, MPH, University of Washington
+
+Amritha Bhat, MBBS, MD, MPH, University of Washington
+
+Report prepared by: David Owaga & Yuwei Wang
 
 Date of data freeze: `r data_freeze`
 
@@ -66,24 +85,26 @@ Date of data freeze: `r data_freeze`
 
 ```{r study_summary}
 vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Criteria",
-          "Target Sample Size/Actual Enrollment", 
+          "Target Sample Size",
+          "Actual Enrollment",
           "Participants Completed Follow-up", "Duration", 
           "Date Study Open", "Date of First Complete Enrollment",
           "Estimated End of Study",
           "Endpoints", "")
 
-vars2 <- c("Integrate the NEO interactive SMS intervention into routine community health promoter (CHP) workflow through the eCHIS and pragmatically evaluate its clinical, service delivery, and implementation outcomes", 
-           "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of CHV-NEO on neonatal mortality, ENC provision and care-seeking vs. control (no SMS) among Kenyan women", 
+vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatment of perinatal mood and anxiety disorders (PMADs), and its implementation strategies, into maternal and child health clinics and pragmatically evaluate its clinical, service delivery, and implementation outcomes",
+           "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of IPMH and associated implementation strategies on depression, anxiety, quality of life, and adverse perinatal outcomes vs. control (PHQ-2/GAD-2 screening only) among Kenyan women", 
            "Pregnant Kenyan women", 
-           "-Receiving antenatal care at study facility\n-26-36 weeks gestation\n-Age>=14\n-Registered as pregnant in eCHIS v2.0 under a CHP linked to study facility\n-Daily access to a mobile phone (own or shared) or using a Safaricom/Airtel SIM\n-Willing to receive SMS\n-Plan to be in the area for at least 3 months postpartum\n-Able to read and respond to text messages in English, Kiswahili or Luo, or have someone in the household who can help", 
-           "Sub Cohort: 2000/2000\ Mortality Cohort: 7200/1990", 
-           "Sub Cohort: 1470",
-           "Follow-up through 6 weeks postpartum", 
-           "April 15, 2021", 
-           "January 10, 2024",
-           "February 28, 2026",
-           "Primary: Neonatal mortality", 
-           "Secondary:\n-Early initiation of breastfeeding\n-Cord care\n-Maternal knowledge of neontal danger signs\n-Care-seeking")
+           "-Receiving antenatal care at study facility\n->=28 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
+           "2970, including 405 women living with HIV (WLWH)", 
+           "[place holder]",
+           "0",
+           "Follow-up through 6 months postpartum", 
+           "[place holder]", 
+           "February 24, 2025",
+           "[place holder]",
+           "Primary: Depression and anxiety", 
+           "Secondary:\n-Depression and anxiety among WLWH\n-Quality of Life\n-Adverse perinatal outcomes")
 
 stdy_summ <- data.frame(vars, vars2)
 
@@ -92,17 +113,12 @@ study_summary <- flextable::width(study_summary, 'vars2', width = 5)
 study_summary <- flextable::width(study_summary, 'vars', width = 2)
 border <- fp_border()
 study_summary <- flextable::vline(study_summary, j = c('vars'), border = border, part = "all")
-study_summary <- set_header_labels(study_summary, vars = "Title", vars2 = "CHV-NEO: Community-based digital communication to support neonatal health")
+study_summary <- set_header_labels(study_summary, vars = "Title", vars2 = "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics")
 
 study_summary
 ```
 
 \newpage
-
-```{r timeline_prenum, echo=FALSE}
-source("enroll_linegraph_ppw.R")
-
-```
 
 ## 1.1 Study Timeline Since Initiation:
 -   Apr 15, 2021: RO1 Start date
@@ -116,9 +132,6 @@ source("enroll_linegraph_ppw.R")
 -   `r sub_enroll50_date`: Sub cohort 50% of planned enrollment
 -   `r sub_enroll75_date`: Sub cohort 75% of planned enrollment
 -   `r sub_enroll100_date`: Sub cohort 100% of planned enrollment
-```{r timeline_prenum_2, echo=FALSE}
-source("morcohort_linegraphs.R")
-```
 -   `r enroll25_date`: Mortality cohort 25% of planned target
 
 ## 1.2 Key Changes to Study Protocol
