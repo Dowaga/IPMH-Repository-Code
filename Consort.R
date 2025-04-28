@@ -75,7 +75,14 @@ elig <- consort_data %>%
 decline_reason <- consort_data %>% 
     filter(!is.na(rct_decline_reason))
 
+secondvisit <- ppw_rct_df %>% filter(
+    clt_visit == "6 weeks post-partum") %>% 
+    select(clt_ptid) %>% mutate(secondvisit = "Yes") 
 
+#merge secondvisit people into consort_data
+consort_data <- consort_data %>% 
+    left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
+    
 consort_diagram <- consort_plot(data = consort_data,
                     orders = c(anc_attendees = "ANC Attendees",
                                arm = "Assessed for Eligibility",
@@ -84,7 +91,8 @@ consort_diagram <- consort_plot(data = consort_data,
                                eligible = "Eligible",
                                rct_decline_reason = "Declined Enrollment",
                                rct_enrolling = "Enrolled",
-                        ipmh_participant = "Study Nurse PM+ Yields"),
+                        ipmh_participant = "PM+",
+                        secondvisit = "6 weeks postpartum visit"),
                     side_box = c("exclusion", "rct_decline_reason"),
                     allocation = "arm")
 consort_diagram
@@ -103,8 +111,10 @@ txt_decline_intervention <- "Declined Enrollment (n=12, 4.17%)\n\u2022 Not enoug
 txt_decline <- c(txt_decline_control, txt_decline_intervention)
 txt_enrol <- c("Enrolled (n=315, 94.88%)", 
                "Enrolled (n=276, 95.83%)")
-txt_pm <- c("Study Nurse PM+ Yields\n (n=0, 0%)", 
-            "Study Nurse PM+ Yields\n (n=65, 23.55%)")
+txt_pm <- c("PM+\n (n=0, 0%)", 
+            "PM+\n (n=65, 23.55%)")
+txt_secondvisit <- c("6 weeks postpartum visit\n (n=14, 4.44%)", 
+                      "6 weeks postpartum visit\n (n=10, 3.62%)")
 
 consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = txt_ass) |>
@@ -113,7 +123,8 @@ consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = txt_eli) |>
     add_side_box(txt = txt_decline) |>
     add_box(txt = txt_enrol) |>
-    add_box(txt= txt_pm)
+    add_box(txt= txt_pm) |>
+    add_box(txt = txt_secondvisit)
 
 consort_per
 
