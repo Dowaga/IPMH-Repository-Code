@@ -65,7 +65,7 @@ knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 
 \newpage
 
-John Kinuthia, MBChD MMed MPH, Kenyatta National Hospital
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
 
 Keshet Ronen, PhD, MPH, University of Washington
 
@@ -93,7 +93,7 @@ vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Cr
           "Endpoints", "")
 
 vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatment of perinatal mood and anxiety disorders (PMADs), and its implementation strategies, into maternal and child health clinics and pragmatically evaluate its clinical, service delivery, and implementation outcomes",
-           "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of IPMH and associated implementation strategies on depression, anxiety, quality of life, and adverse perinatal outcomes vs. control (PHQ-2/GAD-2 screening only) among Kenyan women", 
+           "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of IPMH and associated implementation strategies on depression, anxiety, quality of life, and adverse perinatal outcomes vs. control (standard of care) among Kenyan women", 
            "Pregnant Kenyan women", 
            "-Receiving antenatal care at study facility\n->=28 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
            "2970, including 405 women living with HIV (WLWH)", 
@@ -124,7 +124,7 @@ study_summary
 -   May 12, 2023: Initial IRB approval
 -   Jun 05, 2023: Initial ERC approval
 -   Sep 19, 2023: RO1 Start date
--   Oct 04, 2024: Research Assistant training initiation
+-   Oct 04, 2024: Research assistant (RA) training initiation
 -   Oct 11, 2024: 1st DSMB meeting
 -   Oct 23, 2024: Facility randomization
 -   Nov 06, 2024: Facility staff training initiation
@@ -136,33 +136,35 @@ study_summary
 # 2. Study Progress
 
 ## 2.1 Recruitment Timeline
-```{r source_prenum, echo=FALSE}
-source("weekly_consort.R")
+```{r source_consort, echo=FALSE, warning=FALSE}
+source("Consort.R")
+n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
+n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
+n_eligible <- consort_data %>% filter(!is.na(eligible)) %>% nrow()
+n_eligible_per <- n_eligible/n_ass *100 %>% round(2)
+n_enrol <- consort_data %>% filter(!is.na(rct_enrolling)) %>% nrow()
+n_enrol_per <- n_enrol/n_eligible *100 %>% round(2)
+n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
+n_second_per <- n_second/n_enrol * 100 %>% round(2)
 ```
-CHPs began enrolling households into eCHIS on Dec 07, 23. `r all_echispreg` women have been registered as pregnant in eCHIS, of which `r livebirths` are known to have delivered live births. This achieves `r livebirths_per`% of our mortality cohort target. Of these, `r infantstatus_28days_y` of those have reported an infant status past 28 days of life.
+We began recruiting pregnant women into the study on Feb 24, 2025. 
 
-We began recruitment into the sub-cohort on Jan 10, 24. `r enroll_ppw` participants have been recruited into the subcohort meeting `r enroll_ppw_per`% of our subcohort enrollment target. Of these, `r all_followup_6wk` (`r all_followup_6wk_per`%) have completed follow-up.
-
-In general, enrollment has proceeded well despite delays in launching and slow initial household registration. A series of national healthcare worker strikes (Mar 12, 2024 and May 8, 2024), flooding (Apr 23, 2024 and May 12, 2024), and ongoing national protests beginning Jun 18, 2024 have slowed data collection in the larger mortality cohort.
+In general, enrollment has proceeded well despite slow initial enrollment. {A series of national healthcare worker strikes (Mar 12, 2024 and May 8, 2024), flooding (Apr 23, 2024 and May 12, 2024), and ongoing national protests beginning Jun 18, 2024 have slowed data collection.} We should talk about the disruptions regarding USAID, strikes and protests here for IPMH.
 
 \newpage
 
 # 3. Study Enrollment 
 
-## 3.1 Sub Cohort
+## 3.1 Overall Cohort
 
 ### 3.1.1 Current subject status
 
-From `r anc_attendance` ANC visits of non-unique clients at recruitment sites, `r screeningnum` were assessed for eligibility. `r total_excluded` potential participants were excluded, leaving `r enroll_ppw` eligible participants enrolled across intervention and control clusters. `r all_followup_6wk` participants have completed follow-up to 6 weeks potspartum.
+So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (%) completed their 6 weeks postpartum visit.
 
 
-
-```{r consort_sub}
-source("weekly_consort.R")
-weekly_consort_subcohort
-
+```{r consort}
+consort_per
 ```
-
 
 \newpage
 
