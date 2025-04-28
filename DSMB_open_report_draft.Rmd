@@ -121,18 +121,14 @@ study_summary
 \newpage
 
 ## 1.1 Study Timeline Since Initiation:
--   Apr 15, 2021: RO1 Start date
--   Jun 21, 2021: Initial IRB approval
--   Mar 15, 2022: Initial ERC approval
--   May 23, 2023: 1st DSMB meeting
--   Nov 06, 2023: eCHIS user training initiation
--   Dec 07, 2023: eCHIS household and pregnancy registration initiation
--   Jan 10, 2024: Sub cohort recruitment initiation
--   `r sub_enroll25_date`: Sub cohort 25% of planned enrollment
--   `r sub_enroll50_date`: Sub cohort 50% of planned enrollment
--   `r sub_enroll75_date`: Sub cohort 75% of planned enrollment
--   `r sub_enroll100_date`: Sub cohort 100% of planned enrollment
--   `r enroll25_date`: Mortality cohort 25% of planned target
+-   May 12, 2023: Initial IRB approval
+-   Jun 05, 2023: Initial ERC approval
+-   Sep 19, 2023: RO1 Start date
+-   Oct 04, 2024: Research Assistant training initiation
+-   Oct 11, 2024: 1st DSMB meeting
+-   Oct 23, 2024: Facility randomization
+-   Nov 06, 2024: Facility staff training initiation
+-   Feb 24, 2025: Perinatal women recruitment initiation
 
 ## 1.2 Key Changes to Study Protocol
 -N/A
