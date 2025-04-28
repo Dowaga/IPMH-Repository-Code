@@ -1,0 +1,356 @@
+---
+title: "IPMH: Community-based digital communication to support neonatal health"
+
+subtitle: 'Data and Safety Monitoring Board (DSMB): Closed Report '
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, options(scipen = 0))
+
+library(stringr)
+library(lubridate)
+library(patchwork)
+library(officedown)
+library(officer)
+library(flextable)
+
+## WORKING DIRECTORY
+# Setup ------------------------------------------------------------------------
+
+###########################################################################################
+
+#### Note to analyst: change "analysis" to "Not Test"  in the faketreatment_helper.R script to run with actual treatment group data
+
+###########################################################################################
+
+# Set latex options (+latex troubleshooting)
+# options(tinytex.verbose = TRUE)
+# update.packages(ask = FALSE, checkBuilt = TRUE)
+# tinytex::tlmgr_update()
+# tinytex::reinstall_tinytex()
+
+rm(list = ls())             
+
+# Reference source codes & other dependencies:
+source("DataTeam.R")
+source("Dependencies.R")
+
+# Set file paths: Use this section to set input and output filepaths
+data_dir <- file.path(rctact_filepath, "/DSMB/Sep 2024/Data Freeze Data")
+
+# Processed data from R
+data_freeze <- fileSnapshot(file.path(rctact_filepath,"/DSMB/Sep 2024/Data Freeze Data"))
+data_freeze <- rownames(data_freeze$info[which.max(data_freeze$info$mtime),])
+
+data_freeze <- format(data_freeze, format="%d %B %Y")
+options(scipen = 0)
+
+```
+
+
+```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
+
+knitr::include_graphics(paste0(file.path(rctact_filepath, "/Data Management/Logo/logo chvneo.png")))
+
+```
+\newpage
+
+Keshet Ronen, PhD, MPH, University of Washington
+
+John Kinuthia, MBChD MMed MPH, Kenyatta National Hospital
+
+Report prepared by: Lincoln Pothan and Erica Wetzler
+
+Date of data freeze: `r data_freeze` 
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+
+# 1. Study summary
+
+```{r study_summary}
+vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Criteria",
+          "Target Sample Size/Actual Enrollment", 
+          "Participants Completed Follow-up", "Duration", 
+          "Date Study Open", "Date of First Complete Enrollment",
+          "Estimated End of Study",
+          "Endpoints", "")
+
+vars2 <- c("Integrate the NEO interactive SMS intervention into routine CHV workflow through the eCHIS and pragmatically evaluate its clinical, service delivery, and implementation outcomes", 
+           "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of CHV-NEO on neonatal mortality, ENC provision and care-seeking vs. control (no SMS) among Kenyan women", 
+           "Pregnant Kenyan women", 
+           "-Receiving antenatal care at study facility\n-26-36 weeks gestation\n-Age>=14\n-Registered as pregnant in eCHIS v2.0 under a CHV linked to study facility\n-Daily access to a mobile phone (own or shared) or using a Safaricom/Airtel SIM\n-Willing to receive SMS\n-Plan to be in the area for at least 3 months postpartum\n-Able to read and respond to text messages in English, Kiswahili or Luo, or have someone in the household who can help", 
+           "Sub Cohort: 2,000/2000\ Mortality Cohort: 7200/1990", 
+           "Sub Cohort: 1470",
+           "Follow-up through 6 weeks postpartum", 
+           "April 15, 2021", 
+           "January 10, 2024",
+           "February 28, 2026",
+           "Primary: Neonatal mortality", 
+           "Secondary:\n-Early initiation of breastfeeding\n-Cord care\n-Maternal knowledge of neontal danger signs\n-Care-seeking")
+
+stdy_summ <- data.frame(vars, vars2)
+
+study_summary <- flextable(stdy_summ)
+study_summary <- flextable::width(study_summary, 'vars2', width = 5)
+study_summary <- flextable::width(study_summary, 'vars', width = 2)
+border <- fp_border()
+study_summary <- flextable::vline(study_summary, j = c('vars'), border = border, part = "all")
+study_summary <- set_header_labels(study_summary, vars = "Title", vars2 = "CHV-NEO: Community-based digital communication to support neonatal health")
+
+study_summary
+```
+
+\newpage
+
+# 2. Study Enrollment
+
+## 2.1 Sub cohort
+
+### 2.1.1 Current Subject Status
+
+```{r status_subcohort, warning=FALSE, message=FALSE}
+source("closed_consort_dsmb.R")
+dsmb_closed_subcohort_consort
+
+```
+ANC visits are program data without patient identifiers and not de-duplicated.
+
+
+
+## 2.2 Mortality cohort 
+
+### 2.2.1 Current Subject Status
+
+
+```{r status_morcohort, echo=FALSE}
+source("closed_consort_dsmb.R")
+dsmb_closed_morcohort_consort
+
+```
+
+
+\newpage
+# 2.2.2 Loss to followup by site
+The below tables show mortality cohort subject status stratified by study site. 
+
+
+```{r status_morcohort_losstofollowup, echo=FALSE}
+source("DSMBconsort_facilitystrat.R")
+mortprog_tbl_X
+mortprog_tbl_Y
+
+```
+
+
+\newpage
+
+# 3. Baseline Demographics
+
+## 3.1 Sub Cohort Participant Baseline Demographics
+Participant characteristics are generally (similar/different) across arms. We do, however, see a (statistically significant/non statistically significant) difference in (XXXX).
+
+
+
+```{r subcohort_demo, echo=FALSE}
+source("comparison_table.R")
+
+kable(dsmb_demotable) %>%
+kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
+  row_spec(0,bold=T) %>%
+  row_spec(1,bold=T)
+  
+
+```
+
+
+\newpage
+
+## 3.2 Mortality Cohort Baseline Demographics
+
+Participant characteristics are generally (similar/different) across arms. We do, however, see a (statistically significant/non statistically significant) difference in (XXXX).
+
+
+
+```{r morcohort_demo, echo=FALSE}
+source("mort_demo.R")
+
+kable(mort_demo_closed) %>%
+kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
+  row_spec(0,bold=T) %>%
+  row_spec(1,bold=T)
+
+```
+
+
+# 4. CHP Workflow Process Outcomes
+CHPs perform their duties based on "tasks" in eCHIS. ANC tasks are periodically assigned to CHPs for completion based on the gestational age of a mother. PNC tasks are periodically assigned to CHPs based on the age of a newborn. SMS scheduling and some mortality cohort outcomes are based on data collected by CHPs in ANC and PNC tasks. Therefore, completion of ANC and PNC tasks may align with the fidelity of intervention implementation and overall data collection for study outcomes. The table below summarizes task completion data for all tasks past their date scheduled for completion.
+
+
+
+```{r chp_workflows, echo=FALSE}
+source("chpworkflow_completion_tbls.R")
+
+kable_styling(task_completion_tbl) %>%
+  kable_styling(latex_options = "HOLD_position") %>% 
+  row_spec(0,bold=T) %>% 
+  add_indent(c(2,4)) %>% 
+  row_spec(2,hline_after=T)
+
+```
+
+\newpage
+
+# 5. Time from Delivery to eCHIS Delivery Report
+Timely ascertainment of delivery enables timely scheduling of postpartum visits by CHPs and, in the intervention arm, initiation of time-sensitive postpartum messaging. The tables below summarize the time from delivery date to delivery report submission in eCHIS. 
+
+
+## 5.1 Sub Cohort
+
+
+```{r deliveryreport_tat_sub, echo=FALSE}
+source("deliveryreportTAT.R")
+kable_styling(sub_deliverytat_summary_closed) %>%
+  kable_styling(latex_options = "HOLD_position") %>% 
+  row_spec(0,bold=T)
+```
+
+
+
+## 5.2 Mortality Cohort 
+
+
+
+```{r deliveryreport_tat_mort, echo=FALSE}
+source("deliveryreportTAT.R")
+kable_styling(deliverytat_summary_closed) %>%
+  kable_styling(latex_options = "HOLD_position") %>% 
+  row_spec(0,bold=T)
+```
+
+
+\newpage
+
+# 6. Two Way SMS
+We have been monitoring CHPs’ responsiveness to client SMS as an indicator of intervention fidelity. To optimize intervention delivery, we are using audit and feedback to share this data with CHPs and their supervisors on a monthly basis and identify ways to improve intervention delivery.
+
+
+```{r twoway_sms_load, warning=FALSE, echo=FALSE, results='hide'}
+source("chpmonthlymtg_data.R")
+```
+
+```{r twoway_sms, warning=FALSE, echo=FALSE}
+kable_styling(all_twoway_sms_tbl) %>%
+  kable_styling(latex_options = c("HOLD_position", position = "center")) %>% 
+  row_spec(0,bold=T) %>%
+  row_spec(1,bold=T) %>%
+  row_spec(4,bold=T) %>%
+  row_spec(5,bold=T) %>%
+  row_spec(6,bold=T)
+
+```
+
+
+## 6.1 Monthly Two Way SMS
+We began these monthly reviews in May 2024, and are beginning to see performance improvements.
+
+
+```{r monthly_twoway_sms,echo=FALSE}
+
+kable_styling(monthly_twoway_sms_tbl) %>%
+  kable_styling(latex_options = c("HOLD_position", position = "center")) %>% 
+  row_spec(0,bold=T)
+
+```
+
+
+\newpage
+```{r ae_summary_desc, echo=FALSE}
+source("ae_dsmb_tbls.R")
+```
+
+
+# 7. Adverse Events
+
+
+## 7.1 Mortality cohort 
+The final mortality cohort will consist of only those who experienced live births at the end of their pregnancies. In order to report pregnancy losses, the adverse event data shown below is for all pregnancies in eCHIS.
+
+
+```{r ae_summary_morcohort, echo=FALSE}
+source("ae_mort_dsmb_tbls.R")
+
+kable_styling(ae_mortcohort_summary) %>%
+  kable_styling(latex_options = c("scale_down", "HOLD_position", position = "center")) %>% 
+  row_spec(0,bold=T) %>% 
+  row_spec(1,bold=T) %>% 
+  row_spec(4,bold=T) 
+```
+
+
+```{r ae_summary_subcohortdesc, echo=FALSE}
+source("ae_dsmb_tbls.R")
+
+```
+
+
+## 7.2 Sub cohort 
+A total of `r overall_ae_num` adverse events have occurred among 2000 study participants.The most common adverse event was infant death, which occurred among `r overall_infdeath_per` of total study participants.The table below lists characteristics of adverse events. None have been determined to have been related to study procedures.
+
+
+
+```{r ae_summary_subcohort, echo=FALSE}
+source("ae_dsmb_tbls.R")
+kable_styling(ae_subcohort_summary) %>%
+  kable_styling(latex_options = "HOLD_position") %>% 
+  row_spec(0,bold=T) %>% 
+  row_spec(1,bold=T) %>% 
+  row_spec(2,bold=T) %>% 
+  row_spec(5,bold=T)
+
+
+```
+\newpage
+
+
+### 7.2.1 List of SAEs: Arm X 
+
+
+
+```{r saes_intervention, echo=FALSE, message = FALSE}
+source("ae_linelists.R")
+kable_styling(int_ae_linelist2) %>% 
+  kable_styling(latex_options = c("striped", "scale_down", "HOLD_position", position = "center","repeat_header")) %>% 
+   row_spec(0,bold=T)
+
+```
+
+\newpage
+### 7.2.2 List of SAEs: Arm Y 
+
+
+```{r saes_control, echo=FALSE, message = FALSE}
+source("ae_linelists.R")
+
+kable_styling(con_ae_linelist2)  %>% 
+  kable_styling(latex_options = c("striped", "scale_down", "HOLD_position", position = "center","repeat_header")) %>% 
+   row_spec(0,bold=T)
+```
+
+
+
+
+
+
+
+
+
+

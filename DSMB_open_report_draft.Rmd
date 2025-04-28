@@ -1,0 +1,347 @@
+---
+title: "CHV-NEO: Community-based digital communication to support neonatal health"
+
+subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report '
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, options(scipen = 0))
+
+library(stringr)
+library(lubridate)
+library(patchwork)
+library(officedown)
+library(officer)
+library(flextable)
+
+## WORKING DIRECTORY
+# Setup ------------------------------------------------------------------------
+rm(list = ls())             
+
+# Reference source codes & other dependencies:
+source("DataTeam.R")
+source("Dependencies.R")
+source("morcohort_linegraphs.R") 
+source("enroll_linegraph_ppw.R")
+
+# Set file paths: Use this section to set input and output filepaths
+data_dir <- file.path(rctact_filepath, "/Data Management/Processed Study Data") # Processed data from R
+
+data_freeze <- fileSnapshot(file.path(rctact_filepath,"eCHISdata/3_eCHIS_data_pull/data/tabular/archive"))
+data_freeze <- rownames(data_freeze$info[which.max(data_freeze$info$mtime),])
+
+data_freeze <- format(data_freeze, format="%d %B %Y")
+options(scipen = 0)
+
+```
+
+
+```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
+
+knitr::include_graphics(paste0(file.path(rctact_filepath, "/Data Management/Logo/logo chvneo.png")))
+
+```
+
+\newpage
+
+Keshet Ronen, PhD, MPH, University of Washington
+
+John Kinuthia, MBChD MMed MPH, Kenyatta National Hospital
+
+Report prepared by: Lincoln Pothan
+
+Date of data freeze: `r data_freeze`
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+# 1. Study summary
+
+```{r study_summary}
+vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Criteria",
+          "Target Sample Size/Actual Enrollment", 
+          "Participants Completed Follow-up", "Duration", 
+          "Date Study Open", "Date of First Complete Enrollment",
+          "Estimated End of Study",
+          "Endpoints", "")
+
+vars2 <- c("Integrate the NEO interactive SMS intervention into routine community health promoter (CHP) workflow through the eCHIS and pragmatically evaluate its clinical, service delivery, and implementation outcomes", 
+           "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of CHV-NEO on neonatal mortality, ENC provision and care-seeking vs. control (no SMS) among Kenyan women", 
+           "Pregnant Kenyan women", 
+           "-Receiving antenatal care at study facility\n-26-36 weeks gestation\n-Age>=14\n-Registered as pregnant in eCHIS v2.0 under a CHP linked to study facility\n-Daily access to a mobile phone (own or shared) or using a Safaricom/Airtel SIM\n-Willing to receive SMS\n-Plan to be in the area for at least 3 months postpartum\n-Able to read and respond to text messages in English, Kiswahili or Luo, or have someone in the household who can help", 
+           "Sub Cohort: 2000/2000\ Mortality Cohort: 7200/1990", 
+           "Sub Cohort: 1470",
+           "Follow-up through 6 weeks postpartum", 
+           "April 15, 2021", 
+           "January 10, 2024",
+           "February 28, 2026",
+           "Primary: Neonatal mortality", 
+           "Secondary:\n-Early initiation of breastfeeding\n-Cord care\n-Maternal knowledge of neontal danger signs\n-Care-seeking")
+
+stdy_summ <- data.frame(vars, vars2)
+
+study_summary <- flextable(stdy_summ)
+study_summary <- flextable::width(study_summary, 'vars2', width = 5)
+study_summary <- flextable::width(study_summary, 'vars', width = 2)
+border <- fp_border()
+study_summary <- flextable::vline(study_summary, j = c('vars'), border = border, part = "all")
+study_summary <- set_header_labels(study_summary, vars = "Title", vars2 = "CHV-NEO: Community-based digital communication to support neonatal health")
+
+study_summary
+```
+
+\newpage
+
+```{r timeline_prenum, echo=FALSE}
+source("enroll_linegraph_ppw.R")
+
+```
+
+## 1.1 Study Timeline Since Initiation:
+-   Apr 15, 2021: RO1 Start date
+-   Jun 21, 2021: Initial IRB approval
+-   Mar 15, 2022: Initial ERC approval
+-   May 23, 2023: 1st DSMB meeting
+-   Nov 06, 2023: eCHIS user training initiation
+-   Dec 07, 2023: eCHIS household and pregnancy registration initiation
+-   Jan 10, 2024: Sub cohort recruitment initiation
+-   `r sub_enroll25_date`: Sub cohort 25% of planned enrollment
+-   `r sub_enroll50_date`: Sub cohort 50% of planned enrollment
+-   `r sub_enroll75_date`: Sub cohort 75% of planned enrollment
+-   `r sub_enroll100_date`: Sub cohort 100% of planned enrollment
+```{r timeline_prenum_2, echo=FALSE}
+source("morcohort_linegraphs.R")
+```
+-   `r enroll25_date`: Mortality cohort 25% of planned target
+
+## 1.2 Key Changes to Study Protocol
+-N/A
+
+# 2. Study Progress
+
+## 2.1 Recruitment Timeline
+```{r source_prenum, echo=FALSE}
+source("weekly_consort.R")
+```
+CHPs began enrolling households into eCHIS on Dec 07, 23. `r all_echispreg` women have been registered as pregnant in eCHIS, of which `r livebirths` are known to have delivered live births. This achieves `r livebirths_per`% of our mortality cohort target. Of these, `r infantstatus_28days_y` of those have reported an infant status past 28 days of life.
+
+We began recruitment into the sub-cohort on Jan 10, 24. `r enroll_ppw` participants have been recruited into the subcohort meeting `r enroll_ppw_per`% of our subcohort enrollment target. Of these, `r all_followup_6wk` (`r all_followup_6wk_per`%) have completed follow-up.
+
+In general, enrollment has proceeded well despite delays in launching and slow initial household registration. A series of national healthcare worker strikes (Mar 12, 2024 and May 8, 2024), flooding (Apr 23, 2024 and May 12, 2024), and ongoing national protests beginning Jun 18, 2024 have slowed data collection in the larger mortality cohort.
+
+\newpage
+
+# 3. Study Enrollment 
+
+## 3.1 Sub Cohort
+
+### 3.1.1 Current subject status
+
+From `r anc_attendance` ANC visits of non-unique clients at recruitment sites, `r screeningnum` were assessed for eligibility. `r total_excluded` potential participants were excluded, leaving `r enroll_ppw` eligible participants enrolled across intervention and control clusters. `r all_followup_6wk` participants have completed follow-up to 6 weeks potspartum.
+
+
+
+```{r consort_sub}
+source("weekly_consort.R")
+weekly_consort_subcohort
+
+```
+
+
+\newpage
+
+
+```{r enrolltargetsource,  message=FALSE, echo=FALSE}
+source("enroll_linegraph_ppw.R")
+```
+
+
+### 3.1.2 Enrollment Progress - Overall
+
+On May 29, 2024 we began restricting enrollments in facilities with >70 participants recruited to only 2 enrollments/week. We hit our enrollment target on `r sub_enroll100_date`.
+
+
+```{r enrollment_sub,  message=FALSE}
+source("enroll_linegraph_ppw.R")
+p1
+```
+
+
+\newpage
+
+### 3.1.3 Enrollment Progress - Per Facility
+
+All facilities have hit the minimum target enrollment number of 80 peripartum women/facility cluster. The first cluster to reach the minimum recruitment number per facility was Masogo in mid May 2024. The last cluster to reach the minimum recruitment number per facility was KCH in early July 2024. 
+
+
+
+```{r enrollment_sub_facility}
+source("enroll_linegraph_ppw_zoom.R")
+p2
+```
+
+
+
+\newpage
+
+## 3.2 Mortality cohort
+
+### 3.2.1 Current subject status
+```{r consortnumsource, echo=FALSE}
+source("weekly_consort.R")
+
+```
+From `r all_echispreg` pregnancies registered in eCHIS, `r eligpregs` pregnant women were registered before 37 weeks gestation. Of these `r deliveries` deliveries (`r deliveries_per`%) have been reported, of which `r livebirths` (`r round(livebirths/deliveries*100, 2)`%) were live births. Of these, `r infantstatus_28days_y` infants (`r round(infantstatus_28days_y/livebirths*100, 2)`%) have had home visits with the infant’s status reported at \>=28 days after birth. These data point to gaps or delays in routine reporting of births and completion of postnatal visits. The study team has been utilizing implementation strategies to encourage CHPs to complete follow-up visits in order to improve reporting.
+
+```{r consort_mortality}
+source("weekly_consort.R")
+weekly_consort_mortcohort
+```
+
+
+\newpage
+
+### 3.2.2 Enrollment Progress - Overall
+
+Recruitment into the mortality cohort has been slower than expected but has been steadily improving. The study team has been utilizing implementation strategies to encourage CHPs to complete follow-up visits in order to improve delivery reporting.
+
+
+```{r enrollment_mor}
+source("morcohort_linegraphs.R")
+p2
+```
+
+
+<!-- \newpage -->
+
+<!-- ### 3.2.3 Infant Outcome Ascertainment Progress - Per Facility -->
+
+
+<!-- ```{r enrollment_mor_facility} -->
+<!-- source("morcohort_linegraphs.R") -->
+<!-- p3 -->
+<!-- ``` -->
+
+
+\newpage
+
+# 4. Subcohort Ineligibility
+Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons.
+
+
+```{r subcohort_prog}
+source("weekly_consort.R")
+vars <- c("Participated in CHV-NEO before/ In another study", 
+          "Age", "Gestational age",
+          "Phone access \n(No phone access, no safaricom/airtel, no phone number)",
+          "Not willing to receive sms", 
+          "Not able to stay in the area >3 months", "Not willing to provide contact info", "Not registered in eCHIS", "Not visited by study CHP/ village not in facility’s CUs",
+          "Not able to read/respond to SMS",
+          "Total ineligible visits")
+
+vars2 <- c(enroll.no_othrstdy, enroll.no_age, enroll.no_gest, enroll.no_phoneacces, enroll.no_sms, enroll.no_locstay, enroll.no_contact, enroll.no_echis, enroll.no_chp, enroll.no_readwritesms, enroll.no)
+
+percentages <- (vars2 / enroll.no) * 100
+vars2_formatted <- ifelse(vars2 == enroll.no, enroll.no, paste0(vars2, " (", round(percentages, 2), "%)"))
+
+ineligible_table <- data.frame(vars, vars2_formatted)
+
+table_ineligibility <- flextable(ineligible_table)
+table_ineligibility <- flextable::width(table_ineligibility, 'vars2_formatted', width = 2)
+table_ineligibility <- flextable::width(table_ineligibility, 'vars', width = 5)
+border <- fp_border()
+table_ineligibility <- flextable::vline(table_ineligibility, j = c('vars'), border = border, part = "all")
+table_ineligibility <- set_header_labels(table_ineligibility, vars = "Ineligible Reason \n(Participants can be ineligible for multiple reasons)", vars2_formatted = "N (%)")
+
+table_ineligibility
+```
+
+\newpage
+
+# 5. Baseline Demographics
+
+## 5.1 Sub Cohort Participant Baseline Demographics
+
+
+
+```{r demographics, warning=F}
+
+source("comparison_table.R")
+
+kable(weekly_demotable) %>%
+kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
+  row_spec(0,bold=T) %>%
+  row_spec(1,bold=T)
+```
+
+## 5.2 Mortality Cohort Baseline Demographics
+
+
+```{r morcohort_demo, echo=FALSE}
+source("mort_demo.R")
+
+kable(mort_demo_open) %>%
+kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
+  row_spec(0,bold=T) %>%
+  row_spec(1,bold=T)
+
+```
+
+
+\newpage
+
+# 6. Sub Cohort Study Terminations
+
+
+```{r terminations"}
+source("terminations_tbl.R")
+
+kable_styling(terminations_summary) %>%
+  kable_styling(latex_options = "HOLD_position") %>% 
+  row_spec(0,bold=T,hline_after = T) %>% 
+  row_spec(7,bold=T) 
+
+
+```
+
+
+
+```{r referralnumsource, echo=FALSE}
+source("referrals.R")
+
+```
+
+# 7. Sub Cohort Referrals
+At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, participants have screened positive for `r total_scr_num` (`r total_scr_per`) referable conditions. Of which, `r total_ref_num` (`r total_ref_per`) have accepted referrals for those conditions.
+
+
+```{r referrals}
+source("referrals.R")
+
+kable_styling(referrals_summary) %>%
+  kable_styling(latex_options = "HOLD_position") %>% 
+  row_spec(0,bold=T,hline_after = T) %>% 
+  row_spec(5,bold=T,hline_after = T) 
+```
+
+\newpage
+
+# 8. Time from Delivery to eCHIS Delivery Report
+
+Timely ascertainment of delivery enables timely scheduling of postpartum visits by CHPs and, in the intervention arm, initiation of time-sensitive postpartum messaging. The table below summarizes the time from delivery date to delivery report submission in eCHIS. 
+
+
+```{r deliveryrepTAT}
+source("deliveryreportTAT.R")
+kable_styling(deliverytat_summary) %>%
+  kable_styling(latex_options = "HOLD_position") %>% 
+  row_spec(0,bold=T)
+```
+
