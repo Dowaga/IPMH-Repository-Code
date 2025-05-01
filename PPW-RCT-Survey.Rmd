@@ -123,6 +123,8 @@ not_enrolled %>%
         table.font.size = px(12))
 ```
 
+\newpage
+
 ## Enrollment Per Facility
 
 ```{r Summary of Study Enrollment by Facility, echo=FALSE, message=FALSE, warning=FALSE}
@@ -154,6 +156,7 @@ source("Enrollment Progress.R")
 #figure_1
 ```
 
+\newpage
 ## PPW Demographics
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
@@ -226,7 +229,7 @@ demographics_df %>% tbl_summary(
 #moh_summary
 ```
 
-
+\newpage
 ## PM+ and Telepsychiatry Referrals
 
 ```{r PM+ and Telepsychiatry Referrals, echo=FALSE, message=FALSE, warning=FALSE, include = F}
@@ -360,12 +363,12 @@ duplicates_sessions <- pm_sessions %>%
   summarise(count = n(), .groups = "drop") %>%
   filter(count > 1)  # Filter those with more than one attendance per session
 
-
 # Transforming data: One column for ptid, each session as a separate column
 pm_session_wide <- pm_sessions %>%
   distinct(pm_ptid, pm_session) %>%  # Remove duplicate sessions per ptid
   mutate(attended = 1) %>%  # Assign 1 for attended
-  pivot_wider(names_from = pm_session, values_from = attended, values_fill = list(attended = 0)) %>%   # Fill non-attended sessions with 0
+  pivot_wider(names_from = pm_session, values_from = attended, 
+              values_fill = list(attended = 0)) %>%   # Fill non-attended sessions with 0
 mutate(facility = str_sub(pm_ptid, 3, 4)) %>% 
     mutate(facility = recode(facility,
                                 "01" = "Rwambwa SCH",
@@ -382,7 +385,7 @@ pm_session_wide<- pm_session_wide %>%
     mutate(`Pre-intervention PSYCHLOPS measurement` = ifelse(`Pre-intervention PSYCHLOPS measurement` == 1, "Yes", "No"))
 
 pm_session_wide %>% 
-    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`),
+    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
                 label = list(facility = "Facility"),
                 statistic = list(all_categorical() ~
     "{n} ({p}%)"),
@@ -401,6 +404,7 @@ pm_session_wide %>%
 ```
 
 
+\newpage
 
 ```{r None study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
     # None study participants in PM+
@@ -433,7 +437,7 @@ session_wide <- pm_session %>%
 
 
 session_wide %>% 
-    tbl_summary(include = c(pm_facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`),
+    tbl_summary(include = c(pm_facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
                 label = list(pm_facility = "Facility",
                              `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
@@ -547,16 +551,17 @@ weekly_visits %>%
 ```
 
 
+\newpage
 
 ## Overall PM+ Retention
 ```{r PM+ Retention, echo=FALSE, message=FALSE, warning=FALSE}
 source("PM+ Follow-up.R")
 attendance_table %>%
-  kable() %>%
-  kable_styling(full_width = FALSE) %>%
-  add_header_above(c("PM+ Session Tracking for Study Participants" = ncol(attendance_table))) %>%
-  kableExtra::footnote(general_title = "Notes: ", general = "On time is defined as within a 14 day window since last attendance")
+  flextable() %>%
+  set_caption("PM+ Session Tracking for Study Participants") %>%
+  add_footer_lines("Notes: On time is defined as within a 14 day window since last attendance")
 ```
+\newpage
 
 ## Percent of SAEs reported to ERC
 ```{r SAES, echo=FALSE, message=FALSE, warning=FALSE}
@@ -580,7 +585,7 @@ sae_report
 
 
 ```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE, include = F}
-source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
+#source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
 fc_yield_summary
 
 yield_summary
