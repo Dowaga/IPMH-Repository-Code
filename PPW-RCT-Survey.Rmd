@@ -559,7 +559,8 @@ source("PM+ Follow-up.R")
 attendance_table %>%
   flextable() %>%
   set_caption("PM+ Session Tracking for Study Participants") %>%
-  add_footer_lines("Notes: On time is defined as within a 14 day window since last attendance")
+  add_footer_lines("Notes: On time is defined as within a 14 day window since last attendance") %>% 
+    autofit()
 ```
 \newpage
 
