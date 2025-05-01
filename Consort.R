@@ -32,10 +32,6 @@ pm_abstractions <- pm_survey_df %>%
 pm_df <- pm_abstractions %>% 
     select(pm_ptid, ipmh_participant)
 
-#study participants in the telepsychiatry survey
-telepsychiatry_abstractions <- telepsychiatry_df %>%
-    mutate(tele_ptid = unique(tele_initials))
-
 # Get unique participant count in telepsychiatry data
 n_tele_intervention <- telepsychiatry_df %>%
     distinct(tele_initials) %>%
@@ -180,6 +176,10 @@ counts_by_arm <- counts_by_arm %>%
         txt_pm_tele = paste(txt_pm, txt_tele, sep = "\n")
     )
 
+generate_box_header <- function(label, numerator, denominator, decimals = 2) {
+percent <- ifelse(denominator > 0, (numerator / denominator) * 100, 0)
+sprintf("%s (n=%d, %.*f%%):", label, numerator, decimals, percent)
+}
 
 # Build exclusion string per arm
 exclusion_side_boxes <- consort_data %>%
