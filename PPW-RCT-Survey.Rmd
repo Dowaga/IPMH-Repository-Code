@@ -8,6 +8,8 @@ output:
 ---
 
 ```{r setup, echo = F, include = F}
+
+
 #rm(list = ls())
 
 # read data
@@ -52,15 +54,10 @@ first_enrollment
 
 ## Consort Diagram
 
-```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE}
-#source("weekly_consort.R")
+```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE, fig.width=14, fig.height=8}
 source("Consort.R")
-#weekly_consort
-
-#consort_diagram
-
+#consort_diagram for weekly reports
 consort_per
-
 ```
 
 
@@ -225,14 +222,14 @@ demographics_df %>% tbl_summary(
 
 
 ```{r Medical and Obstetric History, message=FALSE, warning=FALSE, include=FALSE}
-source("Medical and Obstetric History.R")
+#source("Medical and Obstetric History.R")
 #moh_summary
 ```
 
 
 ## PM+ and Telepsychiatry Referrals
 
-```{r PM+ and Telepsychiatry Referrals, echo=FALSE, message=FALSE, warning=FALSE}
+```{r PM+ and Telepsychiatry Referrals, echo=FALSE, message=FALSE, warning=FALSE, include = F}
 pm_telep_df <- ppw_rct_df %>% 
     filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
@@ -348,7 +345,9 @@ eligible_no_survey <- eligible_pm %>%
 
 ### Those that are in the PM+ Survey, while not Eligible
 setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
+```
 
+```{r Study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
 # Study participant PM+ Sessions
 pm_sessions <- 
     pm_survey_df %>% 
@@ -379,21 +378,20 @@ mutate(facility = str_sub(pm_ptid, 3, 4)) %>%
                                "17" = "Ramula HC",
                                "19" = "Airport HC (Kisumu)",
                                "22" = "Ndiru Level 4"))
-    
-
+pm_session_wide<- pm_session_wide %>% 
+    mutate(`Pre-intervention PSYCHLOPS measurement` = ifelse(`Pre-intervention PSYCHLOPS measurement` == 1, "Yes", "No"))
 
 pm_session_wide %>% 
     tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`),
-                label = list(facility = "Facility",
-                             `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
-        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+                label = list(facility = "Facility"),
+                statistic = list(all_categorical() ~
+    "{n} ({p}%)"),
+        sort = list(all_categorical() ~ "frequency")
         )%>% 
-  # convert from gtsummary object to gt object
   as_gt() %>%
-  # modify with gt functions
     gt::tab_header(
-      title = "Study Participants In PM+",
-      subtitle = "Showing Study Participants Referred to PM+") %>%
+      title = "Study Participants Who Received PM+",
+      subtitle = "Showing Study Participants Who Received PM+") %>%
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
@@ -444,8 +442,8 @@ session_wide %>%
   as_gt() %>%
   # modify with gt functions
     gt::tab_header(
-      title = "None study Participants in PM+",
-      subtitle = "Showing None Study Participants Referred to PM+") %>%
+      title = "None study Participants Who Received PM+",
+      subtitle = "Showing None Study Participants Who Received PM+") %>%
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
@@ -463,13 +461,13 @@ telepsych_referrals <- pm_telep_df %>%
 
 telepsych_referrals %>% 
     tbl_summary(
-        sort = list(all_categorical() ~ "frequency"),# Sort categorical levels by frequency in descending order
+        sort = list(all_categorical() ~ "frequency"),
         include = c(clt_study_site),
                 label = list(clt_study_site ~ "Facility"))%>% 
     as_gt %>% 
       # modify with gt functions
     gt::tab_header(
-      title = "Participants referred to Telepsychiatry",
+      title = "Participants Referred to Telepsychiatry",
       subtitle = "Showing Participants Referred to Telepsychiatry") %>%
   gt::tab_options(
     table.font.size = "medium",
@@ -544,7 +542,7 @@ weekly_visits %>%
 
 
 ```{r Reducing Tension Checklist, echo=FALSE, message=FALSE, warning=FALSE}
-source("Reducing Tension Checklist.R")
+#source("Reducing Tension Checklist.R")
 # summary_table
 ```
 
@@ -553,26 +551,12 @@ source("Reducing Tension Checklist.R")
 ## Overall PM+ Retention
 ```{r PM+ Retention, echo=FALSE, message=FALSE, warning=FALSE}
 source("PM+ Follow-up.R")
-weekly_pm_retention
+attendance_table %>%
+  kable() %>%
+  kable_styling(full_width = FALSE) %>%
+  add_header_above(c("PM+ Session Tracking for Study Participants" = ncol(attendance_table))) %>%
+  kableExtra::footnote(general_title = "Notes: ", general = "On time is defined as within a 14 day window since last attendance")
 ```
-
-
-```{r PM+ Weekly Retention, message=FALSE, warning=FALSE, include=FALSE}
-source("PM+ Follow-up.R")
-V_week1 %>% 
-    gt()
-
-V_week2 %>% 
-    gt()
-
-V_week3 %>% 
-    gt()
-
-V_week4 %>% 
-    gt()
-```
-
-
 
 ## Percent of SAEs reported to ERC
 ```{r SAES, echo=FALSE, message=FALSE, warning=FALSE}
@@ -595,8 +579,7 @@ sae_report
 ```
 
 
-#PHQ9 and GAD7 Comparison
-```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE, include = F}
 source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
 fc_yield_summary
 
