@@ -101,7 +101,7 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
            "0",
            "Follow-up through 6 months postpartum", 
            "[place holder]", 
-           "February 24, 2025",
+           "February 17, 2025",
            "[place holder]",
            "Primary: Depression and anxiety", 
            "Secondary:\n-Depression and anxiety among WLWH\n-Quality of Life\n-Adverse perinatal outcomes")
@@ -128,7 +128,7 @@ study_summary
 -   Oct 11, 2024: 1st DSMB meeting
 -   Oct 23, 2024: Facility randomization
 -   Nov 06, 2024: Facility staff training initiation
--   Feb 24, 2025: Perinatal women recruitment initiation
+-   Feb 17, 2025: Perinatal women recruitment initiation
 
 ## 1.2 Key Changes to Study Protocol
 -N/A
@@ -147,7 +147,7 @@ n_enrol_per <- n_enrol/n_eligible *100 %>% round(2)
 n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
 n_second_per <- n_second/n_enrol * 100 %>% round(2)
 ```
-We began recruiting pregnant women into the study on Feb 24, 2025. 
+We began recruiting pregnant women into the study on Feb 17, 2025. 
 
 In general, enrollment has proceeded well despite slow initial enrollment. {A series of national healthcare worker strikes (Mar 12, 2024 and May 8, 2024), flooding (Apr 23, 2024 and May 12, 2024), and ongoing national protests beginning Jun 18, 2024 have slowed data collection.} We should talk about the disruptions regarding USAID, strikes and protests here for IPMH.
 
