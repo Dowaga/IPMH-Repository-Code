@@ -11,6 +11,7 @@ source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
+#data prep ----------------
 # Summarise ANC attendees and extract the sum as a numeric value
 Attendees <- daily_closeout_df %>%
     summarise(`anc attendees` = sum(rct_anc_number, na.rm = TRUE)) %>%
@@ -31,8 +32,22 @@ pm_abstractions <- pm_survey_df %>%
 pm_df <- pm_abstractions %>% 
     select(pm_ptid, ipmh_participant)
 
+#study participants in the telepsychiatry survey
+telepsychiatry_abstractions <- telepsychiatry_df %>%
+    mutate(tele_ptid = unique(tele_initials))
 
+# Get unique participant count in telepsychiatry data
+n_tele_intervention <- telepsychiatry_df %>%
+    distinct(tele_initials) %>%
+    nrow()
 
+# Control is always zero
+n_tele_control <- 0
+
+# Total referrals
+n_tele_total <- n_tele_intervention + n_tele_control
+
+#merging data
 consort_data <- screening_consent_df %>% 
     select(record_id, partipant_id, rct_harm_thought, rct_aud_hallucinations, 
            rct_vis_hallucinations, rct_paranoia,rct_delusions,
@@ -65,7 +80,6 @@ consort_data <- screening_consent_df %>%
 consort_data <- consort_data %>% 
     left_join(pm_df, by = c("partipant_id"="pm_ptid"))
 
-
 consort_data <- bind_rows(anc_attendees_df, consort_data)
 
 elig <- consort_data %>% 
@@ -83,6 +97,7 @@ secondvisit <- ppw_rct_df %>% filter(
 consort_data <- consort_data %>% 
     left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
     
+#generate consort diagram without percentages (also without telepsychiatry)
 consort_diagram <- consort_plot(data = consort_data,
                     orders = c(anc_attendees = "ANC Attendees",
                                arm = "Assessed for Eligibility",
@@ -97,35 +112,260 @@ consort_diagram <- consort_plot(data = consort_data,
                     allocation = "arm")
 consort_diagram
 
-library(grid)
-options(txt_gp = gpar(cex = 0.8)) 
-txt_anc <- c("ANC Attendees (n=4,089)")
-txt_ass <- c("Assessed for Eligibility\n (n=1,018, 24.90%)") 
-txt_arm <- c("Control\n (n=527, 51.77%)", "Intervention\n (n=491, 48.23%)")
-txt_ex_control <- "Excluded (n=194, 36.81%):\n\u2022 Gestation < 28 weeks (n=177, 91.24%)\n\u2022 Hearing voices that others cannot hear (n=3, 1.55%)\n\u2022 Holding unusual beliefs (n=4, 2.06%)\n\u2022 Memory problem (n=3, 1.55%)\n\u2022 Self harm (n=5, 2.58%)\n\u2022 Self harm and memory problem (n=1, 0.52%)"
-txt_ex_intervention <- "Excluded (n=203, 41.34%):\n\u2022 Gestation < 28 weeks (n=198, 97.54%)\n\u2022 Memory problem (n=1, 0.49%)\n\u2022 Self harm (n=4, 1.97%)"
-txt_ex <- c(txt_ex_control, txt_ex_intervention)
-txt_eli <- c("Eligible\n (n=332, 63.00%)", "Eligible\n (n=288, 58.66%)")
-txt_decline_control <- "Declined Enrollment (n=17, 5.12%)\n\u2022 Consult spouse (n=2, 11.76%)\n\u2022 Not enough time (n=3, 17.65%)\n\u2022 Not interested (n=3, 17.65%)\n\u2022 Relocate post delivery (n=6, 35.29%)\n\u2022 Time to think about it (n=3, 17.65%)"
-txt_decline_intervention <- "Declined Enrollment (n=12, 4.17%)\n\u2022 Not enough time (n=5, 41.67%)\n\u2022 Relocate post delivery (n=7, 58.33%)"
-txt_decline <- c(txt_decline_control, txt_decline_intervention)
-txt_enrol <- c("Enrolled (n=315, 94.88%)", 
-               "Enrolled (n=276, 95.83%)")
-txt_pm <- c("PM+\n (n=0, 0%)", 
-            "PM+\n (n=65, 23.55%)")
-txt_secondvisit <- c("6 weeks postpartum visit\n (n=14, 4.44%)", 
-                      "6 weeks postpartum visit\n (n=10, 3.62%)")
+#automatically adding percentages (for weekly reports) ----------------
+# Total ANC attendees
+n_attendees <- consort_data %>% filter(anc_attendees == "Yes") %>% nrow()
+
+# Assessed for eligibility (non-NA arm)
+n_assessed <- consort_data %>% filter(!is.na(arm)) %>% nrow()
+
+# By arm
+counts_by_arm <- consort_data %>%
+    filter(!is.na(arm)) %>%
+    group_by(arm) %>%
+    summarise(
+        assessed = n(),
+        excluded = sum(!is.na(exclusion)),
+        eligible = sum(eligible == 1, na.rm = TRUE),
+        enrolled = sum(rct_enrolling == "Yes", na.rm = TRUE),
+        pm_participants = sum(ipmh_participant == "Yes", na.rm = TRUE),
+        postpartum_visit = sum(secondvisit == "Yes", na.rm = TRUE)
+    )
+
+# Function to generate stage text
+generate_stage_text <- function(stage_label, numerator, denominator, decimals = 2) {
+    percent <- ifelse(denominator > 0, (numerator / denominator) * 100, 0)
+    sprintf("%s\n (n=%d, %.*f%%)", stage_label, numerator, decimals, percent)
+}
+
+# Apply to each arm
+counts_by_arm <- counts_by_arm %>%
+    rowwise() %>%
+    mutate(
+        txt_eligible = generate_stage_text("Eligible", eligible, assessed),
+        txt_excluded = generate_stage_text("Excluded", excluded, assessed),
+        txt_enrolled = generate_stage_text("Enrolled", enrolled, eligible),
+        txt_pm = generate_stage_text("PM+", pm_participants, enrolled),
+        txt_postpartum = generate_stage_text("6 weeks postpartum visit", postpartum_visit, enrolled)
+    )
+
+# Total text for ANC attendees
+txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
+
+# Total assessment
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.2f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+
+txt_arm <- counts_by_arm %>%
+    mutate(
+        txt = sprintf("%s\n (n=%d, %.2f%%)", arm, assessed, (assessed / n_assessed) * 100)
+    ) %>%
+    pull(txt)
+
+# telepsychiatry
+n_enrolled_intervention <- counts_by_arm %>%
+    filter(arm == "Intervention") %>%
+    pull(enrolled)
+
+counts_by_arm <- counts_by_arm %>%
+    mutate(
+        txt_tele = case_when(
+            arm == "Control" ~ sprintf("Telepsychiatry\n (n=%d, %.2f%%)", 0, 0),
+            arm == "Intervention" ~ sprintf("Telepsychiatry\n (n=%d, %.2f%%)", n_tele_intervention, (n_tele_intervention / enrolled) * 100)
+        )
+    )
+
+#combine PM+ and telepsychiatry
+counts_by_arm <- counts_by_arm %>%
+    mutate(
+        txt_pm_tele = paste(txt_pm, txt_tele, sep = "\n")
+    )
+
+
+# Build exclusion string per arm
+exclusion_side_boxes <- consort_data %>%
+    filter(!is.na(exclusion)) %>%
+    group_by(arm, exclusion_reason = exclusion) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    left_join(
+        counts_by_arm %>% select(arm, excluded, assessed),
+        by = "arm"
+    ) %>%
+    group_split(arm) %>%
+    lapply(function(df_arm) {
+        arm_label <- unique(df_arm$arm)
+        excluded <- unique(df_arm$excluded)
+        assessed <- unique(df_arm$assessed)
+        
+        # Header line (no real line break)
+        header <- generate_box_header("Excluded", excluded, assessed)
+        
+        # Bullet lines (keep \\n as character)
+        reason_lines <- mapply(
+            function(reason, count) {
+                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / excluded) * 100)
+            },
+            df_arm$exclusion_reason,
+            df_arm$count
+        )
+        
+        # Combine header + bullets with literal \n characters
+        box_text <- paste(c(header, reason_lines), collapse = "\n")
+        
+        box_text
+    })
+
+# Combine into character vector
+txt_ex <- unlist(exclusion_side_boxes)
+
+# Build decline side boxes per arm
+decline_side_boxes <- consort_data %>%
+    filter(!is.na(rct_decline_reason)) %>%
+    group_by(arm, decline_reason = rct_decline_reason) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    left_join(
+        counts_by_arm %>%
+            mutate(declined = eligible - enrolled) %>%
+            select(arm, declined, eligible),
+        by = "arm"
+    ) %>%
+    group_split(arm) %>%
+    lapply(function(df_arm) {
+        arm_label <- unique(df_arm$arm)
+        declined <- unique(df_arm$declined)
+        eligible <- unique(df_arm$eligible)
+        
+        # Header line (with real line break later)
+        header <- sprintf("Declined Enrollment (n=%d, %.2f%%):", declined, (declined / eligible) * 100)
+        
+        # Bullet lines with Unicode bullets and percentages
+        reason_lines <- mapply(
+            function(reason, count) {
+                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / declined) * 100)
+            },
+            df_arm$decline_reason,
+            df_arm$count
+        )
+        
+        # Combine header + bullets with **real line breaks**
+        box_text <- paste(c(header, reason_lines), collapse = "\n")
+        
+        box_text
+    })
+
+# Combine into character vector
+txt_decline <- unlist(decline_side_boxes)
 
 consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = txt_ass) |>
     add_split(txt = txt_arm) |>
     add_side_box(txt = txt_ex) |>
-    add_box(txt = txt_eli) |>
+    add_box(txt = counts_by_arm$txt_eligible) |>
     add_side_box(txt = txt_decline) |>
-    add_box(txt = txt_enrol) |>
-    add_box(txt= txt_pm) |>
-    add_box(txt = txt_secondvisit)
+    add_box(txt = counts_by_arm$txt_enrolled) |>
+    add_side_box(txt= counts_by_arm$txt_pm_tele) |>
+    add_box(txt = counts_by_arm$txt_postpartum)
 
 consort_per
 
+## consort diagram without arm breaking--------
+# Total ANC attendees
+n_attendees <- consort_data %>% filter(anc_attendees == "Yes") %>% nrow()
 
+# Total assessed (non-NA arm)
+n_assessed <- consort_data %>% filter(!is.na(arm)) %>% nrow()
+
+# Total excluded
+n_excluded <- consort_data %>% filter(!is.na(exclusion)) %>% nrow()
+
+# Total eligible
+n_eligible <- consort_data %>% filter(eligible == 1) %>% nrow()
+
+# Total enrolled
+n_enrolled <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
+
+# Total PM+ participants
+n_pm <- consort_data %>% filter(ipmh_participant == "Yes") %>% nrow()
+
+# Total postpartum visits
+n_postpartum <- consort_data %>%
+         filter(rct_enrolling == "Yes", secondvisit == "Yes") %>%
+         nrow()
+
+# ANC attendees (no percentage)
+txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
+
+# Assessed
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.2f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+
+# Eligible
+txt_eligible <- sprintf("Eligible\n (n=%d, %.2f%%)", n_eligible, (n_eligible / n_assessed) * 100)
+
+# Excluded
+txt_excluded <- sprintf("Excluded\n (n=%d, %.2f%%)", n_excluded, (n_excluded / n_assessed) * 100)
+
+# Enrolled
+txt_enrolled <- sprintf("Enrolled\n (n=%d, %.2f%%)", n_enrolled, (n_enrolled / n_eligible) * 100)
+
+# PM+
+txt_pm <- sprintf("PM+\n (n=%d, %.2f%%)", n_pm, (n_pm / n_enrolled) * 100)
+
+# Postpartum
+txt_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.2f%%)", n_postpartum, (n_postpartum / n_enrolled) * 100)
+
+#telepsychiatry
+txt_tele_overall <- sprintf("Telepsychiatry \n (n=%d, %.2f%%)", n_tele_total, (n_tele_total/ n_enrolled) *100)
+
+#combining pm+ and telepsychiatry
+txt_pm_tele <- paste(txt_pm, txt_tele_overall, sep = "\n")
+
+#exclusion side box
+exclusion_summary <- consort_data %>%
+    filter(!is.na(exclusion)) %>%
+    group_by(exclusion_reason = exclusion) %>%
+    summarise(count = n(), .groups = "drop")
+
+header_ex <- sprintf("Excluded (n=%d, %.2f%%):", n_excluded, (n_excluded / n_assessed) * 100)
+
+reason_lines_ex <- mapply(
+    function(reason, count) {
+        sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / n_excluded) * 100)
+    },
+    exclusion_summary$exclusion_reason,
+    exclusion_summary$count
+)
+
+txt_ex <- paste(c(header_ex, reason_lines_ex), collapse = "\n")
+
+
+#decline side box
+
+n_declined <- n_eligible - n_enrolled
+
+decline_summary <- consort_data %>%
+    filter(!is.na(rct_decline_reason)) %>%
+    group_by(decline_reason = rct_decline_reason) %>%
+    summarise(count = n(), .groups = "drop")
+
+header_decline <- sprintf("Declined Enrollment (n=%d, %.2f%%):", n_declined, (n_declined / n_eligible) * 100)
+
+reason_lines_decline <- mapply(
+    function(reason, count) {
+        sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / n_declined) * 100)
+    },
+    decline_summary$decline_reason,
+    decline_summary$count
+)
+
+txt_decline <- paste(c(header_decline, reason_lines_decline), collapse = "\n")
+
+#consort generation
+consort_single <- add_box(txt = txt_anc) |>
+    add_box(txt = txt_ass) |>
+    add_side_box(txt = txt_ex) |>
+    add_box(txt = txt_eligible) |>
+    add_side_box(txt = txt_decline) |>
+    add_box(txt = txt_enrolled) |>
+    add_side_box(txt = txt_pm_tele) |>
+    add_box(txt = txt_postpartum)
+
+consort_single
