@@ -54,7 +54,7 @@ first_enrollment
 
 ## Consort Diagram
 
-```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE, fig.width=14, fig.height=8}
+```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE, fig.width=15, fig.height=9}
 source("Consort.R")
 #consort_diagram for weekly reports
 consort_per
@@ -458,7 +458,6 @@ session_wide %>%
 
 
 
-
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
 telepsych_referrals <- pm_telep_df %>% 
     filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
@@ -562,7 +561,6 @@ attendance_table %>%
   add_footer_lines("Notes: On time is defined as within a 14 day window since last attendance") %>% 
     autofit()
 ```
-\newpage
 
 ## Percent of SAEs reported to ERC
 ```{r SAES, echo=FALSE, message=FALSE, warning=FALSE}
