@@ -100,9 +100,9 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
            "[place holder]",
            "0",
            "Follow-up through 6 months postpartum", 
-           "[place holder]", 
+           "September 19, 2023", 
            "February 17, 2025",
-           "[place holder]",
+           "July 31, 2028",
            "Primary: Depression and anxiety", 
            "Secondary:\n-Depression and anxiety among WLWH\n-Quality of Life\n-Adverse perinatal outcomes")
 
@@ -129,6 +129,7 @@ study_summary
 -   Oct 23, 2024: Facility randomization
 -   Nov 06, 2024: Facility staff training initiation
 -   Feb 17, 2025: Perinatal women recruitment initiation
+-   []: 25% of planned enrollment
 
 ## 1.2 Key Changes to Study Protocol
 -N/A
