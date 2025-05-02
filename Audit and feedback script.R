@@ -10,7 +10,8 @@
 # 4. Telepsychiatry session referral (among intervention sites for study participants)
 # 5. PM+ session initiation (among intervention sites for study participants)
 # 6. Telepsychiatry session initiation (among intervention sites for study participants)
-# 7. PM+ session completion (among intervention sites for study participants)
+# 7. PM+ session completion (among intervention sites for study participants) 
+##### [this indicator will be since study initiation]
 # 8. Health talks & flipbook use (among all sties)
 
 # Setup ------------------------------------------------------------------------
@@ -28,9 +29,10 @@ source("REDCap_datapull.R")
 #PHQ9/GAD7 abstraction form in the PPW longitudinal database
 #PM+ session survey
 #Telepsychiatry session survey
+#PPW consenting databse (ANC number matching)
 
 #drop all other datasets
-rm(list = ls()[! ls() %in% c("daily_closeout", "phq2_gad2_abstract", "rct_ppw", "pm", "telepsych")])
+rm(list = ls()[! ls() %in% c("daily_closeout", "phq2_gad2_abstract", "rct_ppw", "pm", "telepsych", "rct_ppw_consenting")])
 
 #Ensure date columns are in proper format
 daily_closeout$rct_dcr_date <- as.Date(daily_closeout$rct_dcr_date)
@@ -41,12 +43,20 @@ rct_ppw <- rct_ppw %>%
 pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$tele_date)
 
-#time period for the data
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date <= "2025-04-15")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date <= "2025-04-15")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-004-15")
-pm <- pm %>% filter(pm_date <= "2025-03-15")
-#telepsych <- telepsych %>% filter(tele_date <= "2025-03-15")
+#time period for the data [2025-03-01, 2025-05-01)]
+pm_all <- pm
+rct_ppw_all <- rct_ppw
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-05-01")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date >= "2025-03-01")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2025-05-01")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date >= "2025-03-01")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-05-01")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp >= "2025-03-01")
+pm <- pm %>% filter(pm_date <= "2025-05-01")
+pm <- pm %>% filter(pm_date >= "2025-03-01")
+telepsych <- telepsych %>% filter(tele_date <= "2025-05-01")
+telepsych <- telepsych %>% filter(tele_date >= "2025-03-01")
+
 
 #uniform study site number for all datasets
 phq2_gad2_abstract <- phq2_gad2_abstract %>%
@@ -114,7 +124,7 @@ daily_closeout %>%
     filter(diff != 0) %>% knitr::kable()
 
 #1.2 PHQ2/GAD2 screening rate by facility ------------
-#metho1 - daily rate
+#method - daily rate
 #Aggregate PHQ2/GAD2 screening rate per study site and day
 screening_rate <- phq2_gad2_abstract %>%
     mutate(day = floor_date(screening_date, "day")) %>%
@@ -188,7 +198,7 @@ rct_ppw_int <- rct_ppw %>%
                clt_study_site == "Ramula Health Centre"|
                clt_study_site == "Airport Health Centre (Kisumu)")
 
-#denomintor should just be the number of participants
+#denominator should just be the number of participants
 n_part <- rct_ppw_int %>%
     filter(!is.na(clt_ptid)) %>%
     group_by(clt_study_site, clt_timestamp) %>%
@@ -220,8 +230,8 @@ phq9_screening_monthly <- phq9_screening %>%
     mutate(month = format(clt_timestamp, "%Y-%m")) %>%
     group_by(clt_study_site, month) %>%
     summarise(
-        `Monthly PHQ9/GAD7 screening` = sum(num_screened, rm.na = TRUE),
-        `Monthly study participants` = sum(n_part, rm.na = TRUE),
+        `Monthly PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
+        `Monthly study participants` = sum(n_part, na.rm = TRUE),
         `PHQ9/GAD7 monthly screening rate` = (`Monthly PHQ9/GAD7 screening` / `Monthly study participants`) * 100,
         .groups = "drop"
     )
@@ -271,6 +281,7 @@ rct_ppw_int <- rct_ppw_int %>%
 phq9_high_scores <- rct_ppw_int %>%
     filter((score_phq9 >= 10 & score_phq9 <15 )| 
                (score_gad7 >= 10 & score_gad7 <15)) %>%
+    filter(phq_dead == "not at all") %>% 
     mutate(day = floor_date(clt_timestamp, "day")) %>%
     group_by(clt_study_site, day) %>%
     summarise(total_high_scores = n(),
@@ -321,7 +332,8 @@ pm_referral_total <- pm_referral %>%
 # Aggregate total women with PHQ9/GAD7 scores > 15 (Denominator)
 phq9_high_scores_tele <- rct_ppw_int %>%
     filter((score_phq9 >= 15)| 
-               (score_gad7 >=15)) %>%
+               (score_gad7 >=15)|
+               !phq_dead == "not at all") %>% 
     group_by(clt_study_site, clt_timestamp) %>%
     summarise(total_high_scores = n(),
               .groups = "drop")
@@ -375,7 +387,7 @@ pm_initiation <- pm %>%
 
 #calculate the number of participants per facility per month and pm_session == "Session 1"
 pm_summary_session1 <- pm_initiation %>%
-    filter(pm_session == "Session 1") %>%
+    filter(pm_session == "Session 1 content") %>%
     group_by(pm_facility, month) %>%
     summarise(num_initiated = n(), .groups = "drop")
 
@@ -399,7 +411,7 @@ pm_initiation_all <- pm %>%
 
 #calculate the number of participants per facility and pm_session == "Session 1"
 pm_summary_session1_all <- pm_initiation_all %>%
-    filter(pm_session == "Session 1") %>%
+    filter(pm_session == "Session 1 content") %>%
     group_by(pm_facility) %>%
     summarise(num_initiated = n(), .groups = "drop")
 
@@ -419,24 +431,100 @@ pm_initiation_all_merge_session1 <- pm_initiation_all_merge_session1 %>%
     mutate(initiation_rate = num_initiated / num_referred * 100)
 
 #6. PM+ session completion---------------
-#6.1 this is per month
-pm_month <- pm %>%
+pm_completion <- pm_all %>%
     filter(ipmh_participant == "Yes") %>%
     select(pm_facility, pm_date, pm_ptid, pm_session, pm_explain, pm_adv,
            pm_stress, pm_prob, pm_activ, pm_social, pm_stay, pm_nonresponse, pm_psychlops) %>% 
     mutate(month = format(pm_date, "%Y-%m"))
 
-#calculate the number of participants per facility per month and pm_session == "Session 1"
+pm_completion_session1 <- pm_completion %>%
+    filter(pm_session == "Session 1 content") %>%
+    group_by(pm_facility) %>%
+    summarise(num_initiated = n(), .groups = "drop")
+
+#calculating the number of participants who completed PM+ session 5
+pm_completion_session5 <- pm_completion %>%
+    filter(pm_session == "Session 5 content") %>%
+    group_by(pm_facility) %>%
+    summarise(num_completed = n(), .groups = "drop")
+
+#merge the two datasets based on facility
+pm_completion_df <- full_join(pm_completion_session1, pm_completion_session5, 
+                                     by = c("pm_facility" = "pm_facility"))
+
+#change num_completed to 0 if NA
+pm_completion_df[is.na(pm_completion_df)] <- 0
+
+#calculate completion rate
+pm_completion_df <- pm_completion_df %>%
+    mutate(completion_rate = num_completed / num_initiated * 100)
 
 #7. Telepsychiatry session initiation---------------
 #7.1 this is per month
 #numerator is the number of participants who initiated telepsychiatry [get from telepsych dataset]
+# fix the anc problem for record 1
+telepsych$tele_ancid[1] <- telepsych$tele_ancid[4] 
 
+initiated_telepsych_df <- telepsych %>%
+    filter(pt_attend == "Yes") %>%               # keep only attended
+    arrange(tele_ancid, tele_date) %>%            # sort by person and date
+    group_by(tele_ancid) %>%
+    slice(1) %>%                                 # keep first record per person
+    ungroup()
 
-#denominator is the number of participants who are referred to telepsychiatry
+#now match this with consenting database to get their facility
+tele_with_facility <- initiated_telepsych_df %>%
+    left_join(
+        rct_ppw_consenting %>% select(anc_num, study_site),
+        by = c("tele_ancid" = "anc_num")
+    )
 
+#aggregate tele_with_facility by month
+telepsych_initiation <- tele_with_facility %>%
+    mutate(month = format(tele_date, "%Y-%m")) %>%
+    group_by(study_site, month) %>%
+    summarise(num_initiated = n(), .groups = "drop")
 
+#reformat the study_site name to match with the other datasets
+telepsych_initiation <- telepsych_initiation %>%
+    mutate(study_site = str_replace(study_site, "^\\d+,\\s*", ""))
 
+#get denominator information from tele_referral and aggregate by month
+telepsych_referral <- tele_referral %>%
+    mutate(month = format(clt_timestamp, "%Y-%m")) %>%
+    group_by(clt_study_site, month) %>%
+    summarise(num_referred = sum(num_referred, na.rm = TRUE), .groups = "drop")
+
+#merge telepsych_initiation and telepsych_referral
+telepsych_initiation_monthly <- full_join(telepsych_initiation, telepsych_referral, 
+                                           by = c("study_site" = "clt_study_site", "month" = "month"))
+
+#change num_initiated to 0 if NA
+telepsych_initiation_monthly[is.na(telepsych_initiation_monthly)] <- 0
+
+#calculate initiation rate
+telepsych_initiation_monthly <- telepsych_initiation_monthly %>%
+    mutate(initiation_rate = num_initiated / num_referred * 100)
+
+#total data
+telepsych_initiation_total <- telepsych_initiation %>%
+    group_by(study_site) %>%
+    summarise(num_initiated = sum(num_initiated, na.rm = TRUE), .groups = "drop")
+
+telepsych_referral_total <- tele_referral %>%
+    group_by(clt_study_site) %>%
+    summarise(num_referred = sum(num_referred, na.rm = TRUE), .groups = "drop")
+
+#merge telepsych_initiation and telepsych_referral
+telepsych_initiation_total <- full_join(telepsych_initiation_total, telepsych_referral_total, 
+                                         by = c("study_site" = "clt_study_site"))
+
+#change num_initiated to 0 if NA
+telepsych_initiation_total[is.na(telepsych_initiation_total)] <- 0
+
+#calculate initiation rate
+telepsych_initiation_total <- telepsych_initiation_total %>%
+    mutate(initiation_rate = num_initiated / num_referred * 100)
 
 #8. Health talks & flipbook use---------------
 # extract the health talk data from the daily closeout dataset
