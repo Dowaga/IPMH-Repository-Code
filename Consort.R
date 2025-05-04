@@ -32,16 +32,25 @@ pm_abstractions <- pm_survey_df %>%
 pm_df <- pm_abstractions %>% 
     select(pm_ptid, ipmh_participant)
 
-# Get unique participant count in telepsychiatry data
-n_tele_intervention <- telepsychiatry_df %>%
-    distinct(tele_initials) %>%
-    nrow()
+# telepsy
+telepsych$tele_ancid[1] <- telepsych$tele_ancid[4] 
 
-# Control is always zero
-n_tele_control <- 0
+telepsych_df <- telepsych %>%
+    filter(pt_attend == "Yes") %>%               # keep only attended
+    arrange(tele_ancid, tele_date) %>%            # sort by person and date
+    group_by(tele_ancid) %>%
+    slice(1) %>%                                 # keep first record per person
+    ungroup()
 
-# Total referrals
-n_tele_total <- n_tele_intervention + n_tele_control
+#now match this with consenting database to get their pt_id
+tele_with_id <- telepsych_df %>%
+    left_join(
+        rct_ppw_consenting %>% select(anc_num, partipant_id),
+        by = c("tele_ancid" = "anc_num")
+    )
+tele_with_id <- tele_with_id %>%
+    select(tele_ancid, partipant_id) %>% 
+    mutate(tele = "Yes") 
 
 #merging data
 consort_data <- screening_consent_df %>% 
@@ -92,6 +101,9 @@ secondvisit <- ppw_rct_df %>% filter(
 #merge secondvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
+
+consort_data <- consort_data %>% 
+    left_join(tele_with_id, by = c("partipant_id" = "partipant_id")) 
     
 #generate consort diagram without percentages (also without telepsychiatry)
 consort_diagram <- consort_plot(data = consort_data,
@@ -103,6 +115,7 @@ consort_diagram <- consort_plot(data = consort_data,
                                rct_decline_reason = "Declined Enrollment",
                                rct_enrolling = "Enrolled",
                         ipmh_participant = "PM+",
+                        tele = "Telepsychiatry",
                         secondvisit = "6 weeks postpartum visit"),
                     side_box = c("exclusion", "rct_decline_reason"),
                     allocation = "arm")
@@ -125,6 +138,7 @@ counts_by_arm <- consort_data %>%
         eligible = sum(eligible == 1, na.rm = TRUE),
         enrolled = sum(rct_enrolling == "Yes", na.rm = TRUE),
         pm_participants = sum(ipmh_participant == "Yes", na.rm = TRUE),
+        tele_participants = sum(tele == "Yes", na.rm = TRUE),
         postpartum_visit = sum(secondvisit == "Yes", na.rm = TRUE)
     )
 
@@ -142,6 +156,7 @@ counts_by_arm <- counts_by_arm %>%
         txt_excluded = generate_stage_text("Excluded", excluded, assessed),
         txt_enrolled = generate_stage_text("Enrolled", enrolled, eligible),
         txt_pm = generate_stage_text("PM+", pm_participants, enrolled),
+        txt_tele = generate_stage_text("Telepsychiatry", tele_participants, enrolled),
         txt_postpartum = generate_stage_text("6 weeks postpartum visit", postpartum_visit, enrolled)
     )
 
@@ -156,19 +171,6 @@ txt_arm <- counts_by_arm %>%
         txt = sprintf("%s\n (n=%d, %.2f%%)", arm, assessed, (assessed / n_assessed) * 100)
     ) %>%
     pull(txt)
-
-# telepsychiatry
-n_enrolled_intervention <- counts_by_arm %>%
-    filter(arm == "Intervention") %>%
-    pull(enrolled)
-
-counts_by_arm <- counts_by_arm %>%
-    mutate(
-        txt_tele = case_when(
-            arm == "Control" ~ sprintf("Telepsychiatry\n (n=%d, %.2f%%)", 0, 0),
-            arm == "Intervention" ~ sprintf("Telepsychiatry\n (n=%d, %.2f%%)", n_tele_intervention, (n_tele_intervention / enrolled) * 100)
-        )
-    )
 
 #combine PM+ and telepsychiatry
 counts_by_arm <- counts_by_arm %>%
@@ -286,6 +288,9 @@ n_enrolled <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
 # Total PM+ participants
 n_pm <- consort_data %>% filter(ipmh_participant == "Yes") %>% nrow()
 
+# Total telepsychiatry participants
+n_tele <- consort_data %>% filter(tele == "Yes") %>% nrow()
+
 # Total postpartum visits
 n_postpartum <- consort_data %>%
          filter(rct_enrolling == "Yes", secondvisit == "Yes") %>%
@@ -309,14 +314,15 @@ txt_enrolled <- sprintf("Enrolled\n (n=%d, %.2f%%)", n_enrolled, (n_enrolled / n
 # PM+
 txt_pm <- sprintf("PM+\n (n=%d, %.2f%%)", n_pm, (n_pm / n_enrolled) * 100)
 
+#telepsychiatry
+txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.2f%%)", n_tele, (n_tele / n_enrolled) * 100)
+
 # Postpartum
 txt_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.2f%%)", n_postpartum, (n_postpartum / n_enrolled) * 100)
 
-#telepsychiatry
-txt_tele_overall <- sprintf("Telepsychiatry \n (n=%d, %.2f%%)", n_tele_total, (n_tele_total/ n_enrolled) *100)
 
 #combining pm+ and telepsychiatry
-txt_pm_tele <- paste(txt_pm, txt_tele_overall, sep = "\n")
+txt_pm_tele <- paste(txt_pm, txt_tele, sep = "\n")
 
 #exclusion side box
 exclusion_summary <- consort_data %>%
