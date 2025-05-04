@@ -165,6 +165,7 @@ So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique A
 
 
 ```{r consort, fig.height=14, fig.width=8}
+source("Consort.R")
 consort_single
 ```
 
@@ -304,40 +305,87 @@ p2
 
 ### 3.2.1 Current subject status
 
-```{r consortnumsource, echo=FALSE}
-source("weekly_consort.R")
-
-
+```{r consortnumsource, echo=FALSE, warning = F, fig.height=4, fig.width=8}
+source("Consort_WLWH.R")
 ```
 
-From `r all_echispreg` pregnancies registered in eCHIS, `r eligpregs` pregnant women were registered before 37 weeks gestation. Of these `r deliveries` deliveries (`r deliveries_per`%) have been reported, of which `r livebirths` (`r round(livebirths/deliveries*100, 2)`%) were live births. Of these, `r infantstatus_28days_y` infants (`r round(infantstatus_28days_y/livebirths*100, 2)`%) have had home visits with the infant’s status reported at \>=28 days after birth. These data point to gaps or delays in routine reporting of births and completion of postnatal visits. The study team has been utilizing implementation strategies to encourage CHPs to complete follow-up visits in order to improve reporting.
+From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled, 1)`%) women were HIV positive, meeting `r round(n_hiv/405, 1)`% of our WLWH cohort enrollment target. Of these, `r n_postpartum` (`r round(n_postpartum/n_hiv,1 )`%) have completed their 6 week postpartum follow-up with our study team.
 
-```{r consort_mortality}
-source("weekly_consort.R")
-weekly_consort_mortcohort
+
+```{r consort_mortality, warning = F}
+source("Consort_WLWH.R")
+
+add_box(txt = txt_enrolled) |>
+    add_box(txt = txt_hiv) |>
+    add_side_box(txt = txt_pm_tele) |>
+    add_box(txt = txt_postpartum)
 ```
-
 
 \newpage
 
 ### 3.2.2 Enrollment Progress - Overall
 
-Recruitment into the mortality cohort has been slower than expected but has been steadily improving. The study team has been utilizing implementation strategies to encourage CHPs to complete follow-up visits in order to improve delivery reporting.
+Recruitment into the WLWH cohort has been slower than expected but has been steadily improving. Two facilities have reached the 50% enrollment target of 10 WLWH per facility cluster, and six facilities have reached the 25% enrollment target of 5 WLWH per facility cluster. 
 
+```{r enrollment_mor, warning=F}
+source("Enrollment_WLWH.R")
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+  mutate(study_site = recode(study_site,
+    "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital" = "02, Sigomere",
+    "03, Uyawi Sub County Hospital" = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital" = "05, Ukwala",
+    "06, Madiany Sub County Hospital" = "06, Madiany",
+    "07, Kabondo Sub County Hospital" = "07, Kabondo",
+    "08, Mbita Sub-County Hospital" = "08, Mbita",
+    "09, Miriu Health Centre" = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital" = "14, Gita",
+    "15, Akala Health Centre" = "15, Akala",
+    "16, Usigu Health Centre" = "16, Usigu",
+    "17, Ramula Health Centre" = "17, Ramula",
+    "18, Simenya Health Centre" = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)" = "19, Airport",
+    "20, Nyalenda Health Centre" = "20, Nyalenda",
+    "21, Mirogi Health Centre" = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+  ))
 
-```{r enrollment_mor}
-source("morcohort_linegraphs.R")
-p2
+ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                    color = study_site, group = study_site)) +
+    geom_line(linewidth = 1) +  
+    geom_hline(yintercept = 5, linetype = "dashed", color = "blue", linewidth = 1.5) +
+    annotate("text", x = min(weekly_enrollment$week), y = 5, 
+             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
+    geom_hline(yintercept = 10, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+    annotate("text", x = min(weekly_enrollment$week), y = 10, 
+             label = "50% Target", vjust = -1, hjust = 0, size = 3) +
+    labs(title = "WLWH Enrollment Trends by Study Site",
+         x = "Date",
+         y = "Number of WLWH Enrollments",
+         color = "Study Site") +
+    theme_minimal() +
+    theme(
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 9)
+    ) +
+    guides(color = guide_legend(ncol = 2))
 ```
 
 \newpage
 
-# 4. Subcohort Ineligibility
-Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons.
+# 4. Ineligibility
+
+Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. *{Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons. - David, please check if those are correct for IPMH.}*
 
 
 ```{r subcohort_prog}
-source("weekly_consort.R")
+source("Consort.R")
 vars <- c("Participated in CHV-NEO before/ In another study", 
           "Age", "Gestational age",
           "Phone access \n(No phone access, no safaricom/airtel, no phone number)",
@@ -367,9 +415,7 @@ table_ineligibility
 
 # 5. Baseline Demographics
 
-## 5.1 Sub Cohort Participant Baseline Demographics
-
-
+## 5.1 Participant Baseline Demographics
 
 ```{r demographics, warning=F}
 
@@ -381,8 +427,7 @@ kable_styling(latex_options = c("striped", "HOLD_position", position = "center")
   row_spec(1,bold=T)
 ```
 
-## 5.2 Mortality Cohort Baseline Demographics
-
+## 5.2 WLWH Cohort Baseline Demographics
 
 ```{r morcohort_demo, echo=FALSE}
 source("mort_demo.R")
@@ -397,32 +442,21 @@ kable_styling(latex_options = c("striped", "HOLD_position", position = "center")
 
 \newpage
 
-# 6. Sub Cohort Study Terminations
+# 6. Study Terminations
 
+We have not yet had any early terminations; our first expected termination is [].
 
-```{r terminations"}
-source("terminations_tbl.R")
+# 7. Referrals
 
-kable_styling(terminations_summary) %>%
-  kable_styling(latex_options = "HOLD_position") %>% 
-  row_spec(0,bold=T,hline_after = T) %>% 
-  row_spec(7,bold=T) 
+# 7.1 Psychosocial Referrals 
 
-
-```
-
-
-
-```{r referralnumsource, echo=FALSE}
-source("referrals.R")
-
-```
-
-# 7. Sub Cohort Referrals
 At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, participants have screened positive for `r total_scr_num` (`r total_scr_per`) referable conditions. Of which, `r total_ref_num` (`r total_ref_per`) have accepted referrals for those conditions.
 
 
 ```{r referrals}
+##generate report using data from the ???psychosocial referrals??? form in REDCap  
+
+
 source("referrals.R")
 
 kable_styling(referrals_summary) %>%
@@ -431,17 +465,8 @@ kable_styling(referrals_summary) %>%
   row_spec(5,bold=T,hline_after = T) 
 ```
 
-\newpage
+# 7.2 Treatment Referrals
 
-# 8. Time from Delivery to eCHIS Delivery Report
-
-Timely ascertainment of delivery enables timely scheduling of postpartum visits by CHPs and, in the intervention arm, initiation of time-sensitive postpartum messaging. The table below summarizes the time from delivery date to delivery report submission in eCHIS. 
-
-
-```{r deliveryrepTAT}
-source("deliveryreportTAT.R")
-kable_styling(deliverytat_summary) %>%
-  kable_styling(latex_options = "HOLD_position") %>% 
-  row_spec(0,bold=T)
+```{r treatment_referrals}
+#Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
 ```
-
