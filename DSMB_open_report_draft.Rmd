@@ -129,7 +129,7 @@ study_summary
 -   Oct 23, 2024: Facility randomization
 -   Nov 06, 2024: Facility staff training initiation
 -   Feb 17, 2025: Perinatal women recruitment initiation
--   []: 25% of planned enrollment
+-   [Place holder, we are not about 22%]: 25% of planned enrollment
 
 ## 1.2 Key Changes to Study Protocol
 -N/A
@@ -142,15 +142,16 @@ source("Consort.R")
 n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
 n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
 n_eligible <- consort_data %>% filter(!is.na(eligible)) %>% nrow()
-n_eligible_per <- n_eligible/n_ass *100 %>% round(2)
+n_eligible_per <- round(n_eligible/n_ass *100, 1)
 n_enrol <- consort_data %>% filter(!is.na(rct_enrolling)) %>% nrow()
-n_enrol_per <- n_enrol/n_eligible *100 %>% round(2)
+n_enrol_per <- round(n_enrol/n_eligible *100, 1)
 n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
-n_second_per <- n_second/n_enrol * 100 %>% round(2)
+n_second_per <- round(n_second/n_enrol * 100, 1)
 ```
-We began recruiting pregnant women into the study on Feb 17, 2025. 
 
-In general, enrollment has proceeded well despite slow initial enrollment. {A series of national healthcare worker strikes (Mar 12, 2024 and May 8, 2024), flooding (Apr 23, 2024 and May 12, 2024), and ongoing national protests beginning Jun 18, 2024 have slowed data collection.} We should talk about the disruptions regarding USAID, strikes and protests here for IPMH.
+We began recruiting pregnant women into the study on Feb 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970, 1)`% of our enrollment target. Of these, `r n_second` (`r n_second_per`%) have completed their 6 week postpartum follow-up with our study team.
+
+In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
 
 \newpage
 
@@ -160,28 +161,83 @@ In general, enrollment has proceeded well despite slow initial enrollment. {A se
 
 ### 3.1.1 Current subject status
 
-So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (%) completed their 6 weeks postpartum visit.
+So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6 weeks postpartum visit.
 
 
-```{r consort}
-consort_per
+```{r consort, fig.height=14, fig.width=8}
+consort_single
 ```
 
 \newpage
 
-
-```{r enrolltargetsource,  message=FALSE, echo=FALSE}
-source("enroll_linegraph_ppw.R")
-```
-
-
 ### 3.1.2 Enrollment Progress - Overall
 
-On May 29, 2024 we began restricting enrollments in facilities with >70 participants recruited to only 2 enrollments/week. We hit our enrollment target on `r sub_enroll100_date`.
-
+On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on
+[placeholder].
 
 ```{r enrollment_sub,  message=FALSE}
-source("enroll_linegraph_ppw.R")
+source("Enrollment Progress.R")
+
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+  mutate(study_site = recode(study_site,
+    "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital" = "02, Sigomere",
+    "03, Uyawi Sub County Hospital" = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital" = "05, Ukwala",
+    "06, Madiany Sub County Hospital" = "06, Madiany",
+    "07, Kabondo Sub County Hospital" = "07, Kabondo",
+    "08, Mbita Sub-County Hospital" = "08, Mbita",
+    "09, Miriu Health Centre" = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital" = "14, Gita",
+    "15, Akala Health Centre" = "15, Akala",
+    "16, Usigu Health Centre" = "16, Usigu",
+    "17, Ramula Health Centre" = "17, Ramula",
+    "18, Simenya Health Centre" = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)" = "19, Airport",
+    "20, Nyalenda Health Centre" = "20, Nyalenda",
+    "21, Mirogi Health Centre" = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+  ))
+
+target_25_line <- data.frame(
+  week = unique(weekly_enrollment$week),
+  cumulative_enrollment = 743,
+  study_site = "25% Target"
+)
+
+total_enrollment <- weekly_enrollment %>%
+    group_by(week) %>%
+    summarise(enrollment_count = sum(enrollment_count)) %>%
+    arrange(week) %>%
+    mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+    mutate(study_site = "Total")
+
+combined_enrollment <- bind_rows(
+  weekly_enrollment,
+  total_enrollment,
+  target_25_line
+)
+
+p1<- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                color = study_site, group = study_site)) +
+    geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +  # thicker total line
+    scale_linewidth_identity() +  
+    labs(title = "Enrollment Trends",
+         x = "Date",
+         y = "Cumulative Enrollment",
+         color = "Study Site") +
+    theme_minimal() +
+    theme(
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 9)
+    ) +
+    guides(color = guide_legend(ncol = 2))
 p1
 ```
 
@@ -190,26 +246,70 @@ p1
 
 ### 3.1.3 Enrollment Progress - Per Facility
 
-All facilities have hit the minimum target enrollment number of 80 peripartum women/facility cluster. The first cluster to reach the minimum recruitment number per facility was Masogo in mid May 2024. The last cluster to reach the minimum recruitment number per facility was KCH in early July 2024. 
-
-
+[Three] facilities have reached the 25% enrollment target of 37 perinatal women per facility cluster. The first cluster to achieve this milestone was Nyalenda in mid-April 2024.
 
 ```{r enrollment_sub_facility}
-source("enroll_linegraph_ppw_zoom.R")
+source("Enrollment Progress.R")
+
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+  mutate(study_site = recode(study_site,
+    "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital" = "02, Sigomere",
+    "03, Uyawi Sub County Hospital" = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital" = "05, Ukwala",
+    "06, Madiany Sub County Hospital" = "06, Madiany",
+    "07, Kabondo Sub County Hospital" = "07, Kabondo",
+    "08, Mbita Sub-County Hospital" = "08, Mbita",
+    "09, Miriu Health Centre" = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital" = "14, Gita",
+    "15, Akala Health Centre" = "15, Akala",
+    "16, Usigu Health Centre" = "16, Usigu",
+    "17, Ramula Health Centre" = "17, Ramula",
+    "18, Simenya Health Centre" = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)" = "19, Airport",
+    "20, Nyalenda Health Centre" = "20, Nyalenda",
+    "21, Mirogi Health Centre" = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+  ))
+
+p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                    color = study_site, group = study_site)) +
+    geom_line(linewidth = 1) +  
+    geom_hline(yintercept = 37, linetype = "dashed", color = "blue", linewidth = 1.5) +
+    annotate("text", x = min(weekly_enrollment$week), y = 37.125, 
+             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
+    labs(title = "Enrollment Trends by Study Site",
+         x = "Date",
+         y = "Number of Enrollments",
+         color = "Study Site") +
+    theme_minimal() +
+    theme(
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 9)
+    ) +
+    guides(color = guide_legend(ncol = 2))
+
 p2
 ```
 
-
-
 \newpage
 
-## 3.2 Mortality cohort
+## 3.2 WLWH Cohort
 
 ### 3.2.1 Current subject status
+
 ```{r consortnumsource, echo=FALSE}
 source("weekly_consort.R")
 
+
 ```
+
 From `r all_echispreg` pregnancies registered in eCHIS, `r eligpregs` pregnant women were registered before 37 weeks gestation. Of these `r deliveries` deliveries (`r deliveries_per`%) have been reported, of which `r livebirths` (`r round(livebirths/deliveries*100, 2)`%) were live births. Of these, `r infantstatus_28days_y` infants (`r round(infantstatus_28days_y/livebirths*100, 2)`%) have had home visits with the infant’s status reported at \>=28 days after birth. These data point to gaps or delays in routine reporting of births and completion of postnatal visits. The study team has been utilizing implementation strategies to encourage CHPs to complete follow-up visits in order to improve reporting.
 
 ```{r consort_mortality}
@@ -229,18 +329,6 @@ Recruitment into the mortality cohort has been slower than expected but has been
 source("morcohort_linegraphs.R")
 p2
 ```
-
-
-<!-- \newpage -->
-
-<!-- ### 3.2.3 Infant Outcome Ascertainment Progress - Per Facility -->
-
-
-<!-- ```{r enrollment_mor_facility} -->
-<!-- source("morcohort_linegraphs.R") -->
-<!-- p3 -->
-<!-- ``` -->
-
 
 \newpage
 
