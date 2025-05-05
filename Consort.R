@@ -154,7 +154,9 @@ n_attendees <- consort_data %>%
     nrow()
 
 # Assessed for eligibility (non-NA arm)
-n_assessed <- consort_data %>% filter(!is.na(arm)) %>% nrow()
+n_assessed <- consort_data %>% 
+    filter(!is.na(arm)) %>% 
+    nrow()
 
 # By arm
 counts_by_arm <- consort_data %>%
