@@ -419,12 +419,10 @@ table_ineligibility
 
 ```{r demographics, warning=F}
 
-source("comparison_table.R")
+source("PPW RCT Basic Demographics.R")
 
-kable(weekly_demotable) %>%
-kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
-  row_spec(0,bold=T) %>%
-  row_spec(1,bold=T)
+
+basic_demo
 ```
 
 ## 5.2 WLWH Cohort Baseline Demographics
@@ -448,16 +446,15 @@ We have not yet had any early terminations; our first expected termination is []
 
 # 7. Referrals
 
-# 7.1 Psychosocial Referrals 
+## 7.1 Psychosocial Referrals 
 
 At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, participants have screened positive for `r total_scr_num` (`r total_scr_per`) referable conditions. Of which, `r total_ref_num` (`r total_ref_per`) have accepted referrals for those conditions.
 
 
 ```{r referrals}
-##generate report using data from the ???psychosocial referrals??? form in REDCap  
+## generate report using data from psychosocial referrals form in REDCap  
 
-
-source("referrals.R")
+source("PPW RCT Referrals.R")
 
 kable_styling(referrals_summary) %>%
   kable_styling(latex_options = "HOLD_position") %>% 
