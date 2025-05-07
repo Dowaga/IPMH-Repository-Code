@@ -14,6 +14,7 @@ source("data_import.R")
 pm_follow_up <- pm_survey_df %>% 
     select(pm_ptid, pm_facility, pm_date, pm_session) %>%
     right_join(ppw_rct_df %>% 
+                   filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
                    select(record_id, clt_date), 
                by = c("pm_ptid" = "record_id")) %>% 
     select(pm_ptid, clt_date, pm_date, pm_session) %>% 
@@ -185,6 +186,8 @@ V_week5 <- retention %>%
                                    round(`% Attendance`, 2)))
 
 #Yuwei's code--------------
+#clt = enrollment data
+#pm_data = pm session date
 pm_intervals <- pm_follow_up %>%
     mutate(
         clt_date = as.Date(clt_date),
@@ -241,7 +244,7 @@ attendance_table <- pm_intervals %>%
         values_from = label,
         values_fill = "-"
     ) %>%
-    arrange(pm_session, round)
+    arrange(round, pm_session)
 
 kable(attendance_table)
 
