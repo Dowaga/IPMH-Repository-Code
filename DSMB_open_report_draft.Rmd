@@ -1,0 +1,472 @@
+---
+title: "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics"
+
+subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report '
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, options(scipen = 0))
+
+library(stringr)
+library(lubridate)
+library(patchwork)
+library(officedown)
+library(officer)
+library(flextable)
+
+## WORKING DIRECTORY
+# Setup ------------------------------------------------------------------------
+rm(list = ls())             
+
+# Reference source codes & other dependencies:
+source("DataTeam_ipmh.R")
+source("Dependencies.R")
+
+# Set file paths: Use this section to set input and output filepaths
+file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
+file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
+file_date <- gsub("^.*?_2","2",file_date)
+file_date <- str_remove(file_date,".csv")
+file_date <- format(file_date, format="%d %B %Y")
+ppw_rct_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
+                              file_date, ".csv", sep="")) %>% 
+    filter(is.na(redcap_repeat_instance)) #PPW data
+
+daily_closeout_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/Daily_closeout_", 
+                                     file_date, ".csv", sep=""))
+
+screening_consent_df <- read.csv(paste0(ipmh_filepath, 
+                                        "/Data/2. Consenting database/RCT_PPW_consenting_", 
+                                        file_date, ".csv", sep=""))
+
+pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_", 
+                                file_date, ".csv", sep="" ))
+
+ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
+                                             file_date, ".csv", sep="")) %>% 
+    filter(redcap_repeat_instrument == "ADMIN: Adverse Experience")
+
+data_freeze <- file_date
+
+data_freeze <- format(data_freeze, format="%d %B %Y")
+options(scipen = 0)
+```
+
+
+```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
+
+knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
+
+```
+
+\newpage
+
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
+
+Keshet Ronen, PhD, MPH, University of Washington
+
+Amritha Bhat, MBBS, MD, MPH, University of Washington
+
+Report prepared by: David Owaga & Yuwei Wang
+
+Date of data freeze: `r data_freeze`
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+# 1. Study summary
+
+```{r study_summary}
+vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Criteria",
+          "Target Sample Size",
+          "Actual Enrollment",
+          "Participants Completed Follow-up", "Duration", 
+          "Date Study Open", "Date of First Complete Enrollment",
+          "Estimated End of Study",
+          "Endpoints", "")
+
+vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatment of perinatal mood and anxiety disorders (PMADs), and its implementation strategies, into maternal and child health clinics and pragmatically evaluate its clinical, service delivery, and implementation outcomes",
+           "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of IPMH and associated implementation strategies on depression, anxiety, quality of life, and adverse perinatal outcomes vs. control (standard of care) among Kenyan women", 
+           "Pregnant Kenyan women", 
+           "-Receiving antenatal care at study facility\n->=28 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
+           "2970, including 405 women living with HIV (WLWH)", 
+           "[place holder]",
+           "0",
+           "Follow-up through 6 months postpartum", 
+           "September 19, 2023", 
+           "February 17, 2025",
+           "July 31, 2028",
+           "Primary: Depression and anxiety", 
+           "Secondary:\n-Depression and anxiety among WLWH\n-Quality of Life\n-Adverse perinatal outcomes")
+
+stdy_summ <- data.frame(vars, vars2)
+
+study_summary <- flextable(stdy_summ)
+study_summary <- flextable::width(study_summary, 'vars2', width = 5)
+study_summary <- flextable::width(study_summary, 'vars', width = 2)
+border <- fp_border()
+study_summary <- flextable::vline(study_summary, j = c('vars'), border = border, part = "all")
+study_summary <- set_header_labels(study_summary, vars = "Title", vars2 = "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics")
+
+study_summary
+```
+
+\newpage
+
+## 1.1 Study Timeline Since Initiation:
+-   May 12, 2023: Initial IRB approval
+-   Jun 05, 2023: Initial ERC approval
+-   Sep 19, 2023: RO1 Start date
+-   Oct 04, 2024: Research assistant (RA) training initiation
+-   Oct 11, 2024: 1st DSMB meeting
+-   Oct 23, 2024: Facility randomization
+-   Nov 06, 2024: Facility staff training initiation
+-   Feb 17, 2025: Perinatal women recruitment initiation
+-   [Place holder, we are not about 22%]: 25% of planned enrollment
+
+## 1.2 Key Changes to Study Protocol
+-N/A
+
+# 2. Study Progress
+
+## 2.1 Recruitment Timeline
+```{r source_consort, echo=FALSE, warning=FALSE}
+source("Consort.R")
+n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
+n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
+n_eligible <- consort_data %>% filter(!is.na(eligible)) %>% nrow()
+n_eligible_per <- round(n_eligible/n_ass *100, 1)
+n_enrol <- consort_data %>% filter(!is.na(rct_enrolling)) %>% nrow()
+n_enrol_per <- round(n_enrol/n_eligible *100, 1)
+n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
+n_second_per <- round(n_second/n_enrol * 100, 1)
+```
+
+We began recruiting pregnant women into the study on Feb 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970, 1)`% of our enrollment target. Of these, `r n_second` (`r n_second_per`%) have completed their 6 week postpartum follow-up with our study team.
+
+In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
+
+\newpage
+
+# 3. Study Enrollment 
+
+## 3.1 Overall Cohort
+
+### 3.1.1 Current subject status
+
+So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6 weeks postpartum visit.
+
+
+```{r consort, fig.height=14, fig.width=8}
+source("Consort.R")
+consort_single
+```
+
+\newpage
+
+### 3.1.2 Enrollment Progress - Overall
+
+On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on
+[placeholder].
+
+```{r enrollment_sub,  message=FALSE}
+source("Enrollment Progress.R")
+
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+  mutate(study_site = recode(study_site,
+    "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital" = "02, Sigomere",
+    "03, Uyawi Sub County Hospital" = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital" = "05, Ukwala",
+    "06, Madiany Sub County Hospital" = "06, Madiany",
+    "07, Kabondo Sub County Hospital" = "07, Kabondo",
+    "08, Mbita Sub-County Hospital" = "08, Mbita",
+    "09, Miriu Health Centre" = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital" = "14, Gita",
+    "15, Akala Health Centre" = "15, Akala",
+    "16, Usigu Health Centre" = "16, Usigu",
+    "17, Ramula Health Centre" = "17, Ramula",
+    "18, Simenya Health Centre" = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)" = "19, Airport",
+    "20, Nyalenda Health Centre" = "20, Nyalenda",
+    "21, Mirogi Health Centre" = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+  ))
+
+target_25_line <- data.frame(
+  week = unique(weekly_enrollment$week),
+  cumulative_enrollment = 743,
+  study_site = "25% Target"
+)
+
+total_enrollment <- weekly_enrollment %>%
+    group_by(week) %>%
+    summarise(enrollment_count = sum(enrollment_count)) %>%
+    arrange(week) %>%
+    mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+    mutate(study_site = "Total")
+
+combined_enrollment <- bind_rows(
+  weekly_enrollment,
+  total_enrollment,
+  target_25_line
+)
+
+p1<- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                color = study_site, group = study_site)) +
+    geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +  # thicker total line
+    scale_linewidth_identity() +  
+    labs(title = "Enrollment Trends",
+         x = "Date",
+         y = "Cumulative Enrollment",
+         color = "Study Site") +
+    theme_minimal() +
+    theme(
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 9)
+    ) +
+    guides(color = guide_legend(ncol = 2))
+p1
+```
+
+
+\newpage
+
+### 3.1.3 Enrollment Progress - Per Facility
+
+[Three] facilities have reached the 25% enrollment target of 37 perinatal women per facility cluster. The first cluster to achieve this milestone was Nyalenda in mid-April 2024.
+
+```{r enrollment_sub_facility}
+source("Enrollment Progress.R")
+
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+  mutate(study_site = recode(study_site,
+    "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital" = "02, Sigomere",
+    "03, Uyawi Sub County Hospital" = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital" = "05, Ukwala",
+    "06, Madiany Sub County Hospital" = "06, Madiany",
+    "07, Kabondo Sub County Hospital" = "07, Kabondo",
+    "08, Mbita Sub-County Hospital" = "08, Mbita",
+    "09, Miriu Health Centre" = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital" = "14, Gita",
+    "15, Akala Health Centre" = "15, Akala",
+    "16, Usigu Health Centre" = "16, Usigu",
+    "17, Ramula Health Centre" = "17, Ramula",
+    "18, Simenya Health Centre" = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)" = "19, Airport",
+    "20, Nyalenda Health Centre" = "20, Nyalenda",
+    "21, Mirogi Health Centre" = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+  ))
+
+p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                    color = study_site, group = study_site)) +
+    geom_line(linewidth = 1) +  
+    geom_hline(yintercept = 37, linetype = "dashed", color = "blue", linewidth = 1.5) +
+    annotate("text", x = min(weekly_enrollment$week), y = 37.125, 
+             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
+    labs(title = "Enrollment Trends by Study Site",
+         x = "Date",
+         y = "Number of Enrollments",
+         color = "Study Site") +
+    theme_minimal() +
+    theme(
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 9)
+    ) +
+    guides(color = guide_legend(ncol = 2))
+
+p2
+```
+
+\newpage
+
+## 3.2 WLWH Cohort
+
+### 3.2.1 Current subject status
+
+```{r consortnumsource, echo=FALSE, warning = F, fig.height=4, fig.width=8}
+source("Consort_WLWH.R")
+```
+
+From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled, 1)`%) women were HIV positive, meeting `r round(n_hiv/405, 1)`% of our WLWH cohort enrollment target. Of these, `r n_postpartum` (`r round(n_postpartum/n_hiv,1 )`%) have completed their 6 week postpartum follow-up with our study team.
+
+
+```{r consort_mortality, warning = F}
+source("Consort_WLWH.R")
+
+add_box(txt = txt_enrolled) |>
+    add_box(txt = txt_hiv) |>
+    add_side_box(txt = txt_pm_tele) |>
+    add_box(txt = txt_postpartum)
+```
+
+\newpage
+
+### 3.2.2 Enrollment Progress - Overall
+
+Recruitment into the WLWH cohort has been slower than expected but has been steadily improving. Two facilities have reached the 50% enrollment target of 10 WLWH per facility cluster, and six facilities have reached the 25% enrollment target of 5 WLWH per facility cluster. 
+
+```{r enrollment_mor, warning=F}
+source("Enrollment_WLWH.R")
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+  mutate(study_site = recode(study_site,
+    "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital" = "02, Sigomere",
+    "03, Uyawi Sub County Hospital" = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital" = "05, Ukwala",
+    "06, Madiany Sub County Hospital" = "06, Madiany",
+    "07, Kabondo Sub County Hospital" = "07, Kabondo",
+    "08, Mbita Sub-County Hospital" = "08, Mbita",
+    "09, Miriu Health Centre" = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital" = "14, Gita",
+    "15, Akala Health Centre" = "15, Akala",
+    "16, Usigu Health Centre" = "16, Usigu",
+    "17, Ramula Health Centre" = "17, Ramula",
+    "18, Simenya Health Centre" = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)" = "19, Airport",
+    "20, Nyalenda Health Centre" = "20, Nyalenda",
+    "21, Mirogi Health Centre" = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+  ))
+
+ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                    color = study_site, group = study_site)) +
+    geom_line(linewidth = 1) +  
+    geom_hline(yintercept = 5, linetype = "dashed", color = "blue", linewidth = 1.5) +
+    annotate("text", x = min(weekly_enrollment$week), y = 5, 
+             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
+    geom_hline(yintercept = 10, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+    annotate("text", x = min(weekly_enrollment$week), y = 10, 
+             label = "50% Target", vjust = -1, hjust = 0, size = 3) +
+    labs(title = "WLWH Enrollment Trends by Study Site",
+         x = "Date",
+         y = "Number of WLWH Enrollments",
+         color = "Study Site") +
+    theme_minimal() +
+    theme(
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 9)
+    ) +
+    guides(color = guide_legend(ncol = 2))
+```
+
+\newpage
+
+# 4. Ineligibility
+
+Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. *{Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons. - David, please check if those are correct for IPMH.}*
+
+
+```{r subcohort_prog}
+source("Consort.R")
+vars <- c("Participated in CHV-NEO before/ In another study", 
+          "Age", "Gestational age",
+          "Phone access \n(No phone access, no safaricom/airtel, no phone number)",
+          "Not willing to receive sms", 
+          "Not able to stay in the area >3 months", "Not willing to provide contact info", "Not registered in eCHIS", "Not visited by study CHP/ village not in facility’s CUs",
+          "Not able to read/respond to SMS",
+          "Total ineligible visits")
+
+vars2 <- c(enroll.no_othrstdy, enroll.no_age, enroll.no_gest, enroll.no_phoneacces, enroll.no_sms, enroll.no_locstay, enroll.no_contact, enroll.no_echis, enroll.no_chp, enroll.no_readwritesms, enroll.no)
+
+percentages <- (vars2 / enroll.no) * 100
+vars2_formatted <- ifelse(vars2 == enroll.no, enroll.no, paste0(vars2, " (", round(percentages, 2), "%)"))
+
+ineligible_table <- data.frame(vars, vars2_formatted)
+
+table_ineligibility <- flextable(ineligible_table)
+table_ineligibility <- flextable::width(table_ineligibility, 'vars2_formatted', width = 2)
+table_ineligibility <- flextable::width(table_ineligibility, 'vars', width = 5)
+border <- fp_border()
+table_ineligibility <- flextable::vline(table_ineligibility, j = c('vars'), border = border, part = "all")
+table_ineligibility <- set_header_labels(table_ineligibility, vars = "Ineligible Reason \n(Participants can be ineligible for multiple reasons)", vars2_formatted = "N (%)")
+
+table_ineligibility
+```
+
+\newpage
+
+# 5. Baseline Demographics
+
+## 5.1 Participant Baseline Demographics
+
+```{r demographics, warning=F}
+
+source("comparison_table.R")
+
+kable(weekly_demotable) %>%
+kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
+  row_spec(0,bold=T) %>%
+  row_spec(1,bold=T)
+```
+
+## 5.2 WLWH Cohort Baseline Demographics
+
+```{r morcohort_demo, echo=FALSE}
+source("mort_demo.R")
+
+kable(mort_demo_open) %>%
+kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
+  row_spec(0,bold=T) %>%
+  row_spec(1,bold=T)
+
+```
+
+
+\newpage
+
+# 6. Study Terminations
+
+We have not yet had any early terminations; our first expected termination is [].
+
+# 7. Referrals
+
+# 7.1 Psychosocial Referrals 
+
+At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, participants have screened positive for `r total_scr_num` (`r total_scr_per`) referable conditions. Of which, `r total_ref_num` (`r total_ref_per`) have accepted referrals for those conditions.
+
+
+```{r referrals}
+##generate report using data from the ???psychosocial referrals??? form in REDCap  
+
+
+source("referrals.R")
+
+kable_styling(referrals_summary) %>%
+  kable_styling(latex_options = "HOLD_position") %>% 
+  row_spec(0,bold=T,hline_after = T) %>% 
+  row_spec(5,bold=T,hline_after = T) 
+```
+
+# 7.2 Treatment Referrals
+
+```{r treatment_referrals}
+#Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
+```
