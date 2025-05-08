@@ -102,15 +102,6 @@ dups_filtered <- pm_visits %>%
 # Save each PM Facility as a separate CSV file with date in the filename
 dups_filtered %>%
     group_split(pm_facility) %>%
-    walk(~ write_xlsx(.x, file = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/", 
-                                       "Duplicate PM+ Session", 
-                                       unique(.x$pm_facility), "_", 
-                                       format(Sys.Date(), "%Y-%m-%d"), ".xlsx"), 
-                     row.names = FALSE))
-
-# Save each facility's dataset as an Excel file
-dups_filtered %>%
-    group_split(pm_facility) %>%
     walk(~ write_xlsx(.x, path = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/", 
                                         "Duplicate PM+ Session ", 
                                         unique(.x$pm_facility), "_", 
@@ -252,7 +243,7 @@ pm_intervals <- pm_intervals %>%
     ) %>%
     ungroup()
 
-#table for attendance timing (type)
+# table for attendance timing (type)
 attendance_table <- pm_intervals %>%
     filter(!is.na(attendance_timing)) %>%
     group_by(pm_session, round, attendance_timing) %>%
