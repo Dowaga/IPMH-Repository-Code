@@ -86,11 +86,36 @@ pm_visits <- pm_survey_df %>%
     filter(ipmh_participant == "Yes") %>%
     select(pm_facility,pm_ptid,pm_date, pm_session)
 
+
 # Duplicates Sessions
 duplicates_visit <- pm_visits %>%
     group_by(pm_ptid, pm_session) %>%
     summarise(count = n(), .groups = "drop") %>%
     filter(count > 1)  # Filter those with more than one attendance per session
+
+# Filter duplicated rows based on ptid and session
+dups_filtered <- pm_visits %>%
+    filter(duplicated(pm_visits[c("pm_ptid", "pm_session")]) |
+               duplicated(pm_visits[c("pm_ptid", "pm_session")], fromLast = TRUE))
+
+
+# Save each PM Facility as a separate CSV file with date in the filename
+dups_filtered %>%
+    group_split(pm_facility) %>%
+    walk(~ write_xlsx(.x, file = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/", 
+                                       "Duplicate PM+ Session", 
+                                       unique(.x$pm_facility), "_", 
+                                       format(Sys.Date(), "%Y-%m-%d"), ".xlsx"), 
+                     row.names = FALSE))
+
+# Save each facility's dataset as an Excel file
+dups_filtered %>%
+    group_split(pm_facility) %>%
+    walk(~ write_xlsx(.x, path = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/", 
+                                        "Duplicate PM+ Session ", 
+                                        unique(.x$pm_facility), "_", 
+                                        format(Sys.Date(), "%Y-%m-%d"), ".xlsx")))
+
 
 
 # Transforming data: One column for ptid, each session as a separate column
