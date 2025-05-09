@@ -417,3 +417,4 @@ consort_single <- add_box(txt = txt_anc) |>
     add_box(txt = txt_postpartum)
 
 consort_single
+
