@@ -386,29 +386,7 @@ Total ineligible visits represents ANC visits at which a woman was assessed as i
 
 ```{r subcohort_prog}
 source("Consort.R")
-vars <- c("Participated in CHV-NEO before/ In another study", 
-          "Age", "Gestational age",
-          "Phone access \n(No phone access, no safaricom/airtel, no phone number)",
-          "Not willing to receive sms", 
-          "Not able to stay in the area >3 months", "Not willing to provide contact info", "Not registered in eCHIS", "Not visited by study CHP/ village not in facility’s CUs",
-          "Not able to read/respond to SMS",
-          "Total ineligible visits")
 
-vars2 <- c(enroll.no_othrstdy, enroll.no_age, enroll.no_gest, enroll.no_phoneacces, enroll.no_sms, enroll.no_locstay, enroll.no_contact, enroll.no_echis, enroll.no_chp, enroll.no_readwritesms, enroll.no)
-
-percentages <- (vars2 / enroll.no) * 100
-vars2_formatted <- ifelse(vars2 == enroll.no, enroll.no, paste0(vars2, " (", round(percentages, 2), "%)"))
-
-ineligible_table <- data.frame(vars, vars2_formatted)
-
-table_ineligibility <- flextable(ineligible_table)
-table_ineligibility <- flextable::width(table_ineligibility, 'vars2_formatted', width = 2)
-table_ineligibility <- flextable::width(table_ineligibility, 'vars', width = 5)
-border <- fp_border()
-table_ineligibility <- flextable::vline(table_ineligibility, j = c('vars'), border = border, part = "all")
-table_ineligibility <- set_header_labels(table_ineligibility, vars = "Ineligible Reason \n(Participants can be ineligible for multiple reasons)", vars2_formatted = "N (%)")
-
-table_ineligibility
 ```
 
 \newpage
@@ -428,25 +406,50 @@ basic_demo
 ## 5.2 WLWH Cohort Baseline Demographics
 
 ```{r morcohort_demo, echo=FALSE}
-source("mort_demo.R")
+source("PPW RCT Basic Demographics.R")
 
-kable(mort_demo_open) %>%
-kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
-  row_spec(0,bold=T) %>%
-  row_spec(1,bold=T)
+wlwh_demo
 
 ```
-
 
 \newpage
 
 # 6. Study Terminations
+```{r Ealiest Expected termination}
 
-We have not yet had any early terminations; our first expected termination is [].
+first_6w <- ppw_rct_df %>%
+    # Filter to "6 weeks" and grab the first per participant
+  filter(clt_visit == "6 weeks post-partum") %>%
+    mutate(
+    clt_date = as_date(clt_date, format = "%Y-%m-%d")) %>% 
+  group_by(clt_ptid) %>%
+  slice_min(clt_date, n = 1) %>%    # in case there are duplicates
+  ungroup() %>% 
+    select(clt_study_site,clt_ptid, clt_date, ) %>% 
+    # Compute the six-month due date
+    mutate(
+    sixmo_duedate = clt_date %m+% months(6)
+  )
+
+# Earliest due date
+earliest_due <- first_6w %>%
+  slice_min(sixmo_duedate, n = 1) %>%
+  select(clt_ptid, clt_date, sixmo_duedate) %>% 
+    pull(clt_date)                                  
+```
+
+
+We have not yet had any early terminations; our first expected termination is `r earliest_due`.
 
 # 7. Referrals
 
 ## 7.1 Psychosocial Referrals 
+```{r message=FALSE, warning=FALSE, include=FALSE}
+total_visits <- ppw_rct_df %>%
+    summarise(total_visits = n())
+total_scr_num
+```
+
 
 At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, participants have screened positive for `r total_scr_num` (`r total_scr_per`) referable conditions. Of which, `r total_ref_num` (`r total_ref_per`) have accepted referrals for those conditions.
 
@@ -456,10 +459,7 @@ At, both, enrollment and 6-week follow up study visits participants are asked if
 
 source("PPW RCT Referrals.R")
 
-kable_styling(referrals_summary) %>%
-  kable_styling(latex_options = "HOLD_position") %>% 
-  row_spec(0,bold=T,hline_after = T) %>% 
-  row_spec(5,bold=T,hline_after = T) 
+summary_tbl
 ```
 
 # 7.2 Treatment Referrals
