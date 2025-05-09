@@ -223,4 +223,39 @@ yield_summary <- yield_df %>%
 yield_summary
 
 
+# Missed Opportunities
+
+facility_yield <- facility_yield %>% 
+    rename(phq9_fac = phq9_positive,
+           gad7_fac = gad7_positive)
+
+yield_df <- yield_df %>% 
+    rename(phq9_staff = phq9_positive,
+           gad7_staff = gad7_positive)
+
+missed_oppor <- facility_yield %>% 
+    select(record_id, clt_study_site, phq9_fac, gad7_fac) %>% 
+    right_join(yield_df %>% 
+                   select(record_id, clt_study_site, phq9_staff, gad7_staff, arm),
+               by = c("record_id", "clt_study_site")) %>% 
+    #filter the intervention sites
+    filter(arm == "Intervention")%>%
+    select(-arm) %>% 
+    mutate(
+        missed_opportunity = case_when(
+            (phq9_staff == 1 & phq9_fac == 0) |
+                (gad7_staff == 1 & gad7_fac == 0)  ~ 1L,
+            TRUE                                 ~ 0L
+        )
+    ) %>% 
+    filter(missed_opportunity == 1)
+
+
+# Save each Missed opportunityas a separate xlsx file with date in the filename
+missed_oppor %>%
+    group_split(clt_study_site) %>%
+    walk(~ write_xlsx(.x, path = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/", 
+                                        "Missed Opportunities ", 
+                                        unique(.x$clt_study_site), "_", 
+                                        format(Sys.Date(), "%Y-%m-%d"), ".xlsx")))
 
