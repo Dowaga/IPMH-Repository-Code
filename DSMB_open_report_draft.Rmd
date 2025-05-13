@@ -164,7 +164,7 @@ In general, the enrollment had a good start and has progressed well despite chal
 So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6 weeks postpartum visit.
 
 
-```{r consort, fig.height=14, fig.width=8}
+```{r consort, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
 source("Consort.R")
 consort_single
 ```
@@ -305,7 +305,7 @@ p2
 
 ### 3.2.1 Current subject status
 
-```{r consortnumsource, echo=FALSE, warning = F, fig.height=4, fig.width=8}
+```{r consortnumsource, echo=FALSE, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
 source("Consort_WLWH.R")
 ```
 
@@ -435,7 +435,7 @@ first_6w <- ppw_rct_df %>%
 earliest_due <- first_6w %>%
   slice_min(sixmo_duedate, n = 1) %>%
   select(clt_ptid, clt_date, sixmo_duedate) %>% 
-    pull(clt_date)                                  
+    pull(sixmo_duedate)                                  
 ```
 
 
@@ -443,23 +443,28 @@ We have not yet had any early terminations; our first expected termination is `r
 
 # 7. Referrals
 
-## 7.1 Psychosocial Referrals 
+## 7.1 Psychosocial Referrals
+
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-total_visits <- ppw_rct_df %>%
-    summarise(total_visits = n())
-total_scr_num
+source("PPW RCT Referrals.R")
+total_visits <- referral_df %>%nrow()
+total_scr_num <- df_long %>% nrow()
+total_scr_per <- round(total_scr_num/total_visits *100, 1)
+total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
+total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
+
+
 ```
 
 
-At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, participants have screened positive for `r total_scr_num` (`r total_scr_per`) referable conditions. Of which, `r total_ref_num` (`r total_ref_per`) have accepted referrals for those conditions.
+At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`) participants have screened positive for  referable conditions. Of which, `r total_ref_num` (`r total_ref_per`) have accepted referrals for those conditions.
 
 
-```{r referrals}
+```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
 ## generate report using data from psychosocial referrals form in REDCap  
-
 source("PPW RCT Referrals.R")
 
-summary_tbl
+referral_summary
 ```
 
 # 7.2 Treatment Referrals
