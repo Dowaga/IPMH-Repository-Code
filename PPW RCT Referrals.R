@@ -55,21 +55,26 @@ control_psy_qcs <- referral_df %>%
     select(record_id, clt_study_site, Arm, starts_with("screened_"), referred, 
            referral_accept) %>% 
     filter(referred == 0) %>% 
-    filter(Arm == "control")
+    filter(Arm == "control") %>% 
+    select(-Arm)
 
-# Save each study site as a separate CSV file
-control_psy_qcs %>%
-    group_split(clt_study_site) %>%
-    walk(~ write.csv(.x, file = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/", 
-                                       unique(.x$clt_study_site), ".csv"), row.names = FALSE))
+# Select PHQ9 and GAD7 Scores
+phq9_gad7_scores <- ppw_rct_df %>% 
+    select(record_id, starts_with("phq_"), starts_with("gad7_"))
+
+# Join Qcs with PHQ9 and GAD7 Scores
+control_psy_qcs <- control_psy_qcs %>% 
+    left_join(phq9_gad7_scores, by  = "record_id")
+
 
 # Save each clt_study_site as a separate CSV file with date in the filename
 control_psy_qcs %>%
     group_split(clt_study_site) %>%
-    walk(~ write.csv(.x, file = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/", 
+    walk(~ write_xlsx(.x, path = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/",
+                                        "Psychosocial Support Referral_",
                                        unique(.x$clt_study_site), "_", 
-                                       format(Sys.Date(), "%Y-%m-%d"), ".csv"), 
-                     row.names = FALSE))
+                                       format(Sys.Date(), "%Y-%m-%d"), ".xlsx")))
+
 
 
 intervention_psy_qcs <- referral_df %>% 
@@ -89,7 +94,7 @@ condition_labels <- tribble(
     "screened_IPV",          "IPV>=10"
 )
 
-# ????????? 2. Pivot longer & flag accepted ???????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
+# 2. Pivot longer & flag accepted
 df_long <- referral_df %>%
     # keep only the risk_* + referral_accept columns you need
     select(record_id, starts_with("screened_"), referral_accept) %>%
@@ -130,16 +135,20 @@ summary_tbl <- df_long %>%
     )
 
 
-
 referral_summary <- summary_tbl %>%
     mutate(
-        pct_screened = scales::percent(pct_screened/100, accuracy = 0.1),
-        pct_accepted = scales::percent(pct_accepted/100,  accuracy = 0.1)
+        pct_screened = scales::percent(pct_screened / 100, accuracy = 0.1),
+        pct_accepted = scales::percent(pct_accepted / 100, accuracy = 0.1)
     ) %>%
     kableExtra::kbl(
-        col.names = c("Referral Condition", "n", "% Screened+", "n Accepted", "% Accepted"),
+        col.names = c("Referral Condition", "n", "% ", "n", "%"),
         booktabs = TRUE, digits = 1
+    ) %>%
+    kableExtra::add_header_above(
+        c(" " = 1, "Screened" = 2, "Accepted" = 2)
     ) %>%
     kableExtra::kable_styling(full_width = FALSE)
 
+
 referral_summary
+
