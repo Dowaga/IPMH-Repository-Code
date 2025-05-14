@@ -141,9 +141,9 @@ study_summary
 source("Consort.R")
 n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
 n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
-n_eligible <- consort_data %>% filter(!is.na(eligible)) %>% nrow()
+n_eligible <- consort_data %>% filter(rct_eligible == 1) %>% nrow()
 n_eligible_per <- round(n_eligible/n_ass *100, 1)
-n_enrol <- consort_data %>% filter(!is.na(rct_enrolling)) %>% nrow()
+n_enrol <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
 n_enrol_per <- round(n_enrol/n_eligible *100, 1)
 n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
 n_second_per <- round(n_second/n_enrol * 100, 1)
@@ -161,7 +161,7 @@ In general, the enrollment had a good start and has progressed well despite chal
 
 ### 3.1.1 Current subject status
 
-So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6 weeks postpartum visit.
+So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6 weeks postpartum visit.
 
 
 ```{r consort, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
@@ -309,7 +309,7 @@ p2
 source("Consort_WLWH.R")
 ```
 
-From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled, 1)`%) women were HIV positive, meeting `r round(n_hiv/405, 1)`% of our WLWH cohort enrollment target. Of these, `r n_postpartum` (`r round(n_postpartum/n_hiv,1 )`%) have completed their 6 week postpartum follow-up with our study team.
+From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled*100, 1)`%) women were HIV positive, meeting `r round(n_hiv/405*100, 1)`% of our WLWH cohort enrollment target. Of these, `r n_postpartum` (`r round(n_postpartum/n_hiv *100,1 )`%) have completed their 6 week postpartum follow-up with our study team.
 
 
 ```{r consort_mortality, warning = F}
@@ -381,12 +381,12 @@ ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
 
 # 4. Ineligibility
 
-Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. *{Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons. - David, please check if those are correct for IPMH.}*
+Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. *{Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons.}*
 
 
 ```{r subcohort_prog}
 source("Consort.R")
-
+ineligibility_summary
 ```
 
 \newpage
@@ -405,7 +405,7 @@ basic_demo
 
 ## 5.2 WLWH Cohort Baseline Demographics
 
-```{r morcohort_demo, echo=FALSE}
+```{r WLWH_demo, echo=FALSE}
 source("PPW RCT Basic Demographics.R")
 
 wlwh_demo
@@ -457,7 +457,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
 
-At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`) participants have screened positive for  referable conditions. Of which, `r total_ref_num` (`r total_ref_per`) have accepted referrals for those conditions.
+At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions. Of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals for those conditions.
 
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
