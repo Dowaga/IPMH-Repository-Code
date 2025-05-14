@@ -58,7 +58,7 @@ consort_data <- screening_consent_df %>%
     select(record_id, partipant_id, rct_harm_thought, rct_aud_hallucinations, 
            rct_vis_hallucinations, rct_paranoia,rct_delusions,
            rct_memory_problem,rct_eligible_gestation, rct_eligible_harm, 
-           rct_eligible, rct_enrolling, rct_decline_reason, 
+           rct_risk, rct_eligible, rct_enrolling, rct_decline_reason, 
            rct_other_reasons) %>% 
     mutate(
         eligible = case_when(
@@ -71,7 +71,13 @@ consort_data <- screening_consent_df %>%
         rct_eligible == 0 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
         rct_memory_problem == "Yes" ~"Memory problem",
         rct_delusions == "Yes" ~ "Holding unusual beliefs",
-        TRUE ~ NA_character_)) %>% 
+        rct_paranoia == "Yes" ~ "Feels watched/followed",
+                TRUE ~ NA_character_)) %>% 
+    mutate(
+        exclusion = case_when(
+            exclusion == "Self harm" & rct_risk %in% c("Low", "Moderate") ~ NA_character_,
+            TRUE ~ exclusion
+        )) %>% 
     mutate(facility = as.numeric(str_sub(partipant_id, 3, 4))) %>% 
     mutate(arm = case_when(
         facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21) ~ "Control",
@@ -417,4 +423,11 @@ consort_single <- add_box(txt = txt_anc) |>
     add_box(txt = txt_postpartum)
 
 consort_single
+
+#### Ineligibility Reasons
+ineligibility_summary <- consort_data %>% 
+    filter(!is.na(exclusion)) %>% 
+    tbl_summary(include = c(exclusion))
+
+ineligibility_summary
 
