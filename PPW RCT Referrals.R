@@ -13,7 +13,7 @@ source("data_import.R")
 
 # data prep --------------------------------------------------------------------
 referral_df <- ppw_rct_df %>% 
-    filter(clt_visit == "Enrollment") %>% 
+    #filter(clt_visit == "Enrollment") %>% 
     select(record_id, clt_study_site, clt_date,starts_with("risk_"), 
            referral_inf, date_infharm,
            referral_depress, referral_anxiety, referral_ipv, referral_type___0,
@@ -146,7 +146,7 @@ referral_summary <- summary_tbl %>%
     ) %>%
     kableExtra::add_header_above(
         c(" " = 1, "Screened" = 2, "Accepted" = 2)
-    ) %>%
+    ) %>% kableExtra::row_spec(nrow(summary_tbl), bold = TRUE)%>%
     kableExtra::kable_styling(full_width = FALSE)
 
 
