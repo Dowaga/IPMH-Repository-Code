@@ -1,6 +1,6 @@
 ---
-title: "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics"
-
+title: 'IPMH: Integration of stepped care for perinatal mood and anxiety disorders
+  among women attending MCH clinics'
 subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report '
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
@@ -246,8 +246,19 @@ p1
 \newpage
 
 ### 3.1.3 Enrollment Progress - Per Facility
+```{r Facility target reached}
+source("Enrollment Progress.R")
+reached_25per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 37) %>%
+  summarise(n = n()) %>%
+  pull(n)
 
-[Three] facilities have reached the 25% enrollment target of 37 perinatal women per facility cluster. The first cluster to achieve this milestone was Nyalenda in mid-April 2024.
+```
+
+
+`r reached_25per_target` facilities have reached the 25% enrollment target of 37 perinatal women per facility cluster. The first cluster to achieve this milestone was Nyalenda in mid-April 2024.
 
 ```{r enrollment_sub_facility}
 source("Enrollment Progress.R")
@@ -384,7 +395,7 @@ ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
 Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. *{Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons.}*
 
 
-```{r subcohort_prog}
+```{r subcohort_prog, echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort.R")
 ineligibility_summary
 ```
@@ -407,7 +418,6 @@ basic_demo
 
 ```{r WLWH_demo, echo=FALSE}
 source("PPW RCT Basic Demographics.R")
-
 wlwh_demo
 
 ```
@@ -416,7 +426,6 @@ wlwh_demo
 
 # 6. Study Terminations
 ```{r Ealiest Expected termination}
-
 first_6w <- ppw_rct_df %>%
     # Filter to "6 weeks" and grab the first per participant
   filter(clt_visit == "6 weeks post-partum") %>%
@@ -447,12 +456,12 @@ We have not yet had any early terminations; our first expected termination is `r
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 source("PPW RCT Referrals.R")
+
 total_visits <- referral_df %>%nrow()
 total_scr_num <- df_long %>% nrow()
 total_scr_per <- round(total_scr_num/total_visits *100, 1)
 total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
 total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
-
 
 ```
 
@@ -466,6 +475,7 @@ source("PPW RCT Referrals.R")
 
 referral_summary
 ```
+
 
 # 7.2 Treatment Referrals
 
