@@ -75,9 +75,9 @@ consort_data <- screening_consent_df %>%
                 TRUE ~ NA_character_)) %>% 
     mutate(
         exclusion = case_when(
-            exclusion == "Self harm" & rct_risk %in% c("Low", "Moderate") ~ NA_character_,
+            rct_enrolling == Yes & exclusion == "Self harm" & rct_risk %in% c("Low", "Moderate") ~ NA_character_,
             TRUE ~ exclusion
-        )) %>% 
+              )) %>% 
     mutate(facility = as.numeric(str_sub(partipant_id, 3, 4))) %>% 
     mutate(arm = case_when(
         facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21) ~ "Control",
@@ -319,6 +319,9 @@ n_excluded <- consort_data %>%
     filter(!is.na(exclusion)) %>% 
     nrow()
 
+consort_data %>% 
+    tabyl(exclusion)
+
 # Total eligible
 n_eligible <- consort_data %>% 
     filter(eligible == 1) %>% 
@@ -424,10 +427,17 @@ consort_single <- add_box(txt = txt_anc) |>
 
 consort_single
 
+#-------------------------------------------------------------------------------
 #### Ineligibility Reasons
 ineligibility_summary <- consort_data %>% 
     filter(!is.na(exclusion)) %>% 
-    tbl_summary(include = c(exclusion))
+    tbl_summary(
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include = c(exclusion),
+        label = list(exclusion ~ "Reasons for Ineligibility"))
 
 ineligibility_summary
 
+#-------------------------------------------------------------------------------
+tele <- consort_data %>% 
+    filter(eligible == 1 & !is.na(exclusion))
