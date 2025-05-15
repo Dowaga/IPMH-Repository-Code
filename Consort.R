@@ -75,7 +75,7 @@ consort_data <- screening_consent_df %>%
                 TRUE ~ NA_character_)) %>% 
     mutate(
         exclusion = case_when(
-            rct_enrolling == Yes & exclusion == "Self harm" & rct_risk %in% c("Low", "Moderate") ~ NA_character_,
+            eligible == 1 & exclusion == "Self harm" & rct_risk %in% c("Low", "Moderate") ~ NA_character_,
             TRUE ~ exclusion
               )) %>% 
     mutate(facility = as.numeric(str_sub(partipant_id, 3, 4))) %>% 
@@ -441,3 +441,4 @@ ineligibility_summary
 #-------------------------------------------------------------------------------
 tele <- consort_data %>% 
     filter(eligible == 1 & !is.na(exclusion))
+
