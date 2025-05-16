@@ -61,7 +61,7 @@ if(length(new.packages) > 0){
     install.packages(new.packages)
 }
 
-# Load all packages
+# Load packages
 for(p in packages){
-    p, character.only = T)
+    library(p, character.only = TRUE)
 }
