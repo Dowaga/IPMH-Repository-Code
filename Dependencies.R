@@ -36,7 +36,10 @@ packages <- c("redcapAPI",
               "webshot2",
               "gtExtras",
               "gtsummary",
-              "writexl")
+              "writexl",
+              "tidyr",
+              "tibble",
+              "purrr")
 
 # Check for duplicates in list 
 if(length(packages[duplicated(packages)])>0){
@@ -56,5 +59,5 @@ if(length(new.packages) > 0){
 
 # Load all packages
 for(p in packages){
-    library(p, character.only = T)
+    p, character.only = T)
 }
