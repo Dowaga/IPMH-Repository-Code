@@ -5,18 +5,17 @@ subtitle: 'Data and Safety Monitoring Board (DSMB): Closed Report '
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
   pdf_document:
-    latex_engine: xelatex
+    #latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, options(scipen = 0))
 
-library(stringr)
-library(lubridate)
-library(patchwork)
-library(officedown)
-library(officer)
-library(flextable)
+rm(list = ls())             
+
+# Reference source codes & other dependencies:
+source("DataTeam_ipmh.R")
+source("Dependencies.R")
 
 ## WORKING DIRECTORY
 # Setup ------------------------------------------------------------------------
@@ -32,12 +31,6 @@ library(flextable)
 # update.packages(ask = FALSE, checkBuilt = TRUE)
 # tinytex::tlmgr_update()
 # tinytex::reinstall_tinytex()
-
-rm(list = ls())             
-
-# Reference source codes & other dependencies:
-source("DataTeam_ipmh.R")
-source("Dependencies.R")
 
 # Set file paths: Use this section to set input and output filepaths
 file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
@@ -210,7 +203,7 @@ weekly_enrollment <- weekly_enrollment %>%
 # Create target line repeated for each arm_group
 arm_groups <- unique(weekly_enrollment %>%
                        mutate(arm = stringr::str_extract(study_site,"^\\d{2}"),
-                              arm_group = ifelse(arm %in% c("05", "06", "08", "11", "14", "15", "18", "20", "22"),
+                              arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "22"),
                                                  "Control", "Intervention")) %>%
                        pull(arm_group) %>%
                        unique())
@@ -379,12 +372,7 @@ Participant characteristics are generally (similar/different) across arms. We do
 
 
 ```{r morcohort_demo, echo=FALSE}
-source("mort_demo.R")
 
-kable(mort_demo_closed) %>%
-kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
-  row_spec(0,bold=T) %>%
-  row_spec(1,bold=T)
 
 ```
 
@@ -410,15 +398,14 @@ ineligibility_summary
 
 source("PPW RCT Basic Demographics.R")
 
-
-basic_demo
+arm_demo
 ```
 
 ## 5.2 WLWH Cohort Baseline Demographics
 
 ```{r WLWH_demo, echo=FALSE}
 source("PPW RCT Basic Demographics.R")
-wlwh_demo
+arm_wlwh_demo
 
 ```
 
@@ -484,24 +471,10 @@ referral_summary
 #Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
 ```
 # 7. Adverse Events
-```{r ae_summary_desc, echo=FALSE}
-source("ae_dsmb_tbls.R")
-```
-
-
-
-
 
 ## 7.1 Adverse Events Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
-source("ae_mort_dsmb_tbls.R")
-
-kable_styling(ae_mortcohort_summary) %>%
-  kable_styling(latex_options = c("scale_down", "HOLD_position", position = "center")) %>% 
-  row_spec(0,bold=T) %>% 
-  row_spec(1,bold=T) %>% 
-  row_spec(4,bold=T) 
 ```
 
 
@@ -511,10 +484,7 @@ kable_styling(ae_mortcohort_summary) %>%
 ### 7.1.1 List of SAEs: Arm X 
 
 ```{r saes_intervention, echo=FALSE, message = FALSE}
-source("ae_linelists.R")
-kable_styling(int_ae_linelist2) %>% 
-  kable_styling(latex_options = c("striped", "scale_down", "HOLD_position", position = "center","repeat_header")) %>% 
-   row_spec(0,bold=T)
+
 
 ```
 
@@ -523,11 +493,7 @@ kable_styling(int_ae_linelist2) %>%
 
 
 ```{r saes_control, echo=FALSE, message = FALSE}
-source("ae_linelists.R")
 
-kable_styling(con_ae_linelist2)  %>% 
-  kable_styling(latex_options = c("striped", "scale_down", "HOLD_position", position = "center","repeat_header")) %>% 
-   row_spec(0,bold=T)
 ```
 
 
