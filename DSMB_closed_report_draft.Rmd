@@ -77,11 +77,6 @@ knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 ```
 
 
-```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
-
-knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
-```
-
 \newpage
 
 ohn Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
@@ -139,21 +134,51 @@ study_summary
 
 \newpage
 
-# 2. Study Enrollment
+## 1.1 Study Timeline Since Initiation:
+-   May 12, 2023: Initial IRB approval
+-   Jun 05, 2023: Initial ERC approval
+-   Sep 19, 2023: RO1 Start date
+-   Oct 04, 2024: Research assistant (RA) training initiation
+-   Oct 11, 2024: 1st DSMB meeting
+-   Oct 23, 2024: Facility randomization
+-   Nov 06, 2024: Facility staff training initiation
+-   Feb 17, 2025: Perinatal women recruitment initiation
+-   [Place holder, we are not about 22%]: 25% of planned enrollment
+
+## 1.2 Key Changes to Study Protocol
+-N/A
+
+# 2. Study Progress
+
+## 2.1 Recruitment Timeline
+```{r source_consort, echo=FALSE, warning=FALSE}
+source("Consort.R")
+n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
+n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
+n_eligible <- consort_data %>% filter(rct_eligible == 1) %>% nrow()
+n_eligible_per <- round(n_eligible/n_ass *100, 1)
+n_enrol <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
+n_enrol_per <- round(n_enrol/n_eligible *100, 1)
+n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
+n_second_per <- round(n_second/n_enrol * 100, 1)
+```
+
+We began recruiting pregnant women into the study on Feb 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970, 1)`% of our enrollment target. Of these, `r n_second` (`r n_second_per`%) have completed their 6 week postpartum follow-up with our study team.
+
+In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
+
+\newpage
+# 3. Study Enrollment
 
 ```{r Consort, warning=FALSE, message=FALSE}
 source("Consort.R")
 consort_per
 
 ```
-ANC visits are program data without patient identifiers and not de-duplicated.
 
+## 3.2  Enrollment Progress
 
-
-## 2.2 Mortality cohort 
-
-### 2.2.1  Enrollment Progress - Overall
-
+## 3.2.1  Enrollment Progress - Overall
 
 ```{r enrollment_prohress, echo=FALSE}
 source("Enrollment Progress.R")
@@ -184,8 +209,8 @@ weekly_enrollment <- weekly_enrollment %>%
 
 # Create target line repeated for each arm_group
 arm_groups <- unique(weekly_enrollment %>%
-                       mutate(arm = stringr::str_extract(study_site, "^\\d{2}"),
-                              arm_group = ifelse(arm %in% c("01", "02", "03", "04", "05", "06", "07"),
+                       mutate(arm = stringr::str_extract(study_site,"^\\d{2}"),
+                              arm_group = ifelse(arm %in% c("05", "06", "08", "11", "14", "15", "18", "20", "22"),
                                                  "Control", "Intervention")) %>%
                        pull(arm_group) %>%
                        unique())
@@ -248,7 +273,7 @@ p1
 
 \newpage
 
-### 3.1.3 Enrollment Progress - Per Facility
+### 3.2.2 Enrollment Progress - Per Facility
 ```{r Facility target reached}
 source("Enrollment Progress.R")
 reached_25per_target <- weekly_enrollment %>%
@@ -324,9 +349,9 @@ p2
 
 \newpage
 
-## 3.2 WLWH Cohort
+## 4.2 WLWH Cohort
 
-### 3.2.1 Current subject status
+### 4.2.1 Current subject status
 
 
 ```{r consortnumsource, echo=FALSE, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
@@ -363,100 +388,111 @@ kable_styling(latex_options = c("striped", "HOLD_position", position = "center")
 
 ```
 
+# 4. Ineligibility
 
-# 4. CHP Workflow Process Outcomes
-CHPs perform their duties based on "tasks" in eCHIS. ANC tasks are periodically assigned to CHPs for completion based on the gestational age of a mother. PNC tasks are periodically assigned to CHPs based on the age of a newborn. SMS scheduling and some mortality cohort outcomes are based on data collected by CHPs in ANC and PNC tasks. Therefore, completion of ANC and PNC tasks may align with the fidelity of intervention implementation and overall data collection for study outcomes. The table below summarizes task completion data for all tasks past their date scheduled for completion.
+Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. *{Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons.}*
 
 
+```{r subcohort_prog, echo=FALSE, message=FALSE, warning=FALSE}
+source("Consort.R")
+ineligibility_summary
+```
 
-```{r chp_workflows, echo=FALSE}
-source("chpworkflow_completion_tbls.R")
+\newpage
 
-kable_styling(task_completion_tbl) %>%
-  kable_styling(latex_options = "HOLD_position") %>% 
-  row_spec(0,bold=T) %>% 
-  add_indent(c(2,4)) %>% 
-  row_spec(2,hline_after=T)
+\newpage
+
+# 5. Baseline Demographics
+
+## 5.1 Participant Baseline Demographics
+
+```{r demographics, warning=F}
+
+source("PPW RCT Basic Demographics.R")
+
+
+basic_demo
+```
+
+## 5.2 WLWH Cohort Baseline Demographics
+
+```{r WLWH_demo, echo=FALSE}
+source("PPW RCT Basic Demographics.R")
+wlwh_demo
 
 ```
 
 \newpage
 
-# 5. Time from Delivery to eCHIS Delivery Report
-Timely ascertainment of delivery enables timely scheduling of postpartum visits by CHPs and, in the intervention arm, initiation of time-sensitive postpartum messaging. The tables below summarize the time from delivery date to delivery report submission in eCHIS. 
+# 6. Study Terminations
+```{r Ealiest Expected termination}
+first_6w <- ppw_rct_df %>%
+    # Filter to "6 weeks" and grab the first per participant
+  filter(clt_visit == "6 weeks post-partum") %>%
+    mutate(
+    clt_date = as_date(clt_date, format = "%Y-%m-%d")) %>% 
+  group_by(clt_ptid) %>%
+  slice_min(clt_date, n = 1) %>%    # in case there are duplicates
+  ungroup() %>% 
+    select(clt_study_site,clt_ptid, clt_date, ) %>% 
+    # Compute the six-month due date
+    mutate(
+    sixmo_duedate = clt_date %m+% months(6)
+  )
 
-
-## 5.1 Sub Cohort
-
-
-```{r deliveryreport_tat_sub, echo=FALSE}
-source("deliveryreportTAT.R")
-kable_styling(sub_deliverytat_summary_closed) %>%
-  kable_styling(latex_options = "HOLD_position") %>% 
-  row_spec(0,bold=T)
+# Earliest due date
+earliest_due <- first_6w %>%
+  slice_min(sixmo_duedate, n = 1) %>%
+  select(clt_ptid, clt_date, sixmo_duedate) %>% 
+    pull(sixmo_duedate)                                  
 ```
 
 
-
-## 5.2 Mortality Cohort 
-
+We have not yet had any early terminations; our first expected termination is `r earliest_due`.
 
 
-```{r deliveryreport_tat_mort, echo=FALSE}
-source("deliveryreportTAT.R")
-kable_styling(deliverytat_summary_closed) %>%
-  kable_styling(latex_options = "HOLD_position") %>% 
-  row_spec(0,bold=T)
-```
+# 7. Referrals
 
+## 7.1 Psychosocial Referrals
 
-\newpage
+```{r message=FALSE, warning=FALSE, include=FALSE}
+source("PPW RCT Referrals.R")
 
-# 6. Two Way SMS
-We have been monitoring CHPs’ responsiveness to client SMS as an indicator of intervention fidelity. To optimize intervention delivery, we are using audit and feedback to share this data with CHPs and their supervisors on a monthly basis and identify ways to improve intervention delivery.
-
-
-```{r twoway_sms_load, warning=FALSE, echo=FALSE, results='hide'}
-source("chpmonthlymtg_data.R")
-```
-
-```{r twoway_sms, warning=FALSE, echo=FALSE}
-kable_styling(all_twoway_sms_tbl) %>%
-  kable_styling(latex_options = c("HOLD_position", position = "center")) %>% 
-  row_spec(0,bold=T) %>%
-  row_spec(1,bold=T) %>%
-  row_spec(4,bold=T) %>%
-  row_spec(5,bold=T) %>%
-  row_spec(6,bold=T)
+total_visits <- referral_df %>%nrow()
+total_scr_num <- df_long %>% nrow()
+total_scr_per <- round(total_scr_num/total_visits *100, 1)
+total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
+total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 
 ```
 
 
-## 6.1 Monthly Two Way SMS
-We began these monthly reviews in May 2024, and are beginning to see performance improvements.
+At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions. Of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals for those conditions.
 
 
-```{r monthly_twoway_sms,echo=FALSE}
+```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
+## generate report using data from psychosocial referrals form in REDCap  
+source("PPW RCT Referrals.R")
 
-kable_styling(monthly_twoway_sms_tbl) %>%
-  kable_styling(latex_options = c("HOLD_position", position = "center")) %>% 
-  row_spec(0,bold=T)
-
+referral_summary
 ```
 
 
-\newpage
+# 7.2 Treatment Referrals
+
+```{r treatment_referrals}
+#Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
+```
+# 7. Adverse Events
 ```{r ae_summary_desc, echo=FALSE}
 source("ae_dsmb_tbls.R")
 ```
 
 
-# 7. Adverse Events
 
 
-## 7.1 Mortality cohort 
-The final mortality cohort will consist of only those who experienced live births at the end of their pregnancies. In order to report pregnancy losses, the adverse event data shown below is for all pregnancies in eCHIS.
 
+## 7.1 Adverse Events Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
 source("ae_mort_dsmb_tbls.R")
@@ -469,34 +505,10 @@ kable_styling(ae_mortcohort_summary) %>%
 ```
 
 
-```{r ae_summary_subcohortdesc, echo=FALSE}
-source("ae_dsmb_tbls.R")
-
-```
-
-
-## 7.2 Sub cohort 
-A total of `r overall_ae_num` adverse events have occurred among 2000 study participants.The most common adverse event was infant death, which occurred among `r overall_infdeath_per` of total study participants.The table below lists characteristics of adverse events. None have been determined to have been related to study procedures.
-
-
-
-```{r ae_summary_subcohort, echo=FALSE}
-source("ae_dsmb_tbls.R")
-kable_styling(ae_subcohort_summary) %>%
-  kable_styling(latex_options = "HOLD_position") %>% 
-  row_spec(0,bold=T) %>% 
-  row_spec(1,bold=T) %>% 
-  row_spec(2,bold=T) %>% 
-  row_spec(5,bold=T)
-
-
-```
 \newpage
 
 
-### 7.2.1 List of SAEs: Arm X 
-
-
+### 7.1.1 List of SAEs: Arm X 
 
 ```{r saes_intervention, echo=FALSE, message = FALSE}
 source("ae_linelists.R")
@@ -507,7 +519,7 @@ kable_styling(int_ae_linelist2) %>%
 ```
 
 \newpage
-### 7.2.2 List of SAEs: Arm Y 
+### 7.1.2 List of SAEs: Arm Y 
 
 
 ```{r saes_control, echo=FALSE, message = FALSE}
