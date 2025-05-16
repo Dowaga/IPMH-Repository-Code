@@ -139,7 +139,7 @@ study_summary
 
 \newpage
 
-# 2. Study Progress
+# 2. Study Enrollment
 
 ```{r Consort, warning=FALSE, message=FALSE}
 source("Consort.R")
@@ -152,49 +152,198 @@ ANC visits are program data without patient identifiers and not de-duplicated.
 
 ## 2.2 Mortality cohort 
 
-### 2.2.1 Current Subject Status
+### 2.2.1  Enrollment Progress - Overall
 
 
-```{r status_morcohort, echo=FALSE}
-source("closed_consort_dsmb.R")
-dsmb_closed_morcohort_consort
+```{r enrollment_prohress, echo=FALSE}
+source("Enrollment Progress.R")
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+  mutate(study_site = recode(study_site,
+    "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital" = "02, Sigomere",
+    "03, Uyawi Sub County Hospital" = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital" = "05, Ukwala",
+    "06, Madiany Sub County Hospital" = "06, Madiany",
+    "07, Kabondo Sub County Hospital" = "07, Kabondo",
+    "08, Mbita Sub-County Hospital" = "08, Mbita",
+    "09, Miriu Health Centre" = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital" = "14, Gita",
+    "15, Akala Health Centre" = "15, Akala",
+    "16, Usigu Health Centre" = "16, Usigu",
+    "17, Ramula Health Centre" = "17, Ramula",
+    "18, Simenya Health Centre" = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)" = "19, Airport",
+    "20, Nyalenda Health Centre" = "20, Nyalenda",
+    "21, Mirogi Health Centre" = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+  )) 
+
+# Create target line repeated for each arm_group
+arm_groups <- unique(weekly_enrollment %>%
+                       mutate(arm = stringr::str_extract(study_site, "^\\d{2}"),
+                              arm_group = ifelse(arm %in% c("01", "02", "03", "04", "05", "06", "07"),
+                                                 "Control", "Intervention")) %>%
+                       pull(arm_group) %>%
+                       unique())
+
+target_25_line <- expand.grid(
+  week = unique(weekly_enrollment$week),
+  arm_group = arm_groups
+) %>%
+  mutate(
+    cumulative_enrollment = 372,
+    study_site = "25% Target"
+  )
+
+weekly_enrollment <- weekly_enrollment %>%
+  mutate(
+    arm = stringr::str_extract(study_site, "^\\d{2}"),
+    arm_group = ifelse(arm %in% c("01", "02", "03", "04", "05", "06", "07"),
+                       "Control", "Intervention")
+  )
+
+total_enrollment <- weekly_enrollment %>%
+  group_by(week, arm_group) %>%
+  summarise(enrollment_count = sum(enrollment_count), .groups = "drop") %>%
+  arrange(week) %>%
+  group_by(arm_group) %>%
+  mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+  mutate(study_site = "Total")
+
+combined_enrollment <- bind_rows(
+  weekly_enrollment,
+  total_enrollment,
+  target_25_line
+)
+
+p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                      color = study_site, group = study_site)) +
+  geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +
+  scale_linewidth_identity() +
+  facet_wrap(~ arm_group, scales = "free_y") +  # one panel per arm
+  labs(
+    title = "Enrollment Trends by Study Arm",
+    x = "Date",
+    y = "Cumulative Enrollment",
+    color = "Study Site"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    legend.box = "vertical",
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9),
+    strip.text = element_text(size = 10, face = "bold")
+  ) +
+  guides(color = guide_legend(ncol = 2))
+
+p1
 
 ```
 
 
 \newpage
-# 2.2.2 Loss to followup by site
-The below tables show mortality cohort subject status stratified by study site. 
 
-
-```{r status_morcohort_losstofollowup, echo=FALSE}
-source("DSMBconsort_facilitystrat.R")
-mortprog_tbl_X
-mortprog_tbl_Y
+### 3.1.3 Enrollment Progress - Per Facility
+```{r Facility target reached}
+source("Enrollment Progress.R")
+reached_25per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 37) %>%
+  summarise(n = n()) %>%
+  pull(n)
 
 ```
 
+`r reached_25per_target` facilities have reached the 25% enrollment target of 37 perinatal women per facility cluster. The first cluster to achieve this milestone was Nyalenda in mid-April 2024.
+
+```{r enrollment_sub_facility}
+source("Enrollment Progress.R")
+
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+  mutate(study_site = recode(study_site,
+    "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital" = "02, Sigomere",
+    "03, Uyawi Sub County Hospital" = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital" = "05, Ukwala",
+    "06, Madiany Sub County Hospital" = "06, Madiany",
+    "07, Kabondo Sub County Hospital" = "07, Kabondo",
+    "08, Mbita Sub-County Hospital" = "08, Mbita",
+    "09, Miriu Health Centre" = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital" = "14, Gita",
+    "15, Akala Health Centre" = "15, Akala",
+    "16, Usigu Health Centre" = "16, Usigu",
+    "17, Ramula Health Centre" = "17, Ramula",
+    "18, Simenya Health Centre" = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)" = "19, Airport",
+    "20, Nyalenda Health Centre" = "20, Nyalenda",
+    "21, Mirogi Health Centre" = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+  )) %>%
+  mutate(
+    arm = stringr::str_extract(study_site, "^\\d{2}"),
+    arm_group = ifelse(arm %in% c("02", "05", "06", "08", "11", "15", "18", "20", "21"),
+                       "Control", "Intervention")
+  )
+
+p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                    color = study_site, group = study_site)) +
+  geom_line(linewidth = 1) +  
+  geom_hline(yintercept = 37, linetype = "dashed", color = "blue", linewidth = 1.5) +
+  annotate("text", x = min(weekly_enrollment$week), y = 37.125, 
+           label = "25% Target", vjust = -1, hjust = 0, size = 3) +
+  labs(title = "Enrollment Trends by Study Arm",
+       x = "Date",
+       y = "Cumulative Enrollment",
+       color = "Study Site") +
+  facet_wrap(~ arm_group) +  # ??? facet by arm_group
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    legend.box = "vertical",
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9),
+    strip.text = element_text(size = 10, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 14)  # Center and bold title
+  ) +
+  guides(color = guide_legend(ncol = 2))
+
+
+p2
+```
 
 \newpage
 
-# 3. Baseline Demographics
+## 3.2 WLWH Cohort
 
-## 3.1 Sub Cohort Participant Baseline Demographics
-Participant characteristics are generally (similar/different) across arms. We do, however, see a (statistically significant/non statistically significant) difference in (XXXX).
-
+### 3.2.1 Current subject status
 
 
-```{r subcohort_demo, echo=FALSE}
-source("comparison_table.R")
-
-kable(dsmb_demotable) %>%
-kable_styling(latex_options = c("striped", "HOLD_position", position = "center")) %>%
-  row_spec(0,bold=T) %>%
-  row_spec(1,bold=T)
-  
-
+```{r consortnumsource, echo=FALSE, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
+source("Consort_WLWH.R")
 ```
 
+From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled*100, 1)`%) women were HIV positive, meeting `r round(n_hiv/405*100, 1)`% of our WLWH cohort enrollment target. Of these, `r n_postpartum` (`r round(n_postpartum/n_hiv *100,1 )`%) have completed their 6 week postpartum follow-up with our study team.
+
+
+```{r consort_mortality, warning = F}
+source("Consort_WLWH.R")
+
+add_box(txt = txt_enrolled) |>
+    add_box(txt = txt_hiv) |>
+    add_side_box(txt = txt_pm_tele) |>
+    add_box(txt = txt_postpartum)
+```
 
 \newpage
 
