@@ -223,7 +223,7 @@ combined_enrollment <- bind_rows(
   target_25_line
 )
 
-p1<- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
+p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
                                 color = study_site, group = study_site)) +
     geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +  # thicker total line
     scale_linewidth_identity() +  
