@@ -39,7 +39,11 @@ packages <- c("redcapAPI",
               "writexl",
               "tidyr",
               "tibble",
-              "purrr")
+              "purrr",
+              "patchwork",
+              "officedown",
+              "flextable")
+
 
 # Check for duplicates in list 
 if(length(packages[duplicated(packages)])>0){
