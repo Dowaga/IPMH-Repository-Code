@@ -129,13 +129,23 @@ fidelity_df <- screened %>%
     left_join(telepsych_ids, by = c("partipant_id" = "record_id")) %>% 
     select(-clt_study_site)
 
-fidelity_summary <- fidelity_df %>%
-    count(pm_plus, tele) %>%
-    tidyr::complete(pm_plus = c("Yes", "No"), tele = c("Yes", "No"), fill = list(n = 0))
 
 
-library(knitr)
+# Get counts
+step_counts <- fidelity_df %>%
+    summarise(
+        Step_1 = sum(screened == "Yes", na.rm = TRUE),
+        Step_2 = sum(pm_plus == "Yes", na.rm = TRUE),
+        Step_3 = sum(tele == "Yes", na.rm = TRUE)
+    ) %>%
+    pivot_longer(cols = everything(), names_to = "Step", values_to = "N Participants") %>%
+    mutate(Step = case_when(
+        Step == "Step_1" ~ "Step 1",
+        Step == "Step_2" ~ "Step 2",
+        Step == "Step_3" ~ "Step 3"
+    ))
 
+# Fidelity count
 step_data <- data.frame(
     Step = c("Step 1", "Step 2", "Step 3"),
     Intervention = c("PMAD Screening", "Problem Management Plus (PM+)",
@@ -149,8 +159,11 @@ step_data <- data.frame(
                  "As recommended")
 )
 
+#
+fidelity_table <- step_data %>%
+    left_join(step_counts, by = "Step")
 
-fidelity_summary <- step_data %>%
+fidelity_summary <- fidelity_table %>%
     gt() %>%
     tab_header(
         title = "Stepped Care Intervention Table"
@@ -160,17 +173,13 @@ fidelity_summary <- step_data %>%
         Intervention = "Intervention",
         Trigger = "Eligibility / Trigger",
         `Delivered.By` = "Delivered By",
-        Duration = "Duration/Frequency"
+        Duration = "Duration/Frequency",
+        `N Participants` = "Participants (n)"
     ) %>%
     tab_options(
-        table.font.names = "Arial",
-        table.border.top.width = px(2),
-        table.border.bottom.width = px(2),
-        heading.title.font.size = 16,
+        row.striping.include_table_body = TRUE,
         column_labels.font.weight = "bold",
-        row.striping.background_color = "#F9F9F9"
+        heading.title.font.size = 16
     )
 
 fidelity_summary
-
-
