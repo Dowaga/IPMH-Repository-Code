@@ -4,8 +4,9 @@ title: 'IPMH: Integration of stepped care for perinatal mood and anxiety disorde
 subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report '
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
-  pdf_document:
-    latex_engine: xelatex
+    word_document
+  #pdf_document:
+    #latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
@@ -149,7 +150,7 @@ n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
 n_second_per <- round(n_second/n_enrol * 100, 1)
 ```
 
-We began recruiting pregnant women into the study on Feb 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970, 1)`% of our enrollment target. Of these, `r n_second` (`r n_second_per`%) have completed their 6 week postpartum follow-up with our study team.
+We began recruiting pregnant women into the study on February 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970, 1)`% of our enrollment target. Of these, `r n_second` (`r n_second_per`%) have completed their 6-week postpartum follow-up with our study team.
 
 In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
 
@@ -161,7 +162,7 @@ In general, the enrollment had a good start and has progressed well despite chal
 
 ### 3.1.1 Current subject status
 
-So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6 weeks postpartum visit.
+So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6-weeks postpartum visit.
 
 
 ```{r consort, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
@@ -392,8 +393,7 @@ ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
 
 # 4. Ineligibility
 
-Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. *{Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons.}*
-
+Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. 
 
 ```{r subcohort_prog, echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort.R")
@@ -481,4 +481,5 @@ referral_summary
 
 ```{r treatment_referrals}
 #Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
+
 ```
