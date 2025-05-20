@@ -319,8 +319,6 @@ n_excluded <- consort_data %>%
     filter(!is.na(exclusion)) %>% 
     nrow()
 
-consort_data %>% 
-    tabyl(exclusion)
 
 # Total eligible
 n_eligible <- consort_data %>% 
@@ -439,6 +437,4 @@ ineligibility_summary <- consort_data %>%
 ineligibility_summary
 
 #-------------------------------------------------------------------------------
-tele <- consort_data %>% 
-    filter(eligible == 1 & !is.na(exclusion))
 
