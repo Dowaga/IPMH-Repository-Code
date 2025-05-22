@@ -4,7 +4,8 @@ title: "IPMH: Community-based digital communication to support neonatal health"
 subtitle: 'Data and Safety Monitoring Board (DSMB): Closed Report '
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
-  pdf_document:
+  word_document
+    #pdf_document:
     #latex_engine: xelatex
 ---
 
@@ -81,12 +82,8 @@ Amritha Bhat, MBBS, MD, MPH, University of Washington
 Report prepared by: David Owaga & Yuwei Wang
 
 Date of data freeze: `r data_freeze`
-\newpage
-
-\tableofcontents
 
 \newpage
-
 
 # 1. Study summary
 
@@ -342,9 +339,9 @@ p2
 
 \newpage
 
-## 4.2 WLWH Cohort
+# 4. WLWH Cohort
 
-### 4.2.1 Current subject status
+## 4.1 Current subject status
 
 
 ```{r consortnumsource, echo=FALSE, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
@@ -365,7 +362,7 @@ add_box(txt = txt_enrolled) |>
 
 \newpage
 
-## 3.2 Mortality Cohort Baseline Demographics
+## 4.2 WLWH Cohort Baseline Demographics
 
 Participant characteristics are generally (similar/different) across arms. We do, however, see a (statistically significant/non statistically significant) difference in (XXXX).
 
@@ -376,7 +373,7 @@ Participant characteristics are generally (similar/different) across arms. We do
 
 ```
 
-# 4. Ineligibility
+# 5. Ineligibility
 
 Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. *{Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons.}*
 
@@ -388,11 +385,9 @@ ineligibility_summary
 
 \newpage
 
-\newpage
+# 6. Baseline Demographics
 
-# 5. Baseline Demographics
-
-## 5.1 Participant Baseline Demographics
+## 6.1 Participant Baseline Demographics
 
 ```{r demographics, warning=F}
 
@@ -401,7 +396,7 @@ source("PPW RCT Basic Demographics.R")
 arm_demo
 ```
 
-## 5.2 WLWH Cohort Baseline Demographics
+## 6.2 WLWH Cohort Baseline Demographics
 
 ```{r WLWH_demo, echo=FALSE}
 source("PPW RCT Basic Demographics.R")
@@ -411,7 +406,7 @@ arm_wlwh_demo
 
 \newpage
 
-# 6. Study Terminations
+# 7. Study Terminations
 ```{r Ealiest Expected termination}
 first_6w <- ppw_rct_df %>%
     # Filter to "6 weeks" and grab the first per participant
@@ -438,9 +433,9 @@ earliest_due <- first_6w %>%
 We have not yet had any early terminations; our first expected termination is `r earliest_due`.
 
 
-# 7. Referrals
+# 8. Referrals
 
-## 7.1 Psychosocial Referrals
+## 8.1 Psychosocial Referrals
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 source("PPW RCT Referrals.R")
@@ -465,14 +460,22 @@ referral_summary
 ```
 
 
-# 7.2 Treatment Referrals
+## 8.2 Treatment Referrals
 
 ```{r treatment_referrals}
 #Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
 ```
-# 7. Adverse Events
+# 9. Serious Adverse Events
 
-## 7.1 Adverse Events Summary
+```{r Summary of SAEs}
+source("SAEs Lists.R")
+sae_summary
+
+```
+
+
+# 10. Adverse Events
+## 10.1 Adverse Events Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
 ```
@@ -481,7 +484,7 @@ referral_summary
 \newpage
 
 
-### 7.1.1 List of SAEs: Arm X 
+### 10.1.1 List of SAEs: Arm X 
 
 ```{r saes_intervention, echo=FALSE, message = FALSE}
 
@@ -489,7 +492,7 @@ referral_summary
 ```
 
 \newpage
-### 7.1.2 List of SAEs: Arm Y 
+### 10.1.2 List of SAEs: Arm Y 
 
 
 ```{r saes_control, echo=FALSE, message = FALSE}
