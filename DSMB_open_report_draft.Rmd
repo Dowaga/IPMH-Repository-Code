@@ -477,9 +477,33 @@ referral_summary
 ```
 
 
-# 7.2 Treatment Referrals
+## 7.2 Treatment Referrals
 
-```{r treatment_referrals}
+```{r, message=FALSE, warning=FALSE}
+
+source("Telepsychiatry Sessions.R")
 #Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
+fidelity_summary
 
 ```
+
+
+# 8 AEs and SAEs
+
+## 8.1 AEs Summary
+To `r Sys.Date()`, one adverse event has been observed. This event will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
+
+
+## 8.2 SAEs Summary
+
+As of `r Sys.Date()`, a total of `r sum(sae_report$"Number of Events")` Serious Adverse Events (SAEs) have been reported.
+These include `r sae_report$number_of_events[sae_report$event_type == "Death (Infant or Maternal) (SAE)"]` infant deaths, 
+`r sae_report$number_of_events[sae_report$event_type == "New/prolonged hospitalization (SAE)"]` cases of prolonged hospitalization, 
+and `r sae_report$number_of_events[sae_report$event_type == "Miscarriage or stillbirth (loss of pregnancy) (SAE)"]` miscarriages.
+
+
+```{r SAEs Report}
+source("SAEs Lists.R")
+sae_report
+```
+
