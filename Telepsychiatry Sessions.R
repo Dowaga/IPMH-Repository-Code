@@ -123,6 +123,23 @@ pm_participants <- pm_plus_df %>%
     select(record_id, clt_study_site) %>% 
     mutate(pm_plus = "Yes")
 
+# Select distinct ptids in the PM+ Survey
+pm_ptids <- pm_survey_df %>% 
+    filter(!is.na(pm_ptid)) %>%
+    select(pm_ptid, pm_facility) %>%
+    distinct(pm_ptid, .keep_all = TRUE)
+
+# First, rename pm_ptid to match the column in pm_participants
+new_pm_ptids <- pm_ptids %>%
+    rename(record_id = pm_ptid,
+           clt_study_site = pm_facility) %>%
+    filter(!(record_id %in% pm_participants$record_id)) %>%
+    mutate(pm_plus = "Yes")
+
+# Then, bind these new participants to the original pm_participants
+pm_participants <- bind_rows(pm_participants, new_pm_ptids)
+
+
 fidelity_df <- screened %>% 
     left_join(pm_participants, by = c("partipant_id" = "record_id", 
                                       "study_site" = "clt_study_site")) %>% 
