@@ -3,12 +3,12 @@ title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
-  word_document
+ word_document
   #pdf_document
 ---
 
 ```{r setup, echo = F, include = F}
-#rm(list = ls())
+rm(list = ls())
 
 # read data
 source("Datateam_ipmh.R")
@@ -17,6 +17,12 @@ source("data_import.R")
 
 ```
 
+
+```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
+
+knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
+
+```
 
 Altogether, we currently have data for `r ppw_rct_df$clt_ptid %>% unique() %>% length()` participants.
 
@@ -42,6 +48,20 @@ setdiff(consent_id$partipant_id, survey_id$clt_ptid)
 ### Those that are in the RCT, while missing in Consent database
 setdiff(survey_id$clt_ptid, consent_id$partipant_id) 
 
+
+# Split data into Enrollment and 6 Weeks groups
+enrolled <- ppw_rct_df %>% 
+    filter(clt_visit == "Enrollment") %>% 
+    select(clt_ptid)
+
+six_weeks <- ppw_rct_df %>% 
+    filter(clt_visit == "6 weeks post-partum") %>% 
+    select(clt_ptid)
+
+# Find ptid values in "6 weeks" that are missing from "Enrollment"
+missing_enrollment <- anti_join(six_weeks, enrolled, by = "clt_ptid")
+
+#---------------------------------------------------------------------------
 # First Enrollment Date
 first_enrollment <- ppw_rct_df %>%
   pull(clt_date) %>%  # Extract the enrollment_date column
@@ -52,15 +72,10 @@ first_enrollment
 
 ## Consort Diagram
 
-```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE}
-#source("weekly_consort.R")
+```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE, fig.width=15, fig.height=9}
 source("Consort.R")
-#weekly_consort
-
-#consort_diagram
-
+#consort_diagram for weekly reports
 consort_per
-
 ```
 
 
@@ -126,6 +141,8 @@ not_enrolled %>%
         table.font.size = px(12))
 ```
 
+\newpage
+
 ## Enrollment Per Facility
 
 ```{r Summary of Study Enrollment by Facility, echo=FALSE, message=FALSE, warning=FALSE}
@@ -151,15 +168,18 @@ Enrollments <- screening_consent_df %>%
 Enrollments
 ```
 
+
 ```{r Weekly Enrollment Trends, message=FALSE, warning=FALSE, include=FALSE}
 
 source("Enrollment Progress.R")
 #figure_1
 ```
 
+\newpage
 ## PPW Demographics
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
+
 demographics_df <- ppw_rct_df %>% 
     filter(clt_visit == "Enrollment") %>% 
   select(clt_date,starts_with("dem_"), demographics_complete)%>% 
@@ -224,15 +244,16 @@ demographics_df %>% tbl_summary(
 ```
 
 
+
 ```{r Medical and Obstetric History, message=FALSE, warning=FALSE, include=FALSE}
-source("Medical and Obstetric History.R")
+#source("Medical and Obstetric History.R")
 #moh_summary
 ```
 
-
+\newpage
 ## PM+ and Telepsychiatry Referrals
 
-```{r PM+ and Telepsychiatry Referrals, echo=FALSE, message=FALSE, warning=FALSE}
+```{r PM+ and Telepsychiatry Referrals, echo=FALSE, message=FALSE, warning=FALSE, include = F}
 pm_telep_df <- ppw_rct_df %>% 
     filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
@@ -282,19 +303,21 @@ self_harm <- pm_telep_df %>%
 pm_telep_df <- pm_telep_df %>% 
     filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
     mutate(
-    max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
-    eligible_for = case_when(
-      (max_score >= 10 & max_score < 15 & 
-       ((max_score == phq9_scores)|(max_score == gad7_scores))) ~ "PM+",
-      max_score >= 15 ~ "Telepsychiatry"),
-       referred_to = case_when(abs_phq_ref_pm == "Yes"|abs_gad7_ref_pm == "Yes" ~ "PM+",
-      abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
-      TRUE ~ NA_character_))
+        max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
+        eligible_for = case_when(
+            abs_phq_dead > 0 ~ "Telepsychiatry",
+            (max_score >= 10 & max_score < 15 & (max_score == phq9_scores | max_score == gad7_scores)) ~ "PM+",
+            max_score >= 15 ~ "Telepsychiatry",
+            TRUE ~ "Not Eligible"),
+        referred_to = case_when(abs_phq_ref_pm == "Yes"|abs_gad7_ref_pm == "Yes" ~ "PM+",
+                                abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
+                                TRUE ~ NA_character_))
+
 
 
 #PM+ participants
 pm_plus_df <- pm_telep_df %>% 
-    filter(max_score >= 10 & max_score < 15) %>%
+    filter(eligible_for == "PM+") %>%
   select(-max_score)  # Remove max_score if not needed
 
 ## Not referred to PM_
@@ -312,9 +335,8 @@ pm_eligible <- eligible_pm %>%
     adorn_totals() %>% 
     arrange(desc(`PM+ Eligible`))
 
-## Total study participants in PM+ Survey 
-
-    # Count of unique participant IDs 
+# Total study participants in PM+ Survey -----------------------------------
+## Count of unique participant IDs 
 pm_counts <- pm_survey_df %>%
     filter(ipmh_participant == "Yes") %>%
     group_by(pm_facility) %>% 
@@ -324,7 +346,7 @@ pm_counts <- pm_survey_df %>%
     adorn_totals()
     
 
-###### PM+ referral QCs
+#### PM+ referral QCs-------------------------------------------------------
 merged_pm <- pm_eligible %>% 
     full_join(pm_counts, by = c("clt_study_site" = "pm_facility"))
 
@@ -345,15 +367,22 @@ eligible_no_survey <- eligible_pm %>%
     clt_study_site = gsub("^.{2},", "", clt_study_site)  # Remove first 2 characters and comma
   )
 
-
 ### Those that are in the PM+ Survey, while not Eligible
 setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
 
+wrong_pm_survey <- pm_survey_df %>% 
+    filter(pm_ptid%in% c(21177049, 21031052, 21010085))
+```
+
+
+
+```{r Study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
 # Study participant PM+ Sessions
 pm_sessions <- 
     pm_survey_df %>% 
     filter(ipmh_participant == "Yes") %>% 
-    select(pm_facility, pm_ptid, pm_session)
+    select(pm_facility, pm_ptid, pm_session,ipmh_participant)
+
 
 # Duplicates Sessions
 duplicates_sessions <- pm_sessions %>%
@@ -361,12 +390,12 @@ duplicates_sessions <- pm_sessions %>%
   summarise(count = n(), .groups = "drop") %>%
   filter(count > 1)  # Filter those with more than one attendance per session
 
-
 # Transforming data: One column for ptid, each session as a separate column
 pm_session_wide <- pm_sessions %>%
   distinct(pm_ptid, pm_session) %>%  # Remove duplicate sessions per ptid
   mutate(attended = 1) %>%  # Assign 1 for attended
-  pivot_wider(names_from = pm_session, values_from = attended, values_fill = list(attended = 0)) %>%   # Fill non-attended sessions with 0
+  pivot_wider(names_from = pm_session, values_from = attended, 
+              values_fill = list(attended = 0)) %>%   # Fill non-attended sessions with 0
 mutate(facility = str_sub(pm_ptid, 3, 4)) %>% 
     mutate(facility = recode(facility,
                                 "01" = "Rwambwa SCH",
@@ -379,21 +408,21 @@ mutate(facility = str_sub(pm_ptid, 3, 4)) %>%
                                "17" = "Ramula HC",
                                "19" = "Airport HC (Kisumu)",
                                "22" = "Ndiru Level 4"))
-    
 
+pm_session_wide<- pm_session_wide %>% 
+    mutate(`Pre-intervention PSYCHLOPS measurement` = ifelse(`Pre-intervention PSYCHLOPS measurement` == 1, "Yes", "No"))
 
 pm_session_wide %>% 
-    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`),
-                label = list(facility = "Facility",
-                             `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
-        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
+                label = list(facility = "Facility"),
+                statistic = list(all_categorical() ~
+    "{n} ({p}%)"),
+        sort = list(all_categorical() ~ "frequency")
         )%>% 
-  # convert from gtsummary object to gt object
   as_gt() %>%
-  # modify with gt functions
     gt::tab_header(
-      title = "Study Participants In PM+",
-      subtitle = "Showing Study Participants Referred to PM+") %>%
+      title = "Study Participants Who Received PM+",
+      subtitle = "Showing Study Participants Who Received PM+") %>%
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
@@ -403,6 +432,7 @@ pm_session_wide %>%
 ```
 
 
+\newpage
 
 ```{r None study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
     # None study participants in PM+
@@ -414,11 +444,17 @@ nsp_pm <- pm_survey_df %>%
     arrange(desc(`PM+ Abstracted`)) %>% 
     adorn_totals()
 
+# Filter ptids with session 5 but without Post session
+no_post_psychlops <- pm_survey_df %>%
+  group_by(pm_ptid) %>%
+  filter(any(pm_session == "Session 5 content") & !any(pm_session == "Post-intervention PSYCHLOPS measurement"))%>%
+  filter(pm_session == "Session 5 content")
+
 
 # Study participant PM+ Sessions
 pm_session <- 
     pm_survey_df %>% 
-    filter(ipmh_participant == "No") %>% 
+    filter(ipmh_participant == "Yes") %>% 
     select(pm_facility, pm_ancid, pm_session)
 
 # Duplicates Sessions
@@ -426,6 +462,19 @@ duplicate_sessions <- pm_session %>%
   group_by(pm_ancid, pm_session) %>%
   summarise(count = n(), .groups = "drop") %>%
   filter(count > 1)  # Filter those with more than one attendance per session
+
+# duplicates
+dups <- pm_survey_df %>%
+    filter(pm_ancid %in% c("03-2024/11/24", "0423/2024",
+                           "13812-2025/1/0071", "2024/12/017"))
+
+dups_with_multiple_sessions <- dups %>%
+  group_by(pm_ancid, pm_session) %>%
+  filter(n() > 1) %>%
+  ungroup()
+
+xc <- pm_survey_df %>% 
+    filter(pm_ptid == "21031043")
 
 # Transforming data: One column for ptid, each session as a separate column
 session_wide <- pm_session %>%
@@ -435,7 +484,7 @@ session_wide <- pm_session %>%
 
 
 session_wide %>% 
-    tbl_summary(include = c(pm_facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`),
+    tbl_summary(include = c(pm_facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
                 label = list(pm_facility = "Facility",
                              `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
@@ -444,8 +493,8 @@ session_wide %>%
   as_gt() %>%
   # modify with gt functions
     gt::tab_header(
-      title = "None study Participants in PM+",
-      subtitle = "Showing None Study Participants Referred to PM+") %>%
+      title = "None study Participants Who Received PM+",
+      subtitle = "Showing None Study Participants Who Received PM+") %>%
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
@@ -456,20 +505,19 @@ session_wide %>%
 
 
 
-
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
 telepsych_referrals <- pm_telep_df %>% 
     filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
 
 telepsych_referrals %>% 
     tbl_summary(
-        sort = list(all_categorical() ~ "frequency"),# Sort categorical levels by frequency in descending order
+        sort = list(all_categorical() ~ "frequency"),
         include = c(clt_study_site),
                 label = list(clt_study_site ~ "Facility"))%>% 
     as_gt %>% 
       # modify with gt functions
     gt::tab_header(
-      title = "Participants referred to Telepsychiatry",
+      title = "Participants Referred to Telepsychiatry",
       subtitle = "Showing Participants Referred to Telepsychiatry") %>%
   gt::tab_options(
     table.font.size = "medium",
@@ -544,32 +592,21 @@ weekly_visits %>%
 
 
 ```{r Reducing Tension Checklist, echo=FALSE, message=FALSE, warning=FALSE}
-source("Reducing Tension Checklist.R")
+#source("Reducing Tension Checklist.R")
 # summary_table
 ```
 
 
+\newpage
 
 ## Overall PM+ Retention
 ```{r PM+ Retention, echo=FALSE, message=FALSE, warning=FALSE}
 source("PM+ Follow-up.R")
-weekly_pm_retention
-```
-
-
-```{r PM+ Weekly Retention, message=FALSE, warning=FALSE, include=FALSE}
-source("PM+ Follow-up.R")
-V_week1 %>% 
-    gt()
-
-V_week2 %>% 
-    gt()
-
-V_week3 %>% 
-    gt()
-
-V_week4 %>% 
-    gt()
+attendance_table %>%
+  flextable() %>%
+  set_caption("PM+ Session Tracking for Study Participants") %>%
+  add_footer_lines("Notes: On time is defined as within a 14 day window since last attendance") %>% 
+    autofit()
 ```
 
 
@@ -595,12 +632,11 @@ sae_report
 ```
 
 
-#PHQ9 and GAD7 Comparison
-```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE}
-source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
-fc_yield_summary
-
-yield_summary
+```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE, include = F}
+# source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
+# fc_yield_summary
+# 
+# yield_summary
 ```
 
 
