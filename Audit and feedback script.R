@@ -43,18 +43,18 @@ rct_ppw <- rct_ppw %>%
 pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$tele_date)
 
-#time period for the data [2025-03-01, 2025-05-01)]
+#time period for the data [2025-03-01, 2025-05-31]
 pm_all <- pm
 rct_ppw_all <- rct_ppw
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-05-01")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-06-01")
 daily_closeout <- daily_closeout %>% filter(rct_dcr_date >= "2025-03-01")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2025-05-01")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2025-06-01")
 phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date >= "2025-03-01")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-05-01")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-06-01")
 rct_ppw <- rct_ppw %>% filter(clt_timestamp >= "2025-03-01")
-pm <- pm %>% filter(pm_date <= "2025-05-01")
+pm <- pm %>% filter(pm_date <= "2025-06-01")
 pm <- pm %>% filter(pm_date >= "2025-03-01")
-telepsych <- telepsych %>% filter(tele_date <= "2025-05-01")
+telepsych <- telepsych %>% filter(tele_date <= "2025-06-01")
 telepsych <- telepsych %>% filter(tele_date >= "2025-03-01")
 
 
