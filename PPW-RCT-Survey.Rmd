@@ -171,7 +171,7 @@ Enrollments
 
 ```{r Weekly Enrollment Trends, message=FALSE, warning=FALSE, include=FALSE}
 
-source("Enrollment Progress.R")
+#source("Enrollment Progress.R")
 #figure_1
 ```
 
@@ -179,10 +179,10 @@ source("Enrollment Progress.R")
 ## PPW Demographics
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
-
 demographics_df <- ppw_rct_df %>% 
-    filter(clt_visit == "Enrollment") %>% 
-  select(clt_date,starts_with("dem_"), demographics_complete)%>% 
+    filter(clt_visit == "Enrollment") %>%
+    filter(str_detect((redcap_event_name), "Enrollment")) %>%
+    select(clt_date,starts_with("dem_"), demographics_complete)%>% 
      mutate(dem_age = if_else(
          dem_dob_uk == "Yes",
          floor(time_length(interval(dem_dob, clt_date), "years")),
