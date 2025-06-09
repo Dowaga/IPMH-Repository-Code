@@ -11,29 +11,51 @@ rm(list = ls())
 source("Audit and feedback script.R")
 ```
 
-This script generates the audit and feedback report for each facility based on the calendar months. For the first audit and feedback session, we will report statistics from the beginning of the study till March 15th. Data from the report should be abstracted for each facility and put into the slide template.
+This script generates the audit and feedback report for each facility based on the calendar months. For the third audit and feedback session, we will report statistics from March 1st to May 31st. Data from the report should be abstracted for each facility and put into the slide template.
 
-# 1. PHQ2 and GAD2 Screening Rate Per Facility (Per week & Per month & Total)
+# 1. PHQ2 and GAD2 Screening Rate Per Facility (Per month & March-May Combined)
 
-```{r, line plots for each facility, echo = F, warning=F, fig.width = 6, fig.height = 4}
-facilities <- unique(screening_rate_weekly$study_site)
+```{r, bar plots for each facility, echo = F, warning=F, fig.width = 6, fig.height = 4}
+# Only rename columns for easier reference - no new columns created
+plot_data_simple <- screening_rate_monthly %>%
+  rename(
+    screened = `Monthly screening`,
+    anc_total = `Monthly ANC clients`,
+    screening_rate = `PHQ2/GAD2 screening rate`
+  )
+
+# Loop through facilities
+facilities <- unique(plot_data_simple$study_site)
 
 for (facility in facilities) {
-  facility_data <- screening_rate_weekly %>% filter(study_site == facility)
+  facility_data <- plot_data_simple %>% filter(study_site == facility)
   
-  p <- ggplot(facility_data, aes(x = week, y = screening_rate)) +
-    geom_line(color = "blue") + 
-    geom_point(color = "red") +
-    labs(title = paste("Weekly PHQ2/GAD2 Screening Rate -", facility),
-         x = "Week", 
-         y = "PHQ2/GAD2 screening Rate (%)") +
-    theme_minimal() +
-    theme(axis.text.x = element_text(hjust = 1),
-          plot.title = element_text(size = 12)) +
-      scale_x_date(date_breaks = "1 week", date_labels = "%Y-%m-%d") +
-      scale_y_continuous(limits = c(20, 120))
+  p1 <- ggplot(facility_data, aes(x = month)) +
+    # Screened portion (blue)
+    geom_col(aes(y = pmin(100, (screened/anc_total) * 100)), 
+             fill = "skyblue", width = 0.7) +
+    # Unscreened portion (gray) - only if there are unscreened patients
+    geom_col(aes(y = pmax(0, 100 - (screened/anc_total) * 100)), 
+             fill = "gray80", width = 0.7,
+             position = position_nudge(y = pmin(100, (facility_data$screened/facility_data$anc_total) * 100))) +
+    
+    # Labels for screened numbers and percentages
+    geom_text(aes(y = pmin(50, (screened/anc_total) * 50),
+                  label = paste0(screened, "\n(", round(pmin(100, (screened/anc_total) * 100), 1), "%)")),
+              color = "white", fontface = "bold", size = 3.5) +
+    
+    # Total ANC labels above bars
+    geom_text(aes(y = 105, label = paste0("ANC: ", anc_total)),
+              size = 3) +
+    
+    labs(title = paste("PHQ2/GAD2 Screening Rate -", facility),
+         x = "Month", y = "Screening Rate (%)") +
+    scale_y_continuous(limits = c(0, 120), breaks = seq(0, 100, 20),
+                       labels = paste0(seq(0, 100, 20), "%")) +
+    theme_minimal(base_size = 13) +
+    theme(panel.grid.minor.y = element_blank())
   
-  print(p)  # This will generate separate plots for each facility
+  print(p1)
 }
 ```
 
@@ -45,15 +67,15 @@ kable(screening_rate_monthly,
 
 ```{r, total screening rate table per facility, echo = F, warning=F}
 kable(total_screening_rate, 
-      caption = "Total PHQ2/GAD2 Screening Rate by Facility",
+      caption = "March-May Combined PHQ2/GAD2 Screening Rate by Facility",
       digits = 2)
 ```
 
 \newpage
 
-# 2. PHQ9 and GAD7 Screening Rate Among Study Participants Per Facility (Per week & Per month & Total)
+# 2. PHQ9 and GAD7 Screening Rate Among Study Participants Per Facility (Per month & March-May Combined)
 
-```{r, phq9 line plots for all facilities, echo = F, warning=F, fig.width=6, fig.height=4}
+```{r, phq9 line plots for all facilities, include =F, echo = F, warning=F, fig.width=6, fig.height=4}
 facilities <- unique(phq9_screening$clt_study_site)
 
 for (facility in facilities) {
@@ -66,7 +88,7 @@ for (facility in facilities) {
          x = "Date", 
          y = "PHQ9/GAD7 Screening Rate (%)") +
     theme_minimal() +
-    theme(axis.text.x = element_text(hjust = 1),
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
           plot.title = element_text(size = 12)) +
     scale_x_date(date_breaks = "1 week", date_labels = "%Y-%m-%d") +
     scale_y_continuous(limits = c(0, 100))
@@ -83,13 +105,13 @@ kable(phq9_screening_monthly,
 
 ```{r, total secondary screening rate table, echo = F, warning=F}
 kable(phq9_screening_total, 
-      caption = "Total PHQ9/GAD7 Screening Rate by Facility",
+      caption = "March-May Combined PHQ9/GAD7 Screening Rate by Facility",
       digits = 2)
 ```
 
 \newpage
 
-# 3. PM+ Referral Rate Per Facility (Per month & Total)
+# 3. PM+ Referral Rate Per Facility (Per month & March-May Combined)
 
 ```{r, pm referral rate, echo = F, warning=F}
 kable(pm_referral_monthly, 
@@ -97,25 +119,25 @@ kable(pm_referral_monthly,
       digits = 2)
 
 kable(pm_referral_total,
-      caption = "Total PM+ Referral Rate by Facility",
+      caption = "March-May Combined PM+ Referral Rate by Facility",
       digits = 2)
 ```
 
 \newpage
 
-# 4. Telepsychiatry Referral Rate Per Facility (Per month & Total)
+# 4. Telepsychiatry Referral Rate Per Facility (Per month & March-May Combined)
 
 ```{r, telepsych referral rate, echo = F, warning=F}
 kable(monthly_referral_summary_tele, caption = "Monthly Telepsychiatry Referral Rate by Facility",
       digits = 2)
 
-kable(total_referral_summary_tele, caption = "Total Telepsychiatry Referral Rate by Facility",
+kable(total_referral_summary_tele, caption = "March-May Combined Telepsychiatry Referral Rate by Facility",
       digits = 2)
 ```
 
 \newpage
 
-# 5. PM+ initiation rate per facility (Per month & Total)
+# 5. PM+ initiation rate per facility (Per month & March-May Combined)
 
 ```{r, pm initiation rate, echo = F, warning=F}
 kable(pm_summary_session1%>% select(1,2,3,4,7), 
@@ -123,28 +145,40 @@ kable(pm_summary_session1%>% select(1,2,3,4,7),
       digits = 2)
 
 kable(pm_initiation_all_merge_session1,
-      caption = "Total PM+ Initiation Rate by Facility",
+      caption = "March-May Combined PM+ Initiation Rate by Facility",
       digits = 2)
 ```
 \newpage
 
-# 6. PM+ completion rate per facility (Per month & Total)
+# 6. PM+ completion rate per facility (Since Study Initiation)
 
-No data yet. No completion rate data available for the first audit and feedback session.
-
-\newpage
-
-# 7. Telepsychiatry initiation rate per facility (Per month & Total)
-
-No initiation data yet. Kabondo Sub County Hospital has two referrals for telepsychiatry, but no initiation data is available for the first audit and feedback session.
+```{r, pm completion rate, echo = F, warning=F}
+kable(pm_completion_df, 
+      caption = "PM+ Completion Rate by Facility Since Study Initiation",
+      digits = 2)
+```
 
 \newpage
 
-# 8. Frequency of conducting health talks & use of flipbook per facility (Per month & Total)
+# 7. Telepsychiatry initiation rate per facility (Per month & March-May Combined)
+
+```{r, telepsych initiation rate, echo = F, warning=F}
+kable(telepsych_initiation_monthly, 
+      caption = "Monthly Telepsychiatry Initiation Rate by Facility",
+      digits = 2)
+
+kable(telepsych_initiation_total,
+      caption = "March-May Combined Telepsychiatry Initiation Rate by Facility",
+      digits = 2)
+```
+
+\newpage
+
+# 8. Frequency of conducting health talks & use of flipbook per facility (Per month & March-May Combined)
 
 ```{r health talks, echo = F, warning=F}
 kable(health_talks_monthly, caption = "Monthly Health Talks & Flipbook Usage by Facility",
       digits = 2)
-kable(total_health_talks, caption = "Total Health Talks & Flipbook Usage by Facility",
+kable(total_health_talks, caption = "March-May Combined Health Talks & Flipbook Usage by Facility",
       digits = 2)
 ```
