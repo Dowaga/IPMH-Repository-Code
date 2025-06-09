@@ -35,6 +35,13 @@ pm_df <- pm_abstractions %>%
 # telepsy
 telepsych$tele_ancid[1] <- telepsych$tele_ancid[4] 
 
+
+
+
+
+
+
+
 telepsych_df <- telepsych %>%
     filter(pt_attend == "Yes") %>%               # keep only attended
     arrange(tele_ancid, tele_date) %>%            # sort by person and date
@@ -106,12 +113,22 @@ secondvisit <- ppw_rct_df %>%
     select(clt_ptid) %>% 
     mutate(secondvisit = "Yes") 
 
+thirdvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "14 weeks post-partum") %>% 
+    select(clt_ptid) %>% 
+    mutate(thirdvisit = "Yes") 
+
 #merge secondvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
 
 consort_data <- consort_data %>% 
     left_join(tele_with_id, by = c("partipant_id" = "partipant_id")) 
+
+
+#merge thirdvisit people into consort_data
+consort_data <- consort_data %>% 
+    left_join(thirdvisit, by = c("partipant_id" = "clt_ptid"))
     
 #generate consort diagram without percentages (also without telepsychiatry)
 consort_diagram <- consort_plot(data = consort_data,
@@ -124,7 +141,8 @@ consort_diagram <- consort_plot(data = consort_data,
                                rct_enrolling = "Enrolled",
                         ipmh_participant = "PM+",
                         tele = "Telepsychiatry",
-                        secondvisit = "6 weeks postpartum visit"),
+                        secondvisit = "6 weeks postpartum visit",
+                        thirdvisit = "14 Weeks Postpartum Visit"),
                     side_box = c("exclusion", "rct_decline_reason"),
                     allocation = "arm")
 consort_diagram
@@ -175,7 +193,8 @@ counts_by_arm <- consort_data %>%
         enrolled = sum(rct_enrolling == "Yes", na.rm = TRUE),
         pm_participants = sum(ipmh_participant == "Yes", na.rm = TRUE),
         tele_participants = sum(tele == "Yes", na.rm = TRUE),
-        postpartum_visit = sum(secondvisit == "Yes", na.rm = TRUE)
+        postpartum_visit = sum(secondvisit == "Yes", na.rm = TRUE),
+        postpartum_visit1 = sum(thirdvisit == "Yes", na.rm = TRUE)
     )
 
 # Function to generate stage text
@@ -193,7 +212,8 @@ counts_by_arm <- counts_by_arm %>%
         txt_enrolled = generate_stage_text("Enrolled", enrolled, eligible),
         txt_pm = generate_stage_text("PM+", pm_participants, enrolled),
         txt_tele = generate_stage_text("Telepsychiatry", tele_participants, enrolled),
-        txt_postpartum = generate_stage_text("6 weeks postpartum visit", postpartum_visit, enrolled)
+        txt_postpartum = generate_stage_text("6 weeks postpartum visit", postpartum_visit, enrolled),
+        txt_postpartum1 = generate_stage_text("14 weeks postpartum visit", postpartum_visit1, enrolled)
     )
 
 # Total text for ANC attendees
@@ -303,7 +323,8 @@ consort_per <- add_box(txt = txt_anc) |>
     add_side_box(txt = txt_decline) |>
     add_box(txt = counts_by_arm$txt_enrolled) |>
     add_side_box(txt= counts_by_arm$txt_pm_tele) |>
-    add_box(txt = counts_by_arm$txt_postpartum)
+    add_box(txt = counts_by_arm$txt_postpartum)|>
+    add_box(txt = counts_by_arm$txt_postpartum1)
 
 consort_per
 
