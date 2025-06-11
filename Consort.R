@@ -149,7 +149,7 @@ consort_diagram
 
 #### HEAD
 library(grid)
-options(txt_gp = gpar(cex = 1.0)) 
+options(txt_gp = gpar(cex = 1.2)) 
 
 #### HEAD
 txt_anc <- c("ANC Attendees (n=4,465)")
