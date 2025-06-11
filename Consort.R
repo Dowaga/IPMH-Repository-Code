@@ -149,7 +149,7 @@ consort_diagram
 
 #### HEAD
 library(grid)
-options(txt_gp = gpar(cex = 0.8)) 
+options(txt_gp = gpar(cex = 1.0)) 
 
 #### HEAD
 txt_anc <- c("ANC Attendees (n=4,465)")
@@ -327,6 +327,7 @@ consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = counts_by_arm$txt_postpartum1)
 
 consort_per
+
 
 ## consort diagram without arm breaking--------
 # Total ANC attendees
