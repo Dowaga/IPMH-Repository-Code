@@ -451,10 +451,10 @@ no_post_psychlops <- pm_survey_df %>%
   filter(pm_session == "Session 5 content")
 
 
-# Study participant PM+ Sessions
+# None Study participant PM+ Sessions
 pm_session <- 
     pm_survey_df %>% 
-    filter(ipmh_participant == "Yes") %>% 
+    filter(ipmh_participant == "No") %>% 
     select(pm_facility, pm_ancid, pm_session)
 
 # Duplicates Sessions
