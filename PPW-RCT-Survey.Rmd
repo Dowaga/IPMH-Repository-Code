@@ -28,7 +28,6 @@ Altogether, we currently have data for `r ppw_rct_df$clt_ptid %>% unique() %>% l
 
 ```{r check ID, message=FALSE, warning=FALSE, include=FALSE}
 # check the IDs in the consenting database
-
 consent_df <- screening_consent_df %>% 
     filter(ipmh_rct_enrollment_consent_complete == "Complete")
 
@@ -370,8 +369,8 @@ eligible_no_survey <- eligible_pm %>%
 ### Those that are in the PM+ Survey, while not Eligible
 setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
 
-wrong_pm_survey <- pm_survey_df %>% 
-    filter(pm_ptid%in% c(21177049, 21031052, 21010085))
+none2_pm_survey <- pm_survey_df %>% 
+    filter(pm_ptid%in% c(21177049, 21031052, 21010085,21094053,21073077, 21229516))
 ```
 
 
@@ -450,6 +449,11 @@ no_post_psychlops <- pm_survey_df %>%
   filter(any(pm_session == "Session 5 content") & !any(pm_session == "Post-intervention PSYCHLOPS measurement"))%>%
   filter(pm_session == "Session 5 content")
 
+# Filter ptids with Post session but without session 5 
+no_post_intervention <- pm_survey_df %>%
+  group_by(pm_ptid) %>%
+  filter(any(pm_session == "Post-intervention PSYCHLOPS measurement") & !any(pm_session == "Session 5 content"))%>%
+  filter(pm_session == "Post-intervention PSYCHLOPS measurement")
 
 # Study participant PM+ Sessions
 pm_session <- 

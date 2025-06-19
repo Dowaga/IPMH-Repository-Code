@@ -16,6 +16,8 @@ ae_df <- ppw_sae_df %>%
            redcap_event_name, redcap_repeat_instance) %>% 
     filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
 
+
+
 sae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>% 
     filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
@@ -76,4 +78,38 @@ sae_summary <- tbl_summary(
     modify_header(label = "**SAE Category**") %>%
     modify_caption("**Summary of Serious Adverse Events by Study Arm**")
 
+
 sae_summary 
+
+# Summary of Adverse events-----------------------------------------------------
+# Select age and site from main df
+ae_ages <- ppw_rct_df %>% 
+    mutate(dem_age = if_else(
+        dem_dob_uk == "Yes",
+        floor(time_length(interval(dem_dob, clt_date), "years")),
+        dem_age
+    )) %>% 
+    select(record_id, clt_study_site,redcap_event_name, dem_age)
+
+# left joing with aes df
+ae_summary <- ae_df %>% 
+    select(record_id, ae_datereport,ae_dateonset , ae_cat, ae_resolutiondate) %>% 
+    left_join(ae_ages, by = "record_id") %>% 
+    filter(!is.na(dem_age)) %>% 
+    select(record_id, clt_study_site, dem_age,ae_datereport,ae_cat,ae_dateonset, 
+           ae_resolutiondate) %>% 
+    # Remove the facility code
+    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>% 
+    rename(PTID = record_id,
+           `Study Site` = "clt_study_site",
+           `Date Averse Event was reported` = ae_datereport,
+           `Adverse Event reported` = ae_cat, 
+           `Start date of adverse event` = ae_dateonset,
+           `End date of adverse event` = ae_resolutiondate,
+           `Age of participant` = dem_age)
+
+ae_summary <- ae_summary %>% 
+    gt()
+
+# Save the table to a Word document
+gtsave(ae_summary, filename = "Summary of Adverse Events.docx") 

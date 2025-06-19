@@ -17,12 +17,12 @@ knitr::opts_chunk$set(fig.width = 18, fig.height = 18)
 
 # read data
 source("Datateam_ipmh.R")
-data <- read.csv(file.path(ipmh_filepath, "/Data/4. Aim 1 quantitative data/Aim1_quant_data_2024-10-14.csv"))
+#data <- read.csv(file.path(ipmh_filepath, "/Data/4. Aim 1 quantitative data/Aim1_quant_data_2024-10-14.csv"))
 
-# read data
-#source("REDCap_datapull.R")
-#data <- aim1quant_data %>%
-  #filter(pt_id < 15000000)
+ #read data
+source("REDCap_datapull.R")
+data <- aim1quant_data %>%
+  filter(pt_id < 15000000)
 
 # Quick overview of the selected columns
 # data %>% 
