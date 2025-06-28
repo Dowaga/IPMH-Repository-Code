@@ -13,18 +13,17 @@ source("Dependencies.R")
 source("data_import.R")
 
 # Only keep the necessary dataset
-rm(list = ls()[! ls() %in% c("rct_ppw")])
+rm(list = ls()[! ls() %in% c("ppw_rct_df", "ppw_sae_df")])
 
 # Data for baseline vs. follow-up
-rct_ppw <- rct_ppw %>%
+ppw_sae_df <- ppw_sae_df %>%
     mutate(
         visit_type = case_when(
             grepl("Enrollment", redcap_event_name) ~ "Enrollment",
             grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
             grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
             grepl("6 Months", redcap_event_name) ~ "6 Months",
-            grepl("PM\\+ Session 5", redcap_event_name) ~ "PM+ Session 5",
-            TRUE ~ "Other"
+            TRUE ~ NA_character_
         ),
         arm = case_when(
             grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
@@ -33,15 +32,26 @@ rct_ppw <- rct_ppw %>%
         )
     )
 
-ase_data <- rct_ppw %>% 
-    filter(!is.na(redcap_repeat_instrument))
-non_ase_data <- rct_ppw %>% 
-    filter(is.na(redcap_repeat_instrument))
+ppw_rct_df <- ppw_rct_df %>%
+    mutate(
+        visit_type = case_when(
+            grepl("Enrollment", redcap_event_name) ~ "Enrollment",
+            grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
+            grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
+            grepl("6 Months", redcap_event_name) ~ "6 Months",
+            TRUE ~ NA_character_
+        ),
+        arm = case_when(
+            grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
+            grepl("Arm 2: Control", redcap_event_name) ~ "Control",
+            TRUE ~ "Unknown"
+        )
+    )
 
-rct_ppw_followup <- non_ase_data %>%
+rct_ppw_followup <- ppw_rct_df %>%
     filter(visit_type %in% c("6 Weeks", "14 Weeks", "6 Months"))
 
-rct_ppw_baseline <- non_ase_data %>%
+rct_ppw_baseline <- ppw_rct_df %>%
     filter(visit_type == "Enrollment")
 
 # Table 1: Pregnancy outcomes at 6 weeks postpartum --------------
@@ -59,6 +69,9 @@ pregnancy_outcomes_6week <- pregnancy_outcomes_6week %>%
 # calculate gestational age at birth in weeks
 pregnancy_outcomes_6week <- pregnancy_outcomes_6week %>%
     mutate(
+        tpnc_date = as.Date(tpnc_date),
+        med_lmp = as.Date(med_lmp),
+        
         gestage_calculated = case_when(
             !is.na(tpnc_date) & !is.na(med_lmp) ~ 
                 as.numeric(tpnc_date - med_lmp) / 7,
@@ -142,7 +155,7 @@ table2a <- infant_outcomes %>%
             io_mf ~ "Fed infant any drink or food other than breastmilk"
         ),
         statistic = list(
-            all_continuous() ~ "{mean} ({sd})",
+            all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         missing = "no"
@@ -220,4 +233,279 @@ table2b <- infant_outcomes %>%
 #     modify_caption("**Table 2c. Infant Outcomes at 6 Months Postpartum**") %>%
 #     bold_labels()
 
-# Table 3: Primary and secondary clinical outcomes --------------
+# Table 3: Primary and secondary clinical outcomes across times--------------
+# PHQ9, GAD7, WHOQOL BREF score, Any adverse pregnant outcome (%) 
+outcomes <- ppw_rct_df %>%
+    select(visit_type, clt_ptid, all_of(starts_with("phq_")), 
+           all_of(starts_with("gad7_")), all_of(starts_with("qol_")))
+# PHQ9 & GAD7 scores
+outcomes <- outcomes %>% 
+    mutate(across(c(starts_with("phq_")), 
+                  ~ case_when(
+                      . == "not at all" ~ 0,
+                      . == "several days" ~ 1,
+                      . == "more than half the days" ~ 2,
+                      . == "nearly every day" ~ 3,
+                      TRUE ~ NA_real_
+                  ), 
+                  .names = "{.col}_number")) %>% 
+    mutate(across(starts_with("gad7_"), 
+                  ~ case_when(
+                      . == "Not at all" ~ 0,
+                      . == "Several days" ~ 1,
+                      . == "Over half the days" ~ 2,
+                      . == "Nearly every day" ~ 3,
+                      TRUE ~ NA_real_
+                  ), 
+                  .names = "{.col}_number")) %>% 
+    mutate(phq9_total = rowSums(select(., starts_with("phq_")& ends_with("_number")), na.rm = TRUE),
+           gad7_total = rowSums(select(., starts_with("gad7_")& ends_with("_number")), na.rm = TRUE)) %>% 
+    mutate(phq9_high = ifelse(phq9_total >= 10, "Yes", "No"),
+           gad7_high = ifelse(gad7_total >= 10, "Yes", "No"))
+
+# WHOQOL BREF ======
+outcomes <- outcomes %>%
+    mutate(qol_rate_number = case_when(
+        qol_rate == "Very poor" ~ 1,
+        qol_rate == "Poor" ~ 2,
+        qol_rate == "Neither poor nor good" ~ 3,
+        qol_rate == "Good" ~ 4,
+        qol_rate == "Very good" ~ 5,
+        TRUE ~ NA_real_  )) %>% 
+    mutate(qol_sat_number = case_when(
+        qol_sat == "Very dissatisfied" ~ 1,
+        qol_sat == "Dissatisfied" ~ 2,
+        qol_sat == "Neither satisfied nor dissatisfied" ~ 3,
+        qol_sat == "Satisfied" ~ 4,
+        qol_sat == "Very satisfied" ~ 5,
+        TRUE ~ NA_real_  )) %>% 
+    mutate(across(
+        .cols = c(qol_enjoy, qol_mean),
+                  .fns = ~ case_when(
+                      . == "Not at all" ~ 1,
+                      . == "A little" ~ 2,
+                      . == "A moderate amount" ~ 3,
+                      . == "Very much" ~ 4,
+                      . == "An extreme amount" ~ 5,
+                      TRUE ~ NA_real_
+                  ),
+                  .names = "{.col}_number"
+    )) %>% 
+    mutate(across(
+        .cols = c(qol_medtreat, qol_pain),
+        .fns = ~ case_when(
+            . == "Not at all" ~ 5,
+            . == "A little" ~ 4,
+            . == "A moderate amount" ~ 3,
+            . == "Very much" ~ 2,
+            . == "An extreme amount" ~ 1,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>% 
+    mutate(across(
+        .cols = c(qol_conc, qol_safe, qol_env),
+        .fns = ~ case_when(
+            . == "Not at all" ~ 1,
+            . == "A little" ~ 2,
+            . == "A moderate amount" ~ 3,
+            . == "Very much" ~ 4,
+            . == "Extremely" ~ 5,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>% 
+    mutate(across(
+        .cols = c(qol_energy, qol_bod, qol_money, qol_info, qol_leis),
+        .fns = ~ case_when(
+            . == "Not at all" ~ 1,
+            . == "A little" ~ 2,
+            . == "Moderately" ~ 3,
+            . == "Mostly" ~ 4,
+            . == "Completely" ~ 5,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>% 
+    mutate(qol_get_number = case_when(
+        qol_get == "Very poor" ~ 1,
+        qol_get == "Poor" ~ 2,
+        qol_get == "Neither poor nor good" ~ 3,
+        qol_get == "Good" ~ 4,
+        qol_get == "Very good" ~ 5,
+        TRUE ~ NA_real_
+    )) %>% 
+    mutate(across(
+        .cols = c(qol_sleep, qol_perf, qol_cap, qol_self, qol_rel, qol_sex,
+                  qol_sup, qol_con_, qol_serv, qol_trans),
+        .fns = ~ case_when(
+            . == "Very dissatisfied" ~ 1,
+            . == "Dissatisfied" ~ 2,
+            . == "Neither satisfied nor dissatisfied" ~ 3,
+            . == "Satisfied" ~ 4,
+            . == "Very satisfied" ~ 5,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>% 
+        mutate(qol_blue_number = case_when(
+            qol_blue == "Never" ~ 5,
+            qol_blue == "Seldom" ~ 4,
+            qol_blue == "Quite often" ~ 3,
+            qol_blue == "Very often" ~ 2,
+            qol_blue == "Always" ~ 1,
+            TRUE ~ NA_real_
+        ))
+        
+# Calculate WHOQOL BREF scores
+outcomes <- outcomes %>% 
+    mutate(qol_overall = qol_rate_number + qol_sat_number,
+           qol_physical = qol_pain_number + qol_medtreat_number + qol_energy_number + qol_get_number +
+               qol_sleep_number + qol_perf_number + qol_cap_number,
+           qol_psycho = qol_enjoy_number + qol_mean_number + qol_conc_number + qol_bod_number +
+               qol_self_number + qol_blue_number,
+           qol_social = qol_rel_number + qol_sex_number + qol_sup_number,
+           qol_environ = qol_safe_number + qol_env_number + qol_money_number + qol_info_number +
+               qol_leis_number + qol_con__number + qol_trans_number + qol_serv_number
+    )
+
+#scoring instruction: https://depts.washington.edu/seaqol/docs/WHOQOL-BREF%20and%20Scoring%20Instructions.pdf
+
+# Define item vectors for each domain
+physical_items <- c("qol_pain_number", "qol_medtreat_number", "qol_energy_number",
+                    "qol_get_number", "qol_sleep_number", "qol_perf_number", "qol_cap_number")
+
+psych_items <- c("qol_enjoy_number", "qol_mean_number", "qol_conc_number",
+                 "qol_bod_number", "qol_self_number", "qol_blue_number")
+
+social_items <- c("qol_rel_number", "qol_sex_number", "qol_sup_number")
+
+env_items <- c("qol_safe_number", "qol_env_number", "qol_money_number",
+               "qol_info_number", "qol_leis_number", "qol_con__number",
+               "qol_trans_number", "qol_serv_number")
+
+# Impute physical domain
+outcomes <- outcomes %>%
+    rowwise() %>%
+    mutate(
+        physical_non_missing = sum(!is.na(c_across(all_of(physical_items)))),
+        qol_physical = ifelse(
+            physical_non_missing >= 6,
+            sum(replace_na(c_across(all_of(physical_items)),
+                           mean(c_across(all_of(physical_items)), na.rm = TRUE)), na.rm = TRUE),
+            NA_real_
+        )
+    ) %>%
+    ungroup()
+
+outcomes <- outcomes %>%
+    rowwise() %>%
+    mutate(
+        env_non_missing = sum(!is.na(c_across(all_of(env_items)))),
+        qol_environ = ifelse(
+            env_non_missing >= 7,
+            sum(replace_na(c_across(all_of(env_items)),
+                           mean(c_across(all_of(env_items)), na.rm = TRUE)), na.rm = TRUE),
+            NA_real_
+        )
+    ) %>%
+    ungroup()
+
+outcomes <- outcomes %>%
+    rowwise() %>%
+    mutate(
+        qol_psycho = ifelse(any(is.na(c_across(all_of(psych_items))), na.rm = TRUE), NA_real_,
+                            sum(c_across(all_of(psych_items)))),
+        qol_social = ifelse(any(is.na(c_across(all_of(social_items))), na.rm = TRUE), NA_real_,
+                            sum(c_across(all_of(social_items))))
+    ) %>%
+    ungroup()
+
+outcomes <- outcomes %>%
+    mutate(
+        qol_physical_scaled = ((qol_physical - 7) / 28) * 100,
+        qol_psycho_scaled   = ((qol_psycho - 6) / 24) * 100,
+        qol_social_scaled   = ((qol_social - 3) / 12) * 100,
+        qol_environ_scaled  = ((qol_environ - 8) / 32) * 100,
+        qol_overall_scaled = as.numeric(((qol_overall - 2) / 8) * 100)
+    )
+
+# Adverse pregnant outcomes
+## here we included: miscarriage or stillbirth, death(infant or maternal), hospitalization
+adverse_outcomes <- ppw_sae_df %>%
+    select(visit_type, record_id, arm, ae_yn, ae_cat, ae_preglosssp, ae_type___1, ae_type___2,
+           ae_type___3, ae_type___4, ae_type___5) %>% 
+    rename(
+        maternal_death = ae_type___1,
+        infant_death = ae_type___2,
+        maternal_hospitalization = ae_type___3,
+        infant_hospitalization = ae_type___4,
+        loss = ae_type___5
+    ) %>%
+    mutate(
+        stillbirth = if_else(ae_preglosssp == "Stillbirth (>20wks gestation)", TRUE, FALSE, missing = FALSE),
+        miscarriage = if_else(ae_preglosssp == "Miscarriage (< =20wks gestation)", TRUE, FALSE, missing = FALSE),
+        maternal_death = if_else(maternal_death == "Checked", TRUE, FALSE),
+        infant_death = if_else(infant_death == "Checked", TRUE, FALSE),
+        maternal_hospitalization = if_else(maternal_hospitalization == "Checked", TRUE, FALSE),
+        infant_hospitalization = if_else(infant_hospitalization == "Checked", TRUE, FALSE)
+    )
+
+outcomes <- outcomes %>% left_join(adverse_outcomes, 
+                                   by = c("visit_type", 
+                                          "clt_ptid" = "record_id")) 
+
+outcomes <- outcomes %>%
+    mutate(visit_type = factor(visit_type,
+                               levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months")))
+table3 <- outcomes %>%
+    select(visit_type, phq9_total, phq9_high, gad7_total, gad7_high,
+           qol_overall_scaled, qol_physical_scaled, qol_psycho_scaled,
+           qol_social_scaled, qol_environ_scaled,
+           maternal_death, infant_death, maternal_hospitalization,
+           infant_hospitalization, stillbirth, miscarriage) %>%
+    tbl_summary(
+        by = visit_type,
+        type = list(
+            phq9_total ~ "continuous",
+            gad7_total ~ "continuous",
+            qol_overall_scaled ~ "continuous",
+            qol_physical_scaled ~ "continuous",
+            qol_psycho_scaled ~ "continuous",
+            qol_social_scaled ~ "continuous",
+            qol_environ_scaled ~ "continuous"
+        ),
+        label = list(
+            phq9_total ~ "PHQ-9 Total Score",
+            phq9_high ~ "PHQ-9 High Score (>=10)",
+            gad7_total ~ "GAD-7 Total Score",
+            gad7_high ~ "GAD-7 High Score (>=10)",
+            qol_overall_scaled ~ "WHOQOL Overall Score (Scaled)",
+            qol_physical_scaled ~ "WHOQOL Physical Domain Score (Scaled)",
+            qol_psycho_scaled ~ "WHOQOL Psychological Domain Score (Scaled)",
+            qol_social_scaled ~ "WHOQOL Social Domain Score (Scaled)",
+            qol_environ_scaled ~ "WHOQOL Environmental Domain Score (Scaled)",
+            maternal_death ~ "Maternal Death",
+            infant_death ~ "Infant Death",
+            maternal_hospitalization ~ "Maternal Hospitalization",
+            infant_hospitalization ~ "Infant Hospitalization",
+            stillbirth ~ "Stillbirth",
+            miscarriage ~ "Miscarriage"
+        ),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no"
+    ) %>%
+    add_n() %>%
+    modify_header(label = "**Clinical Outcome**") %>%
+    modify_caption("**Table 3. Primary and Secondary Clinical Outcomes Across Visits**") %>%
+    bold_labels()
+
+#Table 4: Adverse and severe adverse events --------------------
+
+
+#Table 5: Psychosocial correlates across visits --------------------
+
+#Table for tracking follow-up visits ------------------
