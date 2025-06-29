@@ -504,8 +504,212 @@ table3 <- outcomes %>%
     bold_labels()
 
 #Table 4: Adverse and severe adverse events --------------------
+sae <- ppw_sae_df %>%
+    select(visit_type, record_id, arm, ae_yn, ae_datereport, ae_cat, ae_preglosssp,
+           ae_multpreg_loss, ae_pregloss_mult, ae_dateonset,
+           ae_narrative, ae_type___1, ae_type___2, ae_type___3, ae_type___4, ae_type___5,
+           ae_ideath_date, ae_matdeath_date, ae_relation, ae_rational, 
+           ae_resolutiondate, ae_outcome, ae_) %>% 
+    rename(
+        maternal_death = ae_type___1,
+        infant_death = ae_type___2,
+        maternal_hospitalization = ae_type___3,
+        infant_hospitalization = ae_type___4,
+        loss = ae_type___5
+    ) %>%
+    mutate(
+        stillbirth = if_else(ae_preglosssp == "Stillbirth (>20wks gestation)", TRUE, FALSE, missing = FALSE),
+        miscarriage = if_else(ae_preglosssp == "Miscarriage (< =20wks gestation)", TRUE, FALSE, missing = FALSE),
+        maternal_death = if_else(maternal_death == "Checked", TRUE, FALSE),
+        infant_death = if_else(infant_death == "Checked", TRUE, FALSE),
+        maternal_hospitalization = if_else(maternal_hospitalization == "Checked", TRUE, FALSE),
+        infant_hospitalization = if_else(infant_hospitalization == "Checked", TRUE, FALSE)
+    )
+
+enrollment_date <- ppw_rct_df %>%
+    filter(visit_type == "Enrollment") %>%
+    select(clt_ptid, clt_date) 
+
+sae <- sae %>%
+    left_join(enrollment_date, by = c("record_id" = "clt_ptid"))
+
+sae_flags <- c("maternal_death", "infant_death", "maternal_hospitalization",
+               "infant_hospitalization", "stillbirth", "miscarriage")
+
+sae <- sae %>%
+    mutate(across(all_of(sae_flags), ~ . %in% c(TRUE, "TRUE", "true", 1, "1", "Yes", "yes")))
+
+sae_filtered <- sae %>%
+    filter(if_any(all_of(sae_flags), ~ . == TRUE)) %>%
+    rowwise() %>%
+    mutate(
+        SAE_type = paste(sae_flags[c_across(all_of(sae_flags))], collapse = "; "),
+        sae_number = cur_group_id(),  # Sequential ID
+        onset_since_randomization = round(as.numeric(difftime(ae_dateonset, 
+                                                              clt_date, units = "days")),0)  
+    ) %>%
+    ungroup()
+
+# Create a summary table for SAEs
+sae_table <- sae_filtered %>%
+    select(sae_number, record_id, SAE_type, ae_dateonset, ae_datereport,
+           onset_since_randomization, ae_outcome, ae_relation) %>% 
+    kable(caption = "**Adverse and Severe Adverse Events Across Visits**")
 
 
 #Table 5: Psychosocial correlates across visits --------------------
+#1. reducing tension checklist
+rtc <- ppw_rct_df %>%
+    select(visit_type, clt_ptid, starts_with("rtc_")) %>%
+    mutate(across(
+        .cols = c(starts_with("rtc_")),
+        .fns = ~ case_when(
+            . == "Not at all" ~ 0,
+            . == "A little/rarely (once or twice in the past month)" ~ 1,
+            . == "Sometimes (about once a week)" ~ 2,
+            . == "Most of the time (a few times per week)" ~ 3,
+            . == "All the time (almost every day)" ~ 4,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    ))
+rtc <- rtc %>%
+    mutate(rtc_total = rowSums(select(., starts_with("rtc_") & ends_with("_number")), na.rm = TRUE)) 
+
+#2. parenting stress (6w & 6m)
+#https://www.corc.uk.net/media/2764/parent-stress-scale-fillable-pdf.pdf
+parenting_stress <- ppw_rct_df %>%
+    select(visit_type, clt_ptid, starts_with("pstress_")) %>%
+    mutate(across(
+        .cols = c(starts_with("pstress_")),
+        .fns = ~ case_when(
+            . == "Strongly disagree" ~ 1,
+            . == "Disagree" ~ 1,
+            . == "Undecided" ~ 2,
+            . == "Agree" ~ 3,
+            . == "Strongly agree" ~ 4,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>%
+    mutate(ps_total = rowSums(select(., starts_with("pstress_") & ends_with("_number")), na.rm = TRUE))
+
+#3. IPV
+#cutoff: 10
+ipv <- ppw_rct_df %>%
+    select(visit_type, clt_ptid, starts_with("hit_")) %>%
+    mutate(across(
+        .cols = c(starts_with("hit_")),
+        .fns = ~ case_when(
+            . == "Never (Hakuna) [onge]" ~ 0,
+            . == "Rarely (Vigumu) [matin]" ~ 1,
+            . == "Sometimes (Mara nyingine) [kadichiel]" ~ 2,
+            . == "Fairly Often (Karibu mara mingi) [thothne]" ~ 3,
+            . == "Frequently (Mara mingi) [mang'eny]" ~ 4,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>%
+    mutate(hit_total = rowSums(select(., starts_with("hit_") & ends_with("_number")), na.rm = TRUE)) %>% 
+    mutate(hit_high = ifelse(hit_total >= 10, "Yes", "No"))
+
+#4. Social suppot (baseline & 14w)
+#https://emerge.ucsd.edu/r_1mq2f0ksb7qyidj/
+#cutoff: 3~8 poor, 9-11 moderate, 12-14 strong
+social_support <- ppw_rct_df %>%
+    select(visit_type, clt_ptid, starts_with("ss_")) %>%
+    mutate(ss_close_number = case_when(
+            ss_close == "None" ~ 1,
+            ss_close == "1-2" ~ 2,
+            ss_close == "3-5" ~ 3,
+            ss_close == "5+" ~ 4,
+            TRUE ~ NA_real_
+        )) %>% 
+    mutate(ss_interest_number = case_when(
+            ss_interest == "None" ~ 1,
+            ss_interest == "Little" ~ 2,
+            ss_interest == "Uncertain" ~ 3,
+            ss_interest == "Some" ~ 4,
+            ss_interest == "A lot" ~ 5,
+            TRUE ~ NA_real_
+        )) %>%
+    mutate(ss_help_number = case_when(
+            ss_help == "very difficult" ~ 1,
+            ss_help == "difficult" ~ 2,
+            ss_help == "possible" ~ 3,
+            ss_help == "easy" ~ 4,
+            TRUE ~ NA_real_
+        )) %>%
+    mutate(ss_total = rowSums(select(., starts_with("ss_") & ends_with("_number")), na.rm = TRUE)) %>% 
+    mutate(ss_cat = case_when(
+            ss_total >= 3 & ss_total <= 8 ~ "Poor",
+            ss_total >= 9 & ss_total <= 11 ~ "Moderate",
+            ss_total >= 12 & ss_total <= 14 ~ "Strong",
+            TRUE ~ NA_character_
+        ))
+
+#5. ACES (14w)
+aces <- ppw_rct_df %>%
+    select(visit_type, clt_ptid, starts_with("ace_")) %>%
+    mutate(across(
+        .cols = c(starts_with("ace_")),
+        .fns = ~ case_when(
+            . == "Yes (Ndio)" ~ 1,
+            . == "No (La)" ~ 0,
+            . == "No answer (Hakuna jibu)" ~ NA,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>%
+    mutate(ace_total = round(rowSums(select(., starts_with("ace_") & 
+                                                ends_with("_number")), na.rm = TRUE)),0)
+
+# Combine all psychosocial data into one table
+psychosocial_data <- rtc %>%
+    left_join(parenting_stress, by = c("visit_type", "clt_ptid")) %>%
+    left_join(ipv, by = c("visit_type", "clt_ptid")) %>%
+    left_join(social_support, by = c("visit_type", "clt_ptid")) %>%
+    left_join(aces, by = c("visit_type", "clt_ptid")) 
+
+psychosocial_data <- psychosocial_data %>%
+    mutate(visit_type = factor(visit_type,
+                               levels = c("Enrollment", "6 Weeks", 
+                                          "14 Weeks", "6 Months")))
+
+# Create a summary table for psychosocial correlates
+table4 <- psychosocial_data %>%
+    select(visit_type, rtc_total, ps_total, hit_total, hit_high,
+           ss_total, ss_cat, ace_total) %>%
+    tbl_summary(
+        by = visit_type,
+        type = list(
+            all_continuous() ~ "continuous",
+            all_categorical() ~ "categorical",
+            ace_total ~ "continuous"
+        ),
+        label = list(
+            rtc_total ~ "Reducing Tension Checklist (Score)",
+            ps_total ~ "Parenting Stress (Score)\n (6 weeks and 6 months)",
+            hit_total ~ "Intimate Partner Violence (Score)",
+            hit_high ~ "Intimate Partner Violence High Score (>=10)",
+            ss_total ~ "Social Support (Score)\n (Baseline and 14 weeks)",
+            ss_cat ~ "Social Support Category",
+            ace_total ~ "Adverse Childhood Experiences (Number)\n (14 weeks)"
+        ),
+        digits = list(
+            all_continuous() ~ 0,
+            all_categorical() ~ 0
+        ),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no"
+    ) %>%
+    add_n() %>%
+    modify_header(label = "**Psychosocial Correlates**") %>%
+    modify_caption("**Table 4. Psychosocial Correlates Across Visits**") %>%
+    bold_labels()
 
 #Table for tracking follow-up visits ------------------
+
