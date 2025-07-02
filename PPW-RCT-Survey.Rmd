@@ -178,8 +178,8 @@ Enrollments
 ```{r Follow-up Tracking, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
 kable(combined_summary, 
-      caption = "Summary of Follow-up Tracking by Facility") %>%
-    kable_styling("striped", full_width = F) 
+      caption = "Summary of Follow-up Tracking by Facility")
+
 ```
 
 \newpage
@@ -642,19 +642,34 @@ sae_report
 
 # Follow-up Data (PPW Longitudinal Survey)
 
+## Pregnancy Outcomes
+
 ```{r Follow-up Data, echo=FALSE, message=FALSE, warning=FALSE}
-source("Follow-up Data.R")
+source("PPW RCT follow up.R")
 
 table1
+```
 
-table2
+## Infant Outcomes
+```{r Infant Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
+table2a
+table2b
+```
 
+## Clinical Outcomes
+
+```{r Clinical Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
 table3
+```
 
+## Psychosocial Scales
+
+```{r Psychosocial Scales, echo=FALSE, message=FALSE, warning=FALSE}
 table4
+```
 
-table5
-
+## Mental Health Utilization
+```{r Mental Health Utilization, echo=FALSE, message=FALSE, warning=FALSE}
 table6
 
 table7
