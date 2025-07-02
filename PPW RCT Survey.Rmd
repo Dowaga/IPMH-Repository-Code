@@ -14,9 +14,9 @@ output:
 source("Datateam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
-
 ```
 
+# Enrollment Status
 
 Altogether, we currently have data for `r nrow(ppw_rct_df)` participants.
 
@@ -62,8 +62,6 @@ source("Consort.R")
 consort_per
 
 ```
-
-
 
 ```{r Reasons for ineligibility or not enrolled, message=FALSE, warning=FALSE, include=FALSE}
 
@@ -126,7 +124,6 @@ not_enrolled %>%
         table.font.size = px(12))
 ```
 
-
 ```{r Summary of Study Enrollment by Facility, echo=FALSE, message=FALSE, warning=FALSE}
 Enrollments <- screening_consent_df %>%
     group_by(study_site) %>%
@@ -153,11 +150,22 @@ Enrollments
 ## Enrollment Per Facility
 
 ```{r Weekly Enrollment Trends, message=FALSE, warning=FALSE, include=FALSE}
-
 source("Enrollment Progress.R")
 #figure_1
 ```
 
+## Follow-up Tracking Per Facility
+
+```{r Follow-up Tracking, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
+kable(combined_summary, 
+      caption = "Summary of Follow-up Tracking by Facility") %>%
+    kable_styling("striped", full_width = F) 
+```
+
+\newpage
+
+# Baseline Information
 
 ## PPW Demographics
 
@@ -231,6 +239,9 @@ source("Medical and Obstetric History.R")
 moh_summary
 ```
 
+\newpage
+
+# Treatment Tracking (Routine Databases)
 
 ## PM+ and Telepsychiatry Referrals
 
@@ -292,7 +303,6 @@ pm_telep_df <- pm_telep_df %>%
        referred_to = case_when(abs_phq_ref_pm == "Yes"|abs_gad7_ref_pm == "Yes" ~ "PM+",
       abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
       TRUE ~ NA_character_))
-
 
 #PM+ participants
 pm_plus_df <- pm_telep_df %>% 
@@ -405,7 +415,6 @@ pm_session_wide %>%
 ```
 
 
-
 ```{r None study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
     # None study participants in PM+
 nsp_pm <- pm_survey_df %>%
@@ -457,8 +466,6 @@ session_wide %>%
 ```
 
 
-
-
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
 telepsych_referrals <- pm_telep_df %>% 
     filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
@@ -489,7 +496,6 @@ referral_qc <- pm_telep_df %>%
            abs_phq_ref_pm, gad7_scores, abs_gad7_ref_pm)
 
 ```
-
 
 
 ```{r PM+ Follow-Up, message=FALSE, warning=FALSE, include=FALSE}
@@ -543,22 +549,12 @@ weekly_visits %>%
 
 ```
 
-
-
-## Reducing Tension Checklist Table
-```{r Reducing Tension Checklist, echo=FALSE, message=FALSE, warning=FALSE}
-source("Reducing Tension Checklist.R")
-# summary_table
-```
-
-
-
 ## Overall PM+ Retention
+
 ```{r PM+ Retention, echo=FALSE, message=FALSE, warning=FALSE}
 source("PM+ Follow-up.R")
 weekly_pm_retention
 ```
-
 
 ```{r PM+ Weekly Retention, message=FALSE, warning=FALSE, include=FALSE}
 source("PM+ Follow-up.R")
@@ -575,9 +571,12 @@ V_week4 %>%
     gt()
 ```
 
+\newpage
 
+# SAE
 
 ## Percent of SAEs reported to ERC
+
 ```{r SAES, echo=FALSE, message=FALSE, warning=FALSE}
 sae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_")) %>% 
@@ -597,13 +596,24 @@ sae_report <- sae_df %>%
 sae_report
 ```
 
+\newpage
 
+# Follow-up Data (PPW Longitudinal Survey)
 
-```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE}
-source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
-fc_yield_summary
+```{r Follow-up Data, echo=FALSE, message=FALSE, warning=FALSE}
+source("Follow-up Data.R")
 
-yield_summary
+table1
+
+table2
+
+table3
+
+table4
+
+table5
+
+table6
+
+table7
 ```
-
-
