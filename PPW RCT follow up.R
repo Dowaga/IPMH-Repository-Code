@@ -12,9 +12,6 @@ source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
-# Only keep the necessary dataset
-rm(list = ls()[! ls() %in% c("ppw_rct_df", "ppw_sae_df")])
-
 # Data for baseline vs. follow-up
 ppw_sae_df <- ppw_sae_df %>%
     mutate(
