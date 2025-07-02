@@ -17,12 +17,13 @@ source("data_import.R")
 
 ```
 
-
 ```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
 
 knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 
 ```
+
+# Enrollment Status
 
 Altogether, we currently have data for `r ppw_rct_df$clt_ptid %>% unique() %>% length()` participants.
 
@@ -77,8 +78,6 @@ source("Consort.R")
 #consort_diagram for weekly reports
 consort_per
 ```
-
-
 
 ```{r Reasons for ineligibility or not enrolled, message=FALSE, warning=FALSE, include=FALSE}
 
@@ -168,14 +167,25 @@ Enrollments <- screening_consent_df %>%
 Enrollments
 ```
 
-
 ```{r Weekly Enrollment Trends, message=FALSE, warning=FALSE, include=FALSE}
 
 #source("Enrollment Progress.R")
 #figure_1
 ```
 
+## Follow-up Tracking Per Facility
+
+```{r Follow-up Tracking, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
+kable(combined_summary, 
+      caption = "Summary of Follow-up Tracking by Facility") %>%
+    kable_styling("striped", full_width = F) 
+```
+
 \newpage
+
+# Baseline Information
+
 ## PPW Demographics
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
@@ -243,14 +253,15 @@ demographics_df %>% tbl_summary(
         table.font.size = px(14))
 ```
 
-
-
 ```{r Medical and Obstetric History, message=FALSE, warning=FALSE, include=FALSE}
 #source("Medical and Obstetric History.R")
 #moh_summary
 ```
 
 \newpage
+
+# Treatment Tracking (Routine Databases)
+
 ## PM+ and Telepsychiatry Referrals
 
 ```{r PM+ and Telepsychiatry Referrals, echo=FALSE, message=FALSE, warning=FALSE, include = F}
@@ -375,7 +386,6 @@ wrong_pm_survey <- pm_survey_df %>%
 ```
 
 
-
 ```{r Study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
 # Study participant PM+ Sessions
 pm_sessions <- 
@@ -430,9 +440,6 @@ pm_session_wide %>%
         table.font.size = px(14))
 
 ```
-
-
-\newpage
 
 ```{r None study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
     # None study participants in PM+
@@ -503,8 +510,6 @@ session_wide %>%
 
 ```
 
-
-
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
 telepsych_referrals <- pm_telep_df %>% 
     filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
@@ -526,8 +531,6 @@ telepsych_referrals %>%
         table.font.size = px(12))
 ```
 
-
-
 ```{r PM+ and Telepsychiatry Referral QCs, message=FALSE, warning=FALSE, include=FALSE}
 referral_qc <- pm_telep_df %>% 
     filter((phq9_scores > 9 & abs_phq_ref_pm == "No" )|(gad7_scores > 9 & abs_gad7_ref_pm == "No")) %>% 
@@ -535,8 +538,6 @@ referral_qc <- pm_telep_df %>%
            abs_phq_ref_pm, gad7_scores, abs_gad7_ref_pm)
 
 ```
-
-
 
 ```{r PM+ Follow-Up, message=FALSE, warning=FALSE, include=FALSE}
 none_study_part <- pm_survey_df %>% 
@@ -589,17 +590,13 @@ weekly_visits %>%
 
 ```
 
-
-
 ```{r Reducing Tension Checklist, echo=FALSE, message=FALSE, warning=FALSE}
 #source("Reducing Tension Checklist.R")
 # summary_table
 ```
 
-
-\newpage
-
 ## Overall PM+ Retention
+
 ```{r PM+ Retention, echo=FALSE, message=FALSE, warning=FALSE}
 source("PM+ Follow-up.R")
 attendance_table %>%
@@ -609,9 +606,12 @@ attendance_table %>%
     autofit()
 ```
 
+\newpage
 
+# Severe Adverse Events (SAEs)
 
 ## Percent of SAEs reported to ERC
+
 ```{r SAES, echo=FALSE, message=FALSE, warning=FALSE}
 sae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_")) %>% 
@@ -631,7 +631,6 @@ sae_report <- sae_df %>%
 sae_report
 ```
 
-
 ```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE, include = F}
 # source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
 # fc_yield_summary
@@ -639,4 +638,25 @@ sae_report
 # yield_summary
 ```
 
+\newpage
+
+# Follow-up Data (PPW Longitudinal Survey)
+
+```{r Follow-up Data, echo=FALSE, message=FALSE, warning=FALSE}
+source("Follow-up Data.R")
+
+table1
+
+table2
+
+table3
+
+table4
+
+table5
+
+table6
+
+table7
+```
 
