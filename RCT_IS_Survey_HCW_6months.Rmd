@@ -1,6 +1,6 @@
 ---
 title: "IPMH RCT IS Survey - HCW - 6 Months"
-author: "David Owaga & Yuwei Wang"
+author: "Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
   word_document
@@ -17,6 +17,17 @@ knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 #Read data using datapull
 source("REDCap_datapull.R")
 is_survey_df <- rct_hcw
+
+is_survey_df <- is_survey_df %>%
+    mutate(
+        visit_type = case_when(
+            grepl("pre", redcap_event_name, ignore.case = TRUE) ~ "Baseline",
+            grepl("6-month", redcap_event_name) ~ "6 month",
+            grepl("12-month", redcap_event_name) ~ "12 month",
+            TRUE ~ "Other"
+        )
+    ) %>% 
+    mutate(visit_type = factor(visit_type, levels = c("Baseline", "6 month", "12 month")))
 
 #consenting database for cross-check 
 rct_hcw_baseline <- rct_hcw_consenting %>%
@@ -53,33 +64,63 @@ survey_id_6mo <- is_survey_df %>%
 setdiff(consent_id_6mo$screen_id, survey_id_6mo$pt_id)
 setdiff(survey_id_6mo$pt_id, consent_id_6mo$screen_id)
 
+# #12 month -----------
+# #check the IDs in the 12-month consenting database
+# consent_id_12mo <- rct_hcw_consenting_12mo %>% 
+#     filter(grepl("12-month", redcap_event_name, ignore.case = TRUE)) %>%
+#     select(screen_id) %>% 
+#     distinct()
+# 
+# #check the IDs in the survey database - 12-month
+# survey_id_12mo <- is_survey_df %>% 
+#     filter(grepl("12-month", redcap_event_name, ignore.case = TRUE)) %>%
+#     select(pt_id) %>% 
+#     distinct()
+# 
+# #compare - 12-month
+# setdiff(consent_id_12mo$screen_id, survey_id_12mo$pt_id)
+# setdiff(survey_id_12mo$pt_id, consent_id_12mo$screen_id)
+
 #see how many participants we have two timepoints data
-
-
-# First and last date for Old Batch
-Dates_summary <- rct_hcw %>%
-     arrange(collect_time) %>%
-    reframe(
-    start_date = min(collect_time, na.rm = TRUE),
-    end_date = max(collect_time, na.rm = TRUE)
-  )
-
-#12 month -----------
-#check the IDs in the 12-month consenting database
-consent_id_12mo <- rct_hcw_consenting_12mo %>% 
-    filter(grepl("12-month", redcap_event_name, ignore.case = TRUE)) %>%
-    select(screen_id) %>% 
-    distinct()
-
-#check the IDs in the survey database - 12-month
-survey_id_12mo <- is_survey_df %>% 
-    filter(grepl("12-month", redcap_event_name, ignore.case = TRUE)) %>%
-    select(pt_id) %>% 
-    distinct()
-
-#compare - 12-month
-setdiff(consent_id_12mo$screen_id, survey_id_12mo$pt_id)
-setdiff(survey_id_12mo$pt_id, consent_id_12mo$screen_id) 
+participant_timepoints <- is_survey_df %>%
+    mutate(
+        has_baseline = grepl("pre", redcap_event_name, ignore.case = TRUE),
+        has_6month = grepl("6-month", redcap_event_name),
+        has_12month = grepl("12-month", redcap_event_name)
+    ) %>%
+    group_by(pt_id, facility_id) %>%
+    summarise(
+        baseline = any(has_baseline),
+        month_6 = any(has_6month),
+        month_12 = any(has_12month),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        baseline_and_6mo = baseline & month_6,
+        all_three_timepoints = baseline & month_6 & month_12,
+        newly_added_6mo = !baseline & (month_6),
+        newly_added_12mo = !baseline & !month_6 & (month_12),
+        missing_6mo = baseline & !month_6 & month_12
+    )
+participant_timepoints %>%
+    summarise(
+        baseline_and_6mo = sum(baseline_and_6mo, na.rm = TRUE),
+        all_three_timepoints = sum(all_three_timepoints, na.rm = TRUE),
+        newly_added_6mo = sum(newly_added_6mo, na.rm = TRUE),
+        newly_added_12mo = sum(newly_added_12mo, na.rm = TRUE),
+        missing_6mo = sum(missing_6mo, na.rm = TRUE)
+    )
+participant_timepoints %>%
+    group_by(facility_id) %>%
+    summarise(
+        baseline_and_6mo = sum(baseline_and_6mo, na.rm = TRUE),
+        all_three_timepoints = sum(all_three_timepoints, na.rm = TRUE),
+        newly_added_6mo = sum(newly_added_6mo, na.rm = TRUE),
+        newly_added_12mo = sum(newly_added_12mo, na.rm = TRUE),
+        missing_6mo = sum(missing_6mo, na.rm = TRUE)
+    ) %>%
+    gt() %>%
+    tab_header(title = "Participants with Complete Time Points by Facility")
 ```
 
 ```{r, arm, echo=F, message=FALSE, warning=FALSE}
@@ -96,16 +137,30 @@ is_survey_df$arm_redcap <- str_extract(is_survey_df$redcap_event_name, "Arm [0-9
 
 #examine number of participants in each arm by facility
 is_survey_df %>% 
+    filter(grepl("6-month", redcap_event_name)) %>% 
     count(arm_redcap, facility_id) %>% 
     pivot_wider(names_from = arm_redcap, values_from = n, values_fill = 0) %>%
     gt() %>%
     tab_header(
-        title = "Number of Participants by Arm and Facility")
+        title = "Number of Participants by Arm and Facility (6 months follow-up)")
+
+# is_survey_df %>% 
+#     filter(grepl("12-month", redcap_event_name)) %>% 
+#     count(arm_redcap, facility_id) %>% 
+#     pivot_wider(names_from = arm_redcap, values_from = n, values_fill = 0) %>%
+#     gt() %>%
+#     tab_header(
+#         title = "Number of Participants by Arm and Facility (12 months follow-up)")
+
 ```
 
 \newpage
 
+### Demographic Summary for Baseline [6/12 months needs to be added]
+
 ```{r, Basic Demographic Summary, echo=FALSE, message=FALSE, warning=FALSE}
+## This is collected at baseline only - there will be newly added participants at the follow-up visits.
+## Needs to fix after getting new demographic data.
 demogra <- is_survey_df %>% 
   select(arm, part_id,  pt_type, facility_id, calculated_pt_id, 
          dob_uk, age, cal_age, sex, education, 
@@ -115,7 +170,7 @@ demogra <- is_survey_df %>%
          job_arm25___7, job_arm36___1,  job_arm36___2,  job_arm36___3,  
          job_arm7___1, job_arm7___2,
           monthsjob, monthswork, terms, care,  wlwh, monthscare,
-          hrscare, wlwh,  demographic_complete)%>% 
+          hrscare, wlwh, demographic_complete)%>% 
     filter(demographic_complete == "Complete") %>% 
     mutate(age_final = case_when(
         dob_uk == "Yes" ~ floor(as.numeric(cal_age)),
@@ -224,38 +279,12 @@ demogra %>% tbl_summary(
 
 ```{r Participants Interviewed by cadre per facility, echo=FALSE, message=FALSE, warning=FALSE, include=F}
 suveys_done <- is_survey_df %>% 
-    select(pt_id, facility_id, pt_type) %>% 
-    # mutate(pt_type = recode(pt_type,
-    #                         "22" = "Lay providers",
-    #                         "23" = "Facility-in-charge",
-    #                         "24" = "Nurses/COs/medical officers",
-    #                         "25" = "Psychiatrists/psychologists"),
-    #        facility_id = dplyr::recode(facility_id, 
-    #                                "01" = "Rwambwa Sub-county Hospital",
-    #                                "02" = "Sigomere Sub County Hospital",
-    #                                "03" = "Uyawi Sub County Hospital",
-    #                                "04" = "Got Agulu Sub-District Hospital",
-    #                                "05" = "Ukwala Sub County Hospital",
-    #                                "06" = "Madiany Sub County Hospital",
-    #                                "07" = "Kabondo Sub County Hospital",
-    #                                "08" = "Mbita Sub-County Hospital",
-    #                                "09" = "Miriu Health Centre",
-    #                                "11" = "Nyandiwa Level IV Hospital",
-    #                                "13" = "Ober Kamoth Sub County Hospital",
-    #                                "14" = "Gita Sub County Hospital",
-    #                                "15" = "Akala Health Centre",
-    #                                "16" = "Usigu Health Centre",
-    #                                "17" = "Ramula Health Centre",
-    #                                "18" = "Simenya Health Centre",
-    #                                "19" = "Airport Health Centre (Kisumu)",
-    #                                "20" = "Nyalenda Health Centre",
-    #                                "21" = "Mirogi Health Centre",
-    #                                "22" = "Ndiru Level 4 Hospital")) %>%
-    group_by(facility_id, pt_type) %>%
+    select(visit_type, pt_id, facility_id, pt_type) %>% 
+    group_by(visit_type, facility_id, pt_type) %>%
   summarise(count = n(), .groups = "drop")%>%
   pivot_wider(names_from = pt_type, values_from = count, values_fill = 0)%>%
   mutate(`Total_Facility` = rowSums(across(where(is.numeric)))) %>%  # Add row totals
-  arrange(desc(Total_Facility)) %>%  # Arrange in descending order
+  arrange(visit_type, facility_id) %>%  # Arrange by visit_type first, then facility
     bind_rows(summarise(., across(where(is.numeric), sum), facility_id = "Total"))%>%  # Add column totals
     gt() %>%
   tab_header(
@@ -274,27 +303,210 @@ suveys_done
 
 \newpage
 
-## Organizational readiness - HCW
+## Inner Setting - Culture, Culture Effort, and Culture Stress
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-hcw_readiness_df <- is_survey_df %>% 
-    select(pt_id, facility_id, pt_type, arm, oric_needed_1, oric_needed_2,
-    oric_motivated_1, oric_motivated_2, oric_motivated_3, oric_motivated_4, 
-    oric_expectancy_1, oric_expectancy_2, oric_demand_1, oric_demand_2, 
-    oric_demand_3, oric_demand_4, oric_resource_1, oric_resource_2, 
-    oric_context_1, oric_context_2, oric_capacity_1, oric_capacity_2, 
-    oric_capacity_3, oric_flex_1, oric_flex_2, oric_flex_3, oric_flex_4, 
-    oric_politic, organizational_readiness_hcw_complete) %>% 
-    filter(!pt_type == "Facility-in-charge: 23")
+```{r culture echo=FALSE, message=FALSE, warning=FALSE}
+culture_df <- is_survey_df %>% 
+    filter(grepl("6-month", redcap_event_name)) %>%
+    select(pt_id, facility_id, pt_type, arm, starts_with("culture_"),
+           starts_with("cstress_"), starts_with("ceffort_"),
+           inner_setting_culture_stress_complete
+           ) 
 
-hcw_readiness_df <- hcw_readiness_df %>%
+culture_df <- culture_df %>%
     filter(!is.na(pt_type)) %>%  # Remove rows where pt_type is NA
     mutate(pt_type = droplevels(factor(pt_type))) %>% 
     filter(!is.na(facility_id)) %>% 
     mutate(facility_id = droplevels(factor(facility_id))) 
 
-hcw_readiness_df <- hcw_readiness_df %>% 
-    mutate(across(starts_with("oric_"), ~ case_when(
+#scoring instruction
+#reverse coding: culture_3, ceffort_5
+
+culture_df <- culture_df %>% 
+    mutate(across(starts_with("culture"), ~ case_when(
+        . == "1: Strongly disagree" ~ 1,
+        . == "2: Disagree" ~ 2,
+        . == "3: Neutral" ~ 3,
+        . == "4: Agree" ~ 4,
+        . == "5: Strongly agree" ~ 5,
+        . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
+        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+    ))) %>% 
+    mutate(across(starts_with("cstress"), ~case_when(
+        . == "Strongly disagree" ~ 1,
+        . == "Disagree" ~ 2,
+        . == "Neutral" ~ 3,
+        . == "Agree" ~ 4,
+        . == "Strongly agree" ~ 5,
+        . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
+        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+    ))) %>% 
+    mutate(across(starts_with("ceffort"), ~case_when(
+        . == "Strongly disagree" ~ 1,
+        . == "Disagree" ~ 2,
+        . == "Neutral" ~ 3,
+        . == "Agree" ~ 4,
+        . == "Strongly agree" ~ 5,
+        . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
+        TRUE ~ as.numeric(as.character(.))))) # Ensure numeric conversion
+
+# reverse coding for some items: culture_3, ceffort_5
+culture_df <- culture_df %>%
+    mutate(across(c(culture_3, ceffort_5),
+                  ~6 - .)) 
+    
+# create domain scores
+culture_df <- culture_df %>%
+    mutate(
+        culture = rowMeans(select(., starts_with("culture")), 
+                                          na.rm = TRUE),
+        culture_effort = rowMeans(select(., starts_with("ceffort")), 
+                                        na.rm = TRUE),
+        culture_stress = rowMeans(select(., starts_with("cstress")), 
+                                  na.rm = TRUE))
+```
+
+```{r, continuous, echo=FALSE, message=FALSE, warning=FALSE}
+#show the mean score of each domain by arm using tbl_summary
+culture_df %>% 
+    tbl_summary(
+        by = arm,
+        include = c(culture, culture_effort, culture_stress),
+        missing = "ifany") %>% 
+    add_overall() %>% add_p() %>% 
+    bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Culture Summary by Arm") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
+# by pt_type
+culture_df %>% 
+    tbl_summary(
+        by = pt_type,
+        include = c(culture, culture_effort, culture_stress),
+        missing = "ifany") %>% 
+    add_overall() %>% add_p() %>% 
+    bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Culture By Participant Type") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
+#by facility
+# culture_df %>%
+#     tbl_summary(
+#         by = facility_id,
+#         include = c(culture, culture_effort, culture_stress),
+#         missing = "ifany") %>% 
+#     add_overall() %>% add_p() %>%
+#     bold_labels() %>%
+#   # convert from gtsummary object to gt object
+#   as_gt() %>%
+#   # modify with gt functions
+#   gt::tab_header("Culture By Facility") %>%
+#   gt::tab_options(
+#     table.font.size = "medium",
+#     data_row.padding = gt::px(1)) %>%
+#     tab_options(
+#         table.font.size = px(12))
+```
+
+\newpage 
+
+```{r, culture binary, echo=FALSE, message=FALSE, warning=FALSE}
+#making the scores binary
+culture_df <- culture_df %>% 
+    mutate(across(c(culture, culture_effort),
+                  ~case_when(. >= 4 ~ "High",
+                             . < 4 ~ "Low",
+                             TRUE ~ as.character(.)))) %>% 
+    mutate(culture_stress = case_when(
+               culture_stress >= 3 ~ "High",
+               culture_stress < 3 ~ "Low",
+               TRUE ~ as.character(culture_stress))) %>%
+    mutate(across(c(culture, culture_effort, culture_stress), as.factor))  # Convert to factor
+
+# Show the proportion of high and low scores by arm
+culture_df %>% 
+    tbl_summary(
+        by = arm,
+        include = c(culture, culture_effort, culture_stress),
+        missing = "ifany") %>% 
+    add_overall() %>% add_p() %>% 
+    bold_labels() %>%
+    # Convert from gtsummary object to gt object
+    as_gt() %>%
+    # Modify with gt functions
+    gt::tab_header("Culture Summary By Arm") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(table.font.size = px(12))
+
+# by pt_type
+culture_df %>% 
+    tbl_summary(
+        by = pt_type,
+        include = c(culture, culture_effort, culture_stress),
+        missing = "ifany") %>% 
+    add_overall() %>% add_p() %>% 
+    bold_labels() %>%
+    as_gt() %>%
+    gt::tab_header("Culture By Participant Type") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
+#by facility
+# culture_df %>% 
+#     tbl_summary(
+#         by = facility_id,
+#         include = c(culture, culture_effort, culture_stress),
+#        missing = "ifany") %>% 
+#     add_overall() %>% add_p() %>% 
+#     bold_labels() %>%
+#     as_gt() %>%
+#     gt::tab_header("Culture By Facility") %>% 
+#     gt::tab_options(
+#         table.font.size = "medium",
+#         data_row.padding = gt::px(1)) %>%
+#     tab_options(
+#         table.font.size = px(12))
+```
+
+\newpage
+
+## Intervention Characteristics
+
+```{r intervention_characteristics, echo=FALSE, message=FALSE, warning=FALSE}
+intervention_df <- is_survey_df %>% 
+    select(visit_type, pt_id, facility_id, pt_type, arm, starts_with("adapt_"), 
+           starts_with("complex_"), starts_with("trial_"), 
+           intervention_characteristic_complete) %>% 
+    filter(arm == "Intervention") 
+
+intervention_df <- intervention_df %>%
+    filter(!is.na(pt_type)) %>%  # Remove rows where pt_type is NA
+    mutate(pt_type = droplevels(factor(pt_type))) %>% 
+    filter(!is.na(facility_id)) %>% 
+    mutate(facility_id = droplevels(factor(facility_id)))
+
+intervention_df <- intervention_df %>% 
+    mutate(across(c(starts_with("adapt_"), 
+           starts_with("complex_"), starts_with("trial_")), ~ case_when(
         . == "1: Completely disagree" ~ 1,
         . == "2: Disagree" ~ 2,
         . == "3: Neither agree nor disagree" ~ 3,
@@ -304,437 +516,65 @@ hcw_readiness_df <- hcw_readiness_df %>%
         TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
     ))) 
 
-# reverse coding for some items: oric_demand_2, oric_demand_3, oric_context_2, oric_capacity_2, oric_flex_1
-hcw_readiness_df <- hcw_readiness_df %>%
-    mutate(across(c(oric_demand_2, oric_demand_3, oric_context_2, oric_capacity_2, oric_flex_1),
-                  ~6 - .)) 
-    
-# create domain scores
-hcw_readiness_df <- hcw_readiness_df %>%
+#no reverse coding
+
+intervention_df <- intervention_df %>%
     mutate(
-        oric_change_commitment = rowMeans(select(., c(starts_with("oric_motivated"), 
-                                                      starts_with("oric_needed"), 
-                                                      starts_with("oric_expectancy"))), 
-                                          na.rm = TRUE),
-        oric_change_efficacy = rowMeans(select(., c(starts_with("oric_demand"), 
-                                                    starts_with("oric_resource"), 
-                                                    starts_with("oric_context"))), 
-                                        na.rm = TRUE),
-        oric_capacity = rowMeans(select(., starts_with("oric_capacity")), na.rm = TRUE),
-        oric_flex = rowMeans(select(., starts_with("oric_flex")), na.rm = TRUE),
-        oric_org = as.numeric(rowMeans(select(., starts_with("oric_politic")), na.rm = TRUE))
+        adapt = rowMeans(select(., starts_with("adapt_")), na.rm = TRUE),
+        complex = rowMeans(select(., starts_with("complex_")), na.rm = TRUE),
+        trial = rowMeans(select(., starts_with("trial_")), na.rm = TRUE)
     )
 ```
 
 ```{r, continuous, echo=FALSE, message=FALSE, warning=FALSE}
-#show the mean score of each domain by arm using tbl_summary
-hcw_readiness_df %>% 
-    tbl_summary(
-        by = arm,
-        include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-        type = list(oric_org ~ "continuous",
-                    oric_capacity ~ "continuous"),
-        label = list(oric_change_commitment ~ "Change commitment",
-                     oric_change_efficacy ~ "Change efficacy",
-                     oric_capacity ~ "Capacity",
-                     oric_flex ~ "Flexibility",
-                     oric_org ~ "Organizational structure"),
-        missing = "no",
-        statistic = list(all_continuous() ~ "{median} ({sd})")) %>% 
-    add_overall() %>% add_p() %>% 
-    bold_labels() %>%
-  # convert from gtsummary object to gt object
-  as_gt() %>%
-  # modify with gt functions
-  gt::tab_header("HCWs Organizational Readiness Summary by Arm") %>% 
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
-
-# by pt_type
-hcw_readiness_df %>% 
+#show the mean score of each domain by pt_type using tbl_summary
+intervention_df %>% 
+    filter(grepl("6 month", visit_type)) %>%
     tbl_summary(
         by = pt_type,
-        include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-        type = list(oric_org ~ "continuous",
-                    oric_capacity ~ "continuous"),
-        label = list(oric_change_commitment ~ "Change commitment",
-                     oric_change_efficacy ~ "Change efficacy",
-                     oric_capacity ~ "Capacity",
-                     oric_flex ~ "Flexibility",
-                     oric_org ~ "Organizational structure"),
-        statistic = list(all_continuous() ~ "{median} ({sd})"),
-        missing = "no") %>% 
+        include = c(adapt, complex, trial),
+        type = list(adapt ~ "continuous", 
+              complex ~ "continuous", 
+              trial ~ "continuous"),
+        missing = "ifany") %>% 
     add_overall() %>% add_p() %>% 
     bold_labels() %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header("HCWs Organizational Readiness By Participant Type") %>% 
+  gt::tab_header("Intervention Characteristics (6 month) Summary by Participant Type") %>% 
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
     tab_options(
         table.font.size = px(12))
 
-#by facility
-# hcw_readiness_df %>% 
+#show the mean score of each domain by facility using tbl_summary
+# intervention_df %>% 
+#     filter(grepl("6 month", visit_type)) %>%
 #     tbl_summary(
 #         by = facility_id,
-#         include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-#         type = list(oric_org ~ "continuous",
-#                    oric_capacity ~ "continuous"),
-#         label = list(oric_change_commitment ~ "Change commitment",
-#                      oric_change_efficacy ~ "Change efficacy",
-#                      oric_capacity ~ "Capacity",
-#                      oric_flex ~ "Flexibility",
-#                      oric_org ~ "Organizational structure"),
-#         statistic = list(all_continuous() ~ "{median} ({sd})"),
-#         missing = "no") %>% 
+#         include = c(adapt, complex, trial),
+#         type = list(adapt ~ "continuous", 
+#               complex ~ "continuous", 
+#               trial ~ "continuous"),
+#         missing = "ifany") %>% 
 #     add_overall() %>% add_p() %>% 
 #     bold_labels() %>%
 #   # convert from gtsummary object to gt object
 #   as_gt() %>%
 #   # modify with gt functions
-#   gt::tab_header("HCWs Organizational Readiness By Facility") %>% 
+#   gt::tab_header("Intervention Characteristics (6 month) Summary by Participant Type") %>% 
 #   gt::tab_options(
 #     table.font.size = "medium",
 #     data_row.padding = gt::px(1)) %>%
 #     tab_options(
 #         table.font.size = px(12))
-```
 
-\newpage 
-
-```{r, binary, echo=FALSE, message=FALSE, warning=FALSE}
-#making the scores binary
-hcw_readiness_df <- hcw_readiness_df %>% 
-    mutate(across(c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-                  ~case_when(. >= 4 ~ "High",
-                             . < 4 ~ "Low",
-                             TRUE ~ as.character(.))),
-           across(c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org), as.factor))  # Convert to factor
-
-# Show the proportion of high and low scores by arm
-hcw_readiness_df %>% 
-    tbl_summary(
-        by = arm,
-        include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-        type = list(oric_change_commitment ~ "categorical",
-                    oric_change_efficacy ~ "categorical",
-                    oric_capacity ~ "categorical",
-                    oric_flex ~ "categorical",
-                    oric_org ~ "categorical"),
-        label = list(oric_change_commitment ~ "Change commitment",
-                     oric_change_efficacy ~ "Change efficacy",
-                     oric_capacity ~ "Capacity",
-                     oric_flex ~ "Flexibility",
-                     oric_org ~ "Organizational structure"),
-        missing = "no") %>% 
-    add_overall() %>% add_p() %>% 
-    bold_labels() %>%
-    # Convert from gtsummary object to gt object
-    as_gt() %>%
-    # Modify with gt functions
-    gt::tab_header("HCWs Organizational Readiness Summary") %>% 
-    gt::tab_options(
-        table.font.size = "medium",
-        data_row.padding = gt::px(1)) %>%
-    tab_options(table.font.size = px(12))
-
-# by pt_type
-hcw_readiness_df %>% 
-    tbl_summary(
-        by = pt_type,
-        include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-        type = list(oric_org ~ "categorical"),  
-        label = list(oric_change_commitment ~ "Change commitment",
-                     oric_change_efficacy ~ "Change efficacy",
-                     oric_capacity ~ "Capacity",
-                     oric_flex ~ "Flexibility",
-                     oric_org ~ "Organizational structure"),
-        missing = "no") %>% 
-    add_overall() %>% add_p() %>% 
-    bold_labels() %>%
-    as_gt() %>%
-    gt::tab_header("HCWs Organizational Readiness By Participant Type") %>% 
-    gt::tab_options(
-        table.font.size = "medium",
-        data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
-
-#by facility
-# hcw_readiness_df %>% 
-#     tbl_summary(
-#         by = facility_id,
-#         include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-#         type = list(oric_org ~ "categorical"),
-#         label = list(oric_change_commitment ~ "Change commitment",
-#                      oric_change_efficacy ~ "Change efficacy",
-#                      oric_capacity ~ "Capacity",
-#                      oric_flex ~ "Flexibility",
-#                      oric_org ~ "Organizational structure"),
-#         missing = "no") %>% 
-#     add_overall() %>% add_p() %>% 
-#     bold_labels() %>%
-#     as_gt() %>%
-#     gt::tab_header("HCWs Organizational Readiness By Facility") %>% 
-#     gt::tab_options(
-#         table.font.size = "medium",
-#         data_row.padding = gt::px(1)) %>%
-#     tab_options(
-#         table.font.size = px(12))
+#future notes: need to generate a table for 12months, and a table compare 6m & 12m
 ```
 
 \newpage
-
-# Organizational readiness - Facility in-charge
-
-```{r in-charge, echo=FALSE, message=FALSE, warning=FALSE}
-incharge_readiness_df <- is_survey_df %>% 
-        filter(pt_type == "Facility-in-charge: 23") %>% 
-    select(pt_id, facility_id, pt_type, arm, ends_with("_fic"))
-
-incharge_readiness_df <- incharge_readiness_df %>% 
-    mutate(across(ends_with("_fic"), ~ case_when(
-        str_detect(., "Completely disagree") ~ 1,  
-        str_detect(., "Disagree") ~ 2,  
-        str_detect(., "Neither agree nor disagree") ~ 3,  
-        str_detect(., "Agree") ~ 4, 
-        str_detect(., "Completely agree") ~ 5, 
-        str_detect(., "Prefer not to answer") ~ NA_real_,  # Convert to NA
-        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
-    )))
-
-# reverse coding for some items: oric_demand_2, oric_demand_3, oric_context_2, oric_capacity_2, oric_flex_1
-incharge_readiness_df <- incharge_readiness_df %>%
-    mutate(across(c(oric_demand_2_fic, oric_demand_3_fic, oric_context_2_fic, oric_capacity_2_fic, oric_flex_1_fic),
-                  ~6 - .))
-
-# create domain scores
-incharge_readiness_df <- incharge_readiness_df %>%
-    mutate(
-        oric_change_commitment = rowMeans(select(., c(starts_with("oric_motivated"), 
-                                                      starts_with("oric_needed"),
-                                                      starts_with("oric_expectancy"))), 
-                                          na.rm = TRUE),
-        oric_change_efficacy = rowMeans(select(., c(starts_with("oric_demand"), 
-                                                    starts_with("oric_resource"), 
-                                                    starts_with("oric_context"))), 
-                                        na.rm = TRUE),
-        oric_capacity = rowMeans(select(., starts_with("oric_capacity")), na.rm = TRUE),
-        oric_flex = rowMeans(select(., starts_with("oric_flex")), na.rm = TRUE),
-        oric_org = (rowMeans(select(., c(starts_with("leadership"), 
-                                    starts_with("politic"))), na.rm = TRUE))
-    )
-```
-
-```{r, continuous in-charge, echo=FALSE, message=FALSE, warning=FALSE}
-#show the mean score of each domain by arm using tbl_summary
-incharge_readiness_df %>% 
-    tbl_summary(
-        by = arm,
-        include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-        type = list(oric_org ~ "continuous",
-                    oric_change_commitment ~ "continuous",
-                    oric_change_efficacy ~ "continuous",
-                    oric_capacity ~ "continuous",
-                    oric_flex ~ "continuous"),
-        label = list(oric_change_commitment ~ "Change commitment",
-                     oric_change_efficacy ~ "Change efficacy",
-                     oric_capacity ~ "Capacity",
-                     oric_flex ~ "Flexibility",
-                     oric_org ~ "Organizational structure"),
-        missing = "no",
-        statistic = list(all_continuous() ~ "{mean} ({sd})")) %>% 
-    add_overall() %>% add_p() %>% 
-    bold_labels() %>%
-  # convert from gtsummary object to gt object
-  as_gt() %>%
-  # modify with gt functions
-  gt::tab_header("Facility In-charge Organizational Readiness Summary by Arm") %>% 
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
-
-# by facility
-# incharge_readiness_df %>% 
-#     tbl_summary(
-#         by = facility_id,
-#         include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-#         type = list(oric_org ~ "continuous",
-#                     oric_change_commitment ~ "continuous",
-#                     oric_change_efficacy ~ "continuous",
-#                     oric_capacity ~ "continuous",
-#                     oric_flex ~ "continuous"),
-#         label = list(oric_change_commitment ~ "Change commitment",
-#                      oric_change_efficacy ~ "Change efficacy",
-#                      oric_capacity ~ "Capacity",
-#                      oric_flex ~ "Flexibility",
-#                      oric_org ~ "Organizational structure"),
-#         missing = "no",
-#         statistic = list(all_continuous() ~ "{mean}")) %>% 
-#     add_overall() %>% 
-#     bold_labels() %>%
-#   # convert from gtsummary object to gt object
-#   as_gt() %>%
-#   # modify with gt functions
-#   gt::tab_header("Facility In-charge Organizational Readiness By Facility") %>% 
-#   gt::tab_options(
-#     table.font.size = "medium",
-#     data_row.padding = gt::px(1)) %>%
-#     tab_options(
-#         table.font.size = px(12))
-```
-
-```{r, binary in-charge, echo=FALSE, message=FALSE, warning=FALSE}
-#making the scores binary
-incharge_readiness_df <- incharge_readiness_df %>% 
-    mutate(across(c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-                  ~case_when(. >= 4 ~ "High",
-                             . < 4 ~ "Low",
-                             TRUE ~ as.character(.))),
-           across(c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org), as.factor))  # Convert to factor
-
-# Show the proportion of high and low scores by arm
-incharge_readiness_df %>% 
-    tbl_summary(
-        by = arm,
-        include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-        type = list(oric_change_commitment ~ "categorical",
-                    oric_change_efficacy ~ "categorical",
-                    oric_capacity ~ "categorical",
-                    oric_flex ~ "categorical",
-                    oric_org ~ "categorical"),
-        label = list(oric_change_commitment ~ "Change commitment",
-                     oric_change_efficacy ~ "Change efficacy",
-                     oric_capacity ~ "Capacity",
-                     oric_flex ~ "Flexibility",
-                     oric_org ~ "Organizational structure"),
-        missing = "no") %>% 
-    add_overall() %>% add_p() %>% 
-    bold_labels() %>%
-    # Convert from gtsummary object to gt object
-    as_gt() %>%
-    # Modify with gt functions
-    gt::tab_header("Facility In-charge Organizational Readiness Summary") %>% 
-    gt::tab_options(
-        table.font.size = "medium",
-        data_row.padding = gt::px(1)) %>%
-    tab_options(table.font.size = px(12))
-
-# by facility
-# incharge_readiness_df %>% 
-#     tbl_summary(
-#         by = facility_id,
-#         include = c(oric_change_commitment, oric_change_efficacy, oric_capacity, oric_flex, oric_org),
-#         type = list(oric_org ~ "categorical",
-#                     oric_change_commitment ~ "categorical",
-#                     oric_change_efficacy ~ "categorical",
-#                     oric_capacity ~ "categorical",
-#                     oric_flex ~ "categorical"),
-#         label = list(oric_change_commitment ~ "Change commitment",
-#                      oric_change_efficacy ~ "Change efficacy",
-#                      oric_capacity ~ "Capacity",
-#                      oric_flex ~ "Flexibility",
-#                      oric_org ~ "Organizational structure"),
-#         missing = "no") %>% 
-#     add_overall() %>% add_p() %>% 
-#     bold_labels() %>%
-#     # Convert from gtsummary object to gt object
-#     as_gt() %>%
-#     # Modify with gt functions
-#     gt::tab_header("Facility In-charge Organizational Readiness By Facility") %>% 
-#     gt::tab_options(
-#         table.font.size = "medium",
-#         data_row.padding = gt::px(1)) %>%
-#     tab_options(table.font.size = px(12))
-```
-
-\newpage
-
-## Implementation Intention
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-intention_df <- is_survey_df %>% 
-    select(pt_id,pt_type, facility_id, arm,
-           intention_1, intention_2, intention_3,
-           implementation_intention_complete) %>% 
-    filter(!is.na(pt_type)) %>%  # Remove rows where pt_type is NA
-    mutate(pt_type = droplevels(factor(pt_type))) %>% 
-    filter(!is.na(facility_id)) %>% 
-    mutate(facility_id = droplevels(factor(facility_id))) 
-    
-#by arm
-intention_df %>% 
-    tbl_summary(
-        by = arm,
-        include = c(intention_1, intention_2, intention_3),
-        label = list(intention_1 ~ "I plan to use IPMH",
-                     intention_2 ~ "Using IPMH is a high priority to me",
-                     intention_3 ~ "I will use IPMH step relevant to my current role"),
-        missing = "no") %>% 
-    add_overall() %>% add_p() %>% 
-    bold_labels() %>%
-  # convert from gtsummary object to gt object
-  as_gt() %>%
-  # modify with gt functions
-  gt::tab_header("Implementation Intention Summary by Arm") %>% 
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
-
-#by pt_type
-intention_df %>% 
-    tbl_summary(
-        by = pt_type,
-        include = c(intention_1, intention_2, intention_3),
-        label = list(intention_1 ~ "I plan to use IPMH",
-                     intention_2 ~ "Using IPMH is a high priority to me",
-                     intention_3 ~ "I will use IPMH step relevant to my current role"),
-        missing = "no") %>% 
-    add_overall() %>% add_p() %>% 
-    bold_labels() %>%
-  # convert from gtsummary object to gt object
-  as_gt() %>%
-  # modify with gt functions
-  gt::tab_header("Implementation Intention Summary by Participant Type") %>% 
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
-
-#by facility
-# intention_df %>% 
-#     tbl_summary(
-#         by = facility_id,
-#         include = c(intention_1, intention_2, intention_3),
-#         label = list(intention_1 ~ "I plan to use IPMH",
-#                      intention_2 ~ "Using IPMH is a high priority to me",
-#                      intention_3 ~ "I will use IPMH step relevant to my current role"),
-#         missing = "no") %>% 
-#     add_overall() %>% 
-#     bold_labels() %>%
-#   # convert from gtsummary object to gt object
-#   as_gt() %>%
-#   # modify with gt functions
-#   gt::tab_header("Implementation Intention Summary by Facility") %>% 
-#   gt::tab_options(
-#     table.font.size = "medium",
-#     data_row.padding = gt::px(1)) %>%
-#   tab_options(
-#         table.font.size = px(12))
-```
-
-\newpage 
 
 ## Acceptability, appropriateness, and feasibility
 
@@ -743,36 +583,93 @@ intention_df %>%
 ```{r Acceptability, echo=FALSE, message=FALSE}
 acceptability <- is_survey_df %>% 
     select(pt_id, pt_type, facility_id, arm, aim_1, aim_2,
-           aim_3, aim_4) %>% 
+           aim_3, aim_4, visit_type) %>% 
     filter(arm == "Intervention") %>% 
     filter(!is.na(pt_type)) %>%  # Remove rows where pt_type is NA
     mutate(pt_type = droplevels(factor(pt_type))) %>% 
     filter(!is.na(facility_id)) %>% 
     mutate(facility_id = droplevels(factor(facility_id))) 
     
-#by py_type
+#compare baseline & 6 month & 12 month
 acceptability %>% 
     tbl_summary(
-        by = "pt_type",
+        by = visit_type,
         include = c(aim_1, aim_2, aim_3, aim_4),
         label = list(aim_1 ~ "IPMH meets my approval", 
                      aim_2 ~ "IPMH is appealing to me", 
                      aim_3 ~ "I like IPMH.", 
                      aim_4 ~ "I welcome IPMH"),
-        missing = "no") %>%     add_overall() %>% add_p() %>% 
+        missing = "ifany") %>% add_p() %>% 
     bold_labels() %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header("IPMH Acceptability") %>% 
+  gt::tab_header("IPMH Acceptability (comparing baseline, 6months, and 12months)") %>% 
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
     tab_options(
         table.font.size = px(12))
 
-#by facility
+# Code into numbers
+acceptability <- acceptability %>% 
+    mutate(across(c(starts_with("aim_")), ~ case_when(
+        . == "Completely disagree" ~ 1,
+        . == "Disagree" ~ 2,
+        . == "Neither agree nor disagree" ~ 3,
+        . == "Agree" ~ 4,
+        . == "Completely agree" ~ 5,
+        . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
+        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+    ))) 
+
+acceptability <- acceptability %>%
+    mutate(
+        aim_total = rowMeans(select(., starts_with("aim_")), na.rm = TRUE)
+    )
+
+#t-test for people with baseline and 6 months data
+baseline_6m_data <- acceptability %>%
+    filter(visit_type %in% c("Baseline", "6 month")) %>%
+    group_by(pt_id) %>%
+    filter(n() == 2) %>%  # Keep only participants with both time points
+    ungroup()
+
+wide_data <- baseline_6m_data %>%
+    select(visit_type, pt_id, aim_1, aim_2, aim_3, aim_4, aim_total) %>%
+    pivot_wider(names_from = visit_type, values_from = c(aim_1, aim_2, aim_3, aim_4, aim_total))
+
+t.test(wide_data$aim_1_Baseline, wide_data$`aim_1_6 month`, paired = TRUE)
+t.test(wide_data$aim_2_Baseline, wide_data$`aim_2_6 month`, paired = TRUE)
+t.test(wide_data$aim_3_Baseline, wide_data$`aim_3_6 month`, paired = TRUE)
+t.test(wide_data$aim_4_Baseline, wide_data$`aim_4_6 month`, paired = TRUE)
+t.test(wide_data$aim_total_Baseline, wide_data$`aim_total_6 month`, paired = TRUE)
+
+# #by py_type - 6 months
 # acceptability %>% 
+#     filter(grepl("6 month", visit_type)) %>%
+#     tbl_summary(
+#         by = pt_type,
+#         include = c(aim_1, aim_2, aim_3, aim_4),
+#         label = list(aim_1 ~ "IPMH meets my approval", 
+#                      aim_2 ~ "IPMH is appealing to me", 
+#                      aim_3 ~ "I like IPMH.", 
+#                      aim_4 ~ "I welcome IPMH"),
+#         missing = "ifany") %>%     add_overall() %>% add_p() %>% 
+#     bold_labels() %>%
+#   # convert from gtsummary object to gt object
+#   as_gt() %>%
+#   # modify with gt functions
+#   gt::tab_header("IPMH Acceptability at 6 months") %>% 
+#   gt::tab_options(
+#     table.font.size = "medium",
+#     data_row.padding = gt::px(1)) %>%
+#     tab_options(
+#         table.font.size = px(12))
+
+#by facility at 6 months
+# acceptability %>% 
+#     filter(grepl("6 month", visit_type)) %>%
 #     tbl_summary(
 #         by = facility_id,
 #         include = c(aim_1, aim_2, aim_3, aim_4),
@@ -780,12 +677,12 @@ acceptability %>%
 #                      aim_2 ~ "IPMH is appealing to me", 
 #                      aim_3 ~ "I like IPMH.", 
 #                      aim_4 ~ "I welcome IPMH"),
-#         missing = "no") %>%     add_overall() %>% add_p() %>%
+#         missing = "ifany") %>%     add_overall() %>% add_p() %>%
 #     bold_labels() %>%
 #   # convert from gtsummary object to gt object
 #   as_gt() %>%
 #   # modify with gt functions
-#   gt::tab_header("IPMH Acceptability by Facility") %>% 
+#   gt::tab_header("IPMH Acceptability by Facility at 6 months") %>% 
 #   gt::tab_options(
 #     table.font.size = "medium",
 #     data_row.padding = gt::px(1)) %>%
@@ -799,53 +696,110 @@ acceptability %>%
 
 ```{r appropriateness, echo=FALSE, message=FALSE, warning=FALSE}
 appropriateness <- is_survey_df %>% 
-    select(part_id,pt_type, facility_id, arm, iam_1, iam_2, iam_3, iam_4) %>% 
+    select(visit_type, pt_id, pt_type, facility_id, arm, iam_1, iam_2, iam_3, iam_4) %>% 
     filter(arm == "Intervention") %>% 
     filter(!is.na(pt_type)) %>%  # Remove rows where pt_type is NA
     mutate(pt_type = droplevels(factor(pt_type))) %>% 
     filter(!is.na(facility_id)) %>% 
     mutate(facility_id = droplevels(factor(facility_id))) 
 
+#compare baseline & 6 month & 12 month
 appropriateness %>% 
     tbl_summary(
-        by = "pt_type",
+        by = visit_type,
         include = c(iam_1, iam_2, iam_3, iam_4),
-        label = list(iam_1 ~ "IPMH seems fitting", 
-                     iam_2 ~ "IPMH seems suitable", 
-                     iam_3 ~ "IPMH seems applicable", 
+        label = list(iam_1 ~ "IPMH seems fitting",
+                     iam_2 ~ "IPMH seems suitable",
+                     iam_3 ~ "IPMH seems applicable",
                      iam_4 ~ "IPMH seems like a good match"),
-        missing = "no") %>% add_overall() %>% add_p() %>%
-    bold_labels() %>% 
+        missing = "ifany") %>% add_p() %>% 
+    bold_labels() %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header("IPMH Appropriateness") %>% 
+  gt::tab_header("IPMH Appropriateness (comparing baseline, 6months, and 12months)") %>% 
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
     tab_options(
         table.font.size = px(12))
 
-#by facility
-# appropriateness %>% 
+# Code into numbers
+appropriateness <- appropriateness %>% 
+    mutate(across(c(starts_with("iam_")), ~ case_when(
+        . == "Completely disagree" ~ 1,
+        . == "Disagree" ~ 2,
+        . == "Neither agree nor disagree" ~ 3,
+        . == "Agree" ~ 4,
+        . == "Completely agree" ~ 5,
+        . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
+        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+    ))) 
+
+appropriateness <- appropriateness %>%
+    mutate(
+        iam_total = rowMeans(select(., starts_with("iam_")), na.rm = TRUE)
+    )
+
+#t-test for people with baseline and 6 months data
+baseline_6m_data <- appropriateness %>%
+    filter(visit_type %in% c("Baseline", "6 month")) %>%
+    group_by(pt_id) %>%
+    filter(n() == 2) %>%  # Keep only participants with both time points
+    ungroup()
+
+wide_data <- baseline_6m_data %>%
+    select(visit_type, pt_id, iam_1, iam_2, iam_3, iam_4, iam_total) %>%
+    pivot_wider(names_from = visit_type, values_from = c(iam_1, iam_2, iam_3, iam_4, iam_total))
+
+t.test(wide_data$iam_1_Baseline, wide_data$`iam_1_6 month`, paired = TRUE)
+t.test(wide_data$iam_2_Baseline, wide_data$`iam_2_6 month`, paired = TRUE)
+t.test(wide_data$iam_3_Baseline, wide_data$`iam_3_6 month`, paired = TRUE)
+t.test(wide_data$iam_4_Baseline, wide_data$`iam_4_6 month`, paired = TRUE)
+t.test(wide_data$iam_total_Baseline, wide_data$`iam_total_6 month`, paired = TRUE)
+
+# appropriateness %>%
+#     filter(grepl("6 month", visit_type)) %>%
 #     tbl_summary(
-#         by = facility_id,
+#         by = "pt_type",
 #         include = c(iam_1, iam_2, iam_3, iam_4),
-#         label = list(iam_1 ~ "IPMH seems fitting", 
-#                      iam_2 ~ "IPMH seems suitable", 
-#                      iam_3 ~ "IPMH seems applicable", 
+#         label = list(iam_1 ~ "IPMH seems fitting",
+#                      iam_2 ~ "IPMH seems suitable",
+#                      iam_3 ~ "IPMH seems applicable",
 #                      iam_4 ~ "IPMH seems like a good match"),
 #         missing = "no") %>% add_overall() %>% add_p() %>%
-#     bold_labels() %>% 
+#     bold_labels() %>%
 #   # convert from gtsummary object to gt object
 #   as_gt() %>%
 #   # modify with gt functions
-#   gt::tab_header("IPMH Appropriateness by Facility") %>% 
+#   gt::tab_header("IPMH Appropriateness") %>%
 #   gt::tab_options(
 #     table.font.size = "medium",
 #     data_row.padding = gt::px(1)) %>%
-#   tab_options(
+#     tab_options(
 #         table.font.size = px(12))
+
+#by facility
+appropriateness %>%
+    filter(grepl("6 month", visit_type)) %>%
+    tbl_summary(
+        by = facility_id,
+        include = c(iam_1, iam_2, iam_3, iam_4),
+        label = list(iam_1 ~ "IPMH seems fitting",
+                     iam_2 ~ "IPMH seems suitable",
+                     iam_3 ~ "IPMH seems applicable",
+                     iam_4 ~ "IPMH seems like a good match"),
+        missing = "no") %>% add_overall() %>% add_p() %>%
+    bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("IPMH Appropriateness by Facility") %>%
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+  tab_options(
+        table.font.size = px(12))
 ```
 
 \newpage  
@@ -854,35 +808,92 @@ appropriateness %>%
 
 ```{r Feasibility, echo=FALSE, message=FALSE, warning=FALSE}
 feasibility <- is_survey_df %>% 
-    select(part_id,pt_type, facility_id, arm,  fim_1,  fim_2,  fim_3,  fim_4) %>% 
+    select(visit_type, pt_id, pt_type, facility_id, arm,  fim_1,  fim_2,  fim_3,  fim_4) %>% 
     filter(arm == "Intervention") %>% 
     filter(!is.na(pt_type)) %>%  # Remove rows where pt_type is NA
     mutate(pt_type = droplevels(factor(pt_type))) %>% 
     filter(!is.na(facility_id)) %>% 
     mutate(facility_id = droplevels(factor(facility_id))) 
 
+#compare baseline & 6 month & 12 month
 feasibility %>% 
     tbl_summary(
-        by = "pt_type",
-        include = c( fim_1,  fim_2,  fim_3,  fim_4),
-        label = list( fim_1 ~ "IPMH seems implementable", 
-                      fim_2 ~ "IPMH seems possible", 
-                      fim_3 ~ "IPMH seems doable", 
-                      fim_4 ~ "IPMH seems easy to use"),
-        missing = "no") %>% 
-    bold_labels() %>% add_overall() %>% add_p() %>%
+        by = visit_type,
+        include = c(fim_1,  fim_2,  fim_3,  fim_4),
+        label = list(fim_1 ~ "IPMH seems implementable", 
+                     fim_2 ~ "IPMH seems possible", 
+                     fim_3 ~ "IPMH seems doable", 
+                     fim_4 ~ "IPMH seems easy to use"),
+        missing = "ifany") %>% add_p() %>% 
+    bold_labels() %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header("IPMH Feasibility") %>% 
+  gt::tab_header("IPMH Feasibility (comparing baseline, 6months, and 12months)") %>% 
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
     tab_options(
         table.font.size = px(12))
 
+# Code into numbers
+feasibility <- feasibility %>% 
+    mutate(across(c(starts_with("fim_")), ~ case_when(
+        . == "Completely disagree" ~ 1,
+        . == "Disagree" ~ 2,
+        . == "Neither agree nor disagree" ~ 3,
+        . == "Agree" ~ 4,
+        . == "Completely agree" ~ 5,
+        . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
+        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+    ))) 
+
+feasibility <- feasibility %>%
+    mutate(
+        fim_total = rowMeans(select(., starts_with("fim_")), na.rm = TRUE)
+    )
+
+#t-test for people with baseline and 6 months data
+baseline_6m_data <- feasibility %>%
+    filter(visit_type %in% c("Baseline", "6 month")) %>%
+    group_by(pt_id) %>%
+    filter(n() == 2) %>%  # Keep only participants with both time points
+    ungroup()
+
+wide_data <- baseline_6m_data %>%
+    select(visit_type, pt_id, fim_1, fim_2, fim_3, fim_4, fim_total) %>%
+    pivot_wider(names_from = visit_type, values_from = c(fim_1, fim_2, fim_3, fim_4, fim_total))
+
+t.test(wide_data$fim_1_Baseline, wide_data$`fim_1_6 month`, paired = TRUE)
+t.test(wide_data$fim_2_Baseline, wide_data$`fim_2_6 month`, paired = TRUE)
+t.test(wide_data$fim_3_Baseline, wide_data$`fim_3_6 month`, paired = TRUE)
+t.test(wide_data$fim_4_Baseline, wide_data$`fim_4_6 month`, paired = TRUE)
+t.test(wide_data$fim_total_Baseline, wide_data$`fim_total_6 month`, paired = TRUE)
+
+# feasibility %>% 
+#     filter(grepl("6 month", visit_type)) %>%
+#     tbl_summary(
+#         by = "pt_type",
+#         include = c( fim_1,  fim_2,  fim_3,  fim_4, fim_total),
+#         label = list( fim_1 ~ "IPMH seems implementable", 
+#                       fim_2 ~ "IPMH seems possible", 
+#                       fim_3 ~ "IPMH seems doable", 
+#                       fim_4 ~ "IPMH seems easy to use"),
+#         missing = "no") %>% 
+#     bold_labels() %>% add_overall() %>% add_p() %>%
+#   # convert from gtsummary object to gt object
+#   as_gt() %>%
+#   # modify with gt functions
+#   gt::tab_header("IPMH Feasibility") %>% 
+#   gt::tab_options(
+#     table.font.size = "medium",
+#     data_row.padding = gt::px(1)) %>%
+#     tab_options(
+#         table.font.size = px(12))
+
 #by facility
 # feasibility %>% 
+#     filter(grepl("6 month", visit_type)) %>%
 #     tbl_summary(
 #         by = facility_id,
 #         include = c( fim_1,  fim_2,  fim_3,  fim_4),
@@ -909,7 +920,7 @@ feasibility %>%
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 stigma_scale <- is_survey_df %>% 
-    select(arm, part_id, pt_type, facility_id, 
+    select(visit_type, arm, pt_id, pt_type, facility_id, 
            starts_with("social_distance_"), diagnostic,
            starts_with("disclose_"), starts_with("recovery_"), 
            starts_with("responsibility_"), danger) %>% 
@@ -949,6 +960,37 @@ stigma_scale <- stigma_scale %>%
                              starts_with("disclose_"), starts_with("responsibility_"), starts_with("danger")), na.rm = TRUE)
     )
 
+#by visit_type
+stigma_scale %>% 
+    tbl_summary(
+        by = visit_type,
+        include = c(social_distance, recovery, disclose, responsbility, danger, total),
+        type = list(social_distance ~ "continuous",
+                    recovery ~ "continuous",
+                    disclose ~ "continuous",
+                    responsbility ~ "continuous",
+                    danger ~ "continuous",
+                    total ~ "continuous"),
+        label = list(social_distance ~ "Social distance",
+                     recovery ~ "Recovery",
+                     disclose ~ "Disclosure",
+                     responsbility ~ "Responsibility",
+                     danger ~ "Danger",
+                     total ~ "Total score"),
+        missing = "no",
+        statistic = list(all_continuous() ~ "{mean} [{sd}]")) %>% 
+    add_overall() %>% add_p() %>% 
+    bold_labels() %>%
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Stigma Scale Summary by Arm") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
 #by arm (range of the scale: 20 - 100)
 stigma_scale %>% 
     tbl_summary(
@@ -981,35 +1023,36 @@ stigma_scale %>%
         table.font.size = px(12))
 
 #by pt_type
-stigma_scale %>% 
-    tbl_summary(
-        by = pt_type,
-        include = c(social_distance, recovery, disclose, responsbility, danger, total),
-        type = list(social_distance ~ "continuous",
-                    recovery ~ "continuous",
-                    disclose ~ "continuous",
-                    responsbility ~ "continuous",
-                    danger ~ "continuous",
-                    total ~ "continuous"),
-        label = list(social_distance ~ "Social distance",
-                     recovery ~ "Recovery",
-                     disclose ~ "Disclosure",
-                     responsbility ~ "Responsibility",
-                     danger ~ "Danger",
-                     total ~ "Total score"),
-        missing = "no",
-        statistic = list(all_continuous() ~ "{mean} [{sd}]")) %>% 
-    add_overall() %>% add_p() %>% 
-    bold_labels() %>%
-  # convert from gtsummary object to gt object
-  as_gt() %>%
-  # modify with gt functions
-  gt::tab_header("Stigma Scale Summary by Participant Type") %>% 
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
+# stigma_scale %>% 
+#     filter(grepl("6 month", visit_type)) %>%
+#     tbl_summary(
+#         by = pt_type,
+#         include = c(social_distance, recovery, disclose, responsbility, danger, total),
+#         type = list(social_distance ~ "continuous",
+#                     recovery ~ "continuous",
+#                     disclose ~ "continuous",
+#                     responsbility ~ "continuous",
+#                     danger ~ "continuous",
+#                     total ~ "continuous"),
+#         label = list(social_distance ~ "Social distance",
+#                      recovery ~ "Recovery",
+#                      disclose ~ "Disclosure",
+#                      responsbility ~ "Responsibility",
+#                      danger ~ "Danger",
+#                      total ~ "Total score"),
+#         missing = "no",
+#         statistic = list(all_continuous() ~ "{mean} [{sd}]")) %>% 
+#     add_overall() %>% add_p() %>% 
+#     bold_labels() %>%
+#   # convert from gtsummary object to gt object
+#   as_gt() %>%
+#   # modify with gt functions
+#   gt::tab_header("Stigma Scale Summary by Participant Type") %>% 
+#   gt::tab_options(
+#     table.font.size = "medium",
+#     data_row.padding = gt::px(1)) %>%
+#     tab_options(
+#         table.font.size = px(12))
 
 #by facility
 # stigma_scale %>% 
@@ -1042,3 +1085,21 @@ stigma_scale %>%
 #   tab_options(
 #         table.font.size = px(12))
 ```
+
+\newpage
+
+## Sustainability - Short Program Sustainability Assessment Tool [among in-charges only]
+
+```{r psta, echo=FALSE, message=FALSE, warning=FALSE}
+psta_df <- is_survey_df %>% 
+    select(visit_type, pt_id, facility_id, pt_type, arm, starts_with("sus_"), 
+           sustainability_psat_complete) %>% 
+    filter(arm == "Intervention") %>% 
+    filter(pt_type == "Facility-in-charge: 23") 
+```
+
+\newpage
+
+## Sustainability - Normalization Measure Development Questionnaire
+
+
