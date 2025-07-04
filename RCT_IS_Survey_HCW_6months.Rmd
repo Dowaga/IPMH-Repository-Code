@@ -323,37 +323,37 @@ culture_df <- culture_df %>%
 #reverse coding: culture_3, ceffort_5
 
 culture_df <- culture_df %>% 
-    mutate(across(starts_with("culture"), ~ case_when(
+    mutate(across(starts_with("culture_"), ~ case_when(
         . == "1: Strongly disagree" ~ 1,
         . == "2: Disagree" ~ 2,
         . == "3: Neutral" ~ 3,
         . == "4: Agree" ~ 4,
         . == "5: Strongly agree" ~ 5,
         . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
-        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+        TRUE ~ NA_real_  # Ensure numeric conversion
     ))) %>% 
-    mutate(across(starts_with("cstress"), ~case_when(
+    mutate(across(starts_with("cstress_"), ~case_when(
         . == "Strongly disagree" ~ 1,
         . == "Disagree" ~ 2,
         . == "Neutral" ~ 3,
         . == "Agree" ~ 4,
         . == "Strongly agree" ~ 5,
         . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
-        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+        TRUE ~ NA_real_  # Ensure numeric conversion
     ))) %>% 
-    mutate(across(starts_with("ceffort"), ~case_when(
+    mutate(across(starts_with("ceffort_"), ~case_when(
         . == "Strongly disagree" ~ 1,
         . == "Disagree" ~ 2,
         . == "Neutral" ~ 3,
         . == "Agree" ~ 4,
         . == "Strongly agree" ~ 5,
         . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
-        TRUE ~ as.numeric(as.character(.))))) # Ensure numeric conversion
+        TRUE ~ NA_real_))) # Ensure numeric conversion
 
 # reverse coding for some items: culture_3, ceffort_5
 culture_df <- culture_df %>%
     mutate(across(c(culture_3, ceffort_5),
-                  ~6 - .)) 
+                  ~ 6- .)) 
     
 # create domain scores
 culture_df <- culture_df %>%
@@ -1095,11 +1095,341 @@ psta_df <- is_survey_df %>%
     select(visit_type, pt_id, facility_id, pt_type, arm, starts_with("sus_"), 
            sustainability_psat_complete) %>% 
     filter(arm == "Intervention") %>% 
-    filter(pt_type == "Facility-in-charge: 23") 
+    filter(pt_type == "Facility-in-charge: 23") %>% 
+    filter(visit_type %in% c("6 month", "12 month")) %>% 
+    filter(!is.na(pt_type)) %>%  # Remove rows where pt_type is NA
+    mutate(pt_type = droplevels(factor(pt_type))) %>%
+    filter(!is.na(facility_id)) %>%
+    mutate(facility_id = droplevels(factor(facility_id))) %>% 
+    filter(!is.na(visit_type)) %>%
+    mutate(visit_type = droplevels(factor(visit_type)))
+
+#recode
+psta_df <- psta_df %>% 
+    mutate(across(c(starts_with("sus_")), ~ case_when(
+        . == "1 (To little or no extent)" ~ 1,
+        . == "2" ~ 2,
+        . == "3" ~ 3,
+        . == "4" ~ 4,
+        . == "5" ~ 5,
+        . == "6" ~ 6,
+        . == "7 (To a very great extent)" ~ 7,
+        . == "Not able to answer" ~ NA_real_,  # Convert to NA
+        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+    ))) 
+
+psta_df <- psta_df %>%
+    mutate(
+        sus_env_total = rowMeans(select(., starts_with("sus_env_")), na.rm = TRUE),
+        sus_funding_total = rowMeans(select(., starts_with("sus_funding_")), na.rm = TRUE),
+        sus_partner_total = rowMeans(select(., starts_with("sus_partner_")), na.rm = TRUE),
+        sus_or_total = rowMeans(select(., starts_with("sus_or_")), na.rm = TRUE),
+        sus_eval_total = rowMeans(select(., starts_with("sus_eval_")), na.rm = TRUE),
+        sus_adp_total = rowMeans(select(., starts_with("sus_adp_")), na.rm = TRUE),
+        sus_com_total = rowMeans(select(., starts_with("sus_com_")), na.rm = TRUE),
+        sus_plan_total = rowMeans(select(., starts_with("sus_plan_")), na.rm = TRUE)) %>% 
+    mutate(
+        sus_total = rowMeans(select(., sus_env_total, sus_funding_total, sus_partner_total, 
+                         sus_or_total, sus_eval_total, sus_adp_total, 
+                         sus_com_total, sus_plan_total), na.rm = TRUE)
+    )
+
+psta_df %>% 
+    tbl_summary(
+        by = visit_type,
+        include = c(sus_env_total, sus_funding_total, sus_partner_total, 
+                    sus_or_total, sus_eval_total, sus_adp_total, 
+                    sus_com_total, sus_plan_total, sus_total),
+        label = list(sus_env_total ~ "Environmental support",
+                     sus_funding_total ~ "Funding stability",
+                     sus_partner_total ~ "Partnerships",
+                     sus_or_total ~ "Organizational capacity",
+                     sus_eval_total ~ "Program Evaluation",
+                     sus_adp_total ~ "Program Adaptation",
+                     sus_com_total ~ "Communications",
+                     sus_plan_total ~ "Strategic Planning",
+                     sus_total ~ "Total score"),
+        missing = "no",
+        type = list(sus_env_total ~ "continuous",
+                    sus_funding_total ~ "continuous",
+                    sus_partner_total ~ "continuous",
+                    sus_or_total ~ "continuous",
+                    sus_eval_total ~ "continuous",
+                    sus_adp_total ~ "continuous",
+                    sus_com_total ~ "continuous",
+                    sus_plan_total ~ "continuous",
+                    sus_total ~ "continuous")) %>%
+    bold_labels() %>% 
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Short Program Sustainability Assessment Tool by Facility") %>%
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
+## by facility not significant
 ```
 
 \newpage
 
 ## Sustainability - Normalization Measure Development Questionnaire
 
+```{r nmdq, echo=FALSE, message=FALSE, warning=FALSE}
+nmdq_df <- is_survey_df %>% 
+    select(visit_type, pt_id, facility_id, pt_type, arm, starts_with("sus2_"), 
+           sustainability_nom_complete) %>% 
+    filter(arm == "Intervention") %>% 
+    filter(visit_type %in% c("6 month", "12 month")) %>% 
+    filter(!is.na(pt_type)) %>%  # Remove rows where pt_type is NA
+    mutate(pt_type = droplevels(factor(pt_type))) %>%
+    filter(!is.na(facility_id)) %>%
+    mutate(facility_id = droplevels(factor(facility_id))) %>% 
+    filter(!is.na(visit_type)) %>%
+    mutate(visit_type = droplevels(factor(visit_type)))
+
+#recode
+nmdq_df <- nmdq_df %>% 
+    mutate(across(c(starts_with("sus2_familiar")), ~ case_when(
+        . == "0: Feels very new" ~ 0,
+        . == "1" ~ 1,
+        . == "2" ~ 2,
+        . == "3" ~ 3,
+        . == "4" ~ 4,
+        . == "5" ~ 5,
+        . == "6" ~ 6,
+        . == "7" ~ 7,
+        . == "8" ~ 8,
+        . == "9" ~ 9,
+        . == "10: Feels completely familiar" ~ 10,
+        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+    ))) %>% 
+    mutate(across(c(starts_with("sus2_normal_")), ~ case_when(
+        . == "0: Not at all" ~ 0,
+        . == "1" ~ 1,
+        . == "2" ~ 2,
+        . == "3" ~ 3,
+        . == "4" ~ 4,
+        . == "5: Somewhat" ~ 5,
+        . == "6" ~ 6,
+        . == "7" ~ 7,
+        . == "8" ~ 8,
+        . == "9" ~ 9,
+        . == "10: Completely" ~ 10,
+        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+    ))) %>% 
+    mutate(across(matches("^sus2_[1-4]"), ~ case_when(
+        . == "1: Strongly Agree" ~ 1,
+        . == "2: Agree" ~ 2,
+        . == "3: Neither agree nor disagree" ~ 3,
+        . == "4: Disagree" ~ 4,
+        . == "5: Strongly disagree" ~ 5,
+        . == "6: Not relevant to my role" ~ 6,
+        . == "7: Not relevant at this stage" ~ 7,
+        . == "8: Not relevant to the intervention" ~ 8,    
+        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+    )))
+
+nmdq_df <- nmdq_df %>%
+  mutate(
+    sus2_familiar_total = rowMeans(select(., starts_with("sus2_familiar")), na.rm = TRUE),
+    sus2_normal_now_total = rowMeans(select(., starts_with("sus2_normal_now")), na.rm = TRUE),
+    sus2_normal_future_total = rowMeans(select(., starts_with("sus2_normal_will")), na.rm = TRUE),
+
+    sus2_coherence_total = rowMeans(select(., starts_with("sus2_1")) %>%
+                                      mutate(across(everything(), ~ ifelse(. < 6, ., NA))), na.rm = TRUE),
+    sus2_cognitive_participation_total = rowMeans(select(., starts_with("sus2_2")) %>%
+                                                    mutate(across(everything(), ~ ifelse(. < 6, ., NA))), na.rm = TRUE),
+    sus2_collective_action_total = rowMeans(select(., starts_with("sus2_3")) %>%
+                                              mutate(across(everything(), ~ ifelse(. < 6, ., NA))), na.rm = TRUE),
+    sus2_reflexive_monitoring_total = rowMeans(select(., starts_with("sus2_4")) %>%
+                                                 mutate(across(everything(), ~ ifelse(. < 6, ., NA))), na.rm = TRUE)
+  ) %>%
+  mutate(
+    sus2_total = rowMeans(select(., sus2_coherence_total, sus2_cognitive_participation_total,
+                                 sus2_collective_action_total, sus2_reflexive_monitoring_total), na.rm = TRUE)
+  )
+
+#total table
+nmdq_df %>% 
+    tbl_summary(
+        include = c(sus2_familiar_total, sus2_normal_now_total, sus2_normal_future_total,
+                    sus2_coherence_total, sus2_cognitive_participation_total, 
+                    sus2_collective_action_total, sus2_reflexive_monitoring_total, 
+                    sus2_total),
+        label = list(sus2_familiar_total ~ "Familiarity with IPMH",
+                     sus2_normal_now_total ~ "Normalization now",
+                     sus2_normal_future_total ~ "Normalization in future",
+                     sus2_coherence_total ~ "Coherence",
+                     sus2_cognitive_participation_total ~ "Cognitive participation",
+                     sus2_collective_action_total ~ "Collective action",
+                     sus2_reflexive_monitoring_total ~ "Reflexive monitoring",
+                     sus2_total ~ "Total score"),
+        missing = "no",
+        type = list(sus2_familiar_total ~ "continuous",
+                    sus2_normal_now_total ~ "continuous",
+                    sus2_normal_future_total ~ "continuous",
+                    sus2_coherence_total ~ "continuous",
+                    sus2_cognitive_participation_total ~ "continuous",
+                    sus2_collective_action_total ~ "continuous",
+                    sus2_reflexive_monitoring_total ~ "continuous",
+                    sus2_total ~ "continuous")) %>%
+    bold_labels() %>% 
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Normalization Measure Development Questionnaire") %>%
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
+#by visit_type
+nmdq_df %>% 
+    filter(grepl("6 month|12 month", visit_type)) %>%
+    tbl_summary(
+        by = visit_type,
+        include = c(sus2_familiar_total, sus2_normal_now_total, sus2_normal_future_total,
+                    sus2_coherence_total, sus2_cognitive_participation_total, 
+                    sus2_collective_action_total, sus2_reflexive_monitoring_total, 
+                    sus2_total),
+        label = list(sus2_familiar_total ~ "Familiarity with IPMH",
+                     sus2_normal_now_total ~ "Normalization now",
+                     sus2_normal_future_total ~ "Normalization in future",
+                     sus2_coherence_total ~ "Coherence",
+                     sus2_cognitive_participation_total ~ "Cognitive participation",
+                     sus2_collective_action_total ~ "Collective action",
+                     sus2_reflexive_monitoring_total ~ "Reflexive monitoring",
+                     sus2_total ~ "Total score"),
+        missing = "no",
+        type = list(sus2_familiar_total ~ "continuous",
+                    sus2_normal_now_total ~ "continuous",
+                    sus2_normal_future_total ~ "continuous",
+                    sus2_coherence_total ~ "continuous",
+                    sus2_cognitive_participation_total ~ "continuous",
+                    sus2_collective_action_total ~ "continuous",
+                    sus2_reflexive_monitoring_total ~ "continuous",
+                    sus2_total ~ "continuous")) %>%
+    bold_labels() %>% add_p() %>% 
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Normalization Measure Development Questionnaire by Visit Type") %>%
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
+#by pt_type
+nmdq_df %>% 
+    tbl_summary(
+        by = pt_type,
+        include = c(sus2_familiar_total, sus2_normal_now_total, sus2_normal_future_total,
+                    sus2_coherence_total, sus2_cognitive_participation_total, 
+                    sus2_collective_action_total, sus2_reflexive_monitoring_total, 
+                    sus2_total),
+        label = list(sus2_familiar_total ~ "Familiarity with IPMH",
+                     sus2_normal_now_total ~ "Normalization now",
+                     sus2_normal_future_total ~ "Normalization in future",
+                     sus2_coherence_total ~ "Coherence",
+                     sus2_cognitive_participation_total ~ "Cognitive participation",
+                     sus2_collective_action_total ~ "Collective action",
+                     sus2_reflexive_monitoring_total ~ "Reflexive monitoring",
+                     sus2_total ~ "Total score"),
+        missing = "no",
+        type = list(sus2_familiar_total ~ "continuous",
+                    sus2_normal_now_total ~ "continuous",
+                    sus2_normal_future_total ~ "continuous",
+                    sus2_coherence_total ~ "continuous",
+                    sus2_cognitive_participation_total ~ "continuous",
+                    sus2_collective_action_total ~ "continuous",
+                    sus2_reflexive_monitoring_total ~ "continuous",
+                    sus2_total ~ "continuous")) %>%
+    bold_labels() %>% add_p() %>% 
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Normalization Measure Development Questionnaire by Participant Type") %>%
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
+#by role
+nmdq_df %>% 
+    tbl_summary(
+        by = sus2_role,
+        include = c(sus2_familiar_total, sus2_normal_now_total, sus2_normal_future_total,
+                    sus2_coherence_total, sus2_cognitive_participation_total, 
+                    sus2_collective_action_total, sus2_reflexive_monitoring_total, 
+                    sus2_total),
+        label = list(sus2_familiar_total ~ "Familiarity with IPMH",
+                     sus2_normal_now_total ~ "Normalization now",
+                     sus2_normal_future_total ~ "Normalization in future",
+                     sus2_coherence_total ~ "Coherence",
+                     sus2_cognitive_participation_total ~ "Cognitive participation",
+                     sus2_collective_action_total ~ "Collective action",
+                     sus2_reflexive_monitoring_total ~ "Reflexive monitoring",
+                     sus2_total ~ "Total score"),
+        missing = "no",
+        type = list(sus2_familiar_total ~ "continuous",
+                    sus2_normal_now_total ~ "continuous",
+                    sus2_normal_future_total ~ "continuous",
+                    sus2_coherence_total ~ "continuous",
+                    sus2_cognitive_participation_total ~ "continuous",
+                    sus2_collective_action_total ~ "continuous",
+                    sus2_reflexive_monitoring_total ~ "continuous",
+                    sus2_total ~ "continuous")) %>%
+    bold_labels() %>% add_p() %>% 
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Normalization Measure Development Questionnaire by Facility") %>%
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
+#by facility
+nmdq_df %>% 
+    tbl_summary(
+        by = facility_id,
+        include = c(sus2_familiar_total, sus2_normal_now_total, sus2_normal_future_total,
+                    sus2_coherence_total, sus2_cognitive_participation_total, 
+                    sus2_collective_action_total, sus2_reflexive_monitoring_total, 
+                    sus2_total),
+        label = list(sus2_familiar_total ~ "Familiarity with IPMH",
+                     sus2_normal_now_total ~ "Normalization now",
+                     sus2_normal_future_total ~ "Normalization in future",
+                     sus2_coherence_total ~ "Coherence",
+                     sus2_cognitive_participation_total ~ "Cognitive participation",
+                     sus2_collective_action_total ~ "Collective action",
+                     sus2_reflexive_monitoring_total ~ "Reflexive monitoring",
+                     sus2_total ~ "Total score"),
+        missing = "no",
+        type = list(sus2_familiar_total ~ "continuous",
+                    sus2_normal_now_total ~ "continuous",
+                    sus2_normal_future_total ~ "continuous",
+                    sus2_coherence_total ~ "continuous",
+                    sus2_cognitive_participation_total ~ "continuous",
+                    sus2_collective_action_total ~ "continuous",
+                    sus2_reflexive_monitoring_total ~ "continuous",
+                    sus2_total ~ "continuous")) %>%
+    bold_labels() %>% add_p() %>% 
+  # convert from gtsummary object to gt object
+  as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Normalization Measure Development Questionnaire by Facility") %>%
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+```
 
