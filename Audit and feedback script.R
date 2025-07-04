@@ -15,8 +15,6 @@
 # 8. Health talks & flipbook use (among all sties)
 
 # Setup ------------------------------------------------------------------------
-rm(list = ls())             
-
 
 # Reference source codes & other dependencies: Use this section to reference other scripts and dependencies
 source("DataTeam_ipmh.R")
