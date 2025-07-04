@@ -29,9 +29,6 @@ source("REDCap_datapull.R")
 #Telepsychiatry session survey
 #PPW consenting databse (ANC number matching)
 
-#drop all other datasets
-rm(list = ls()[! ls() %in% c("daily_closeout", "phq2_gad2_abstract", "rct_ppw", "pm", "telepsych", "rct_ppw_consenting")])
-
 #Ensure date columns are in proper format
 daily_closeout$rct_dcr_date <- as.Date(daily_closeout$rct_dcr_date)
 phq2_gad2_abstract$screening_date <- as.Date(phq2_gad2_abstract$screening_date) 
