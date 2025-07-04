@@ -6,7 +6,6 @@
 # Update in Feb 19, 2025: Added all REDCap databases so far.
 
 # Setup ------------------------------------------------------------------------
-rm(list = ls())             
 
 # Reference source codes & other dependencies: Use this section to reference other scripts and dependencies
 source("DataTeam_ipmh.R")
