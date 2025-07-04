@@ -620,7 +620,7 @@ acceptability <- acceptability %>%
         . == "Agree" ~ 4,
         . == "Completely agree" ~ 5,
         . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
-        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+        TRUE ~ NA_real_  # Ensure numeric conversion
     ))) 
 
 acceptability <- acceptability %>%
@@ -733,7 +733,7 @@ appropriateness <- appropriateness %>%
         . == "Agree" ~ 4,
         . == "Completely agree" ~ 5,
         . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
-        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+        TRUE ~ NA_real_  # Ensure numeric conversion
     ))) 
 
 appropriateness <- appropriateness %>%
@@ -845,7 +845,7 @@ feasibility <- feasibility %>%
         . == "Agree" ~ 4,
         . == "Completely agree" ~ 5,
         . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
-        TRUE ~ as.numeric(as.character(.))  # Ensure numeric conversion
+        TRUE ~ NA_real_  # Ensure numeric conversion
     ))) 
 
 feasibility <- feasibility %>%
