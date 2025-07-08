@@ -12,9 +12,6 @@ source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
-# Only keep the necessary dataset
-rm(list = ls()[! ls() %in% c("ppw_rct_df", "ppw_sae_df")])
-
 # Data for baseline vs. follow-up
 ppw_sae_df <- ppw_sae_df %>%
     mutate(
@@ -509,7 +506,7 @@ sae <- ppw_sae_df %>%
            ae_multpreg_loss, ae_pregloss_mult, ae_dateonset,
            ae_narrative, ae_type___1, ae_type___2, ae_type___3, ae_type___4, ae_type___5,
            ae_ideath_date, ae_matdeath_date, ae_relation, ae_rational, 
-           ae_resolutiondate, ae_outcome, ae_) %>% 
+           ae_resolutiondate, ae_outcome) %>% 
     rename(
         maternal_death = ae_type___1,
         infant_death = ae_type___2,
@@ -711,5 +708,194 @@ table4 <- psychosocial_data %>%
     modify_caption("**Table 4. Psychosocial Correlates Across Visits**") %>%
     bold_labels()
 
-#Table for tracking follow-up visits ------------------
+#Table 6: Mental Health Service Utilization========
+su <- ppw_rct_df %>% 
+    select(visit_type, clt_ptid, starts_with("su_")) 
 
+su <- su %>%
+    mutate(
+        # Recode su_many: "None" to "0" and make continuous
+        su_many = case_when(
+            su_many == "None" ~ "0",
+            TRUE ~ as.character(su_many)
+        ),
+        su_many = as.numeric(su_many),
+        
+        # Recode PM restart variables from Checked/Unchecked to Yes/No
+        su_pmrestart___0 = case_when(
+            su_pmrestart___0 == "Checked" ~ "Yes",
+            su_pmrestart___0 == "Unchecked" ~ "No",
+            TRUE ~ su_pmrestart___0
+        ),
+        su_pmrestart___1 = case_when(
+            su_pmrestart___1 == "Checked" ~ "Yes",
+            su_pmrestart___1 == "Unchecked" ~ "No", 
+            TRUE ~ su_pmrestart___1
+        ),
+        su_pmrestart___2 = case_when(
+            su_pmrestart___2 == "Checked" ~ "Yes",
+            su_pmrestart___2 == "Unchecked" ~ "No",
+            TRUE ~ su_pmrestart___2
+        ),
+        
+        # Ensure PM restart variables are factors
+        across(c(su_pmrestart___0, su_pmrestart___1, su_pmrestart___2), as.factor)
+    )
+
+
+table6 <- su %>%
+    # Ensure visit_type is a factor with proper ordering
+    mutate(visit_type = factor(visit_type, 
+                               levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months"))) %>%
+    select(visit_type, su_phq2, su_gap2, su_phq9, su_gad7, 
+           su_access, su_referral, su_tele) %>%
+    tbl_summary(
+        by = visit_type,
+        statistic = list(all_categorical() ~ "{n} ({p}%)"),
+        digits = list(all_categorical() ~ c(0, 1)),
+        missing = "no",
+        label = list(
+            su_phq2 ~ "Screened by PHQ-2",
+            su_gap2 ~ "Screened by GAD-2", 
+            su_phq9 ~ "Screened by PHQ-9",
+            su_gad7 ~ "Screened by GAD-7",
+            su_access ~ "Accessed Mental Health Providers",
+            su_referral ~ "Mental Health Referral Made",
+            su_tele ~ "Used Telepsychiatry"
+        )
+    ) %>%
+    add_overall() %>%
+    modify_header(label ~ "**Variable**") %>%
+    modify_spanning_header(c("stat_1", "stat_2", "stat_3", "stat_4") ~ "**Visit Type**") %>%
+    modify_caption("**Screening and Service Utilization by Visit Type**") %>%
+    bold_labels()
+
+table7 <- su %>%
+    filter(visit_type != "Enrollment") %>%
+    mutate(visit_type = factor(visit_type, 
+                               levels = c("6 Weeks", "14 Weeks", "6 Months"))) %>%
+    select(visit_type, su_pmp, su_many, su_pmrestart___0, su_pmrestart___1, su_pmrestart___2) %>%
+    tbl_summary(
+        by = visit_type,
+        statistic = list(
+            all_continuous() ~ "{mean} ({sd})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        digits = list(
+            all_continuous() ~ c(1, 1),
+            all_categorical() ~ c(0, 1)
+        ),
+        missing = "no",
+        label = list(
+            su_pmp ~ "PM+ Participation",
+            su_many ~ "PM+ Sessions Completed",
+            su_pmrestart___0 ~ "Stopped PM+",
+            su_pmrestart___1 ~ "Restarted PM+", 
+            su_pmrestart___2 ~ "No PM+ Changes"
+        )
+    ) %>%
+    add_overall() %>%
+    modify_header(label ~ "**Variable**") %>%
+    modify_spanning_header(c("stat_1", "stat_2", "stat_3") ~ "**Visit Type**") %>%
+    modify_caption("**PM+ Program Participation (Post-Enrollment Visits Only)**") %>%
+    bold_labels()
+
+#Table for tracking follow-up visits ------------------
+ppw_date_track <- ppw_rct_df %>%
+    mutate(
+        clt_date = as.Date(clt_date),
+        med_pre_edd = as.Date(med_pre_edd),
+        tpnc_date = as.Date(tpnc_date)
+    ) %>%
+    # Create participant ID if needed
+    group_by(clt_study_site) %>%
+    ungroup()
+
+enrollment_data <- ppw_date_track %>%
+    filter(grepl("Enrollment", clt_visit)) %>%
+    select(clt_ptid, clt_study_site, enrollment_date = clt_date, med_pre_edd)
+visit_6wk <- ppw_date_track %>%
+    filter(grepl("6 weeks", clt_visit)) %>%
+    select(clt_ptid, visit_6wk_date = clt_date, tpnc_date)
+visit_14wk <- ppw_date_track %>%
+    filter(grepl("14 weeks", clt_visit)) %>%
+    select(clt_ptid, visit_14wk_date = clt_date)
+visit_6mo <- ppw_date_track %>%
+    filter(grepl("6 months", clt_visit)) %>%
+    select(clt_ptid, visit_6mo_date = clt_date)
+
+all_data <- enrollment_data %>%
+    left_join(visit_6wk, by = "clt_ptid") %>%
+    left_join(visit_14wk, by = "clt_ptid") %>%
+    left_join(visit_6mo, by = "clt_ptid") %>%
+    mutate(
+        delivery_date = coalesce(tpnc_date, med_pre_edd)
+    )
+
+summary_by_site <- all_data %>%
+    group_by(clt_study_site) %>%
+    summarise(
+        enrolled = n(),
+        completed_6wk = sum(!is.na(visit_6wk_date)),
+        completed_14wk = sum(!is.na(visit_14wk_date)),
+        completed_6mo = sum(!is.na(visit_6mo_date)),
+        .groups = 'drop'
+    )
+
+total_row <- all_data %>%
+    summarise(
+        clt_study_site = "TOTAL",
+        enrolled = n(),
+        completed_6wk = sum(!is.na(visit_6wk_date)),
+        completed_14wk = sum(!is.na(visit_14wk_date)),
+        completed_6mo = sum(!is.na(visit_6mo_date))
+    )
+
+final_summary <- bind_rows(total_row, summary_by_site)
+
+current_date <- Sys.Date()
+
+due_for_visits <- all_data %>%
+    filter(!is.na(delivery_date)) %>%
+    mutate(
+        # Simple eligibility: X weeks since delivery
+        due_6wk = current_date >= (delivery_date + 42) & is.na(visit_6wk_date),
+        due_14wk = current_date >= (delivery_date + 98) & is.na(visit_14wk_date),
+        due_6mo = current_date >= (delivery_date + 182) & is.na(visit_6mo_date)
+    )
+
+needs_visits <- due_for_visits %>%
+    group_by(clt_study_site) %>%
+    summarise(
+        needs_6wk = sum(due_6wk, na.rm = TRUE),
+        needs_14wk = sum(due_14wk, na.rm = TRUE),
+        needs_6mo = sum(due_6mo, na.rm = TRUE),
+        .groups = 'drop'
+    )
+
+needs_total <- due_for_visits %>%
+    summarise(
+        clt_study_site = "TOTAL",
+        needs_6wk = sum(due_6wk, na.rm = TRUE),
+        needs_14wk = sum(due_14wk, na.rm = TRUE),
+        needs_6mo = sum(due_6mo, na.rm = TRUE)
+    )
+
+needs_summary <- bind_rows(needs_total, needs_visits)
+
+combined_summary <- final_summary %>%
+    left_join(needs_summary, by = "clt_study_site") %>%
+    select(
+        Site = clt_study_site,
+        Enrolled = enrolled,
+        `6wk_Completed` = completed_6wk,
+        `6wk_Needs` = needs_6wk,
+        `14wk_Completed` = completed_14wk,
+        `14wk_Needs` = needs_14wk,
+        `6mo_Completed` = completed_6mo,
+        `6mo_Needs` = needs_6mo
+    ) %>%
+    # Replace NA with 0 for cleaner display
+    mutate(across(ends_with("_Needs"), ~replace_na(.x, 0)))
+
+combined_summary
