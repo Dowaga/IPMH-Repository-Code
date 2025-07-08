@@ -670,7 +670,7 @@ table3
 \newpage
 ## Psychosocial Scales
 
-```{r Psychosocial Scales, echo=FALSE, message=FALSE, warning=FALSE}
+```{r PM+ Participation Scales, echo=FALSE, message=FALSE, warning=FALSE}
 table4
 ```
 
