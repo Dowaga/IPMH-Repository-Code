@@ -393,7 +393,7 @@ wrong_pm_survey <- pm_survey_df %>%
 pm_sessions <- 
     pm_survey_df %>% 
     filter(ipmh_participant == "Yes") %>% 
-    select(pm_facility, pm_ptid, pm_session,ipmh_participant)
+    select(pm_facility, pm_ptid, pm_session, ipmh_participant, pm_psychlops)
 
 
 # Duplicates Sessions
@@ -421,9 +421,10 @@ mutate(facility = str_sub(pm_ptid, 3, 4)) %>%
                                "19" = "Airport HC (Kisumu)",
                                "22" = "Ndiru Level 4"))
 
-pm_session_wide<- pm_session_wide %>% 
+pm_session_wide <- pm_session_wide %>% 
     mutate(`Pre-intervention PSYCHLOPS measurement` = ifelse(`Pre-intervention PSYCHLOPS measurement` == 1, "Yes", "No"))
 
+#--------------------------------------------------------
 pm_session_wide %>% 
     tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
                 label = list(facility = "Facility"),
@@ -440,8 +441,36 @@ pm_session_wide %>%
     data_row.padding = gt::px(1)) %>%
     tab_options(
         table.font.size = px(14))
+```
+
+
+```{r Psychlops Score reductions less than 50%}, message=FALSE, warning=FALSE, include=FALSE}
+psychlops_scores <- pm_survey_df %>%
+  filter(ipmh_participant == "Yes",
+         pm_session %in% c("Pre-intervention PSYCHLOPS measurement",
+                           "Post-intervention PSYCHLOPS measurement")) %>%
+  select(pm_facility, pm_ptid, pm_session, pm_psychlops) %>%
+  distinct(pm_ptid, pm_session, .keep_all = TRUE) %>%  # Ensure no duplicate session entries
+  pivot_wider(
+    names_from = pm_session,
+    values_from = pm_psychlops,
+    values_fill = list(pm_psychlops = NA)
+  ) %>%
+  rename(
+    pre_score = `Pre-intervention PSYCHLOPS measurement`,
+    post_score = `Post-intervention PSYCHLOPS measurement`
+  ) %>%
+  filter(!is.na(pre_score) & !is.na(post_score)) %>%
+  mutate(
+    percent_reduction = (pre_score - post_score) / pre_score,
+    reduction_50plus = percent_reduction >= 0.5
+  ) %>%
+  filter(!reduction_50plus)  # Only those who did NOT achieve 50%+ reduction
+
+psychlops_scores
 
 ```
+
 
 ```{r None study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
     # None study participants in PM+
@@ -477,13 +506,6 @@ dups <- pm_survey_df %>%
     filter(pm_ancid %in% c("03-2024/11/24", "0423/2024",
                            "13812-2025/1/0071", "2024/12/017"))
 
-dups_with_multiple_sessions <- dups %>%
-  group_by(pm_ancid, pm_session) %>%
-  filter(n() > 1) %>%
-  ungroup()
-
-xc <- pm_survey_df %>% 
-    filter(pm_ptid == "21031043")
 
 # Transforming data: One column for ptid, each session as a separate column
 session_wide <- pm_session %>%
@@ -511,6 +533,7 @@ session_wide %>%
         table.font.size = px(12))
 
 ```
+
 
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
 telepsych_referrals <- pm_telep_df %>% 
@@ -680,6 +703,7 @@ table4
 table6
 ```
 
+\newpage
 ```{r PM+ Participation, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```
