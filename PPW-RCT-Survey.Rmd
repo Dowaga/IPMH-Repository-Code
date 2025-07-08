@@ -78,67 +78,12 @@ consort_per
 ```
 
 
-
-```{r Reasons for ineligibility or not enrolled, message=FALSE, warning=FALSE, include=FALSE}
-
-ineligible <- screening_consent_df %>% 
-    select(record_id, rct_harm_thought,  rct_memory_problem, 
-            rct_aud_hallucinations,
-             rct_vis_hallucinations, rct_paranoia, rct_delusions,
-             rct_eligible_age, calc_gestation, rct_eligible_gestation,
-             rct_eligible_phq2,  rct_eligible_gad2,  rct_eligible_harm, 
-            rct_eligible, rct_enrolling, rct_decline_reason,  
-            rct_other_reasons) %>% 
-    filter(rct_eligible == 0 |rct_enrolling == "No") %>% 
-    mutate(reasons = case_when(
-        calc_gestation < 28 ~ "Gestation <28 Weeks",
-        rct_eligible == 0 & rct_enrolling == "No" ~ NA_character_,
-        rct_delusions == "Yes" ~ "Holds unusual beliefs",
-        rct_memory_problem == "Yes" ~ "Difficulty with memory",
-        rct_harm_thought == "Yes" ~ "Thought of Self Harm",
-         rct_paranoia == "Yes" ~ "Paranoia",
-        rct_eligible_gestation == "No" ~ "Gestation <28 Weeks",
-        TRUE ~ NA_character_  # Assign NA if none of the conditions match
-  ))
-
-ineligible_df <- 
-    ineligible %>% 
-    filter(rct_eligible == 0)
-
-ineligible_df %>% 
-    tbl_summary(
-        include = c(reasons),
-        label = list(reasons = "Reasons for Ineligibility"),
-        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
-        ) %>% 
-    bold_labels() %>%
-    as_gt() %>%
-  # modify with gt functions
-    gt::tab_header("Summary of Ineligible Participants and Reasons") %>%
-    gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
-
-not_enrolled <- ineligible %>% 
-    filter(rct_eligible == 1 & rct_enrolling == "No")
-
-not_enrolled %>%
-    filter(rct_enrolling == "No") %>% 
-    tbl_summary(include = c(rct_decline_reason),
-                sort = list(all_categorical() ~ "frequency"),# Sort categorical levels by frequency in descending order
-                label = list(rct_decline_reason ~ "Reasons for declining Enrollment")) %>% 
-    bold_labels() %>%
-    as_gt() %>%
-  # modify with gt functions
-  gt::tab_header("Summary Reasons for Declining Enrollment") %>% 
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
+## Retention
+```{r Retention, echo=FALSE, message=FALSE, warning=FALSE}
+source("RCT Retention.R")
+wk6_retention_summary
 ```
+
 
 \newpage
 
@@ -371,11 +316,13 @@ setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id)
 
 none2_pm_survey <- pm_survey_df %>% 
     filter(pm_ptid%in% c(21177049, 21031052, 21010085,21094053,21073077, 21229516))
+
 ```
 
 
 
 ```{r Study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
+
 # Study participant PM+ Sessions
 pm_sessions <- 
     pm_survey_df %>% 
@@ -388,6 +335,7 @@ duplicates_sessions <- pm_sessions %>%
   group_by(pm_ptid, pm_session) %>%
   summarise(count = n(), .groups = "drop") %>%
   filter(count > 1)  # Filter those with more than one attendance per session
+
 
 # Transforming data: One column for ptid, each session as a separate column
 pm_session_wide <- pm_sessions %>%
