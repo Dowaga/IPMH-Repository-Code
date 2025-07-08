@@ -24,10 +24,13 @@ knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 
 ```
 
+# Enrollment Status
+
 Altogether, we currently have data for `r ppw_rct_df$clt_ptid %>% unique() %>% length()` participants.
 
 ```{r check ID, message=FALSE, warning=FALSE, include=FALSE}
 # check the IDs in the consenting database
+
 consent_df <- screening_consent_df %>% 
     filter(ipmh_rct_enrollment_consent_complete == "Complete")
 
@@ -78,12 +81,66 @@ consort_per
 ```
 
 
-## Retention
-```{r Retention, echo=FALSE, message=FALSE, warning=FALSE}
-source("RCT Retention.R")
-wk6_retention_summary
-```
+```{r Reasons for ineligibility or not enrolled, message=FALSE, warning=FALSE, include=FALSE}
 
+ineligible <- screening_consent_df %>% 
+    select(record_id, rct_harm_thought,  rct_memory_problem, 
+            rct_aud_hallucinations,
+             rct_vis_hallucinations, rct_paranoia, rct_delusions,
+             rct_eligible_age, calc_gestation, rct_eligible_gestation,
+             rct_eligible_phq2,  rct_eligible_gad2,  rct_eligible_harm, 
+            rct_eligible, rct_enrolling, rct_decline_reason,  
+            rct_other_reasons) %>% 
+    filter(rct_eligible == 0 |rct_enrolling == "No") %>% 
+    mutate(reasons = case_when(
+        calc_gestation < 28 ~ "Gestation <28 Weeks",
+        rct_eligible == 0 & rct_enrolling == "No" ~ NA_character_,
+        rct_delusions == "Yes" ~ "Holds unusual beliefs",
+        rct_memory_problem == "Yes" ~ "Difficulty with memory",
+        rct_harm_thought == "Yes" ~ "Thought of Self Harm",
+         rct_paranoia == "Yes" ~ "Paranoia",
+        rct_eligible_gestation == "No" ~ "Gestation <28 Weeks",
+        TRUE ~ NA_character_  # Assign NA if none of the conditions match
+  ))
+
+ineligible_df <- 
+    ineligible %>% 
+    filter(rct_eligible == 0)
+
+ineligible_df %>% 
+    tbl_summary(
+        include = c(reasons),
+        label = list(reasons = "Reasons for Ineligibility"),
+        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+        ) %>% 
+    bold_labels() %>%
+    as_gt() %>%
+  # modify with gt functions
+    gt::tab_header("Summary of Ineligible Participants and Reasons") %>%
+    gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+
+not_enrolled <- ineligible %>% 
+    filter(rct_eligible == 1 & rct_enrolling == "No")
+
+not_enrolled %>%
+    filter(rct_enrolling == "No") %>% 
+    tbl_summary(include = c(rct_decline_reason),
+                sort = list(all_categorical() ~ "frequency"),# Sort categorical levels by frequency in descending order
+                label = list(rct_decline_reason ~ "Reasons for declining Enrollment")) %>% 
+    bold_labels() %>%
+    as_gt() %>%
+  # modify with gt functions
+  gt::tab_header("Summary Reasons for Declining Enrollment") %>% 
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
+```
 
 \newpage
 
@@ -112,14 +169,25 @@ Enrollments <- screening_consent_df %>%
 Enrollments
 ```
 
-
 ```{r Weekly Enrollment Trends, message=FALSE, warning=FALSE, include=FALSE}
 
 #source("Enrollment Progress.R")
 #figure_1
 ```
 
+## Follow-up Tracking Per Facility
+
+```{r Follow-up Tracking, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
+kable(combined_summary, 
+      caption = "Summary of Follow-up Tracking by Facility")
+
+```
+
 \newpage
+
+# Baseline Information
+
 ## PPW Demographics
 
 ```{r Basic Demographic Summary, echo=F, message=FALSE, warning=FALSE}
@@ -187,14 +255,15 @@ demographics_df %>% tbl_summary(
         table.font.size = px(14))
 ```
 
-
-
 ```{r Medical and Obstetric History, message=FALSE, warning=FALSE, include=FALSE}
 #source("Medical and Obstetric History.R")
 #moh_summary
 ```
 
 \newpage
+
+# Treatment Tracking (Routine Databases)
+
 ## PM+ and Telepsychiatry Referrals
 
 ```{r PM+ and Telepsychiatry Referrals, echo=FALSE, message=FALSE, warning=FALSE, include = F}
@@ -314,15 +383,12 @@ eligible_no_survey <- eligible_pm %>%
 ### Those that are in the PM+ Survey, while not Eligible
 setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
 
-none2_pm_survey <- pm_survey_df %>% 
-    filter(pm_ptid%in% c(21177049, 21031052, 21010085,21094053,21073077, 21229516))
-
+wrong_pm_survey <- pm_survey_df %>% 
+    filter(pm_ptid%in% c(21177049, 21031052, 21010085))
 ```
 
 
-
 ```{r Study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
-
 # Study participant PM+ Sessions
 pm_sessions <- 
     pm_survey_df %>% 
@@ -335,7 +401,6 @@ duplicates_sessions <- pm_sessions %>%
   group_by(pm_ptid, pm_session) %>%
   summarise(count = n(), .groups = "drop") %>%
   filter(count > 1)  # Filter those with more than one attendance per session
-
 
 # Transforming data: One column for ptid, each session as a separate column
 pm_session_wide <- pm_sessions %>%
@@ -378,9 +443,6 @@ pm_session_wide %>%
 
 ```
 
-
-\newpage
-
 ```{r None study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
     # None study participants in PM+
 nsp_pm <- pm_survey_df %>%
@@ -397,11 +459,6 @@ no_post_psychlops <- pm_survey_df %>%
   filter(any(pm_session == "Session 5 content") & !any(pm_session == "Post-intervention PSYCHLOPS measurement"))%>%
   filter(pm_session == "Session 5 content")
 
-# Filter ptids with Post session but without session 5 
-no_post_intervention <- pm_survey_df %>%
-  group_by(pm_ptid) %>%
-  filter(any(pm_session == "Post-intervention PSYCHLOPS measurement") & !any(pm_session == "Session 5 content"))%>%
-  filter(pm_session == "Post-intervention PSYCHLOPS measurement")
 
 # None Study participant PM+ Sessions
 pm_session <- 
@@ -455,8 +512,6 @@ session_wide %>%
 
 ```
 
-
-
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
 telepsych_referrals <- pm_telep_df %>% 
     filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
@@ -479,7 +534,6 @@ telepsych_referrals %>%
 ```
 
 
-
 ```{r PM+ and Telepsychiatry Referral QCs, message=FALSE, warning=FALSE, include=FALSE}
 referral_qc <- pm_telep_df %>% 
     filter((phq9_scores > 9 & abs_phq_ref_pm == "No" )|(gad7_scores > 9 & abs_gad7_ref_pm == "No")) %>% 
@@ -487,8 +541,6 @@ referral_qc <- pm_telep_df %>%
            abs_phq_ref_pm, gad7_scores, abs_gad7_ref_pm)
 
 ```
-
-
 
 ```{r PM+ Follow-Up, message=FALSE, warning=FALSE, include=FALSE}
 none_study_part <- pm_survey_df %>% 
@@ -541,17 +593,13 @@ weekly_visits %>%
 
 ```
 
-
-
 ```{r Reducing Tension Checklist, echo=FALSE, message=FALSE, warning=FALSE}
 #source("Reducing Tension Checklist.R")
 # summary_table
 ```
 
-
-\newpage
-
 ## Overall PM+ Retention
+
 ```{r PM+ Retention, echo=FALSE, message=FALSE, warning=FALSE}
 source("PM+ Follow-up.R")
 attendance_table %>%
@@ -561,9 +609,12 @@ attendance_table %>%
     autofit()
 ```
 
+\newpage
 
+# Severe Adverse Events (SAEs)
 
 ## Percent of SAEs reported to ERC
+
 ```{r SAES, echo=FALSE, message=FALSE, warning=FALSE}
 sae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_")) %>% 
@@ -583,7 +634,6 @@ sae_report <- sae_df %>%
 sae_report
 ```
 
-
 ```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE, include = F}
 # source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
 # fc_yield_summary
@@ -591,4 +641,42 @@ sae_report
 # yield_summary
 ```
 
+\newpage
 
+# Follow-up Data (PPW Longitudinal Survey)
+
+## Pregnancy Outcomes
+
+```{r Follow-up Data, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
+
+table1
+```
+\newpage
+
+## Infant Outcomes
+```{r Infant Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
+table2a
+table2b
+```
+
+\newpage
+## Clinical Outcomes
+
+```{r Clinical Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
+table3
+```
+
+\newpage
+## Psychosocial Scales
+
+```{r Psychosocial Scales, echo=FALSE, message=FALSE, warning=FALSE}
+table4
+```
+
+## Mental Health Utilization
+```{r Mental Health Utilization, echo=FALSE, message=FALSE, warning=FALSE}
+table6
+
+table7
+```
