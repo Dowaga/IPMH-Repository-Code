@@ -674,9 +674,13 @@ table3
 table4
 ```
 
+\newpage
 ## Mental Health Utilization
 ```{r Mental Health Utilization, echo=FALSE, message=FALSE, warning=FALSE}
 table6
+```
 
+
+```{r Mental Health Utilization, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```
