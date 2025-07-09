@@ -8,11 +8,14 @@
 # Setup ------------------------------------------------------------------------
 # Reference source codes & other dependencies:
 source("REDCap_datapull.R")
-source("Audit and feedback script.R")
+library(lme4)
+library(parameters)
 
 #data prep ----------------
 #only keep the databases we need
-rm(list = setdiff(ls(), c("screening_rate_weekly", "screening_rate", "total_screening_rate", "rct_hcw")))
+rm(list = setdiff(ls(), c("daily_closeout", "rct_hcw")))
+
+##IS database---------------
 is_survey_df <- rct_hcw
 
 is_survey_df <- is_survey_df %>%
@@ -56,11 +59,14 @@ acceptability <- acceptability %>%
         . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
         TRUE ~ NA_real_  # Ensure numeric conversion
     ))) 
-
+    
 acceptability <- acceptability %>%
     mutate(
         aim_total = rowMeans(select(., starts_with("aim_")), na.rm = TRUE)
     )
+
+acceptability_layonly <- acceptability %>%
+    filter(pt_type == "Lay providers: 22") 
 
 appropriateness <- is_survey_df %>% 
     select(visit_type, pt_id, pt_type, facility_id, arm, iam_1, iam_2, iam_3, iam_4) %>% 
@@ -85,6 +91,9 @@ appropriateness <- appropriateness %>%
     mutate(
         iam_total = rowMeans(select(., starts_with("iam_")), na.rm = TRUE)
     )
+
+appropriateness_layonly <- appropriateness %>%
+    filter(pt_type == "Lay providers: 22")
 
 feasibility <- is_survey_df %>% 
     select(visit_type, pt_id, pt_type, facility_id, arm,  fim_1,  fim_2,  fim_3,  fim_4) %>% 
@@ -111,13 +120,20 @@ feasibility <- feasibility %>%
         fim_total = rowMeans(select(., starts_with("fim_")), na.rm = TRUE)
     )
 
+feasibility_layonly <- feasibility %>%
+    filter(pt_type == "Lay providers: 22")
+
 # Combine all three dataframes
 baseline_data <- acceptability %>%
     left_join(appropriateness, by = c("visit_type", "pt_id", "pt_type", "facility_id", "arm")) %>%
     left_join(feasibility, by = c("visit_type", "pt_id", "pt_type", "facility_id", "arm"))
 
+baseline_data_layonly <- acceptability_layonly %>%
+    left_join(appropriateness_layonly, by = c("visit_type", "pt_id", "pt_type", "facility_id", "arm")) %>%
+    left_join(feasibility_layonly, by = c("visit_type", "pt_id", "pt_type", "facility_id", "arm"))
+
 # make it facility level
-facility_baseline_simple <- baseline_data %>%
+facility_baseline <- baseline_data %>%
     group_by(facility_id) %>%
     summarise(
         aim_total_mean = mean(aim_total, na.rm = TRUE),
@@ -126,240 +142,53 @@ facility_baseline_simple <- baseline_data %>%
         n_participants = n(),
         .groups = 'drop'
     )
-facility_baseline_simple <- facility_baseline_simple %>%
+facility_baseline <- facility_baseline %>%
     mutate(facility_id = str_replace(facility_id, "^\\d+,\\s*", ""))
 
-# merging 
- screening_rate_with_baseline <- screening_rate %>%
-  left_join(facility_baseline_simple, by = c("study_site" = "facility_id"))
+facility_baseline_layonly <- baseline_data_layonly %>%
+    group_by(facility_id) %>%
+    summarise(
+        aim_total_mean = mean(aim_total, na.rm = TRUE),
+        iam_total_mean = mean(iam_total, na.rm = TRUE),
+        fim_total_mean = mean(fim_total, na.rm = TRUE),
+        n_participants = n(),
+        .groups = 'drop'
+    )
 
- screening_rate_weekly_with_baseline <- screening_rate_weekly %>%
-     left_join(facility_baseline_simple, by = c("study_site" = "facility_id"))
- 
- total_screening_rate_with_baseline <- total_screening_rate %>%
-     left_join(facility_baseline_simple, by = c("study_site" = "facility_id"))
+facility_baseline_layonly <- facility_baseline_layonly %>%
+    mutate(facility_id = str_replace(facility_id, "^\\d+,\\s*", ""))
 
-# analysis using the total screening rate database ---------------
- total_screening_analysis <- total_screening_rate_with_baseline %>%
-     rename(
-         screening_rate = `PHQ2/GAD2 screening rate`,
-         total_screening = `Total screening`,
-         total_anc = `Total ANC clients`
-     ) %>%
+## Daily screening rate database ----------------
+daily_closeout$rct_dcr_date <- as.Date(daily_closeout$rct_dcr_date)
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-07-01")
+
+daily_closeout <- daily_closeout %>%
+    mutate(rct_facility_name = str_replace(rct_facility_name, "Mirogi Heath Centre", "Mirogi Health Centre"))
+
+daily_closeout <- daily_closeout %>%
+   mutate(screening_rate = rct_screening/rct_anc_number) %>% 
+    select(rct_facility_name, rct_dcr_autodate, rct_anc_number, rct_screening,
+           screening_rate) %>% 
+    rename(study_site = rct_facility_name, day = rct_dcr_autodate) %>%
+    mutate(screening_rate = as.numeric(screening_rate)) 
+
+## merging --------
+ screening_rate <- daily_closeout %>%
+  left_join(facility_baseline, by = c("study_site" = "facility_id"))
+
+screening_rate_layonly <- daily_closeout %>%
+  left_join(facility_baseline_layonly, by = c("study_site" = "facility_id")) 
+
+# analysis [full IS data] -----------------
+# Filter daily data for facilities with baseline measures
+ daily_analysis <- screening_rate %>%
      filter(!is.na(aim_total_mean))
- 
- # Correlation matrix
- cor_data <- total_screening_analysis %>%
-     select(screening_rate, aim_total_mean, iam_total_mean, fim_total_mean)
- 
- # Calculate correlations
- cor_matrix <- cor(cor_data, use = "complete.obs")
- print(round(cor_matrix, 3))
- 
- # Test statistical significance
- cor.test(total_screening_analysis$screening_rate, total_screening_analysis$aim_total_mean)
- cor.test(total_screening_analysis$screening_rate, total_screening_analysis$iam_total_mean)
- cor.test(total_screening_analysis$screening_rate, total_screening_analysis$fim_total_mean)
 
- # Scatterplot matrix
- library(GGally)
- ggpairs(total_screening_analysis[, c("screening_rate", "aim_total_mean", 
-                                      "iam_total_mean", "fim_total_mean")],
-         columnLabels = c("Screening Rate", "Acceptability", "Appropriateness", "Feasibility"))
- 
- # Individual scatterplots
- p1 <- ggplot(total_screening_analysis, aes(x = aim_total_mean, y = screening_rate)) +
-     geom_point(size = 3, alpha = 0.7) +
-     geom_smooth(method = "lm", se = TRUE) +
-     labs(title = "Acceptability vs Screening Rate", 
-          x = "AIM Score (Acceptability)", y = "Screening Rate (%)") +
-     theme_minimal()
- 
- p2 <- ggplot(total_screening_analysis, aes(x = iam_total_mean, y = screening_rate)) +
-     geom_point(size = 3, alpha = 0.7) +
-     geom_smooth(method = "lm", se = TRUE) +
-     labs(title = "Appropriateness vs Screening Rate", 
-          x = "IAM Score (Appropriateness)", y = "Screening Rate (%)") +
-     theme_minimal()
- 
- p3 <- ggplot(total_screening_analysis, aes(x = fim_total_mean, y = screening_rate)) +
-     geom_point(size = 3, alpha = 0.7) +
-     geom_smooth(method = "lm", se = TRUE) +
-     labs(title = "Feasibility vs Screening Rate", 
-          x = "FIM Score (Feasibility)", y = "Screening Rate (%)") +
-     theme_minimal()
- 
- # Display plots
- library(gridExtra)
- grid.arrange(p1, p2, p3, ncol = 2)
- 
- ggplot(total_screening_analysis, aes(x = aim_total_mean, y = screening_rate)) +
-     geom_point(size = 4, alpha = 0.7, color = "steelblue") +
-     geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
-     geom_text_repel(aes(label = paste0(substr(study_site, 1, 15), "\n(", round(screening_rate, 1), "%)")), 
-                     size = 3, box.padding = 0.5) +
-     labs(title = "The Implementation Paradox", 
-          subtitle = "Higher baseline acceptability ??? Lower screening performance (r = -0.60, p = 0.066)",
-          x = "Baseline Acceptability Score (AIM)", 
-          y = "Actual Screening Rate (%)") +
-     theme_minimal() +
-     theme(plot.title = element_text(size = 14, face = "bold"))
- 
- # Create a summary table showing the paradox
- total_screening_analysis %>%
-     arrange(desc(screening_rate)) %>%
-     select(study_site, screening_rate, aim_total_mean) %>%
-     mutate(
-         performance_rank = row_number(),
-         aim_rank = rank(desc(aim_total_mean)),
-         rank_difference = aim_rank - performance_rank
-     ) %>%
-     head(5)
- 
- ## Analysis using the weekly screening rate database ---------------
- screening_weekly_clean <- screening_rate_weekly_with_baseline %>%
-     filter(!is.na(aim_total_mean))
- ggplot(screening_weekly_clean, aes(x = week, y = screening_rate, color = study_site)) +
-     geom_line(alpha = 0.7, size = 1) +
-     geom_smooth(aes(group = study_site), method = "lm", se = FALSE, size = 0.5) +
-     labs(title = "Weekly Screening Rates by Facility", 
-          x = "Week", y = "Screening Rate (%)") +
-     theme_minimal() +
-     theme(legend.position = "none") +
-     facet_wrap(~study_site, scales = "free_y")
+# drop all the screening rate that is above 100
+ daily_analysis <- daily_analysis %>%
+     filter(screening_rate <= 1)
 
- weekly_overall <- screening_weekly_clean %>%
-     group_by(week) %>%
-     summarise(
-         mean_rate = mean(screening_rate, na.rm = TRUE),
-         median_rate = median(screening_rate, na.rm = TRUE),
-         n_facilities = n_distinct(study_site),
-         .groups = 'drop'
-     )
- 
- ggplot(weekly_overall, aes(x = week, y = mean_rate)) +
-     geom_line(size = 1.2, color = "steelblue") +
-     geom_point(size = 2) +
-     labs(title = "Average Weekly Screening Rate Across All Facilities", 
-          x = "Week", y = "Mean Screening Rate (%)") +
-     theme_minimal()
-  
- facility_baseline_weekly <- screening_weekly_clean %>%
-     group_by(study_site) %>%
-     summarise(
-         mean_weekly_rate = mean(screening_rate, na.rm = TRUE),
-         median_weekly_rate = median(screening_rate, na.rm = TRUE),
-         sd_weekly_rate = sd(screening_rate, na.rm = TRUE),
-         aim_total_mean = first(aim_total_mean),
-         iam_total_mean = first(iam_total_mean),
-         fim_total_mean = first(fim_total_mean),
-         .groups = 'drop'
-     )
- cor.test(facility_baseline_weekly$mean_weekly_rate, facility_baseline_weekly$aim_total_mean)
- cor.test(facility_baseline_weekly$mean_weekly_rate, facility_baseline_weekly$iam_total_mean)
- cor.test(facility_baseline_weekly$mean_weekly_rate, facility_baseline_weekly$fim_total_mean)
- 
- #multilevel analysis
- library(lme4)
- library(broom.mixed)
- 
- # Multilevel model with random intercepts for facilities
- model_aim <- lmer(screening_rate ~ aim_total_mean + (1|study_site), 
-                   data = screening_weekly_clean)
- 
- model_fim <- lmer(screening_rate ~ fim_total_mean + (1|study_site), 
-                   data = screening_weekly_clean)
- 
- model_iam <- lmer(screening_rate ~ iam_total_mean + (1|study_site), 
-                   data = screening_weekly_clean)
- 
- model_combined <- lmer(screening_rate ~ aim_total_mean + iam_total_mean + fim_total_mean + (1|study_site), 
-                        data = screening_weekly_clean)
- 
- # Results
- tidy(model_aim, effects = "fixed")
- tidy(model_fim, effects = "fixed")
- tidy(model_iam, effects = "fixed")
- tidy(model_combined, effects = "fixed")
- 
- # trend analysis
- screening_weekly_clean <- screening_weekly_clean %>%
-     mutate(
-         time_period = case_when(
-             week_number <= 5 ~ "Early (Weeks 1-5)",
-             week_number <= 10 ~ "Middle (Weeks 6-10)", 
-             TRUE ~ "Late (Weeks 11+)"
-         )
-     )
- # Performance by time period and baseline scores
- time_analysis <- screening_weekly_clean %>%
-     group_by(study_site, time_period, aim_total_mean) %>%
-     summarise(mean_rate = mean(screening_rate, na.rm = TRUE), .groups = 'drop') %>%
-     pivot_wider(names_from = time_period, values_from = mean_rate) %>%
-     arrange(desc(aim_total_mean))
- 
- print(time_analysis)
- 
- # Simple visualization of trends by baseline acceptability
- ggplot(screening_weekly_clean, aes(x = week_number, y = screening_rate)) +
-     geom_point(alpha = 0.3) +
-     geom_smooth(method = "lm", se = TRUE) +
-     facet_wrap(~cut(aim_total_mean, breaks = 3, labels = c("Low AIM", "Medium AIM", "High AIM"))) +
-     labs(title = "Screening Rate Trends by Baseline Acceptability Level",
-          x = "Week Number", y = "Screening Rate (%)") +
-     theme_minimal()
- 
- # Calculate improvement over time
- trajectory_analysis <- screening_weekly_clean %>%
-     group_by(study_site) %>%
-     summarise(
-         aim_total_mean = first(aim_total_mean),
-         early_rate = mean(screening_rate[week_number <= 5], na.rm = TRUE),
-         late_rate = mean(screening_rate[week_number >= 11], na.rm = TRUE),
-         improvement = late_rate - early_rate,
-         improvement_pct = ((late_rate - early_rate) / early_rate) * 100,
-         .groups = 'drop'
-     ) %>%
-     arrange(desc(aim_total_mean))
- 
- print(trajectory_analysis)
-
- # Visualize the trajectory patterns
- ggplot(trajectory_analysis, aes(x = aim_total_mean, y = improvement)) +
-     geom_point(size = 4, alpha = 0.7) +
-     geom_smooth(method = "lm", se = TRUE) +
-     geom_text_repel(aes(label = paste0(substr(study_site, 1, 15), 
-                                        "\n(+", round(improvement, 1), "%)")), 
-                     size = 3) +
-     labs(title = "The Learning Curve Paradox", 
-          subtitle = "Higher baseline confidence ??? Bigger improvement over time",
-          x = "Baseline Acceptability (AIM)", 
-          y = "Improvement from Early to Late Period (%)") +
-     theme_minimal()
- 
- # Create trajectory plot
- screening_weekly_clean %>%
-     mutate(confidence_level = case_when(
-         aim_total_mean >= 4.8 ~ "High Confidence (???4.8)",
-         aim_total_mean >= 4.6 ~ "Medium Confidence (4.6-4.79)", 
-         TRUE ~ "Realistic Confidence (<4.6)"
-     )) %>%
-     group_by(confidence_level, week_number) %>%
-     summarise(mean_rate = mean(screening_rate, na.rm = TRUE), .groups = 'drop') %>%
-     ggplot(aes(x = week_number, y = mean_rate, color = confidence_level)) +
-     geom_line(size = 1.5) +
-     geom_point(size = 2) +
-     labs(title = "Performance Trajectories by Baseline Confidence Level",
-          x = "Week Number", y = "Mean Screening Rate (%)",
-          color = "Baseline Confidence") +
-     theme_minimal()
-
- # analysis using daily screening rate database ---------------
- # Filter daily data for facilities with baseline measures
- daily_analysis <- screening_rate_with_baseline %>%
-     filter(!is.na(aim_total_mean))
- 
- # Basic overview
+# Basic overview
  daily_analysis %>%
      summarise(
          n_facilities = n_distinct(study_site),
@@ -386,56 +215,232 @@ facility_baseline_simple <- facility_baseline_simple %>%
  cor.test(daily_summary$daily_mean_rate, daily_summary$fim_score)
  cor.test(daily_summary$daily_mean_rate, daily_summary$iam_score)
  
-#### analysis for the conference abstract --------------
- # Use raw day numbers for easier interpretation
  daily_trends <- daily_analysis %>%
      arrange(study_site, day) %>%
      group_by(study_site) %>%
-     mutate(day_number = row_number()) %>%
+     mutate(day_number = row_number()-1) %>%
      ungroup()
  
- # Simple main effects models (most interpretable)
- daily_model_basic <- lmer(screening_rate ~ day_number + (1|study_site), 
-                           data = daily_trends)
+ daily_trends <- daily_trends %>% 
+     mutate(aim_binary = ifelse(aim_total_mean >= mean(aim_total_mean), "high", "low"),
+            iam_binary = ifelse(iam_total_mean >= mean(iam_total_mean), "high", "low"),
+            fim_binary = ifelse(fim_total_mean >= mean(fim_total_mean), "high", "low")) 
  
- daily_model_aim <- lmer(screening_rate ~ day_number + aim_total_mean + (1|study_site), 
-                         data = daily_trends)
+ ## Model with time only --------
+
+ daily_model_basic <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + (1|study_site), 
+                          data = daily_trends, family = "binomial")
+ parameters(daily_model_basic, exponentiate = T)
  
- daily_model_iam <- lmer(screening_rate ~ day_number + iam_total_mean + (1|study_site), 
-                         data = daily_trends)
+ ##binary models - give very huge confidence intervals - not good ------
  
- daily_model_fim <- lmer(screening_rate ~ day_number + fim_total_mean + (1|study_site), 
-                         data = daily_trends)
- # Use raw day numbers for easier interpretation
-daily_trends <- daily_analysis %>%
-  arrange(study_site, day) %>%
-  group_by(study_site) %>%
-  mutate(day_number = row_number()) %>%
-  ungroup()
+ daily_model_aim <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + aim_binary + (1|study_site), 
+                         data = daily_trends, family = "binomial")
+ parameters(daily_model_aim, exponentiate = T)
+ 
+ daily_model_iam <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + iam_binary + (1|study_site), 
+                          data = daily_trends, family = "binomial")
+ parameters(daily_model_iam, exponentiate = T)
+ 
+ daily_model_fim <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + fim_binary + (1|study_site), 
+                          data = daily_trends, family = "binomial")
+ parameters(daily_model_fim, exponentiate = T)
+ 
+ 
+## Continuous models - more stable but need to standardize the predictors ------
+daily_trends$aim_total_mean_z <- scale(daily_trends$aim_total_mean)[,1]
+daily_trends$iam_total_mean_z <- scale(daily_trends$iam_total_mean)[,1]
+daily_trends$fim_total_mean_z <- scale(daily_trends$fim_total_mean)[,1] 
 
-# Individual models
-daily_model_basic <- lmer(screening_rate ~ day_number + (1|study_site), 
-                          data = daily_trends)
+daily_model_aim_con <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + aim_total_mean_z + (1|study_site), 
+                         data = daily_trends, family = "binomial")
+parameters(daily_model_aim_con, exponentiate = T)
 
-daily_model_aim <- lmer(screening_rate ~ day_number + aim_total_mean + (1|study_site), 
-                        data = daily_trends)
+daily_model_iam_con <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + iam_total_mean_z + (1|study_site), 
+                          data = daily_trends, family = "binomial")
+parameters(daily_model_iam_con, exponentiate = T)
 
-daily_model_iam <- lmer(screening_rate ~ day_number + iam_total_mean + (1|study_site), 
-                        data = daily_trends)
-
-daily_model_fim <- lmer(screening_rate ~ day_number + fim_total_mean + (1|study_site), 
-                        data = daily_trends)
+daily_model_fim_con <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + fim_total_mean_z + (1|study_site), 
+                          data = daily_trends, family = "binomial")
+parameters(daily_model_fim_con, exponentiate = T)
 
 # Combined model - This is key!
-daily_model_combined <- lmer(screening_rate ~ day_number + aim_total_mean + iam_total_mean + fim_total_mean + (1|study_site), 
-                             data = daily_trends)
+daily_model_combined <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + aim_total_mean_z + iam_total_mean_z + fim_total_mean_z + (1|study_site), 
+                              data = daily_trends, family = "binomial")
+
+parameters(daily_model_combined, exponentiate = T)
+
+car::vif(daily_model_combined)
 
 # Model comparisons
-anova(daily_model_basic, daily_model_aim)
-anova(daily_model_basic, daily_model_iam) 
-anova(daily_model_basic, daily_model_fim)
+anova(daily_model_basic, daily_model_aim_con)
+anova(daily_model_basic, daily_model_iam_con) 
+anova(daily_model_basic, daily_model_fim_con)
 anova(daily_model_basic, daily_model_combined)
 
-# See which constructs survive in the combined model
-summary(daily_model_combined)
-tidy(daily_model_combined, effects = "fixed")
+# analysis [layonly IS data] -----------------
+# Filter daily data for facilities with baseline measures
+daily_analysis_layonly <- screening_rate_layonly %>%
+    filter(!is.na(aim_total_mean))
+
+# drop all the screening rate that is above 100
+daily_analysis_layonly <- daily_analysis_layonly %>%
+    filter(screening_rate <= 1)
+
+# Basic overview
+daily_analysis_layonly %>%
+    summarise(
+        n_facilities = n_distinct(study_site),
+        n_days = n_distinct(day),
+        total_observations = n(),
+        date_range = paste(min(day), "to", max(day)),
+        days_per_facility = round(n() / n_distinct(study_site), 1)
+    )
+daily_summary_layonly <- daily_analysis_layonly %>%
+    group_by(study_site) %>%
+    summarise(
+        n_days = n(),
+        daily_mean_rate = mean(screening_rate, na.rm = TRUE),
+        daily_sd_rate = sd(screening_rate, na.rm = TRUE),
+        daily_min_rate = min(screening_rate, na.rm = TRUE),
+        daily_max_rate = max(screening_rate, na.rm = TRUE),
+        aim_score = first(aim_total_mean),
+        fim_score = first(fim_total_mean),
+        iam_score = first(iam_total_mean),
+        .groups = 'drop'
+    ) %>%
+    arrange(desc(daily_mean_rate))
+cor.test(daily_summary_layonly$daily_mean_rate, daily_summary_layonly$aim_score)
+cor.test(daily_summary_layonly$daily_mean_rate, daily_summary_layonly$fim_score)
+cor.test(daily_summary_layonly$daily_mean_rate, daily_summary_layonly$iam_score)
+
+daily_trends_layonly <- daily_analysis_layonly %>%
+    arrange(study_site, day) %>%
+    group_by(study_site) %>%
+    mutate(day_number = row_number()-1) %>%
+    ungroup()
+
+## Model with time only --------
+
+daily_model_basic_layonly <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + (1|study_site), 
+                           data = daily_trends_layonly, family = "binomial")
+parameters(daily_model_basic, exponentiate = T)
+
+## Continuous models - more stable but need to standardize the predictors ------
+daily_trends_layonly$aim_total_mean_z <- scale(daily_trends_layonly$aim_total_mean)[,1]
+daily_trends_layonly$iam_total_mean_z <- scale(daily_trends_layonly$iam_total_mean)[,1]
+daily_trends_layonly$fim_total_mean_z <- scale(daily_trends_layonly$fim_total_mean)[,1] 
+
+daily_model_aim_con_layonly <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + aim_total_mean_z + (1|study_site), 
+                             data = daily_trends_layonly, family = "binomial")
+parameters(daily_model_aim_con_layonly, exponentiate = T)
+
+daily_model_iam_con_layonly <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + iam_total_mean_z + (1|study_site), 
+                             data = daily_trends_layonly, family = "binomial")
+parameters(daily_model_iam_con_layonly, exponentiate = T)
+
+daily_model_fim_con_layonly <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + fim_total_mean_z + (1|study_site), 
+                             data = daily_trends_layonly, family = "binomial")
+parameters(daily_model_fim_con_layonly, exponentiate = T)
+
+# Combined model - This is key!
+daily_model_combined_layonly <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + aim_total_mean_z + iam_total_mean_z + fim_total_mean_z + (1|study_site), 
+                              data = daily_trends_layonly, family = "binomial")
+
+parameters(daily_model_combined_layonly, exponentiate = T)
+
+car::vif(daily_model_combined_layonly)
+
+# Model comparisons
+anova(daily_model_basic_layonly, daily_model_aim_con_layonly)
+anova(daily_model_basic_layonly, daily_model_iam_con_layonly) 
+anova(daily_model_basic_layonly, daily_model_fim_con_layonly)
+anova(daily_model_basic_layonly, daily_model_combined_layonly)
+
+# Graphs requested by Keshet ---------------
+## line graph of daily screening ----------
+ggplot(daily_trends, aes(x = day_number, y = screening_rate, color = study_site)) +
+    geom_line(size = 1) +
+    geom_point(alpha = 0.6) +
+    scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+    labs(
+        title = "Daily Screening Coverage by Facility",
+        x = "Implementation Day",
+        y = "Screening Coverage (%)",
+        color = "Study Site"
+    ) +
+    theme_minimal()
+
+ggplot(daily_trends, aes(x = day_number, y = screening_rate, color = study_site)) +
+    geom_point(alpha = 0.4, size = 0.8) +
+    geom_smooth(method = "loess", se = FALSE, size = 1.2) +
+    scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+    labs(
+        title = "Screening Coverage Trends by Facility", 
+        subtitle = "Smoothed trends over implementation period",
+        x = "Implementation Day",
+        y = "Screening Coverage (%)",
+        color = "Study Site"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "right")
+
+ggplot(daily_trends, aes(x = day_number, y = screening_rate)) +
+    geom_line(color = "steelblue", size = 0.8) +
+    geom_point(alpha = 0.6) +
+    facet_wrap(~ study_site, ncol = 3) +
+    scale_y_continuous(labels = scales::percent_format()) +
+    labs(
+        title = "Daily Screening Coverage by Facility",
+        x = "Implementation Day", 
+        y = "Screening Coverage (%)"
+    ) +
+    theme_minimal()
+
+## table for IS by facility
+facility_table <- baseline_data %>%
+    group_by(facility_id) %>%
+    summarise(
+        N_providers = n(),
+        AIM = paste0(round(mean(aim_total, na.rm = TRUE), 2), 
+                     " (", round(sd(aim_total, na.rm = TRUE), 2), ")"),
+        IAM = paste0(round(mean(iam_total, na.rm = TRUE), 2), 
+                     " (", round(sd(iam_total, na.rm = TRUE), 2), ")"),
+        FIM = paste0(round(mean(fim_total, na.rm = TRUE), 2), 
+                     " (", round(sd(fim_total, na.rm = TRUE), 2), ")"),
+        .groups = "drop"
+    )
+facility_table %>%
+    kable(caption = "Acceptability (AIM), Appropriateness (IAM), and Feasibility (FIM) by Facility",
+          col.names = c("Study Site", "N", "AIM Mean (SD)", "IAM Mean (SD)", "FIM Mean (SD)")) %>%
+    kable_styling(bootstrap_options = c("striped", "hover"))
+
+# table for IS by facility (lay only)
+facility_table_layonly <- baseline_data_layonly %>%
+    group_by(facility_id) %>%
+    summarise(
+        N_providers = n(),
+        AIM = paste0(round(mean(aim_total, na.rm = TRUE), 2), 
+                     " (", round(sd(aim_total, na.rm = TRUE), 2), ")"),
+        IAM = paste0(round(mean(iam_total, na.rm = TRUE), 2), 
+                     " (", round(sd(iam_total, na.rm = TRUE), 2), ")"),
+        FIM = paste0(round(mean(fim_total, na.rm = TRUE), 2), 
+                     " (", round(sd(fim_total, na.rm = TRUE), 2), ")"),
+        .groups = "drop"
+    )
+facility_table_layonly %>%
+    kable(caption = "Acceptability (AIM), Appropriateness (IAM), and Feasibility (FIM) by Facility (Lay Only)",
+          col.names = c("Study Site", "N", "AIM Mean (SD)", "IAM Mean (SD)", "FIM Mean (SD)")) %>%
+    kable_styling(bootstrap_options = c("striped", "hover"))
+
+# use tbl_summary to create a table by provide type
+tbl_summary(baseline_data, 
+             by = pt_type, 
+            include = c(aim_total, iam_total, fim_total),
+            type = c(aim_total, iam_total, fim_total) ~ "continuous",
+             statistic = list(all_continuous() ~ "{mean} ({sd})", 
+                              all_categorical() ~ "{n} ({p}%)")) %>%
+    add_overall() %>%
+    add_p()
+
+            
