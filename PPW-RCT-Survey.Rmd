@@ -658,10 +658,10 @@ sae_report
 ```
 
 ```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE, include = F}
-# source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
-# fc_yield_summary
-# 
-# yield_summary
+source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
+fc_yield_summary
+
+yield_summary
 ```
 
 \newpage
@@ -675,15 +675,18 @@ source("PPW RCT follow up.R")
 
 table1
 ```
+
 \newpage
 
 ## Infant Outcomes
+
 ```{r Infant Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
 table2a
 table2b
 ```
 
 \newpage
+
 ## Clinical Outcomes
 
 ```{r Clinical Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
@@ -691,6 +694,7 @@ table3
 ```
 
 \newpage
+
 ## Psychosocial Scales
 
 ```{r Psychosocial Scales, echo=FALSE, message=FALSE, warning=FALSE}
@@ -698,12 +702,15 @@ table4
 ```
 
 \newpage
+
 ## Mental Health Utilization
+
 ```{r Mental Health Utilization, echo=FALSE, message=FALSE, warning=FALSE}
 table6
 ```
 
 \newpage
+
 ```{r PM+ Participation, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```
