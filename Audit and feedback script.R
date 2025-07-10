@@ -457,9 +457,6 @@ pm_completion_df <- pm_completion_df %>%
 #7. Telepsychiatry session initiation---------------
 #7.1 this is per month
 #numerator is the number of participants who initiated telepsychiatry [get from telepsych dataset]
-# fix the anc problem for record 1
-telepsych$tele_ancid[1] <- telepsych$tele_ancid[4] 
-
 initiated_telepsych_df <- telepsych %>%
     filter(pt_attend == "Yes") %>%               # keep only attended
     arrange(tele_ancid, tele_date) %>%            # sort by person and date
