@@ -36,6 +36,74 @@ is_survey_df <- is_survey_df %>%
             facility_num %in% c("01", "03", "04", "07", "09", "13", "16", "17", "19", "22") ~ "Intervention",
             TRUE ~ "Control"
         ))
+#demographics ----------
+demo <- is_survey_df %>% filter(arm == "Intervention") %>% filter(visit_type == "Baseline")
+demo <- demo %>% 
+    mutate(designation = dplyr::case_when(
+        job_arm14___1 == "Checked" ~ "HTS counsellor",
+        job_arm14___2 == "Checked" ~ "Mentor Mother",
+        job_arm25___1 == "Checked" ~ "Medical officer",
+        job_arm25___2 == "Checked" ~ "Obstetrician/gynaecologist",
+        job_arm25___3 == "Checked" ~ "Clinical Officer",
+        job_arm25___4 == "Checked" ~ "Nurses",
+        job_arm25___6 == "Checked" ~  "Other social worker",
+        job_arm25___7 == "Checked" ~ "Others",
+        job_arm36___1 == "Checked" ~ "Medical officer",
+        job_arm36___2 == "Checked" ~ "Clinical Officer",
+        job_arm36___3 == "Checked" ~ "Nurses",
+        job_arm7___1 == "Checked" ~ "Psychologist",
+        job_arm7___2 == "Checked" ~ "Psychiatrist",
+        TRUE ~ NA_character_)) %>%
+    mutate(monthsjob = as.numeric(monthsjob, monthswork,  monthscare, hrscare)) %>% 
+    mutate(yearjob = monthsjob/12) %>% 
+    mutate(yearwork = monthswork/12) %>% 
+    mutate(yearcare = monthscare/12) %>% 
+    mutate(age_final = case_when(
+        dob_uk == "Yes" ~ floor(as.numeric(cal_age)),
+        dob_uk == "No" ~ as.numeric(age),
+        TRUE ~ NA_real_))
+
+demo %>% tbl_summary(
+    include=c(age_final, sex, education, dpt___1, dpt___2, 
+              dpt___3, dpt___4, dpt___5, dpt___6, dpt___7,
+              designation,  yearjob, yearwork, yearcare, 
+              hrscare, terms, care,  wlwh),
+    label = list(age_final ~ "Age (Years)",
+                 sex ~ "Gender",
+                 education ~ "Education level",
+                 dpt___1 ~ "Working in antenatal care",
+                 dpt___2 ~ "Working in postnatal care",
+                 dpt___3 ~ "Working in immunization clinic",
+                 dpt___4 ~ "Working in PMTCT",
+                 dpt___5 ~ "Working in family planning clinic",
+                 dpt___6 ~ " Psychological/Psychiatric care",
+                 dpt___7 ~ "Working in other department",
+                 designation ~ "Current Designation",
+                 yearjob ~ "Current job duration (Years)",
+                 yearwork ~ "Duration in the facility (Years)",
+                 terms ~ "Terms of engagement in the facility",
+                 care ~ "Offering care to perinatal women (Yes)",
+                 yearcare ~ "Duration of offering care to PW in the facility (Years)",
+                 hrscare ~ "Hours/week taking care of PW in the facility", 
+                 wlwh ~ "Currently providing care to PW living with HIV (Yes)"),
+    missing = "no",
+    digits = list(all_continuous() ~ 1), 
+    type = list(age_final ~ "continuous", 
+                yearjob ~ "continuous",
+                yearwork ~ "continuous", 
+                yearcare ~ "continuous", 
+                hrscare ~ "continuous"),
+    statistic = list(all_continuous() ~ "{mean} ({sd})")) %>% 
+    bold_labels() %>%
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Basic Demographic Summary") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
 
 #load data regarding acceptability, appropriateness, and feasibility
 acceptability <- is_survey_df %>% 
@@ -215,6 +283,10 @@ screening_rate_layonly <- daily_closeout %>%
  cor.test(daily_summary$daily_mean_rate, daily_summary$fim_score)
  cor.test(daily_summary$daily_mean_rate, daily_summary$iam_score)
  
+ cor.test(daily_summary$aim_score, daily_summary$fim_score)
+ cor.test(daily_summary$aim_score, daily_summary$iam_score)
+ cor.test(daily_summary$fim_score, daily_summary$iam_score)
+
  daily_trends <- daily_analysis %>%
      arrange(study_site, day) %>%
      group_by(study_site) %>%
@@ -232,19 +304,19 @@ screening_rate_layonly <- daily_closeout %>%
                           data = daily_trends, family = "binomial")
  parameters(daily_model_basic, exponentiate = T)
  
- ##binary models - give very huge confidence intervals - not good ------
- 
- daily_model_aim <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + aim_binary + (1|study_site), 
-                         data = daily_trends, family = "binomial")
- parameters(daily_model_aim, exponentiate = T)
- 
- daily_model_iam <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + iam_binary + (1|study_site), 
-                          data = daily_trends, family = "binomial")
- parameters(daily_model_iam, exponentiate = T)
- 
- daily_model_fim <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + fim_binary + (1|study_site), 
-                          data = daily_trends, family = "binomial")
- parameters(daily_model_fim, exponentiate = T)
+ # ##binary models - give very huge confidence intervals - not good ------
+ # 
+ # daily_model_aim <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + aim_binary + (1|study_site), 
+ #                         data = daily_trends, family = "binomial")
+ # parameters(daily_model_aim, exponentiate = T)
+ # 
+ # daily_model_iam <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + iam_binary + (1|study_site), 
+ #                          data = daily_trends, family = "binomial")
+ # parameters(daily_model_iam, exponentiate = T)
+ # 
+ # daily_model_fim <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + fim_binary + (1|study_site), 
+ #                          data = daily_trends, family = "binomial")
+ # parameters(daily_model_fim, exponentiate = T)
  
  
 ## Continuous models - more stable but need to standardize the predictors ------
@@ -264,19 +336,19 @@ daily_model_fim_con <- glmer(cbind(rct_screening, rct_anc_number - rct_screening
                           data = daily_trends, family = "binomial")
 parameters(daily_model_fim_con, exponentiate = T)
 
-# Combined model - This is key!
-daily_model_combined <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + aim_total_mean_z + iam_total_mean_z + fim_total_mean_z + (1|study_site), 
-                              data = daily_trends, family = "binomial")
-
-parameters(daily_model_combined, exponentiate = T)
-
-car::vif(daily_model_combined)
+# # Combined model 
+# daily_model_combined <- glmer(cbind(rct_screening, rct_anc_number - rct_screening) ~ day_number + aim_total_mean_z + iam_total_mean_z + fim_total_mean_z + (1|study_site), 
+#                               data = daily_trends, family = "binomial")
+# 
+# parameters(daily_model_combined, exponentiate = T)
+# 
+# car::vif(daily_model_combined)
 
 # Model comparisons
 anova(daily_model_basic, daily_model_aim_con)
 anova(daily_model_basic, daily_model_iam_con) 
 anova(daily_model_basic, daily_model_fim_con)
-anova(daily_model_basic, daily_model_combined)
+#anova(daily_model_basic, daily_model_combined)
 
 # analysis [layonly IS data] -----------------
 # Filter daily data for facilities with baseline measures
