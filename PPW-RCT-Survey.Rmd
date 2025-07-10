@@ -270,7 +270,11 @@ demographics_df %>% tbl_summary(
 pm_telep_df <- ppw_rct_df %>% 
     filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
-    filter(!is.na(clt_date)) 
+    filter(!is.na(clt_date))
+
+finished_pm <- ppw_rct_df %>% 
+     filter(str_detect(redcap_event_name, "PM\\+ Session 5 Abstraction")) %>% 
+    select(record_id, clt_study_site, starts_with("ab"))
 
 # Define PHQ9 recoding
 phq9_labels <- c(
@@ -384,7 +388,7 @@ eligible_no_survey <- eligible_pm %>%
 setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
 
 wrong_pm_survey <- pm_survey_df %>% 
-    filter(pm_ptid%in% c(21177049, 21031052, 21010085))
+    filter(pm_ptid%in% c(21177049, 21010085, 21094053, 21073077, 21229516, 21198004))
 ```
 
 
