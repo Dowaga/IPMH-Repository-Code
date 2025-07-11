@@ -84,8 +84,8 @@ score_wide <- score %>%
 
 # reduction of scores ===========
 score_combined_df <- score_wide %>%
-    filter(!is.na(phq9_scores_enrollment) & !is.na(phq9_scores_session5) &
-               !is.na(gad7_scores_enrollment) & !is.na(gad7_scores_session5)) %>%
+    filter(!is.na(phq9_scores_enrollment), !is.na(phq9_scores_session5),
+           !is.na(gad7_scores_enrollment), !is.na(gad7_scores_session5)) %>%
     mutate(
         phq9_diff = phq9_scores_session5 - phq9_scores_enrollment,
         gad7_diff = gad7_scores_session5 - gad7_scores_enrollment,
@@ -93,8 +93,8 @@ score_combined_df <- score_wide %>%
         gad7_pct_reduction = 100 * (gad7_scores_enrollment - gad7_scores_session5) / gad7_scores_enrollment
     ) %>%
     filter(
-        (phq9_scores_enrollment > 0 & phq9_pct_reduction < 50) | abs(phq9_diff) < 5 |
-            (gad7_scores_enrollment > 0 & gad7_pct_reduction < 50) | abs(gad7_diff) < 5
+        (phq9_scores_enrollment > 10 & (phq9_pct_reduction < 50 | abs(phq9_diff) < 5)) |
+            (gad7_scores_enrollment > 10 & (gad7_pct_reduction < 50 | abs(gad7_diff) < 5))
     ) %>%
     select(record_id,
            phq9_scores_enrollment, phq9_scores_session5, phq9_diff, phq9_pct_reduction,
