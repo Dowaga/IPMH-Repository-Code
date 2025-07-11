@@ -22,17 +22,19 @@ ids_with_session5 <- rct_ppw %>%
 
 rct_ppw <- rct_ppw %>%
     filter(is.na(redcap_repeat_instrument)) %>%
-    filter(record_id %in% ids_with_session5) %>%
+    filter(record_id %in% ids_with_session5)
+
+rct_ppw_en_5session <- rct_ppw %>%
     filter(redcap_event_name %in% c("Enrollment (Arm 1: Intervention)", 
                                     "PM+ Session 5 Abstraction (Arm 1: Intervention)"))
 
 # merge anc_number in consenting to rct_ppw
-rct_ppw <- rct_ppw %>%
+rct_ppw_en_5session <- rct_ppw_en_5session %>%
     left_join(rct_ppw_consenting %>% select(partipant_id, anc_num), by = c("clt_ptid" = "partipant_id"))
 
 
 #look at the PHQ9/GAD7 enrollment & 5th session 
-score <- rct_ppw %>%
+score <- rct_ppw_en_5session %>%
     select(redcap_event_name, record_id, clt_study_site, clt_date, starts_with("abs_")) 
 
 # Define PHQ9 recoding
@@ -124,7 +126,7 @@ score_combined_df %>%
 # Those people need to be referred to telepsychiatry. How many of them have been referred?
 # referral? ========
 # Restrict to enrollment rows only (1 per participant)
-rct_ppw_enroll <- rct_ppw %>%
+rct_ppw_enroll <- rct_ppw_en_5session %>%
     filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>%
     select(clt_ptid, anc_num) %>%
     distinct(clt_ptid, .keep_all = TRUE)
@@ -146,3 +148,32 @@ score_combined_anc_flagged <- score_combined_anc %>%
         telepsychiatry_record = ifelse(!is.na(pt_attend), "Yes", "No")
     )
 
+#Trajectory ==============
+table(rct_ppw$su_pmrestart___0, rct_ppw$redcap_event_name)
+table(rct_ppw$su_pmrestart___1)
+table(rct_ppw$su_pmrestart___2)
+table(rct_ppw$su_pmrestart_sp)
+table(rct_ppw$su_pmrestart_spother)
+table(rct_ppw$su_tele, useNA = "ifany") #0 so none of them have used telepsychiatry
+
+score_classified <- score_combined_anc_flagged %>%
+    left_join(rct_ppw %>%
+                  select(clt_ptid, su_pmp, su_pmrestart___1, su_pmrestart___2, su_tele),
+              by = c("record_id" = "clt_ptid")) %>%
+    mutate(
+        category = case_when(
+            su_pmrestart___1 == "Checked" | su_pmrestart___2 == "Checked" ~ "Delayed or Restarted PM+",
+            su_tele == "Yes" & (phq9_pct_reduction < 50 | gad7_pct_reduction < 50 |
+                                abs(phq9_diff) < 5 | abs(gad7_diff) < 5) ~ "Escalated to Telepsychiatry",
+            su_tele == "Yes" & su_pmp != "Yes" ~ "Direct Telepsychiatry",
+            su_tele != "Yes" & (phq9_pct_reduction >= 50 | gad7_pct_reduction >= 50 |
+                                phq9_diff <= -5 | gad7_diff <= -5) ~ "Completed PM+",
+            TRUE ~ "Unclassified"
+        )
+    )
+score_classified %>%
+    count(category, name = "n") %>%
+    mutate(pct = round(100 * n / sum(n), 1)) %>%
+    flextable() %>%
+    set_caption("Refined Classification of 33 Participants Using Survey Data") %>%
+    autofit()
