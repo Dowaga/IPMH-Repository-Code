@@ -305,7 +305,7 @@ suveys_done
 
 ## Inner Setting - Culture, Culture Effort, and Culture Stress
 
-```{r culture echo=FALSE, message=FALSE, warning=FALSE}
+```{r culture, echo=FALSE, message=FALSE, warning=FALSE}
 culture_df <- is_survey_df %>% 
     filter(grepl("6-month", redcap_event_name)) %>%
     select(pt_id, facility_id, pt_type, arm, starts_with("culture_"),
@@ -366,7 +366,7 @@ culture_df <- culture_df %>%
                                   na.rm = TRUE))
 ```
 
-```{r, continuous, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #show the mean score of each domain by arm using tbl_summary
 culture_df %>% 
     tbl_summary(
