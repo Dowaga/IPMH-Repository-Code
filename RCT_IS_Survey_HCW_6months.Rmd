@@ -320,7 +320,7 @@ culture_df <- culture_df %>%
     mutate(facility_id = droplevels(factor(facility_id))) 
 
 #scoring instruction
-#reverse coding: culture_3, ceffort_5
+#reverse coding: culture_3, ceffort_5, ceffort_3
 
 culture_df <- culture_df %>% 
     mutate(across(starts_with("culture_"), ~ case_when(
@@ -350,9 +350,9 @@ culture_df <- culture_df %>%
         . == "Prefer not to answer" ~ NA_real_,  # Convert to NA
         TRUE ~ NA_real_))) # Ensure numeric conversion
 
-# reverse coding for some items: culture_3, ceffort_5
+# reverse coding for some items: culture_3, ceffort_5, ceffort_3
 culture_df <- culture_df %>%
-    mutate(across(c(culture_3, ceffort_5),
+    mutate(across(c(culture_3, ceffort_5, ceffort_3),
                   ~ 6- .)) 
     
 # create domain scores
