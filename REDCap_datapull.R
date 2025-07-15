@@ -327,16 +327,15 @@ telepsych <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL,
 write.csv(telepsych, paste0(ipmh_filepath,"/Data/7. RCT admin data/Telepsych_",Sys.Date(),".csv"))
 
 
-
 #Costing database----------------
 # Set file paths: Use this section to set input and output filepaths
-data_telepsych_dir <- file.path(ipmh_filepath, "/Data/9. Costing data")
+costing_dir <- file.path(ipmh_filepath, "/Data/9. Costing data")
 
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
 redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
-                            token = telepsych_token)
+                            token = costing_token)
 
 ### Import the REDCap dataset ###
 costing <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
@@ -345,5 +344,5 @@ costing <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL,
                                 dag = FALSE, checkboxLabels = TRUE)
 
 ### Creating datafile ###
-write.csv(telepsych, paste0(ipmh_filepath,"/Data/9. Costing data/Costing_",Sys.Date(),".csv"))
+write.csv(costing, paste0(ipmh_filepath,"/Data/9. Costing data/Costing_",Sys.Date(),".csv"))
 
