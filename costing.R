@@ -9,7 +9,6 @@
 source("dependencies.R")
 source("DataTeam_ipmh.R")
 source("REDCap_datapull.R")
-library(hms)
 
 # load data
 rm(list = setdiff(ls(), c("costing")))
@@ -48,52 +47,32 @@ summary_table <- bind_rows(total_summary, facility_summary)
 
 # Print result
 summary_table %>% 
-    kable(caption = "Summary of Initial Screening and Enrollment") 
+    kable(caption = "Summary of Initial Screening and Enrollment (Intervention Sites)") 
 
+## time table---------
 screening_int_costing <- screening_int_costing %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
                   ~ droplevels(as.factor(.))))
 
-# Step 1: Convert all relevant time columns to hms in one go
-time_cols <- c(
-    "triage_time_in", "triage_time_out",
-    "screen_time_in", "screen_time_out",
-    "score_time_in", "score_time_out",
-    "info_time_in", "info_time_out",
-    "phq9_time_in", "phq9_time_out",
-    "pmass_time_in", "pmass_time_out",
-    "pmsch_time_in", "pmsch_time_out",
-    "telesch_time_in", "telesch_time_out",
-    "harm_time_in", "harm_time_out",
-    "eligi_time_in", "eligi_time_out",
-    "base_time_in", "base_time_out",
-    "enter_time_in", "visit_time_out"
-)
-
-screening_int_costing <- screening_int_costing %>%
-    mutate(across(
-        all_of(time_cols),
-        ~ hms::as_hms(ifelse(. %in% c("NULL", ".", "", "NA"), NA, as.character(.)))
-    ))
-
 screening_int_costing <- screening_int_costing %>%
     mutate(
-        triage_duration    = as.numeric(triage_time_out - triage_time_in, units = "mins"),
-        screen_duration    = as.numeric(screen_time_out - screen_time_in, units = "mins"),
-        score_duration     = as.numeric(score_time_out - score_time_in, units = "mins"),
-        info_duration      = as.numeric(info_time_out - info_time_in, units = "mins"),
-        phq9_duration      = as.numeric(phq9_time_out - phq9_time_in, units = "mins"),
-        pmass_duration     = as.numeric(pmass_time_out - pmass_time_in, units = "mins"),
-        pmsch_duration     = as.numeric(pmsch_time_out - pmsch_time_in, units = "mins"),
-        telesch_duration   = as.numeric(telesch_time_out - telesch_time_in, units = "mins"),
-        harm_duration      = as.numeric(harm_time_out - harm_time_in, units = "mins"),
-        eligi_duration     = as.numeric(eligi_time_out - eligi_time_in, units = "mins"),
-        baseline_duration  = as.numeric(base_time_out - base_time_in, units = "mins"),
-        total_duration     = as.numeric(visit_time_out - enter_time_in, units = "mins")
+        triage_duration    = as.numeric(triage_time_out- triage_time_in)*1440,
+        screen_duration    = as.numeric(screen_time_out- screen_time_in)*1440,
+        score_duration     = as.numeric(score_time_out- score_time_in)*1440,
+        info_duration      = as.numeric(info_time_out- info_time_in)*1440,
+        phq9_duration      = as.numeric(phq9_time_out- phq9_time_in)*1440,
+        pmass_duration     = as.numeric(pmass_time_out- pmass_time_in)*1440,
+        pmsch_duration     = as.numeric(pmsch_time_out- pmsch_time_in)*1440,
+        telesch_duration   = as.numeric(telesch_time_out- telesch_time_in)*1440,
+        harm_duration      = as.numeric(harm_time_out- harm_time_in)*1440,
+        eligi_duration     = as.numeric(eligi_time_out- eligi_time_in)*1440,
+        baseline_duration  = as.numeric(base_time_out- base_time_in)*1440,
+        total_duration     = as.numeric(visit_time_out- enter_time_in)*1440
     )
 
 screening_int_table <- screening_int_costing %>%
     select(
+        study_site,
         enter_desig,
         triage_desig, triage_duration,
         screen_desig, screen_duration,
@@ -107,6 +86,7 @@ screening_int_table <- screening_int_costing %>%
         eligi_duration, baseline_duration, total_duration
     ) %>%
     tbl_summary(
+        by = study_site,
         statistic = list(
             all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
@@ -163,8 +143,11 @@ screening_int_table <- screening_int_costing %>%
         digits = all_continuous() ~ 1,
         missing = "no"
     ) %>%
-    add_n() %>%
-    bold_labels()
+    add_n() %>% add_overall() %>% 
+    bold_labels() %>% 
+    modify_caption("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites)")
+
+screening_int_table
 
 # screening & enrollment - con ------------
 screening_ctrl_costing <- costing %>%
@@ -173,41 +156,44 @@ screening_ctrl_costing <- costing %>%
     filter(!is.na(pt_id_con)) %>%
     select(date, study_site, c(96, 98:122), -visit_initial_con)
 
+## data collection table ---------
+# Total N as a tibble row
+total_summary_con <- tibble(
+    study_site = "Overall",
+    N = nrow(screening_ctrl_costing)
+)
+
+# N per facility
+facility_summary_con <- screening_ctrl_costing %>%
+    group_by(study_site) %>%
+    summarise(N = n(), .groups = "drop")
+
+# Combine both into one table
+summary_table_con <- bind_rows(total_summary_con, facility_summary_con)
+
+# Print result
+summary_table_con %>% 
+    kable(caption = "Summary of Initial Screening and Enrollment (Control Sites)") 
+
+## Time table ---------
 screening_ctrl_costing <- screening_ctrl_costing %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
                   ~ droplevels(as.factor(.))))
 
-time_cols_con <- c(
-    "enter_time_in_con",
-    "triage_time_in_con", "triage_time_out_con",
-    "screen_time_in_con", "screen_time_out_con",
-    "room_time_in_con", "score_time_in_con", "score_time_out_con",
-    "clinic_time_in_con", "clinic_time_out_con",
-    "eligi_time_in_con", "eligi_time_out_con",
-    "refer_time_in_con", "base_time_in_con", "base_time_out_con",
-    "visit_time_out_con"
-)
-
-screening_ctrl_costing <- screening_ctrl_costing %>%
-    mutate(across(
-        all_of(time_cols_con),
-        ~ hms::as_hms(ifelse(. %in% c("NULL", ".", "", "NA"), NA, as.character(.)))
-    ))
-
 screening_ctrl_costing <- screening_ctrl_costing %>%
     mutate(
-        triage_duration_con   = as.numeric(triage_time_out_con - triage_time_in_con, units = "mins"),
-        screen_duration_con   = as.numeric(screen_time_out_con - screen_time_in_con, units = "mins"),
-        score_duration_con    = as.numeric(score_time_out_con - score_time_in_con, units = "mins"),
-        clinic_duration_con   = as.numeric(clinic_time_out_con - clinic_time_in_con, units = "mins"),
-        refer_duration_con    = as.numeric(visit_time_out_con - refer_time_in_con, units = "mins"),
-        eligi_duration_con    = as.numeric(eligi_time_out_con - eligi_time_in_con, units = "mins"),
-        baseline_duration_con = as.numeric(base_time_out_con - base_time_in_con, units = "mins"),
-        total_duration_con    = as.numeric(visit_time_out_con - enter_time_in_con, units = "mins")
+        triage_duration_con   = as.numeric(triage_time_out_con - triage_time_in_con)*1440,
+        screen_duration_con   = as.numeric(screen_time_out_con - screen_time_in_con)*1440,
+        score_duration_con    = as.numeric(score_time_out_con - score_time_in_con)*1440,
+        clinic_duration_con   = as.numeric(clinic_time_out_con - clinic_time_in_con)*1440,
+        refer_duration_con    = as.numeric(visit_time_out_con - refer_time_in_con)*1440,
+        eligi_duration_con    = as.numeric(eligi_time_out_con - eligi_time_in_con)*1440,
+        baseline_duration_con = as.numeric(base_time_out_con - base_time_in_con)*1440,
+        total_duration_con    = as.numeric(visit_time_out_con - enter_time_in_con)*1440
     )
 
 screening_ctrl_table <- screening_ctrl_costing %>%
-    select(
+    select(study_site,
         triage_desig_con, triage_duration_con,
         screen_desig_con, screen_duration_con,
         room_type_con, phq2_cont, gad2_cont,
@@ -220,6 +206,7 @@ screening_ctrl_table <- screening_ctrl_costing %>%
         total_duration_con
     ) %>%
     tbl_summary(
+        by= study_site,
         statistic = list(
             all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
@@ -261,62 +248,65 @@ screening_ctrl_table <- screening_ctrl_costing %>%
         digits = all_continuous() ~ 1,
         missing = "no"
     ) %>%
-    add_n() %>%
-    bold_labels()
+    add_n() %>% add_overall() %>% 
+    bold_labels() %>% 
+    modify_caption("Summary of Time Used for Initial Screening and Enrollment (Control Sites)")
+
+screening_ctrl_table
 
 # PM+ ---------------
 pm_plus_costing <- costing %>%
     filter(redcap_event_name == "Event 1 (Arm 1: Intervention)" & 
                study_visit == "PM+") %>%
     filter(!is.na(pt_id_pm)) %>%
-    select(date, study_site, starts_with("pm"), -pm_desig, -pmass_time_in,
+    select(date, study_site, pt_id_pm, starts_with("pm"), -pm_desig, -pmass_time_in,
            -pmass_time_out, -pmsch_time_in, -pmsch_time_out, -pm_int_complete)
 
+## Data collection table --------
+# Total N as a tibble row
+total_summary_pm <- tibble(
+    study_site = "Overall",
+    N = nrow(pm_plus_costing)
+)
+
+# N per facility
+facility_summary_pm <- pm_plus_costing %>%
+    group_by(study_site) %>%
+    summarise(N = n(), .groups = "drop")
+
+# Combine both into one table
+summary_table_pm <- bind_rows(total_summary_pm, facility_summary_pm)
+
+# Print result
+summary_table_pm %>% 
+    kable(caption = "Summary of PM+ Sessions (Intervention Sites)")
+
+## Time table ---------
 pm_plus_costing <- pm_plus_costing %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
                   ~ droplevels(as.factor(.))))
 
-# List of all PM+ time columns
-pm_time_cols <- c(
-  "pm_enter_time_in",
-  paste0("pm", 1:5, "_time_in"),
-  paste0("pm", 1:5, "_time_out"),
-  paste0("pm", 1:5, "_end_time_out")
-)
-
-screening_pm_costing <- screening_pm_costing %>%
-  mutate(across(
-    all_of(pm_time_cols),
-    ~ hms::as_hms(ifelse(. %in% c("NULL", ".", "", "NA"), NA, as.character(.)))
-  ))
-
-pm_plus_costing <- pm_plus_costing %>%
-    mutate(across(
-        all_of(pm_time_cols),
-        ~ hms::as_hms(ifelse(. %in% c("NULL", ".", "", "NA"), NA, as.character(.)))
-    ))
-
 pm_plus_costing <- pm_plus_costing %>%
     mutate(
-        pm1_duration = as.numeric(pm1_end_time_out - pm1_time_in, units = "mins"),
-        pm1_total_duration = as.numeric(pm1_end_time_out - pm_enter_time_in, units = "mins"),
+        pm1_duration = as.numeric(pm1_end_time_out - pm1_time_in)*1440,
+        pm1_total_duration = as.numeric(pm1_end_time_out - pm_enter_time_in)*1440,
         
-        pm2_duration = as.numeric(pm2_end_time_out - pm2_time_in, units = "mins"),
-        pm2_total_duration = as.numeric(pm2_end_time_out - pm_enter_time_in, units = "mins"),
+        pm2_duration = as.numeric(pm2_end_time_out - pm2_time_in)*1440,
+        pm2_total_duration = as.numeric(pm2_end_time_out - pm_enter_time_in)*1440,
         
-        pm3_duration = as.numeric(pm3_end_time_out - pm3_time_in, units = "mins"),
-        pm3_total_duration = as.numeric(pm3_end_time_out - pm_enter_time_in, units = "mins"),
+        pm3_duration = as.numeric(pm3_end_time_out - pm3_time_in)*1440,
+        pm3_total_duration = as.numeric(pm3_end_time_out - pm_enter_time_in)*1440,
         
-        pm4_duration = as.numeric(pm4_end_time_out - pm4_time_in, units = "mins"),
-        pm4_total_duration = as.numeric(pm4_end_time_out - pm_enter_time_in, units = "mins"),
+        pm4_duration = as.numeric(pm4_end_time_out - pm4_time_in)*1440,
+        pm4_total_duration = as.numeric(pm4_end_time_out - pm_enter_time_in)*1440,
         
-        pm5_duration = as.numeric(pm5_end_time_out - pm5_time_in, units = "mins"),
-        pm5_total_duration = as.numeric(pm5_end_time_out - pm_enter_time_in, units = "mins")
+        pm5_duration = as.numeric(pm5_end_time_out - pm5_time_in)*1440,
+        pm5_total_duration = as.numeric(pm5_end_time_out - pm_enter_time_in)*1440
     )
 
 pm_summary_table <- pm_plus_costing %>%
     select(
-        pm_number,
+        pm_number, study_site,
         pm1_desig, pm1_duration, pm1_total_duration,
         pm2_desig, pm2_duration, pm2_total_duration,
         pm3_desig, pm3_duration, pm3_total_duration,
@@ -324,6 +314,7 @@ pm_summary_table <- pm_plus_costing %>%
         pm5_desig, pm5_duration, pm5_total_duration
     ) %>%
     tbl_summary(
+        by = study_site,
         statistic = list(
             all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
@@ -369,11 +360,11 @@ pm_summary_table <- pm_plus_costing %>%
         digits = all_continuous() ~ 1,
         missing = "no"
     ) %>%
-    add_n() %>% 
-    bold_labels()
+    add_n() %>% add_overall() %>%
+    bold_labels() %>% 
+    modify_caption("Summary of PM+ Sessions (Intervention Sites)")
 
-#data quality issue for 41177003 & 41177004 
-
+pm_summary_table
 
 # telepsychiatry ------------------
 telepsychiatry_costing <- costing %>%
@@ -383,27 +374,36 @@ telepsychiatry_costing <- costing %>%
     select(date, study_site, starts_with("tele"), -telesch_time_in, -telesch_time_out,
            -tele_initial, -tele_end_initial, -telepsychiatry_int_complete)
 
+## Data collection table --------
+# Total N as a tibble row
+total_summary_tele <- tibble(
+    study_site = "Overall",
+    N = nrow(telepsychiatry_costing)
+)
+
+# N per facility
+facility_summary_tele <- telepsychiatry_costing %>%
+    group_by(study_site) %>%
+    summarise(N = n(), .groups = "drop")
+
+# Combine both into one table
+summary_table_tele <- bind_rows(total_summary_tele, facility_summary_tele)
+
+# Print result
+summary_table_tele %>% 
+    kable(caption = "Summary of Telepsychiatry Sessions (Intervention Sites)") 
+
+## Time table ---------
 telepsychiatry_costing <- telepsychiatry_costing %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
                   ~ droplevels(as.factor(.))))
 
 # List of all telepsychiatry time columns
-tele_time_cols <- c(
-    "tele_enter_time_in", "tele_info_time_in", "tele_info_time_out",
-    "tele_docu_time_in", "tele_docu_time_out", "tele_end_time_out"
-)
-
-telepsychiatry_costing <- telepsychiatry_costing %>%
-    mutate(across(
-        all_of(tele_time_cols),
-        ~ hms::as_hms(ifelse(. %in% c("NULL", ".", "", "NA"), NA, as.character(.)))
-    ))
-
 telepsychiatry_costing <- telepsychiatry_costing %>%
     mutate(
-        tele_info_duration = as.numeric(tele_info_time_out - tele_info_time_in, units = "mins"),
-        tele_docu_duration = as.numeric(tele_docu_time_out - tele_docu_time_in, units = "mins"),
-        tele_total_duration = as.numeric(tele_end_time_out - tele_enter_time_in, units = "mins")
+        tele_info_duration = as.numeric(tele_info_time_out - tele_info_time_in)*1440,
+        tele_docu_duration = as.numeric(tele_docu_time_out - tele_docu_time_in)*1440,
+        tele_total_duration = as.numeric(tele_end_time_out - tele_enter_time_in)*1440
     )
 
 telepsychiatry_table <- telepsychiatry_costing %>%
@@ -432,6 +432,10 @@ telepsychiatry_table <- telepsychiatry_costing %>%
     ) %>%
     add_n() %>%
     bold_labels()
+
+telepsychiatry_table
+
+#did not break down due to very small sample size.
 
 # Audit and Feedback ------------------
 audit_feedback_costing <- costing %>%
