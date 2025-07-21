@@ -5,6 +5,10 @@
 # This script is used to analyze the follow-up data from the PPW RCT study. 
 # The generated tables will be included in the weekly data report for team review.
 
+# Included outcomes: Pregnancy outcomes, infant outcomes, clinical outcomes, psychosocial correlates, adverse events,
+# and mental health service utilization.
+
+
 # Setup ------------------------------------------------------------------------
 
 # Reference source codes & other dependencies:
@@ -51,7 +55,7 @@ rct_ppw_followup <- ppw_rct_df %>%
 rct_ppw_baseline <- ppw_rct_df %>%
     filter(visit_type == "Enrollment")
 
-# Table 1: Pregnancy outcomes at 6 weeks postpartum --------------
+# Pregnancy outcomes at 6 weeks postpartum --------------
 # Keep relevant variables for pregnancy outcomes at 6 weeks follow-up
 pregnancy_outcomes_6week <- rct_ppw_followup %>%
     filter(visit_type == "6 Weeks") %>%
@@ -110,7 +114,7 @@ table1 <- pregnancy_outcomes_6week %>%
     modify_caption("**Table 1. Pregnancy Outcomes at 6 Weeks Follow-up**") %>%
     bold_labels()
 
-# Table 2: Infant outcomes at 6 weeks, 14 weeks, & 6 months postpartum --------------
+# Infant outcomes at 6 weeks, 14 weeks, & 6 months postpartum --------------
 infant_outcomes <- rct_ppw_followup %>%
     select(visit_type, clt_ptid, all_of(starts_with("tpnc_")), -tpnc_date,
            -tpnc_ended, -tpnc_lb, -tpnc_gestage, -tpnc_gestfill, -tpnc_place, 
@@ -230,12 +234,12 @@ table2b <- infant_outcomes %>%
 #     modify_caption("**Table 2c. Infant Outcomes at 6 Months Postpartum**") %>%
 #     bold_labels()
 
-# Table 3: Primary and secondary clinical outcomes across times--------------
-# PHQ9, GAD7, WHOQOL BREF score, Any adverse pregnant outcome (%) 
+# Primary and secondary clinical outcomes across times--------------
+## PHQ9, GAD7, WHOQOL BREF score 
 outcomes <- ppw_rct_df %>%
     select(visit_type, clt_ptid, all_of(starts_with("phq_")), 
            all_of(starts_with("gad7_")), all_of(starts_with("qol_")))
-# PHQ9 & GAD7 scores
+## PHQ9 & GAD7 scores ------
 outcomes <- outcomes %>% 
     mutate(across(c(starts_with("phq_")), 
                   ~ case_when(
@@ -260,7 +264,7 @@ outcomes <- outcomes %>%
     mutate(phq9_high = ifelse(phq9_total >= 10, "Yes", "No"),
            gad7_high = ifelse(gad7_total >= 10, "Yes", "No"))
 
-# WHOQOL BREF ======
+## WHOQOL BREF ======
 outcomes <- outcomes %>%
     mutate(qol_rate_number = case_when(
         qol_rate == "Very poor" ~ 1,
@@ -427,8 +431,58 @@ outcomes <- outcomes %>%
         qol_overall_scaled = as.numeric(((qol_overall - 2) / 8) * 100)
     )
 
-# Adverse pregnant outcomes
-## here we included: miscarriage or stillbirth, death(infant or maternal), hospitalization
+outcomes <- outcomes %>%
+    mutate(visit_type = factor(visit_type,
+                               levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months")))
+
+table3 <- outcomes %>%
+    select(visit_type, phq9_total, phq9_high, gad7_total, gad7_high,
+           qol_overall_scaled, qol_physical_scaled, qol_psycho_scaled,
+           qol_social_scaled, qol_environ_scaled) %>%
+    tbl_summary(
+        by = visit_type,
+        type = list(
+            phq9_total ~ "continuous",
+            gad7_total ~ "continuous",
+            qol_overall_scaled ~ "continuous",
+            qol_physical_scaled ~ "continuous",
+            qol_psycho_scaled ~ "continuous",
+            qol_social_scaled ~ "continuous",
+            qol_environ_scaled ~ "continuous"
+        ),
+        label = list(
+            phq9_total ~ "PHQ-9 Total Score",
+            phq9_high ~ "PHQ-9 High Score (>=10)",
+            gad7_total ~ "GAD-7 Total Score",
+            gad7_high ~ "GAD-7 High Score (>=10)",
+            qol_overall_scaled ~ "WHOQOL Overall Score (Scaled)",
+            qol_physical_scaled ~ "WHOQOL Physical Domain Score (Scaled)",
+            qol_psycho_scaled ~ "WHOQOL Psychological Domain Score (Scaled)",
+            qol_social_scaled ~ "WHOQOL Social Domain Score (Scaled)",
+            qol_environ_scaled ~ "WHOQOL Environmental Domain Score (Scaled)"
+        ),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no"
+    ) %>%
+    add_n() %>%
+    modify_header(label = "**Clinical Outcome**") %>%
+    modify_caption("**Table 3. Mental Health & QOL Outcomes Across Visits**") %>%
+    bold_labels()
+
+## Adverse clinical outcomes -------
+
+## This part is only based on 6-week data so did not combine it with the previous table.
+
+## here we included: Any reported miscarriage, stillbirth, preterm birth, low birthweight, SGA, or neonatal death 
+## among those enrolled <20 weeks gestation and with birthweight data
+
+### Miscarriage & stillbirth & late stillbirth
+
+pregnancy_outcomes_6week$tpnc_lb %>% table(useNA = "ifany")
+
 adverse_outcomes <- ppw_sae_df %>%
     select(visit_type, record_id, arm, ae_yn, ae_cat, ae_preglosssp, ae_type___1, ae_type___2,
            ae_type___3, ae_type___4, ae_type___5) %>% 
@@ -448,13 +502,66 @@ adverse_outcomes <- ppw_sae_df %>%
         infant_hospitalization = if_else(infant_hospitalization == "Checked", TRUE, FALSE)
     )
 
-outcomes <- outcomes %>% left_join(adverse_outcomes, 
-                                   by = c("visit_type", 
-                                          "clt_ptid" = "record_id")) 
+# Codes for cross-checking
 
-outcomes <- outcomes %>%
-    mutate(visit_type = factor(visit_type,
-                               levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months")))
+# id_dead_birth <- pregnancy_outcomes_6week %>%
+#     filter(tpnc_lb == "No") %>%
+#     select(clt_ptid, gestage)
+#
+# id_sae <- adverse_outcomes %>%
+#     filter(if_any(c("stillbirth", "miscarriage"), ~ . == TRUE)) %>%
+#     select(record_id)
+#
+# dead_birth_ids <- id_dead_birth$clt_ptid
+# sae_ids <- id_sae$record_id
+#
+# list(
+#     only_in_dead_birth = setdiff(dead_birth_ids, sae_ids),
+#     only_in_sae = setdiff(sae_ids, dead_birth_ids),
+#     in_both = intersect(dead_birth_ids, sae_ids)
+# )
+
+pregnancy_outcomes_clean <- pregnancy_outcomes_6week %>%
+    mutate(
+        miscarriage_flag = if_else(
+            tpnc_lb == "No" & gestage <= 20, TRUE, FALSE, missing = FALSE
+        ),
+        stillbirth_flag = if_else(
+            tpnc_lb == "No" & gestage > 20, TRUE, FALSE, missing = FALSE
+        ),
+        late_stillbirth_flag = if_else(
+            tpnc_lb == "No" & gestage >= 28 & gestage <=36 , TRUE, FALSE, missing = FALSE
+        )
+    )
+
+sae_flags_unique <- adverse_outcomes %>%
+    group_by(record_id) %>%
+    summarise(
+        miscarriage = any(miscarriage),
+        stillbirth = any(stillbirth),
+        .groups = "drop"
+    )
+
+pregnancy_combined <- pregnancy_outcomes_clean %>%
+    left_join(sae_flags_unique, by = c("clt_ptid" = "record_id")) %>%
+    mutate(
+        miscarriage_final    = miscarriage_flag | miscarriage,
+        stillbirth_final     = stillbirth_flag | stillbirth,
+        late_stillbirth_final = late_stillbirth_flag & (stillbirth_flag | stillbirth)
+    )
+
+### preterm birth
+
+### low birth weight
+
+### small for gestational age
+
+### neonatal death
+
+
+
+
+
 table3 <- outcomes %>%
     select(visit_type, phq9_total, phq9_high, gad7_total, gad7_high,
            qol_overall_scaled, qol_physical_scaled, qol_psycho_scaled,
@@ -500,7 +607,7 @@ table3 <- outcomes %>%
     modify_caption("**Table 3. Primary and Secondary Clinical Outcomes Across Visits**") %>%
     bold_labels()
 
-#Table 4: Adverse and severe adverse events --------------------
+# Adverse and severe adverse events --------------------
 sae <- ppw_sae_df %>%
     select(visit_type, record_id, arm, ae_yn, ae_datereport, ae_cat, ae_preglosssp,
            ae_multpreg_loss, ae_pregloss_mult, ae_dateonset,
@@ -553,8 +660,7 @@ sae_table <- sae_filtered %>%
            onset_since_randomization, ae_outcome, ae_relation) %>% 
     kable(caption = "**Adverse and Severe Adverse Events Across Visits**")
 
-
-#Table 5: Psychosocial correlates across visits --------------------
+#Psychosocial correlates across visits --------------------
 #1. reducing tension checklist
 rtc <- ppw_rct_df %>%
     select(visit_type, clt_ptid, starts_with("rtc_")) %>%
@@ -705,10 +811,10 @@ table4 <- psychosocial_data %>%
     ) %>%
     add_n() %>%
     modify_header(label = "**Psychosocial Correlates**") %>%
-    modify_caption("**Table 4. Psychosocial Correlates Across Visits**") %>%
+    modify_caption("**Table 5. Psychosocial Correlates Across Visits**") %>%
     bold_labels()
 
-#Table 6: Mental Health Service Utilization========
+# Mental Health Service Utilization========
 su <- ppw_rct_df %>% 
     select(visit_type, clt_ptid, starts_with("su_")) 
 
@@ -800,7 +906,7 @@ table7 <- su %>%
     modify_caption("**PM+ Program Participation (Post-Enrollment Visits Only)**") %>%
     bold_labels()
 
-#Table for tracking follow-up visits ------------------
+# Tracking follow-up visits ------------------
 ppw_date_track <- ppw_rct_df %>%
     mutate(
         clt_date = as.Date(clt_date),
