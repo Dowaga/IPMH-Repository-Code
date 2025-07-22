@@ -658,10 +658,10 @@ sae_report
 ```
 
 ```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE, include = F}
-source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
-fc_yield_summary
-
-yield_summary
+# source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
+# fc_yield_summary
+# 
+# yield_summary
 ```
 
 \newpage
@@ -691,6 +691,7 @@ table2b
 
 ```{r Clinical Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
 table3
+table4
 ```
 
 \newpage
@@ -698,7 +699,7 @@ table3
 ## Psychosocial Scales
 
 ```{r Psychosocial Scales, echo=FALSE, message=FALSE, warning=FALSE}
-table4
+table5
 ```
 
 \newpage
