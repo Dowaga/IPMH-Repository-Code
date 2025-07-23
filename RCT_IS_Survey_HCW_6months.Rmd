@@ -156,12 +156,22 @@ is_survey_df %>%
 
 \newpage
 
-### Demographic Summary for Baseline [6/12 months needs to be added]
+### Demographic Summary for 6 months
 
 ```{r, Basic Demographic Summary, echo=FALSE, message=FALSE, warning=FALSE}
-## This is collected at baseline only - there will be newly added participants at the follow-up visits.
-## Needs to fix after getting new demographic data.
-demogra <- is_survey_df %>% 
+demo_baseline <- is_survey_df %>% 
+    filter(visit_type == "Baseline")
+demo_6month <- is_survey_df %>%
+    filter(visit_type == "6 month")
+
+ids_both <- intersect(demo_baseline$pt_id, demo_6month$pt_id)
+
+demogra_6month <- bind_rows(
+  demo_baseline %>% filter(calculated_pt_id %in% ids_both),
+  demo_6month %>% filter(!calculated_pt_id %in% ids_both)
+)
+
+demogra_6month <- demogra_6month %>% 
   select(arm, part_id,  pt_type, facility_id, calculated_pt_id, 
          dob_uk, age, cal_age, sex, education, 
          dpt___1, dpt___2, dpt___3, dpt___4, dpt___5, dpt___6, dpt___7, 
@@ -177,7 +187,7 @@ demogra <- is_survey_df %>%
         dob_uk == "No" ~ as.numeric(age),
         TRUE ~ NA_real_))
 
-demogra <- demogra %>% 
+demogra_6month <- demogra_6month %>% 
   #   mutate(sex = dplyr::recode(sex, 
   #                              "1" = "Male",
   #                              "2" = "Female")) %>% 
@@ -231,7 +241,7 @@ demogra <- demogra %>%
     mutate(yearcare = monthscare/12)
 
 # basic demo table
-demogra %>% tbl_summary(
+demogra_6month %>% tbl_summary(
     by = "arm",
     include=c(arm, age_final, sex, education, dpt___1, dpt___2, 
             dpt___3, dpt___4, dpt___5, dpt___6, dpt___7,
@@ -263,13 +273,13 @@ demogra %>% tbl_summary(
               yearcare ~ "continuous", 
               hrscare ~ "continuous"),
   statistic = list(all_continuous() ~ "{mean} ({SD})")) %>% 
-    add_overall() %>% 
-    add_p() %>% 
+     add_overall() %>% 
+     add_p() %>% 
   bold_labels() %>%
   # convert from gtsummary object to gt object
   as_gt() %>%
   # modify with gt functions
-  gt::tab_header("Basic Demographic Summary") %>% 
+  gt::tab_header("Basic Demographic Summary (6 months)") %>% 
   gt::tab_options(
     table.font.size = "medium",
     data_row.padding = gt::px(1)) %>%
@@ -304,6 +314,8 @@ suveys_done
 \newpage
 
 ## Inner Setting - Culture, Culture Effort, and Culture Stress
+
+A higher score indicates a more positive perception of the culture, culture effort, and culture stress.
 
 ```{r culture, echo=FALSE, message=FALSE, warning=FALSE}
 culture_df <- is_survey_df %>% 
@@ -491,6 +503,8 @@ culture_df %>%
 
 ## Intervention Characteristics
 
+A higher score indicates a more positive perception of the intervention characteristics.
+
 ```{r intervention_characteristics, echo=FALSE, message=FALSE, warning=FALSE}
 intervention_df <- is_survey_df %>% 
     select(visit_type, pt_id, facility_id, pt_type, arm, starts_with("adapt_"), 
@@ -577,6 +591,8 @@ intervention_df %>%
 \newpage
 
 ## Acceptability, appropriateness, and feasibility
+
+A higher score indicates a more positive perception of the intervention's acceptability, appropriateness, and feasibility.
 
 ### IPMH Acceptability
 
@@ -779,27 +795,27 @@ t.test(wide_data$iam_total_Baseline, wide_data$`iam_total_6 month`, paired = TRU
 #     tab_options(
 #         table.font.size = px(12))
 
-#by facility
-appropriateness %>%
-    filter(grepl("6 month", visit_type)) %>%
-    tbl_summary(
-        by = facility_id,
-        include = c(iam_1, iam_2, iam_3, iam_4),
-        label = list(iam_1 ~ "IPMH seems fitting",
-                     iam_2 ~ "IPMH seems suitable",
-                     iam_3 ~ "IPMH seems applicable",
-                     iam_4 ~ "IPMH seems like a good match"),
-        missing = "no") %>% add_overall() %>% add_p() %>%
-    bold_labels() %>%
-  # convert from gtsummary object to gt object
-  as_gt() %>%
-  # modify with gt functions
-  gt::tab_header("IPMH Appropriateness by Facility") %>%
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-  tab_options(
-        table.font.size = px(12))
+# #by facility
+# appropriateness %>%
+#     filter(grepl("6 month", visit_type)) %>%
+#     tbl_summary(
+#         by = facility_id,
+#         include = c(iam_1, iam_2, iam_3, iam_4),
+#         label = list(iam_1 ~ "IPMH seems fitting",
+#                      iam_2 ~ "IPMH seems suitable",
+#                      iam_3 ~ "IPMH seems applicable",
+#                      iam_4 ~ "IPMH seems like a good match"),
+#         missing = "no") %>% add_overall() %>% add_p() %>%
+#     bold_labels() %>%
+#   # convert from gtsummary object to gt object
+#   as_gt() %>%
+#   # modify with gt functions
+#   gt::tab_header("IPMH Appropriateness by Facility") %>%
+#   gt::tab_options(
+#     table.font.size = "medium",
+#     data_row.padding = gt::px(1)) %>%
+#   tab_options(
+#         table.font.size = px(12))
 ```
 
 \newpage  
@@ -917,6 +933,8 @@ t.test(wide_data$fim_total_Baseline, wide_data$`fim_total_6 month`, paired = TRU
 \newpage  
 
 ## Stigma scale
+
+A higher score indicates a more stigmatizing attitude.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 stigma_scale <- is_survey_df %>% 
@@ -1090,6 +1108,8 @@ stigma_scale %>%
 
 ## Sustainability - Short Program Sustainability Assessment Tool [among in-charges only]
 
+A higher score indicates a more positive perception of the intervention's sustainability.
+
 ```{r psta, echo=FALSE, message=FALSE, warning=FALSE}
 psta_df <- is_survey_df %>% 
     select(visit_type, pt_id, facility_id, pt_type, arm, starts_with("sus_"), 
@@ -1177,6 +1197,9 @@ psta_df %>%
 
 ## Sustainability - Normalization Measure Development Questionnaire
 
+A higher score for the first 3 items indicates a more positive perception of the intervention's normalization.
+A lower score for the rest of the itmes indicates a more positive perception of the intervention's normalization.
+
 ```{r nmdq, echo=FALSE, message=FALSE, warning=FALSE}
 nmdq_df <- is_survey_df %>% 
     select(visit_type, pt_id, facility_id, pt_type, arm, starts_with("sus2_"), 
@@ -1237,7 +1260,7 @@ nmdq_df <- nmdq_df %>%
     sus2_familiar_total = rowMeans(select(., starts_with("sus2_familiar")), na.rm = TRUE),
     sus2_normal_now_total = rowMeans(select(., starts_with("sus2_normal_now")), na.rm = TRUE),
     sus2_normal_future_total = rowMeans(select(., starts_with("sus2_normal_will")), na.rm = TRUE),
-
+    sus2_3_2 = ifelse(sus2_3_2 < 6, 6 - sus2_3_2, NA),
     sus2_coherence_total = rowMeans(select(., starts_with("sus2_1")) %>%
                                       mutate(across(everything(), ~ ifelse(. < 6, ., NA))), na.rm = TRUE),
     sus2_cognitive_participation_total = rowMeans(select(., starts_with("sus2_2")) %>%
@@ -1396,40 +1419,40 @@ nmdq_df %>%
     tab_options(
         table.font.size = px(12))
 
-#by facility
-nmdq_df %>% 
-    tbl_summary(
-        by = facility_id,
-        include = c(sus2_familiar_total, sus2_normal_now_total, sus2_normal_future_total,
-                    sus2_coherence_total, sus2_cognitive_participation_total, 
-                    sus2_collective_action_total, sus2_reflexive_monitoring_total, 
-                    sus2_total),
-        label = list(sus2_familiar_total ~ "Familiarity with IPMH",
-                     sus2_normal_now_total ~ "Normalization now",
-                     sus2_normal_future_total ~ "Normalization in future",
-                     sus2_coherence_total ~ "Coherence",
-                     sus2_cognitive_participation_total ~ "Cognitive participation",
-                     sus2_collective_action_total ~ "Collective action",
-                     sus2_reflexive_monitoring_total ~ "Reflexive monitoring",
-                     sus2_total ~ "Total score"),
-        missing = "no",
-        type = list(sus2_familiar_total ~ "continuous",
-                    sus2_normal_now_total ~ "continuous",
-                    sus2_normal_future_total ~ "continuous",
-                    sus2_coherence_total ~ "continuous",
-                    sus2_cognitive_participation_total ~ "continuous",
-                    sus2_collective_action_total ~ "continuous",
-                    sus2_reflexive_monitoring_total ~ "continuous",
-                    sus2_total ~ "continuous")) %>%
-    bold_labels() %>% add_p() %>% 
-  # convert from gtsummary object to gt object
-  as_gt() %>%
-  # modify with gt functions
-  gt::tab_header("Normalization Measure Development Questionnaire by Facility") %>%
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
+# #by facility
+# nmdq_df %>% 
+#     tbl_summary(
+#         by = facility_id,
+#         include = c(sus2_familiar_total, sus2_normal_now_total, sus2_normal_future_total,
+#                     sus2_coherence_total, sus2_cognitive_participation_total, 
+#                     sus2_collective_action_total, sus2_reflexive_monitoring_total, 
+#                     sus2_total),
+#         label = list(sus2_familiar_total ~ "Familiarity with IPMH",
+#                      sus2_normal_now_total ~ "Normalization now",
+#                      sus2_normal_future_total ~ "Normalization in future",
+#                      sus2_coherence_total ~ "Coherence",
+#                      sus2_cognitive_participation_total ~ "Cognitive participation",
+#                      sus2_collective_action_total ~ "Collective action",
+#                      sus2_reflexive_monitoring_total ~ "Reflexive monitoring",
+#                      sus2_total ~ "Total score"),
+#         missing = "no",
+#         type = list(sus2_familiar_total ~ "continuous",
+#                     sus2_normal_now_total ~ "continuous",
+#                     sus2_normal_future_total ~ "continuous",
+#                     sus2_coherence_total ~ "continuous",
+#                     sus2_cognitive_participation_total ~ "continuous",
+#                     sus2_collective_action_total ~ "continuous",
+#                     sus2_reflexive_monitoring_total ~ "continuous",
+#                     sus2_total ~ "continuous")) %>%
+#     bold_labels() %>% add_p() %>% 
+#   # convert from gtsummary object to gt object
+#   as_gt() %>%
+#   # modify with gt functions
+#   gt::tab_header("Normalization Measure Development Questionnaire by Facility") %>%
+#   gt::tab_options(
+#     table.font.size = "medium",
+#     data_row.padding = gt::px(1)) %>%
+#     tab_options(
+#         table.font.size = px(12))
 ```
 
