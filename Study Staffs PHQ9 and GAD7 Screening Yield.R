@@ -123,9 +123,10 @@ phq9_distribution <- facility_yield %>%
                        data_row.padding = gt::px(1))
 phq9_distribution
 #--------------------------------------------------------------------------
-# Study Staff Screening Yields(PHQ9 and GAD7)
+# Study Staff Screening Yields (PHQ9 and GAD7)
 study_yield_df <- ppw_rct_df %>% 
-        select(record_id, clt_study_site, starts_with("phq_"), starts_with("gad7_"))
+        select(record_id, clt_study_site, starts_with("phq_"), starts_with("gad7_")) %>% 
+    filter(!is.na(clt_study_site))
 
 # Define PHQ9 recoding
 phq9_labels <- c(
@@ -251,11 +252,72 @@ missed_oppor <- facility_yield %>%
     filter(missed_opportunity == 1)
 
 
-# Save each Missed opportunityas a separate xlsx file with date in the filename
-missed_oppor %>%
-    group_split(clt_study_site) %>%
-    walk(~ write_xlsx(.x, path = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/", 
-                                        "Missed Opportunities ", 
-                                        unique(.x$clt_study_site), "_", 
-                                        format(Sys.Date(), "%Y-%m-%d"), ".xlsx")))
+# # Save each Missed opportunityas a separate xlsx file with date in the filename
+# missed_oppor %>%
+#     group_split(clt_study_site) %>%
+#     walk(~ write_xlsx(.x, path = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/", 
+#                                         "Missed Opportunities ", 
+#                                         unique(.x$clt_study_site), "_", 
+#                                         format(Sys.Date(), "%Y-%m-%d"), ".xlsx")))
 
+# sensitivity & specificity table
+# Merge study and facility data
+comparison_df <- facility_yield %>% 
+    select(record_id, clt_study_site, phq9_fac, gad7_fac) %>%
+    inner_join(yield_df %>% 
+                   select(record_id, phq9_staff, gad7_staff),
+               by = "record_id")
+
+# Combine results for PHQ-9 and GAD-7
+phq9_eval <- comparison_df %>%
+    mutate(
+        TP = phq9_staff == 1 & phq9_fac == 1,
+        FP = phq9_staff == 0 & phq9_fac == 1,
+        FN = phq9_staff == 1 & phq9_fac == 0,
+        TN = phq9_staff == 0 & phq9_fac == 0
+    ) %>%
+    summarise(
+        TP = sum(TP), FP = sum(FP), FN = sum(FN), TN = sum(TN),
+        Sensitivity = TP / (TP + FN),
+        Specificity = TN / (TN + FP)
+    ) %>%
+    mutate(measure = "PHQ-9")
+
+gad7_eval <- comparison_df %>%
+    mutate(
+        TP = gad7_staff == 1 & gad7_fac == 1,
+        FP = gad7_staff == 0 & gad7_fac == 1,
+        FN = gad7_staff == 1 & gad7_fac == 0,
+        TN = gad7_staff == 0 & gad7_fac == 0
+    ) %>%
+    summarise(
+        TP = sum(TP), FP = sum(FP), FN = sum(FN), TN = sum(TN),
+        Sensitivity = TP / (TP + FN),
+        Specificity = TN / (TN + FP)
+    ) %>%
+    mutate(measure = "GAD-7")
+
+# Combine both into one table
+eval_summary <- bind_rows(phq9_eval, gad7_eval) %>%
+    select(measure, TP, FP, FN, TN, Sensitivity, Specificity)
+
+# Create GT table
+gt(eval_summary) %>%
+    tab_header(
+        title = "Facility Staff Screening Validity",
+        subtitle = "Using Study Staff Screening as Gold Standard"
+    ) %>%
+    fmt_number(columns = c(Sensitivity, Specificity), decimals = 2) %>%
+    cols_label(
+        measure = "Measure",
+        TP = "True Positive",
+        FP = "False Positive",
+        FN = "False Negative",
+        TN = "True Negative",
+        Sensitivity = "Sensitivity",
+        Specificity = "Specificity"
+    ) %>%
+    tab_options(
+        table.font.size = "medium",
+        data_row.padding = px(3)
+    )

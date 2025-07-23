@@ -679,35 +679,43 @@ source("PPW RCT follow up.R")
 
 table1
 ```
+
 \newpage
 
 ## Infant Outcomes
+
 ```{r Infant Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
 table2a
 table2b
 ```
 
 \newpage
+
 ## Clinical Outcomes
 
 ```{r Clinical Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
 table3
-```
-
-\newpage
-## Psychosocial Scales
-
-```{r Psychosocial Scales, echo=FALSE, message=FALSE, warning=FALSE}
 table4
 ```
 
 \newpage
+
+## Psychosocial Scales
+
+```{r Psychosocial Scales, echo=FALSE, message=FALSE, warning=FALSE}
+table5
+```
+
+\newpage
+
 ## Mental Health Utilization
+
 ```{r Mental Health Utilization, echo=FALSE, message=FALSE, warning=FALSE}
 table6
 ```
 
 \newpage
+
 ```{r PM+ Participation, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```

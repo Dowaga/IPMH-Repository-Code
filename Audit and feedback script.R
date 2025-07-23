@@ -38,18 +38,18 @@ rct_ppw <- rct_ppw %>%
 pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$tele_date)
 
-#time period for the data [2025-03-01, 2025-05-31]
+#time period for the data [2025-03-01, 2025-06-30]
 pm_all <- pm
 rct_ppw_all <- rct_ppw
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-06-01")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-07-01")
 daily_closeout <- daily_closeout %>% filter(rct_dcr_date >= "2025-03-01")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2025-06-01")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2025-07-01")
 phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date >= "2025-03-01")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-06-01")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-07-01")
 rct_ppw <- rct_ppw %>% filter(clt_timestamp >= "2025-03-01")
-pm <- pm %>% filter(pm_date <= "2025-06-01")
+pm <- pm %>% filter(pm_date <= "2025-07-01")
 pm <- pm %>% filter(pm_date >= "2025-03-01")
-telepsych <- telepsych %>% filter(tele_date <= "2025-06-01")
+telepsych <- telepsych %>% filter(tele_date <= "2025-07-01")
 telepsych <- telepsych %>% filter(tele_date >= "2025-03-01")
 
 
@@ -457,9 +457,6 @@ pm_completion_df <- pm_completion_df %>%
 #7. Telepsychiatry session initiation---------------
 #7.1 this is per month
 #numerator is the number of participants who initiated telepsychiatry [get from telepsych dataset]
-# fix the anc problem for record 1
-telepsych$tele_ancid[1] <- telepsych$tele_ancid[4] 
-
 initiated_telepsych_df <- telepsych %>%
     filter(pt_attend == "Yes") %>%               # keep only attended
     arrange(tele_ancid, tele_date) %>%            # sort by person and date

@@ -5,6 +5,10 @@
 # This script is used to analyze the follow-up data from the PPW RCT study. 
 # The generated tables will be included in the weekly data report for team review.
 
+# Included outcomes: Pregnancy outcomes, infant outcomes, clinical outcomes, psychosocial correlates, adverse events,
+# and mental health service utilization.
+
+
 # Setup ------------------------------------------------------------------------
 
 # Reference source codes & other dependencies:
@@ -51,11 +55,12 @@ rct_ppw_followup <- ppw_rct_df %>%
 rct_ppw_baseline <- ppw_rct_df %>%
     filter(visit_type == "Enrollment")
 
-# Table 1: Pregnancy outcomes at 6 weeks postpartum --------------
+# Pregnancy outcomes at 6 weeks postpartum --------------
 # Keep relevant variables for pregnancy outcomes at 6 weeks follow-up
 pregnancy_outcomes_6week <- rct_ppw_followup %>%
     filter(visit_type == "6 Weeks") %>%
-    select(clt_ptid, all_of(starts_with("tpnc_")))
+    select(clt_ptid, all_of(starts_with("tpnc_"))) %>% 
+    filter(!is.na(clt_ptid))
 
 baseline_lmp <- rct_ppw_baseline %>%
     select(clt_ptid, med_lmp) 
@@ -110,11 +115,12 @@ table1 <- pregnancy_outcomes_6week %>%
     modify_caption("**Table 1. Pregnancy Outcomes at 6 Weeks Follow-up**") %>%
     bold_labels()
 
-# Table 2: Infant outcomes at 6 weeks, 14 weeks, & 6 months postpartum --------------
+# Infant outcomes at 6 weeks, 14 weeks, & 6 months postpartum --------------
 infant_outcomes <- rct_ppw_followup %>%
     select(visit_type, clt_ptid, all_of(starts_with("tpnc_")), -tpnc_date,
            -tpnc_ended, -tpnc_lb, -tpnc_gestage, -tpnc_gestfill, -tpnc_place, 
-           -tpnc_mode, all_of(starts_with("io_")), inf_status)
+           -tpnc_mode, all_of(starts_with("io_")), inf_status) %>% 
+    filter(!is.na(clt_ptid))
 
 table(infant_outcomes$tpnc_ihiv, infant_outcomes$io_ihiv, useNA = "ifany")
 table(infant_outcomes$tpnc_iarv, infant_outcomes$io_iarv, useNA = "ifany")
@@ -142,7 +148,7 @@ table2a <- infant_outcomes %>%
             io_iarv ~ "Infant given ARV prophylaxis",
             io_icorti ~ "Infant on given cotrimoxazole prophylaxis",
             tpnc_sex ~ "Infant sex",
-            tpnc_birthweight ~ "Birth weight (grams)",
+            tpnc_birthweight ~ "Birth weight (kg)",
             tpnc_birthlength ~ "Birth length (cm)",
             tpnc_twin ~ "Twin birth",
             inf_status ~ "Infant status",
@@ -230,12 +236,13 @@ table2b <- infant_outcomes %>%
 #     modify_caption("**Table 2c. Infant Outcomes at 6 Months Postpartum**") %>%
 #     bold_labels()
 
-# Table 3: Primary and secondary clinical outcomes across times--------------
-# PHQ9, GAD7, WHOQOL BREF score, Any adverse pregnant outcome (%) 
+# Primary and secondary clinical outcomes across times--------------
+## PHQ9, GAD7, WHOQOL BREF score 
 outcomes <- ppw_rct_df %>%
     select(visit_type, clt_ptid, all_of(starts_with("phq_")), 
-           all_of(starts_with("gad7_")), all_of(starts_with("qol_")))
-# PHQ9 & GAD7 scores
+           all_of(starts_with("gad7_")), all_of(starts_with("qol_"))) %>% 
+    filter(!is.na(clt_ptid)) 
+## PHQ9 & GAD7 scores ------
 outcomes <- outcomes %>% 
     mutate(across(c(starts_with("phq_")), 
                   ~ case_when(
@@ -260,7 +267,7 @@ outcomes <- outcomes %>%
     mutate(phq9_high = ifelse(phq9_total >= 10, "Yes", "No"),
            gad7_high = ifelse(gad7_total >= 10, "Yes", "No"))
 
-# WHOQOL BREF ======
+## WHOQOL BREF ======
 outcomes <- outcomes %>%
     mutate(qol_rate_number = case_when(
         qol_rate == "Very poor" ~ 1,
@@ -427,40 +434,14 @@ outcomes <- outcomes %>%
         qol_overall_scaled = as.numeric(((qol_overall - 2) / 8) * 100)
     )
 
-# Adverse pregnant outcomes
-## here we included: miscarriage or stillbirth, death(infant or maternal), hospitalization
-adverse_outcomes <- ppw_sae_df %>%
-    select(visit_type, record_id, arm, ae_yn, ae_cat, ae_preglosssp, ae_type___1, ae_type___2,
-           ae_type___3, ae_type___4, ae_type___5) %>% 
-    rename(
-        maternal_death = ae_type___1,
-        infant_death = ae_type___2,
-        maternal_hospitalization = ae_type___3,
-        infant_hospitalization = ae_type___4,
-        loss = ae_type___5
-    ) %>%
-    mutate(
-        stillbirth = if_else(ae_preglosssp == "Stillbirth (>20wks gestation)", TRUE, FALSE, missing = FALSE),
-        miscarriage = if_else(ae_preglosssp == "Miscarriage (< =20wks gestation)", TRUE, FALSE, missing = FALSE),
-        maternal_death = if_else(maternal_death == "Checked", TRUE, FALSE),
-        infant_death = if_else(infant_death == "Checked", TRUE, FALSE),
-        maternal_hospitalization = if_else(maternal_hospitalization == "Checked", TRUE, FALSE),
-        infant_hospitalization = if_else(infant_hospitalization == "Checked", TRUE, FALSE)
-    )
-
-outcomes <- outcomes %>% left_join(adverse_outcomes, 
-                                   by = c("visit_type", 
-                                          "clt_ptid" = "record_id")) 
-
 outcomes <- outcomes %>%
     mutate(visit_type = factor(visit_type,
                                levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months")))
+
 table3 <- outcomes %>%
     select(visit_type, phq9_total, phq9_high, gad7_total, gad7_high,
            qol_overall_scaled, qol_physical_scaled, qol_psycho_scaled,
-           qol_social_scaled, qol_environ_scaled,
-           maternal_death, infant_death, maternal_hospitalization,
-           infant_hospitalization, stillbirth, miscarriage) %>%
+           qol_social_scaled, qol_environ_scaled) %>%
     tbl_summary(
         by = visit_type,
         type = list(
@@ -481,13 +462,7 @@ table3 <- outcomes %>%
             qol_physical_scaled ~ "WHOQOL Physical Domain Score (Scaled)",
             qol_psycho_scaled ~ "WHOQOL Psychological Domain Score (Scaled)",
             qol_social_scaled ~ "WHOQOL Social Domain Score (Scaled)",
-            qol_environ_scaled ~ "WHOQOL Environmental Domain Score (Scaled)",
-            maternal_death ~ "Maternal Death",
-            infant_death ~ "Infant Death",
-            maternal_hospitalization ~ "Maternal Hospitalization",
-            infant_hospitalization ~ "Infant Hospitalization",
-            stillbirth ~ "Stillbirth",
-            miscarriage ~ "Miscarriage"
+            qol_environ_scaled ~ "WHOQOL Environmental Domain Score (Scaled)"
         ),
         statistic = list(
             all_continuous() ~ "{median} ({p25}, {p75})",
@@ -497,10 +472,191 @@ table3 <- outcomes %>%
     ) %>%
     add_n() %>%
     modify_header(label = "**Clinical Outcome**") %>%
-    modify_caption("**Table 3. Primary and Secondary Clinical Outcomes Across Visits**") %>%
+    modify_caption("**Table 3. Mental Health & QOL Outcomes Across Visits**") %>%
     bold_labels()
 
-#Table 4: Adverse and severe adverse events --------------------
+## Adverse clinical outcomes -------
+
+## This part is only based on 6-week data so did not combine it with the previous table.
+
+## here we included: Any reported miscarriage, stillbirth, preterm birth, low birthweight, SGA, or neonatal death 
+## among those enrolled <20 weeks gestation and with birthweight data
+
+### Miscarriage & stillbirth & late stillbirth -------
+
+pregnancy_outcomes_6week$tpnc_lb %>% table(useNA = "ifany")
+
+adverse_outcomes <- ppw_sae_df %>%
+    select(visit_type, record_id, arm, ae_yn, ae_cat, ae_preglosssp, ae_type___1, ae_type___2,
+           ae_type___3, ae_type___4, ae_type___5, ae_dateonset, ae_ideath_date) %>% 
+    rename(
+        maternal_death = ae_type___1,
+        infant_death = ae_type___2,
+        maternal_hospitalization = ae_type___3,
+        infant_hospitalization = ae_type___4,
+        loss = ae_type___5
+    ) %>%
+    mutate(
+        stillbirth = if_else(ae_preglosssp == "Stillbirth (>20wks gestation)", TRUE, FALSE, missing = FALSE),
+        miscarriage = if_else(ae_preglosssp == "Miscarriage (< =20wks gestation)", TRUE, FALSE, missing = FALSE),
+        maternal_death = if_else(maternal_death == "Checked", TRUE, FALSE),
+        infant_death = if_else(infant_death == "Checked", TRUE, FALSE),
+        maternal_hospitalization = if_else(maternal_hospitalization == "Checked", TRUE, FALSE),
+        infant_hospitalization = if_else(infant_hospitalization == "Checked", TRUE, FALSE)
+    )
+
+# Codes for cross-checking
+
+# id_dead_birth <- pregnancy_outcomes_6week %>%
+#     filter(tpnc_lb == "No") %>%
+#     select(clt_ptid, gestage)
+#
+# id_sae <- adverse_outcomes %>%
+#     filter(if_any(c("stillbirth", "miscarriage"), ~ . == TRUE)) %>%
+#     select(record_id)
+#
+# dead_birth_ids <- id_dead_birth$clt_ptid
+# sae_ids <- id_sae$record_id
+#
+# list(
+#     only_in_dead_birth = setdiff(dead_birth_ids, sae_ids),
+#     only_in_sae = setdiff(sae_ids, dead_birth_ids),
+#     in_both = intersect(dead_birth_ids, sae_ids)
+# )
+
+pregnancy_outcomes_clean <- pregnancy_outcomes_6week %>%
+    mutate(
+        miscarriage_flag = if_else(
+            tpnc_lb == "No" & gestage <= 20, TRUE, FALSE, missing = NA
+        ),
+        stillbirth_flag = if_else(
+            tpnc_lb == "No" & gestage > 20, TRUE, FALSE, missing = NA
+        ),
+        late_stillbirth_flag = if_else(
+            tpnc_lb == "No" & gestage >= 28 & gestage <=36 , TRUE, FALSE, missing = NA
+        )
+    )
+
+sae_flags_unique <- adverse_outcomes %>%
+    group_by(record_id) %>%
+    summarise(
+        miscarriage = any(miscarriage),
+        stillbirth = any(stillbirth),
+        late_stillbirth = any(late_stillbirth_flag),
+        .groups = "drop"
+    )
+
+pregnancy_combined <- pregnancy_outcomes_clean %>%
+    left_join(sae_flags_unique, by = c("clt_ptid" = "record_id")) %>%
+    mutate(
+        miscarriage_final    = miscarriage_flag | miscarriage,
+        stillbirth_final     = stillbirth_flag | stillbirth,
+        late_stillbirth_final = late_stillbirth_flag & (stillbirth_flag | stillbirth)
+    )
+
+### preterm birth ========
+pregnancy_combined <- pregnancy_combined %>%
+    mutate(
+        preterm_birth = if_else(gestage < 37 & tpnc_lb == "Yes", TRUE, FALSE, missing = NA)
+    )
+
+### low birth weight ========
+pregnancy_combined <- pregnancy_combined %>%
+    mutate(
+        low_birthweight = if_else(tpnc_birthweight < 2.5, TRUE, FALSE, missing = NA)
+    )
+
+### small for gestational age ==========
+pregnancy_combined <- pregnancy_combined %>%
+    mutate(gestage_rounded = floor(gestage),
+           sga = case_when(
+               gestage_rounded == 22 & tpnc_birthweight <= 0.354 ~ TRUE,
+               gestage_rounded == 23 & tpnc_birthweight <= 0.416 ~ TRUE,
+               gestage_rounded == 24 & tpnc_birthweight <= 0.473 ~ TRUE,
+               gestage_rounded == 25 & tpnc_birthweight <= 0.529 ~ TRUE,
+               gestage_rounded == 26 & tpnc_birthweight <= 0.597 ~ TRUE,
+               gestage_rounded == 27 & tpnc_birthweight <= 0.677 ~ TRUE,
+               gestage_rounded == 28 & tpnc_birthweight <= 0.770 ~ TRUE,
+               gestage_rounded == 29 & tpnc_birthweight <= 0.882 ~ TRUE,
+               gestage_rounded == 30 & tpnc_birthweight <= 1.018 ~ TRUE,
+               gestage_rounded == 31 & tpnc_birthweight <= 1.166 ~ TRUE,
+               gestage_rounded == 32 & tpnc_birthweight <= 1.335 ~ TRUE,
+               gestage_rounded == 33 & tpnc_birthweight <= 1.538 ~ TRUE,
+               gestage_rounded == 34 & tpnc_birthweight <= 1.772 ~ TRUE,
+               gestage_rounded == 35 & tpnc_birthweight <= 2.021 ~ TRUE,
+               gestage_rounded == 36 & tpnc_birthweight <= 2.261 ~ TRUE,
+               gestage_rounded == 37 & tpnc_birthweight <= 2.477 ~ TRUE,
+               gestage_rounded == 38 & tpnc_birthweight <= 2.665 ~ TRUE,
+               gestage_rounded == 39 & tpnc_birthweight <= 2.810 ~ TRUE,
+               gestage_rounded == 40 & tpnc_birthweight <= 2.904 ~ TRUE,
+               gestage_rounded == 41 & tpnc_birthweight <= 2.958 ~ TRUE,
+               gestage_rounded == 42 & tpnc_birthweight <= 2.985 ~ TRUE,
+               gestage_rounded == 43 & tpnc_birthweight <= 2.981 ~ TRUE,
+               gestage_rounded == 44 & tpnc_birthweight <= 2.952 ~ TRUE,
+               !is.na(gestage) & !is.na(tpnc_birthweight) ~ FALSE,
+               TRUE ~ NA
+           )
+    )
+
+### neonatal death ============
+pregnancy_combined <- pregnancy_combined %>%
+    left_join(adverse_outcomes %>% select(record_id, infant_death), by = c("clt_ptid" = "record_id"))
+
+pregnancy_combined <- pregnancy_combined %>%
+    mutate(
+        any_adverse_outcome = case_when(
+            miscarriage_final == TRUE |
+                stillbirth_final == TRUE |
+                preterm_birth == TRUE |
+                low_birthweight == TRUE |
+                sga == TRUE |
+                infant_death == TRUE ~ TRUE,
+            # Only set FALSE if *all* inputs are FALSE (i.e., none are NA or TRUE)
+            is.na(miscarriage_final) & is.na(stillbirth_final) &
+                is.na(preterm_birth) & is.na(low_birthweight) & is.na(sga) & is.na(infant_death) ~ NA,
+            TRUE ~ FALSE
+        )
+    )
+
+pregnancy_combined_dedup <- pregnancy_combined %>%
+    distinct(clt_ptid, .keep_all = TRUE)
+
+table4 <- pregnancy_combined_dedup %>%
+    select(miscarriage_final, stillbirth_final, late_stillbirth_final,
+           preterm_birth, low_birthweight, sga, infant_death, any_adverse_outcome) %>%
+    tbl_summary(
+        type = list(
+            miscarriage_final ~ "categorical",
+            stillbirth_final ~ "categorical",
+            late_stillbirth_final ~ "categorical",
+            preterm_birth ~ "categorical",
+            low_birthweight ~ "categorical",
+            sga ~ "categorical",
+            infant_death ~ "categorical",
+            any_adverse_outcome ~ "categorical"
+        ),
+        label = list(
+            miscarriage_final ~ "Miscarriage",
+            stillbirth_final ~ "Stillbirth",
+            late_stillbirth_final ~ "Late Stillbirth (>=28 weeks)",
+            preterm_birth ~ "Preterm Birth (<37 weeks)",
+            low_birthweight ~ "Low Birth Weight (<2.5 kg)",
+            sga ~ "Small for Gestational Age",
+            infant_death ~ "Infant Death",
+            any_adverse_outcome ~ "Any Adverse Outcome"
+        ),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no"
+    ) %>%
+    add_n() %>%
+    modify_header(label = "**Clinical Outcome**") %>%
+    modify_caption("**Table 4. Clinical Adverse Outcomes**") %>%
+    bold_labels()
+
+# Adverse and severe adverse events --------------------
 sae <- ppw_sae_df %>%
     select(visit_type, record_id, arm, ae_yn, ae_datereport, ae_cat, ae_preglosssp,
            ae_multpreg_loss, ae_pregloss_mult, ae_dateonset,
@@ -553,8 +709,7 @@ sae_table <- sae_filtered %>%
            onset_since_randomization, ae_outcome, ae_relation) %>% 
     kable(caption = "**Adverse and Severe Adverse Events Across Visits**")
 
-
-#Table 5: Psychosocial correlates across visits --------------------
+#Psychosocial correlates across visits --------------------
 #1. reducing tension checklist
 rtc <- ppw_rct_df %>%
     select(visit_type, clt_ptid, starts_with("rtc_")) %>%
@@ -674,7 +829,7 @@ psychosocial_data <- psychosocial_data %>%
                                           "14 Weeks", "6 Months")))
 
 # Create a summary table for psychosocial correlates
-table4 <- psychosocial_data %>%
+table5 <- psychosocial_data %>%
     select(visit_type, rtc_total, ps_total, hit_total, hit_high,
            ss_total, ss_cat, ace_total) %>%
     tbl_summary(
@@ -705,10 +860,10 @@ table4 <- psychosocial_data %>%
     ) %>%
     add_n() %>%
     modify_header(label = "**Psychosocial Correlates**") %>%
-    modify_caption("**Table 4. Psychosocial Correlates Across Visits**") %>%
+    modify_caption("**Table 5. Psychosocial Correlates Across Visits**") %>%
     bold_labels()
 
-#Table 6: Mental Health Service Utilization========
+# Mental Health Service Utilization========
 su <- ppw_rct_df %>% 
     select(visit_type, clt_ptid, starts_with("su_")) 
 
@@ -800,7 +955,7 @@ table7 <- su %>%
     modify_caption("**PM+ Program Participation (Post-Enrollment Visits Only)**") %>%
     bold_labels()
 
-#Table for tracking follow-up visits ------------------
+# Tracking follow-up visits ------------------
 ppw_date_track <- ppw_rct_df %>%
     mutate(
         clt_date = as.Date(clt_date),
