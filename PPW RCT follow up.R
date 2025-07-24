@@ -982,12 +982,15 @@ ppw_date_track <- ppw_rct_df %>%
 enrollment_data <- ppw_date_track %>%
     filter(grepl("Enrollment", clt_visit)) %>%
     select(clt_ptid, clt_study_site, enrollment_date = clt_date, med_pre_edd)
+
 visit_6wk <- ppw_date_track %>%
     filter(grepl("6 weeks", clt_visit)) %>%
     select(clt_ptid, visit_6wk_date = clt_date, tpnc_date)
+
 visit_14wk <- ppw_date_track %>%
     filter(grepl("14 weeks", clt_visit)) %>%
     select(clt_ptid, visit_14wk_date = clt_date)
+
 visit_6mo <- ppw_date_track %>%
     filter(grepl("6 months", clt_visit)) %>%
     select(clt_ptid, visit_6mo_date = clt_date)
