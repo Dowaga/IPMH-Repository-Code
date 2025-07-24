@@ -35,13 +35,6 @@ pm_df <- pm_abstractions %>%
 # telepsy
 telepsych$tele_ancid[1] <- telepsych$tele_ancid[4] 
 
-
-
-
-
-
-
-
 telepsych_df <- telepsych %>%
     filter(pt_attend == "Yes") %>%               # keep only attended
     arrange(tele_ancid, tele_date) %>%            # sort by person and date
@@ -52,7 +45,8 @@ telepsych_df <- telepsych %>%
 #now match this with consenting database to get their pt_id
 tele_with_id <- telepsych_df %>%
     left_join(
-        rct_ppw_consenting %>% select(anc_num, partipant_id),
+        rct_ppw_consenting %>% 
+            select(anc_num, partipant_id),
         by = c("tele_ancid" = "anc_num")
     )
 
