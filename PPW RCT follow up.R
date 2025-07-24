@@ -115,6 +115,8 @@ table1 <- pregnancy_outcomes_6week %>%
     modify_caption("**Table 1. Pregnancy Outcomes at 6 Weeks Follow-up**") %>%
     bold_labels()
 
+table1
+
 # Infant outcomes at 6 weeks, 14 weeks, & 6 months postpartum --------------
 infant_outcomes <- rct_ppw_followup %>%
     select(visit_type, clt_ptid, all_of(starts_with("tpnc_")), -tpnc_date,
@@ -168,6 +170,8 @@ table2a <- infant_outcomes %>%
     modify_caption("**Table 2a. Infant Outcomes at 6 Weeks Postpartum**") %>%
     bold_labels()
 
+table2a
+
 table2b <- infant_outcomes %>%
     filter(visit_type == "14 Weeks") %>% 
     select(
@@ -201,6 +205,8 @@ table2b <- infant_outcomes %>%
     modify_header(label = "**Infant Outcome**") %>%
     modify_caption("**Table 2b. Infant Outcomes at 14 Weeks Postpartum**") %>%
     bold_labels()
+
+table2b
 
 # table2c <- infant_outcomes %>%
 #     filter(visit_type == "6 Months") %>% 
@@ -475,6 +481,8 @@ table3 <- outcomes %>%
     modify_caption("**Table 3. Mental Health & QOL Outcomes Across Visits**") %>%
     bold_labels()
 
+table3
+
 ## Adverse clinical outcomes -------
 
 ## This part is only based on 6-week data so did not combine it with the previous table.
@@ -537,17 +545,17 @@ pregnancy_outcomes_clean <- pregnancy_outcomes_6week %>%
         )
     )
 
-sae_flags_unique <- adverse_outcomes %>%
-    group_by(record_id) %>%
+sae_flags_unique <- pregnancy_outcomes_clean %>%
+    group_by(clt_ptid) %>%
     summarise(
-        miscarriage = any(miscarriage),
-        stillbirth = any(stillbirth),
+        miscarriage = any(miscarriage_flag),
+        stillbirth = any(stillbirth_flag),
         late_stillbirth = any(late_stillbirth_flag),
         .groups = "drop"
     )
 
 pregnancy_combined <- pregnancy_outcomes_clean %>%
-    left_join(sae_flags_unique, by = c("clt_ptid" = "record_id")) %>%
+    left_join(sae_flags_unique, by = ("clt_ptid" )) %>%
     mutate(
         miscarriage_final    = miscarriage_flag | miscarriage,
         stillbirth_final     = stillbirth_flag | stillbirth,
@@ -655,6 +663,8 @@ table4 <- pregnancy_combined_dedup %>%
     modify_header(label = "**Clinical Outcome**") %>%
     modify_caption("**Table 4. Clinical Adverse Outcomes**") %>%
     bold_labels()
+
+table4
 
 # Adverse and severe adverse events --------------------
 sae <- ppw_sae_df %>%
@@ -924,6 +934,7 @@ table6 <- su %>%
     modify_spanning_header(c("stat_1", "stat_2", "stat_3", "stat_4") ~ "**Visit Type**") %>%
     modify_caption("**Screening and Service Utilization by Visit Type**") %>%
     bold_labels()
+table6
 
 table7 <- su %>%
     filter(visit_type != "Enrollment") %>%
@@ -954,6 +965,8 @@ table7 <- su %>%
     modify_spanning_header(c("stat_1", "stat_2", "stat_3") ~ "**Visit Type**") %>%
     modify_caption("**PM+ Program Participation (Post-Enrollment Visits Only)**") %>%
     bold_labels()
+
+table7
 
 # Tracking follow-up visits ------------------
 ppw_date_track <- ppw_rct_df %>%
