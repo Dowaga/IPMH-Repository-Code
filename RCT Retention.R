@@ -4,9 +4,10 @@
 
 # Load Packages---------------------------------------
 rm(list = ls())
-pacman::p_load(googledrive, googlesheets4, readxl,dplyr,purrr,
-               stringr, lubridate,flextable, officer, gtsummary,
-               gt, janitor)
+source("DataTeam_ipmh.R")
+source("Dependencies.R")
+source("data_import.R")
+pacman::p_load(googledrive, googlesheets4, readxl,dplyr,purrr, officerr)
 
 #----------------------------------------------------------------
 
@@ -238,4 +239,16 @@ pending_followups <- all_deliveries %>%
             between(wk14_window_close, start_date, end_date)
     ) %>%
     select(ptid, wk6_window_close, wk14_window_close)
+
+###
+# Tracking follow-up visits ------------------
+ppw_date_track <- ppw_rct_df %>%
+    mutate(
+        clt_date = as.Date(clt_date),
+        med_pre_edd = as.Date(med_pre_edd),
+        tpnc_date = as.Date(tpnc_date)
+    ) %>%
+    # Create participant ID if needed
+    group_by(clt_study_site) %>%
+    ungroup()
 
