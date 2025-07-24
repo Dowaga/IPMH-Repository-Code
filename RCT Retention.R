@@ -4,7 +4,9 @@
 
 # Load Packages---------------------------------------
 rm(list = ls())
-pacman::p_load(googledrive, googlesheets4, readxl,dplyr,purrr, stringr, lubridate)
+pacman::p_load(googledrive, googlesheets4, readxl,dplyr,purrr,
+               stringr, lubridate,flextable, officer, gtsummary,
+               gt, janitor)
 
 #----------------------------------------------------------------
 
@@ -12,7 +14,7 @@ pacman::p_load(googledrive, googlesheets4, readxl,dplyr,purrr, stringr, lubridat
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1E1spWNY_hoRoTzQG9D0YWXC-jG8LAk7eoPCfw_l2pGw/edit?gid=1699758718#gid=1699758718"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1-XXBxis7YzTIMGzHJGCGI24wFsL_lcFv7LAwCw-8Qq8/edit?gid=1699758718#gid=1699758718"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -128,22 +130,112 @@ all_deliveries <- all_deliveries %>%
       mo6_window_close = delivery_date + weeks(30)
    )
 
+wk6_retention_overall<- all_deliveries %>%
+    reframe(
+        `Window Open` = sum(wk6_window_open > today()),
+        Expected = sum(wk6_window_close < today()|attended_6wks == 1),
+        Attended = sum(attended_6wks == 1),
+        `Percentage Attended` = round(Attended / Expected * 100, 1)
+    )
+
 
 wk6_retention_summary <- all_deliveries %>%
    group_by(Facility) %>% 
    reframe(
-      `Window not Closed` = sum(wk6_window_open > today()),
+      `Window Open` = sum(wk6_window_open > today()),
       Expected = sum(wk6_window_close < today()|attended_6wks == 1),
       Attended = sum(attended_6wks == 1),
       `Percentage Attended` = round(Attended / Expected * 100, 1)
    )
 
+# 14 Wks visit Retention
+wk14_retention_overall <- all_deliveries %>%
+    reframe(
+        `Window Open` = sum(wk14_window_open > today()),
+        Expected = sum(wk14_window_close < today()|attended_14wks == 1),
+        Attended = sum(attended_14wks == 1),
+        `Percentage Attended` = round(Attended / Expected * 100, 1)
+    )
+
 wk14_retention_summary <- all_deliveries %>%
    group_by(Facility) %>% 
    reframe(
-      `Window not Closed` = sum(wk14_window_open > today()),
+      `Window Open` = sum(wk14_window_open > today()),
       Expected = sum(wk14_window_close < today()|attended_14wks == 1),
       Attended = sum(attended_14wks == 1),
       `Percentage Attended` = round(Attended / Expected * 100, 1)
    )
+
+
+# Convert both to flextables
+ft_6_overall <- flextable(wk6_retention_overall)
+ft_14_overall  <- flextable(wk14_retention_overall)
+ft_6 <- flextable(wk6_retention_summary)
+ft_14  <- flextable(wk14_retention_summary)
+
+# Create Word doc and add both
+doc <- read_docx() %>%
+    body_add_par("6-week Overall Retention", style = "heading 1") %>%
+    body_add_flextable(ft_6_overall) %>%
+    body_add_par("") %>%  # Spacer
+    body_add_par("14-week Overall Retention", style = "heading 1") %>%
+    body_add_flextable(ft_14_overall)%>%
+    body_add_par("") %>%  # Spacer
+    body_add_par("6-week Retention Summary", style = "heading 1") %>%
+    body_add_flextable(ft_6) %>%
+    body_add_par("") %>%  # Spacer
+    body_add_par("14-week Retention Summary", style = "heading 1") %>%
+    body_add_flextable(ft_14)
+
+# Save Word file
+print(doc, target = "retention_summary.docx")
+print(doc, target = paste0("retention_summary_", 
+                           format(Sys.time(), 
+                                  "%Y-%m-%d_%H%M%S"), ".docx"))
+
+View(all_deliveries)
+# -----------------------------------------
+# Filter participants whose 6-weeks or 14-weeks window closes in a week
+# Define the date window
+today <- as.Date("2025-07-28")
+next_friday <- as.Date("2025-08-01")
+
+closing_soon <- all_deliveries %>%
+    filter(
+        (wk6_window_close >= today & wk6_window_close <= next_friday) |
+            (wk14_window_close >= today & wk14_window_close <= next_friday)
+    )
+
+
+# Summarise count of participants within range
+window_summary <- all_deliveries %>%
+    group_by(Facility) %>% 
+    summarise(
+        `Week 6 Visits` = sum(wk6_window_close >= today & wk6_window_close <= next_friday, na.rm = TRUE),
+        `Week 14 Visits` = sum(wk14_window_close >= today & wk14_window_close <= next_friday, na.rm = TRUE)
+    ) %>%
+    adorn_totals(name = "Total")%>%
+    gt() %>% 
+    tab_caption("Follow-ups Due by Friday 2025-08-01")%>%
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_body(
+            rows = Facility == "Total"
+        )
+    ) 
+
+window_summary
+
+
+# Summary of retentions to be affected by study activities hault
+start_date <- as.Date("2025-06-30")
+end_date <- as.Date("2025-07-16")
+
+pending_followups <- all_deliveries %>%
+    filter(attended_6wks == 0) %>%
+    filter(
+        between(wk6_window_close, start_date, end_date) |
+            between(wk14_window_close, start_date, end_date)
+    ) %>%
+    select(ptid, wk6_window_close, wk14_window_close)
 
