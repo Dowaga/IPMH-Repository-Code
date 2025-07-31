@@ -18,12 +18,6 @@ source("data_import.R")
 ```
 
 
-```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
-
-knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
-
-```
-
 # Enrollment Status
 
 Altogether, we currently have data for `r ppw_rct_df$clt_ptid %>% unique() %>% length()` participants.
@@ -79,7 +73,6 @@ source("Consort.R")
 #consort_diagram for weekly reports
 consort_per
 ```
-
 
 ```{r Reasons for ineligibility or not enrolled, message=FALSE, warning=FALSE, include=FALSE}
 
@@ -391,7 +384,6 @@ wrong_pm_survey <- pm_survey_df %>%
     filter(pm_ptid%in% c(21177049, 21010085, 21094053, 21073077, 21229516, 21198004))
 ```
 
-
 ```{r Study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
 # Study participant PM+ Sessions
 pm_sessions <- 
@@ -447,7 +439,6 @@ pm_session_wide %>%
         table.font.size = px(14))
 ```
 
-
 ```{r Psychlops Score reductions less than 50%}, message=FALSE, warning=FALSE, include=FALSE}
 psychlops_scores <- pm_survey_df %>%
   filter(ipmh_participant == "Yes",
@@ -474,7 +465,6 @@ psychlops_scores <- pm_survey_df %>%
 psychlops_scores
 
 ```
-
 
 ```{r None study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
     # None study participants in PM+
@@ -538,7 +528,6 @@ session_wide %>%
 
 ```
 
-
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
 telepsych_referrals <- pm_telep_df %>% 
     filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
@@ -559,7 +548,6 @@ telepsych_referrals %>%
     tab_options(
         table.font.size = px(12))
 ```
-
 
 ```{r PM+ and Telepsychiatry Referral QCs, message=FALSE, warning=FALSE, include=FALSE}
 referral_qc <- pm_telep_df %>% 
