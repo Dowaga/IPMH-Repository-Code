@@ -3,8 +3,9 @@ title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
- word_document
+ #word_document
   #pdf_document
+  html_document
 ---
 
 ```{r setup, echo = F, include = F}
@@ -14,9 +15,7 @@ rm(list = ls())
 source("Datateam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
-
 ```
-
 
 # Enrollment Status
 
@@ -171,9 +170,9 @@ Enrollments
 ## Follow-up Tracking Per Facility
 
 ```{r Follow-up Tracking, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
-kable(combined_summary, 
-      caption = "Summary of Follow-up Tracking by Facility")
+#source("PPW RCT follow up.R")
+#kable(combined_summary, 
+    #  caption = "Summary of Follow-up Tracking by Facility")
 
 ```
 
@@ -358,7 +357,8 @@ pm_counts <- pm_survey_df %>%
 
 #### PM+ referral QCs-------------------------------------------------------
 merged_pm <- pm_eligible %>% 
-    full_join(pm_counts, by = c("clt_study_site" = "pm_facility"))
+    full_join(pm_counts, by = c("clt_study_site" = "pm_facility")) %>%
+    mutate(Surplus = `PM+ Abstracted`- `PM+ Eligible`)
 
 
 ### Those that are eligible to PM+, but not in the PM+ Survey
@@ -381,8 +381,9 @@ eligible_no_survey <- eligible_pm %>%
 setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
 
 wrong_pm_survey <- pm_survey_df %>% 
-    filter(pm_ptid%in% c(21177049, 21010085, 21094053, 21073077, 21229516, 21198004))
+    filter(pm_ptid%in% c(21177049, 21031052, 21010085, 21094053, 21073077, 21229516, 21198004, 21041517, 21229608))
 ```
+
 
 ```{r Study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
 # Study participant PM+ Sessions
@@ -420,6 +421,10 @@ mutate(facility = str_sub(pm_ptid, 3, 4)) %>%
 pm_session_wide <- pm_session_wide %>% 
     mutate(`Pre-intervention PSYCHLOPS measurement` = ifelse(`Pre-intervention PSYCHLOPS measurement` == 1, "Yes", "No"))
 
+# Those who completed Session 5 without Post-intervention PSYCHLOPS measurement
+post_pm_measu <- pm_session_wide %>% 
+    filter(`Session 5 content` == 1 & `Post-intervention PSYCHLOPS measurement` == 0)
+
 #--------------------------------------------------------
 pm_session_wide %>% 
     tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
@@ -438,6 +443,7 @@ pm_session_wide %>%
     tab_options(
         table.font.size = px(14))
 ```
+
 
 ```{r Psychlops Score reductions less than 50%}, message=FALSE, warning=FALSE, include=FALSE}
 psychlops_scores <- pm_survey_df %>%
