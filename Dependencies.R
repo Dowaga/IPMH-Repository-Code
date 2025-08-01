@@ -42,7 +42,10 @@ packages <- c("redcapAPI",
               "purrr",
               "patchwork",
               "officedown",
-              "flextable")
+              "flextable",
+              "googledrive", 
+              "googlesheets4", 
+              "readxl")
 
 
 # Check for duplicates in list 
