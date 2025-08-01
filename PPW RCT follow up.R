@@ -548,21 +548,17 @@ pregnancy_outcomes_clean <- pregnancy_outcomes_6week %>%
         )
     )
 
-sae_flags_unique <- pregnancy_outcomes_clean %>%
-    group_by(clt_ptid) %>%
-    summarise(
-        miscarriage = any(miscarriage_flag),
-        stillbirth = any(stillbirth_flag),
-        late_stillbirth = any(late_stillbirth_flag),
-        .groups = "drop"
-    )
-
 pregnancy_combined <- pregnancy_outcomes_clean %>%
-    left_join(sae_flags_unique, by = ("clt_ptid" )) %>%
+    left_join(adverse_outcomes, by = c("clt_ptid" = "record_id")) %>% 
+    mutate(late_stillbirth_ase = if_else(
+        stillbirth == TRUE & gestage >= 28 & gestage <=36 , TRUE, FALSE, missing = NA
+    ))
+
+pregnancy_combined <- pregnancy_combined %>%
     mutate(
         miscarriage_final    = miscarriage_flag | miscarriage,
         stillbirth_final     = stillbirth_flag | stillbirth,
-        late_stillbirth_final = late_stillbirth_flag & (stillbirth_flag | stillbirth)
+        late_stillbirth_final = late_stillbirth_flag | late_stillbirth_ase
     )
 
 ### preterm birth ========
