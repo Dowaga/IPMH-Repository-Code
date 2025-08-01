@@ -514,6 +514,18 @@ adverse_outcomes <- ppw_sae_df %>%
         infant_death = if_else(infant_death == "Checked", TRUE, FALSE),
         maternal_hospitalization = if_else(maternal_hospitalization == "Checked", TRUE, FALSE),
         infant_hospitalization = if_else(infant_hospitalization == "Checked", TRUE, FALSE)
+    ) 
+
+sae_flags_unique <- adverse_outcomes %>%
+    group_by(record_id) %>%
+    summarise(
+        miscarriage = any(miscarriage, na.rm = TRUE),
+        stillbirth = any(stillbirth, na.rm = TRUE),
+        maternal_death = any(maternal_death, na.rm = TRUE),
+        infant_death = any(infant_death, na.rm = TRUE),
+        maternal_hospitalization = any(maternal_hospitalization, na.rm = TRUE),
+        infant_hospitalization = any(infant_hospitalization, na.rm = TRUE),
+        .groups = "drop"
     )
 
 # Codes for cross-checking
@@ -549,7 +561,7 @@ pregnancy_outcomes_clean <- pregnancy_outcomes_6week %>%
     )
 
 pregnancy_combined <- pregnancy_outcomes_clean %>%
-    left_join(adverse_outcomes, by = c("clt_ptid" = "record_id")) %>% 
+    left_join(sae_flags_unique, by = c("clt_ptid" = "record_id")) %>% 
     mutate(late_stillbirth_ase = if_else(
         stillbirth == TRUE & gestage >= 28 & gestage <=36 , TRUE, FALSE, missing = NA
     ))
@@ -615,7 +627,7 @@ pregnancy_combined <- pregnancy_combined %>%
 
 ### neonatal death ============
 pregnancy_combined <- pregnancy_combined %>%
-    left_join(adverse_outcomes %>% select(record_id, infant_death), by = c("clt_ptid" = "record_id"))
+    left_join(sae_flags_unique %>% select(record_id, infant_death), by = c("clt_ptid" = "record_id"))
 
 pregnancy_combined <- pregnancy_combined %>%
     mutate(
@@ -625,10 +637,10 @@ pregnancy_combined <- pregnancy_combined %>%
                 preterm_birth == TRUE |
                 low_birthweight == TRUE |
                 sga == TRUE |
-                infant_death == TRUE ~ TRUE,
+                infant_death.x == TRUE ~ TRUE,
             # Only set FALSE if *all* inputs are FALSE (i.e., none are NA or TRUE)
             is.na(miscarriage_final) & is.na(stillbirth_final) &
-                is.na(preterm_birth) & is.na(low_birthweight) & is.na(sga) & is.na(infant_death) ~ NA,
+                is.na(preterm_birth) & is.na(low_birthweight) & is.na(sga) & is.na(infant_death.x) ~ NA,
             TRUE ~ FALSE
         )
     )
@@ -638,7 +650,7 @@ pregnancy_combined_dedup <- pregnancy_combined %>%
 
 table4 <- pregnancy_combined_dedup %>%
     select(miscarriage_final, stillbirth_final, late_stillbirth_final,
-           preterm_birth, low_birthweight, sga, infant_death, any_adverse_outcome) %>%
+           preterm_birth, low_birthweight, sga, infant_death.x, any_adverse_outcome) %>%
     tbl_summary(
         type = list(
             miscarriage_final ~ "categorical",
@@ -647,7 +659,7 @@ table4 <- pregnancy_combined_dedup %>%
             preterm_birth ~ "categorical",
             low_birthweight ~ "categorical",
             sga ~ "categorical",
-            infant_death ~ "categorical",
+            infant_death.x ~ "categorical",
             any_adverse_outcome ~ "categorical"
         ),
         label = list(
@@ -657,7 +669,7 @@ table4 <- pregnancy_combined_dedup %>%
             preterm_birth ~ "Preterm Birth (<37 weeks)",
             low_birthweight ~ "Low Birth Weight (<2.5 kg)",
             sga ~ "Small for Gestational Age",
-            infant_death ~ "Infant Death",
+            infant_death.x ~ "Infant Death",
             any_adverse_outcome ~ "Any Adverse Outcome"
         ),
         statistic = list(
