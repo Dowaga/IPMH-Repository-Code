@@ -74,21 +74,24 @@ pregnancy_outcomes_6week <- pregnancy_outcomes_6week %>%
         tpnc_date = as.Date(tpnc_date),
         med_lmp = as.Date(med_lmp),
         
-        gestage_calculated = case_when(
-            !is.na(tpnc_date) & !is.na(med_lmp) ~ 
-                as.numeric(tpnc_date - med_lmp) / 7,
-            TRUE ~ NA_real_
-        ),
-        tpnc_gestfill_numeric = as.numeric(tpnc_gestfill),
-        # Final gestational age: use calculated if available, otherwise use tpnc_gestfill
-        gestage = case_when(
-            !is.na(gestage_calculated) ~ gestage_calculated,
-            !is.na(tpnc_gestfill_numeric) ~ tpnc_gestfill_numeric,
-            TRUE ~ NA_real_
-        )
+        # Step 1: Calculate gestational age
+        gestage_calculated_raw = as.numeric(tpnc_date - med_lmp) / 7,
+        
+        # Step 2: Cap calculation to ??? 44 weeks
+        gestage_calculated = if_else(gestage_calculated_raw > 44, NA_real_, gestage_calculated_raw),
+        
+        # Step 3: Clean gestational age text field
+        tpnc_gestfill_clean = tpnc_gestfill %>%
+            str_remove_all(" Weeks") %>%
+            str_replace("^([0-9]+)/40$", "\\1"),
+        
+        tpnc_gestfill_numeric = as.numeric(tpnc_gestfill_clean),
+        
+        # Step 4: Final gestational age ??? calculated if valid, otherwise use cleaned
+        gestage = coalesce(gestage_calculated, tpnc_gestfill_numeric)
     )
 
-#table(pregnancy_outcomes_6week$gestage, useNA = "ifany")            
+table(pregnancy_outcomes_6week$gestage, useNA = "ifany")
 
 table1 <- pregnancy_outcomes_6week %>%
     select(
@@ -518,14 +521,14 @@ adverse_outcomes <- ppw_sae_df %>%
 # id_dead_birth <- pregnancy_outcomes_6week %>%
 #     filter(tpnc_lb == "No") %>%
 #     select(clt_ptid, gestage)
-#
+# 
 # id_sae <- adverse_outcomes %>%
 #     filter(if_any(c("stillbirth", "miscarriage"), ~ . == TRUE)) %>%
 #     select(record_id)
-#
+# 
 # dead_birth_ids <- id_dead_birth$clt_ptid
 # sae_ids <- id_sae$record_id
-#
+# 
 # list(
 #     only_in_dead_birth = setdiff(dead_birth_ids, sae_ids),
 #     only_in_sae = setdiff(sae_ids, dead_birth_ids),
@@ -578,29 +581,37 @@ pregnancy_combined <- pregnancy_combined %>%
 pregnancy_combined <- pregnancy_combined %>%
     mutate(gestage_rounded = floor(gestage),
            sga = case_when(
-               gestage_rounded == 22 & tpnc_birthweight <= 0.354 ~ TRUE,
-               gestage_rounded == 23 & tpnc_birthweight <= 0.416 ~ TRUE,
-               gestage_rounded == 24 & tpnc_birthweight <= 0.473 ~ TRUE,
-               gestage_rounded == 25 & tpnc_birthweight <= 0.529 ~ TRUE,
-               gestage_rounded == 26 & tpnc_birthweight <= 0.597 ~ TRUE,
-               gestage_rounded == 27 & tpnc_birthweight <= 0.677 ~ TRUE,
-               gestage_rounded == 28 & tpnc_birthweight <= 0.770 ~ TRUE,
-               gestage_rounded == 29 & tpnc_birthweight <= 0.882 ~ TRUE,
-               gestage_rounded == 30 & tpnc_birthweight <= 1.018 ~ TRUE,
-               gestage_rounded == 31 & tpnc_birthweight <= 1.166 ~ TRUE,
-               gestage_rounded == 32 & tpnc_birthweight <= 1.335 ~ TRUE,
-               gestage_rounded == 33 & tpnc_birthweight <= 1.538 ~ TRUE,
-               gestage_rounded == 34 & tpnc_birthweight <= 1.772 ~ TRUE,
-               gestage_rounded == 35 & tpnc_birthweight <= 2.021 ~ TRUE,
-               gestage_rounded == 36 & tpnc_birthweight <= 2.261 ~ TRUE,
-               gestage_rounded == 37 & tpnc_birthweight <= 2.477 ~ TRUE,
-               gestage_rounded == 38 & tpnc_birthweight <= 2.665 ~ TRUE,
-               gestage_rounded == 39 & tpnc_birthweight <= 2.810 ~ TRUE,
-               gestage_rounded == 40 & tpnc_birthweight <= 2.904 ~ TRUE,
-               gestage_rounded == 41 & tpnc_birthweight <= 2.958 ~ TRUE,
-               gestage_rounded == 42 & tpnc_birthweight <= 2.985 ~ TRUE,
-               gestage_rounded == 43 & tpnc_birthweight <= 2.981 ~ TRUE,
-               gestage_rounded == 44 & tpnc_birthweight <= 2.952 ~ TRUE,
+               gestage_rounded == 14 & tpnc_birthweight <= 0.078 ~ TRUE,
+               gestage_rounded == 15 & tpnc_birthweight <= 0.099 ~ TRUE,
+               gestage_rounded == 16 & tpnc_birthweight <= 0.124 ~ TRUE,
+               gestage_rounded == 17 & tpnc_birthweight <= 0.155 ~ TRUE,
+               gestage_rounded == 18 & tpnc_birthweight <= 0.192 ~ TRUE,
+               gestage_rounded == 19 & tpnc_birthweight <= 0.235 ~ TRUE,
+               gestage_rounded == 20 & tpnc_birthweight <= 0.286 ~ TRUE,
+               gestage_rounded == 21 & tpnc_birthweight <= 0.345 ~ TRUE,
+               gestage_rounded == 22 & tpnc_birthweight <= 0.412 ~ TRUE,
+               gestage_rounded == 23 & tpnc_birthweight <= 0.489 ~ TRUE,
+               gestage_rounded == 24 & tpnc_birthweight <= 0.576 ~ TRUE,
+               gestage_rounded == 25 & tpnc_birthweight <= 0.673 ~ TRUE,
+               gestage_rounded == 26 & tpnc_birthweight <= 0.780 ~ TRUE,
+               gestage_rounded == 27 & tpnc_birthweight <= 0.898 ~ TRUE,
+               gestage_rounded == 28 & tpnc_birthweight <= 1.026 ~ TRUE,
+               gestage_rounded == 29 & tpnc_birthweight <= 1.165 ~ TRUE,
+               gestage_rounded == 30 & tpnc_birthweight <= 1.313 ~ TRUE,
+               gestage_rounded == 31 & tpnc_birthweight <= 1.470 ~ TRUE,
+               gestage_rounded == 32 & tpnc_birthweight <= 1.635 ~ TRUE,
+               gestage_rounded == 33 & tpnc_birthweight <= 1.807 ~ TRUE,
+               gestage_rounded == 34 & tpnc_birthweight <= 1.985 ~ TRUE,
+               gestage_rounded == 35 & tpnc_birthweight <= 2.167 ~ TRUE,
+               gestage_rounded == 36 & tpnc_birthweight <= 2.352 ~ TRUE,
+               gestage_rounded == 37 & tpnc_birthweight <= 2.537 ~ TRUE,
+               gestage_rounded == 38 & tpnc_birthweight <= 2.723 ~ TRUE,
+               gestage_rounded == 39 & tpnc_birthweight <= 2.905 ~ TRUE,
+               gestage_rounded == 40 & tpnc_birthweight <= 3.084 ~ TRUE,
+               gestage_rounded == 41 & tpnc_birthweight <= 3.084 ~ TRUE,
+               gestage_rounded == 42 & tpnc_birthweight <= 3.084 ~ TRUE,
+               gestage_rounded == 43 & tpnc_birthweight <= 3.084 ~ TRUE,
+               gestage_rounded == 44 & tpnc_birthweight <= 3.084 ~ TRUE,
                !is.na(gestage) & !is.na(tpnc_birthweight) ~ FALSE,
                TRUE ~ NA
            )
