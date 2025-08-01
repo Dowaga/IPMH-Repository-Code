@@ -13,7 +13,9 @@ source("REDCap_datapull.R")
 # load data
 rm(list = setdiff(ls(), c("costing")))
 
-# screening & enrollment - int ------------
+# screening & enrollment------------
+
+## Intervention sites -----------
 screening_int_costing <- costing %>% 
     filter(redcap_event_name == "Event 1 (Arm 1: Intervention)" & 
                study_visit == "Initial screening and enrollment") %>% 
@@ -23,33 +25,68 @@ screening_int_costing <- costing %>%
            screen_desig, screen_time_in, screen_time_out,
            room_type, room_desig, phq2, gad2, score_time_in,
            score_time_out, preg, info_time_in, info_time_out,
-           phq9, gad7, phq9_time_in, phq9_time_out,
+           phq9, gad7, phq9_time_in, phq9_time_out, clinic_time_in_int, clinic_time_out_int,
            refer_service, refer_time_in, pm_desig, pmass_time_in,
            pmass_time_out,pmsch_time_in, pmsch_time_out, telesch_time_in, telesch_time_out,
            harm_time_in, harm_time_out, eli_yn, eligi_time_in,
            eligi_time_out, enrol_yn, base_time_in,
            base_time_out, visit_time_out)
 
-## data collection table --------
-# Total N as a tibble row
+## Control sites ---------------
+screening_ctrl_costing <- costing %>%
+    filter(redcap_event_name == "Event 1 (Arm 2: Control)" & 
+               study_visit == "Initial screening and enrollment") %>%
+    filter(!is.na(pt_id_con)) %>%
+    select(date, study_site, c(98, 100:124), -visit_initial_con)
+
+### data collection table ---------
 total_summary <- tibble(
     study_site = "Overall",
     N = nrow(screening_int_costing)
 )
 
-# N per facility
 facility_summary <- screening_int_costing %>%
     group_by(study_site) %>%
     summarise(N = n(), .groups = "drop")
 
-# Combine both into one table
 summary_table <- bind_rows(total_summary, facility_summary)
 
-# Print result
-summary_table %>% 
-    kable(caption = "Summary of Initial Screening and Enrollment (Intervention Sites)") 
+summary_table <- summary_table %>%
+    mutate(Group = "Intervention")
 
-## time table---------
+total_summary_con <- tibble(
+    study_site = "Overall",
+    N = nrow(screening_ctrl_costing)
+)
+
+facility_summary_con <- screening_ctrl_costing %>%
+    group_by(study_site) %>%
+    summarise(N = n(), .groups = "drop")
+
+summary_table_con <- bind_rows(total_summary_con, facility_summary_con)
+
+summary_table_con <- summary_table_con %>%
+    mutate(Group = "Control")
+
+combined_summary <- bind_rows(summary_table, summary_table_con)
+
+combined_summary <- combined_summary %>%
+    mutate(
+        overall_flag = if_else(study_site == "Overall", 1, 0)
+    ) %>%
+    arrange(Group, desc(overall_flag), study_site) %>%
+    select(Group, study_site, N)  # Reorder columns
+
+table_combined_summary <- flextable(combined_summary) %>%
+    set_header_labels(
+        Group = "Arm",
+        study_site = "Study Site",
+        N = "Number of Participants"
+    ) %>%
+    autofit() %>% 
+    set_caption("Number of Participants by Study Arm and Site for Initial Screening and Enrollment")
+
+### time table for intervention sites ---------
 screening_int_costing <- screening_int_costing %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
                   ~ droplevels(as.factor(.))))
@@ -61,6 +98,9 @@ screening_int_costing <- screening_int_costing %>%
         score_duration     = as.numeric(score_time_out- score_time_in)*1440,
         info_duration      = as.numeric(info_time_out- info_time_in)*1440,
         phq9_duration      = as.numeric(phq9_time_out- phq9_time_in)*1440,
+        refer_start_time = coalesce(clinic_time_out_int, phq9_time_out, info_time_out),
+        refer_duration   = as.numeric(eligi_time_in - refer_start_time) * 1440,
+        clinic_duration    = as.numeric(clinic_time_out_int - clinic_time_in_int)*1440,
         pmass_duration     = as.numeric(pmass_time_out- pmass_time_in)*1440,
         pmsch_duration     = as.numeric(pmsch_time_out- pmsch_time_in)*1440,
         telesch_duration   = as.numeric(telesch_time_out- telesch_time_in)*1440,
@@ -70,6 +110,24 @@ screening_int_costing <- screening_int_costing %>%
         total_duration     = as.numeric(visit_time_out- enter_time_in)*1440
     )
 
+# examine if there are negative durations
+# screening_int_costing %>%
+#     filter(
+#         triage_duration < 0 | screen_duration < 0 | score_duration < 0 |
+#         info_duration < 0 | phq9_duration < 0 | clinic_duration < 0 |
+#         pmass_duration < 0 | pmsch_duration < 0 | telesch_duration < 0 |
+#         harm_duration < 0 | eligi_duration < 0 | baseline_duration < 0 |
+#         total_duration < 0 | refer_duration < 0
+#     )
+screening_int_costing <- screening_int_costing %>%
+    mutate(
+        refer_service = as.character(refer_service), 
+        refer_service = recode(refer_service,
+                               "Scheduling for PM+ by lay provider" = "PM+",
+                               "Scheduling for telepsychiatry by lay provider" = "Telepsychiatry",
+                               "Self-harm assessment by study staff" = "Self-harm Assessment"),
+        refer_service = replace_na(refer_service, "Refer to study eligibility")
+    )
 screening_int_table <- screening_int_costing %>%
     select(
         study_site,
@@ -79,8 +137,10 @@ screening_int_table <- screening_int_costing %>%
         room_type, room_desig,
         phq2, gad2,
         score_duration, info_duration,
-        phq9, phq9_duration,
-        gad7, refer_service,
+        phq9, gad7, 
+        phq9_duration, clinic_duration, 
+        eli_yn,
+        refer_service, refer_duration,
         pm_desig, pmass_duration, pmsch_duration,
         telesch_duration, harm_duration,
         eligi_duration, baseline_duration, total_duration
@@ -113,7 +173,10 @@ screening_int_table <- screening_int_costing %>%
             harm_duration      = "continuous",
             eligi_duration     = "continuous",
             baseline_duration  = "continuous",
-            total_duration     = "continuous"
+            total_duration     = "continuous",
+            clinic_duration    = "continuous",
+            refer_duration     = "continuous",
+            eli_yn           = "categorical"
         ),
         label = list(
             enter_desig        = "Entry staff",
@@ -130,6 +193,7 @@ screening_int_table <- screening_int_costing %>%
             phq9               = "PHQ-9 score",
             phq9_duration      = "PHQ-9 time (min)",
             gad7               = "GAD-7 score",
+            clinic_duration    = "Clinic consultation time (min)",
             refer_service      = "Referral service(s)",
             pm_desig           = "Pre-PM+ assessment staff",
             pmass_duration     = "PM+ assessment time (min)",
@@ -138,44 +202,105 @@ screening_int_table <- screening_int_costing %>%
             harm_duration      = "Self-harm assessment time (min)",
             eligi_duration     = "Eligibility assessment time (min)",
             baseline_duration  = "Baseline assessment time (min)",
-            total_duration     = "Total visit time (min)"
+            total_duration     = "Total visit time (min)",
+            refer_duration     = "Waiting time for study enrollment (min)",
+            eli_yn           = "Eligibility"
         ),
         digits = all_continuous() ~ 1,
         missing = "no"
     ) %>%
     add_n() %>% add_overall() %>% 
     bold_labels() %>% 
-    modify_caption("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites)")
+    modify_caption("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites)") 
 
-screening_int_table
+table_screening_int <- screening_int_table %>% 
+    as_flex_table() %>% 
+    add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral.")
 
-# screening & enrollment - con ------------
-screening_ctrl_costing <- costing %>%
-    filter(redcap_event_name == "Event 1 (Arm 2: Control)" & 
-               study_visit == "Initial screening and enrollment") %>%
-    filter(!is.na(pt_id_con)) %>%
-    select(date, study_site, c(96, 98:122), -visit_initial_con)
+### By refer_service ---------
+screening_int_table_by_refer <- screening_int_costing %>%
+    select(
+        enter_desig,
+        triage_desig, triage_duration,
+        screen_desig, screen_duration,
+        room_type, room_desig,
+        phq2, gad2,
+        score_duration, info_duration,
+        phq9, gad7, 
+        phq9_duration, clinic_duration, refer_service,refer_duration,
+        pm_desig, pmass_duration, pmsch_duration,
+        telesch_duration, harm_duration,
+        eligi_duration, baseline_duration, total_duration
+    ) %>%
+    tbl_summary(
+        by = refer_service,
+        statistic = list(
+            all_continuous() ~ "{mean} ({sd})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        type = list(
+            enter_desig        = "categorical",
+            triage_desig       = "categorical",
+            screen_desig       = "categorical",
+            room_type          = "categorical",
+            room_desig         = "categorical",
+            phq2               = "continuous",
+            gad2               = "continuous",
+            phq9               = "continuous",
+            gad7               = "continuous",
+            triage_duration    = "continuous",
+            screen_duration    = "continuous",
+            score_duration     = "continuous",
+            info_duration      = "continuous",
+            phq9_duration      = "continuous",
+            pmass_duration     = "continuous",
+            pmsch_duration     = "continuous",
+            telesch_duration   = "continuous",
+            harm_duration      = "continuous",
+            eligi_duration     = "continuous",
+            baseline_duration  = "continuous",
+            total_duration     = "continuous",
+            clinic_duration    = "continuous",
+            refer_duration     = "continuous"
+        ),
+        label = list(
+            enter_desig        = "Entry staff",
+            triage_desig       = "Triage staff",
+            triage_duration    = "Triage time (min)",
+            screen_desig       = "Screening staff",
+            screen_duration    = "Screening time (min)",
+            room_type          = "Room type",
+            room_desig         = "Room staff",
+            phq2               = "PHQ-2 score",
+            gad2               = "GAD-2 score",
+            score_duration     = "Scoring time (min)",
+            info_duration      = "Information & reassurance time (min)",
+            phq9               = "PHQ-9 score",
+            phq9_duration      = "PHQ-9 time (min)",
+            gad7               = "GAD-7 score",
+            clinic_duration    = "Clinic consultation time (min)",
+            pm_desig           = "Pre-PM+ assessment staff",
+            pmass_duration     = "PM+ assessment time (min)",
+            pmsch_duration     = "PM+ scheduling time (min)",
+            telesch_duration   = "Telepsychiatry time (min)",
+            harm_duration      = "Self-harm assessment time (min)",
+            eligi_duration     = "Eligibility assessment time (min)",
+            baseline_duration  = "Baseline assessment time (min)",
+            total_duration     = "Total visit time (min)",
+            refer_duration     = "Waiting time for study enrollment (min)"
+        ),
+        digits = all_continuous() ~ 1,
+        missing = "no"
+    ) %>%
+    add_n() %>% add_overall() %>% add_p() %>% 
+    bold_labels() %>% 
+    modify_caption("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites) By Referral Services") 
 
-## data collection table ---------
-# Total N as a tibble row
-total_summary_con <- tibble(
-    study_site = "Overall",
-    N = nrow(screening_ctrl_costing)
-)
+table_screening_int_by_refer <- screening_int_table_by_refer %>% 
+    as_flex_table() %>% 
+    add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral.")
 
-# N per facility
-facility_summary_con <- screening_ctrl_costing %>%
-    group_by(study_site) %>%
-    summarise(N = n(), .groups = "drop")
-
-# Combine both into one table
-summary_table_con <- bind_rows(total_summary_con, facility_summary_con)
-
-# Print result
-summary_table_con %>% 
-    kable(caption = "Summary of Initial Screening and Enrollment (Control Sites)") 
-
-## Time table ---------
+### Time table for control sites ---------
 screening_ctrl_costing <- screening_ctrl_costing %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
                   ~ droplevels(as.factor(.))))
@@ -186,11 +311,19 @@ screening_ctrl_costing <- screening_ctrl_costing %>%
         screen_duration_con   = as.numeric(screen_time_out_con - screen_time_in_con)*1440,
         score_duration_con    = as.numeric(score_time_out_con - score_time_in_con)*1440,
         clinic_duration_con   = as.numeric(clinic_time_out_con - clinic_time_in_con)*1440,
-        refer_duration_con    = as.numeric(visit_time_out_con - refer_time_in_con)*1440,
+        refer_duration_con    = as.numeric(eligi_time_in_con - refer_time_in_con)*1440,
         eligi_duration_con    = as.numeric(eligi_time_out_con - eligi_time_in_con)*1440,
         baseline_duration_con = as.numeric(base_time_out_con - base_time_in_con)*1440,
         total_duration_con    = as.numeric(visit_time_out_con - enter_time_in_con)*1440
     )
+
+# examine if there are negative durations
+# screening_ctrl_costing %>%
+#     filter(
+#         triage_duration_con < 0 | screen_duration_con < 0 | score_duration_con < 0 |
+#         clinic_duration_con < 0 | refer_duration_con < 0 | eligi_duration_con < 0 |
+#         baseline_duration_con < 0 | total_duration_con < 0
+#     )
 
 screening_ctrl_table <- screening_ctrl_costing %>%
     select(study_site,
@@ -239,8 +372,8 @@ screening_ctrl_table <- screening_ctrl_costing %>%
             score_duration_con    = "PHQ2/GAD2 scoring time (min)",
             clinic_duration_con   = "Clinic consultation time (min)",
             eli_yn_con            = "Eligibility",
-            refer_desig           = "Referral staff",
-            refer_duration_con    = "Referral time (min)",
+            refer_desig           = "Study referral staff",
+            refer_duration_con    = "Waiting time for study enrollment (min)",
             eligi_duration_con    = "Eligibility assessment time (min)",
             baseline_duration_con = "Baseline assessment time (min)",
             total_duration_con    = "Total screening & enrollment time (min)"
@@ -252,7 +385,108 @@ screening_ctrl_table <- screening_ctrl_costing %>%
     bold_labels() %>% 
     modify_caption("Summary of Time Used for Initial Screening and Enrollment (Control Sites)")
 
-screening_ctrl_table
+table_screening_ctrl <- screening_ctrl_table %>% 
+    as_flex_table() 
+
+## Compare intervention and control sites ---------
+# Add 'arm' label
+screening_int_costing <- screening_int_costing %>%
+    mutate(arm = "Intervention") 
+
+screening_ctrl_costing <- screening_ctrl_costing %>%
+    mutate(arm = "Control") %>%
+    rename(
+        triage_desig = triage_desig_con,
+        triage_duration = triage_duration_con,
+        screen_desig = screen_desig_con,
+        screen_duration = screen_duration_con,
+        room_type = room_type_con,
+        phq2 = phq2_cont,
+        gad2 = gad2_cont,
+        score_duration = score_duration_con,
+        clinic_duration = clinic_duration_con,
+        refer_duration = refer_duration_con,
+        eligi_duration = eligi_duration_con,
+        baseline_duration = baseline_duration_con,
+        total_duration = total_duration_con
+    )
+
+common_vars <- c(
+    "arm", "study_site",
+    "triage_desig", "triage_duration",
+    "screen_desig", "screen_duration",
+    "room_type",
+    "phq2", "gad2", "score_duration",
+    "clinic_duration",
+    "refer_duration",
+    "eligi_duration", "baseline_duration",
+    "total_duration"
+)
+
+int_data <- screening_int_costing %>% select(any_of(common_vars))
+ctrl_data <- screening_ctrl_costing %>% select(any_of(common_vars))
+combined_data <- bind_rows(int_data, ctrl_data)
+
+comparison_table <- combined_data %>%
+    select (
+        arm, 
+        triage_desig, triage_duration,
+        screen_desig, screen_duration,
+        room_type,
+        phq2, gad2, score_duration,
+        clinic_duration,
+        refer_duration,
+        eligi_duration, baseline_duration,
+        total_duration
+    ) %>% 
+    tbl_summary(
+        by = arm,
+        statistic = list(
+            all_continuous() ~ "{mean} ({sd})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        label = list(
+            triage_desig       = "Triage staff",
+            triage_duration    = "Triage time (min)",
+            screen_desig       = "Screening staff",
+            screen_duration    = "Screening time (min)",
+            room_type          = "Room type",
+            phq2               = "PHQ-2 score",
+            gad2               = "GAD-2 score",
+            score_duration     = "Scoring time (min)",
+            clinic_duration    = "Clinic time (min)",
+            refer_duration     = "Waiting time for study eligibility (min)",
+            eligi_duration     = "Eligibility time (min)",
+            baseline_duration  = "Baseline time (min)",
+            total_duration     = "Total visit time (min)"
+        ),
+        type = list(
+            triage_desig       = "categorical",
+            screen_desig       = "categorical",
+            room_type          = "categorical",
+            phq2               = "continuous",
+            gad2               = "continuous",
+            triage_duration    = "continuous",
+            screen_duration    = "continuous",
+            score_duration     = "continuous",
+            clinic_duration    = "continuous",
+            refer_duration     = "continuous",
+            eligi_duration     = "continuous",
+            baseline_duration  = "continuous",
+            total_duration     = "continuous"
+        ),
+        digits = all_continuous() ~ 1,
+        missing = "no"
+    ) %>%
+    add_n() %>%
+    add_overall() %>%
+    add_p() %>%
+    bold_labels() %>%
+    modify_caption("Comparison of Screening & Enrollment by Study Site (All Arms)") 
+
+table_screening_comparison <- comparison_table %>%
+    as_flex_table() %>% 
+    add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral among intervention sites.")
 
 # PM+ ---------------
 pm_plus_costing <- costing %>%
@@ -278,8 +512,9 @@ facility_summary_pm <- pm_plus_costing %>%
 summary_table_pm <- bind_rows(total_summary_pm, facility_summary_pm)
 
 # Print result
-summary_table_pm %>% 
-    kable(caption = "Summary of PM+ Sessions (Intervention Sites)")
+table_pm_summary <- flextable(summary_table_pm) %>%
+    autofit() %>% 
+    set_caption("Number of Participants for PM+")
 
 ## Time table ---------
 pm_plus_costing <- pm_plus_costing %>%
@@ -364,7 +599,8 @@ pm_summary_table <- pm_plus_costing %>%
     bold_labels() %>% 
     modify_caption("Summary of PM+ Sessions (Intervention Sites)")
 
-pm_summary_table
+table_pm_costing <- pm_summary_table %>% 
+    as_flex_table() 
 
 # telepsychiatry ------------------
 telepsychiatry_costing <- costing %>%
@@ -390,8 +626,9 @@ facility_summary_tele <- telepsychiatry_costing %>%
 summary_table_tele <- bind_rows(total_summary_tele, facility_summary_tele)
 
 # Print result
-summary_table_tele %>% 
-    kable(caption = "Summary of Telepsychiatry Sessions (Intervention Sites)") 
+table_telepsychiatry_summary <- flextable(summary_table_tele) %>%
+    autofit() %>% 
+    set_caption("Number of Participants for Telepsychiatry Sessions") 
 
 ## Time table ---------
 telepsychiatry_costing <- telepsychiatry_costing %>%
@@ -431,13 +668,142 @@ telepsychiatry_table <- telepsychiatry_costing %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    bold_labels()
+    bold_labels() %>% 
+    modify_caption("Summary of Telepsychiatry Sessions (Intervention Sites)")
 
-telepsychiatry_table
-
-#did not break down due to very small sample size.
+table_telepsychiatry_costing<- telepsychiatry_table %>% 
+    as_flex_table() 
 
 # Audit and Feedback ------------------
 audit_feedback_costing <- costing %>%
-    filter(study_visit == "Audit and Feedback") 
+    filter(study_visit == "Audit and feedback") 
 
+audit_feedback_costing <- audit_feedback_costing %>%
+    mutate(arm = if_else(
+        redcap_event_name == "Event 1 (Arm 1: Intervention)", "Intervention", "Control"
+    )) %>%
+    select(date, study_site, arm, part_num, record_id,
+           starts_with("af_"))
+
+## Data collection table for audit and feedback ----------
+total_summary_af <- audit_feedback_costing %>%
+    group_by(arm) %>%
+    summarise(study_site = "Overall", N = n(), .groups = "drop")
+
+facility_summary_af <- audit_feedback_costing %>%
+    group_by(arm, study_site) %>%
+    summarise(N = n(), .groups = "drop")
+
+summary_table_af <- bind_rows(total_summary_af, facility_summary_af) %>%
+    arrange(arm, desc(study_site == "Overall"), study_site)
+    
+table_audit_feedback_summary<- flextable(summary_table_af) %>%
+    autofit() %>%
+    set_caption("Number of Participants in Audit and Feedback by Arm and Site")
+
+## Time table for audit and feedback ----------
+audit_feedback_costing <- audit_feedback_costing %>%
+    mutate(across(where(~ is.character(.) || is.factor(.)), 
+                  ~ droplevels(as.factor(.))))
+
+audit_feedback_costing <- audit_feedback_costing %>%
+    mutate(
+        af_analysis_duration = difftime(af_analysis_time_out, af_analysis_time_in, units = "mins") %>% as.numeric(),
+        af_develop_duration = difftime(af_develop_time_out, af_develop_time_in, units = "mins") %>% as.numeric(),
+        af_schedule_duration = as.numeric(af_sche_time_out - af_sche_time_in)*1440,
+        af_hurdle_duration = as.numeric(af_hurdle_time_out - af_hurdle_time_in)*1440,
+        af_identify_duration = as.numeric(af_identify_time_out - af_identify_time_in)*1440,
+        af_refresh_duration = difftime(af_refresh_time_out, af_refresh_time_in, units = "mins") %>% as.numeric(),
+        af_map_duration = difftime(af_map_time_out, af_map_time_in, units = "mins") %>% as.numeric(),
+        af_map2_duration = as.numeric(af_map2_time_out - af_map2_time_in)*1440,
+        af_implement_duration = as.numeric(af_imp_time_out - af_imp_time_in)*1440,
+        af_feedback_duration = difftime(af_feedback_time_out, af_feedback_time_in, units = "mins") %>% as.numeric(),
+        af_session_duration = rowSums(across(c(
+            af_hurdle_duration, af_refresh_duration, 
+            af_map_duration, af_map2_duration, 
+            af_implement_duration
+        )), na.rm = TRUE),
+        af_total_duration = rowSums(across(c(
+            af_analysis_duration, af_develop_duration, 
+            af_schedule_duration, af_hurdle_duration, 
+            af_identify_duration, af_refresh_duration, 
+            af_map_duration, af_map2_duration, 
+            af_implement_duration, af_feedback_duration
+        )), na.rm = TRUE)
+    )
+
+audit_feedback_table <- audit_feedback_costing %>%
+    select(arm, part_num, 
+        af_analysis_desig, af_analysis_duration, 
+        af_develop_desig, af_develop_duration,
+        af_sche_desig, af_schedule_duration, 
+        af_hurdle_desig, af_hurdle_duration,
+        #af_identify_desig,
+        #af_identify_duration, 
+        #af_refresh_desig,
+        #af_refresh_duration, 
+        af_map_desig,
+        af_map_duration, 
+        af_map2_desig, af_map2_duration,
+        af_imp_desig,
+        af_implement_duration, 
+        af_feedback_desig,
+        af_feedback_duration,
+        af_session_duration, af_total_duration,
+    ) %>%
+    tbl_summary(
+        by = arm,
+        statistic = list(
+            all_continuous() ~ "{mean} ({sd})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        type = list(
+            study_site = "categorical",
+            af_analysis_duration = "continuous",
+            af_develop_duration = "continuous",
+            af_schedule_duration = "continuous",
+            af_hurdle_duration = "continuous",
+            af_identify_duration = "continuous",
+            af_refresh_duration = "continuous",
+            af_map_duration = "continuous",
+            af_map2_duration = "continuous",
+            af_implement_duration = "continuous",
+            af_feedback_duration = "continuous",
+            af_session_duration = "continuous",
+            af_total_duration = "continuous"
+        ),
+        label = list(
+            part_num = "Participant Number",
+            af_analysis_desig = "Report Generation Staff",
+            af_analysis_duration = "Report Generation Duration (min)",
+            af_develop_desig = "Presentation Development Staff",
+            af_develop_duration = "Presentation Development Duration (min)",
+            af_sche_desig = "Scheduling Staff",
+            af_schedule_duration = "Scheduling Duration (min)",
+            af_hurdle_desig = "Discussion Leading Staff",
+            af_hurdle_duration = "Discussion Leading Duration (min)",
+            #af_identify_desig = "Refresher Identification Staff",
+            #af_identify_duration = "Refresher Identification Duration (min)",
+            #af_refresh_desig = "Refresher Development Staff",
+            #af_refresh_duration = "Refresh Development Duration (min)",
+            af_map_desig = "Map Revisit Staff",
+            af_map_duration = "Map Revisit Duration (min)",
+            af_map2_desig = "Map Updating Staff",
+            af_map2_duration = "Map Updating Duration (min)",
+            af_imp_desig = "Implementation Strategy Reinforcement Staff",
+            af_implement_duration = "Implementation Strategy Reinforcement Duration (min)",
+            af_feedback_desig = "Feedback Relay Staff",
+            af_feedback_duration = "Feedback Relay Duration (min)",
+            af_session_duration = "Session Total Duration (min)",
+            af_total_duration = "Total Audit & Feedback Duration (min)"
+        ),
+        digits = all_continuous() ~ 1,
+        missing = "no"
+    ) %>%
+    add_n() %>% add_overall() %>% add_p() %>%
+    bold_labels() %>% 
+    modify_caption("Comparison of Audit and Feedback Time between arms")
+
+table_audit_feedback_costing<- audit_feedback_table %>%
+    as_flex_table() %>% 
+    add_footer_lines("Note: Total Audit & Feedback Duration includes all components from analysis to feedback.")
