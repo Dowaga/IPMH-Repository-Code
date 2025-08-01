@@ -215,6 +215,7 @@ screening_int_table <- screening_int_costing %>%
 
 table_screening_int <- screening_int_table %>% 
     as_flex_table() %>% 
+    autofit() %>% 
     add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral.")
 
 ### By refer_service ---------
@@ -298,6 +299,7 @@ screening_int_table_by_refer <- screening_int_costing %>%
 
 table_screening_int_by_refer <- screening_int_table_by_refer %>% 
     as_flex_table() %>% 
+    autofit() %>%
     add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral.")
 
 ### Time table for control sites ---------
@@ -386,7 +388,9 @@ screening_ctrl_table <- screening_ctrl_costing %>%
     modify_caption("Summary of Time Used for Initial Screening and Enrollment (Control Sites)")
 
 table_screening_ctrl <- screening_ctrl_table %>% 
-    as_flex_table() 
+    as_flex_table() %>% 
+    autofit()
+
 
 ## Compare intervention and control sites ---------
 # Add 'arm' label
@@ -486,6 +490,7 @@ comparison_table <- combined_data %>%
 
 table_screening_comparison <- comparison_table %>%
     as_flex_table() %>% 
+    autofit() %>%
     add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral among intervention sites.")
 
 # PM+ ---------------
@@ -600,7 +605,8 @@ pm_summary_table <- pm_plus_costing %>%
     modify_caption("Summary of PM+ Sessions (Intervention Sites)")
 
 table_pm_costing <- pm_summary_table %>% 
-    as_flex_table() 
+    as_flex_table() %>% 
+    autofit()
 
 # telepsychiatry ------------------
 telepsychiatry_costing <- costing %>%
@@ -672,7 +678,8 @@ telepsychiatry_table <- telepsychiatry_costing %>%
     modify_caption("Summary of Telepsychiatry Sessions (Intervention Sites)")
 
 table_telepsychiatry_costing<- telepsychiatry_table %>% 
-    as_flex_table() 
+    as_flex_table() %>% 
+    autofit()
 
 # Audit and Feedback ------------------
 audit_feedback_costing <- costing %>%
@@ -806,4 +813,5 @@ audit_feedback_table <- audit_feedback_costing %>%
 
 table_audit_feedback_costing<- audit_feedback_table %>%
     as_flex_table() %>% 
+    autofit() %>%
     add_footer_lines("Note: Total Audit & Feedback Duration includes all components from analysis to feedback.")
