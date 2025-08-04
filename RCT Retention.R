@@ -7,7 +7,7 @@ rm(list = ls())
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
-pacman::p_load(googledrive, googlesheets4, readxl,dplyr,purrr, officerr)
+pacman::p_load(googledrive, googlesheets4, readxl,dplyr,purrr, officer)
 
 #----------------------------------------------------------------
 
@@ -65,7 +65,7 @@ walk2(sheet_list_clean, names(sheet_list_clean), function(df, name) {
          envir = .GlobalEnv
       )
    } else {
-      message("Skipping '", name, "' â€” missing required columns.")
+      message("Skipping '", name, "' â missing required columns.")
    }
 })
 
@@ -198,8 +198,8 @@ View(all_deliveries)
 # -----------------------------------------
 # Filter participants whose 6-weeks or 14-weeks window closes in a week
 # Define the date window
-today <- as.Date("2025-07-28")
-next_friday <- as.Date("2025-08-01")
+today <- as.Date("2025-08-04")
+next_friday <- as.Date("2025-08-08")
 
 closing_soon <- all_deliveries %>%
     filter(
@@ -213,24 +213,33 @@ window_summary <- all_deliveries %>%
     group_by(Facility) %>% 
     summarise(
         `Week 6 Visits` = sum(wk6_window_close >= today & wk6_window_close <= next_friday, na.rm = TRUE),
-        `Week 14 Visits` = sum(wk14_window_close >= today & wk14_window_close <= next_friday, na.rm = TRUE)
-    ) %>%
-    adorn_totals(name = "Total")%>%
-    gt() %>% 
-    tab_caption("Follow-ups Due by Friday 2025-08-01")%>%
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_body(
-            rows = Facility == "Total"
-        )
-    ) 
+        `Week 14 Visits` = sum(wk14_window_close >= today & wk14_window_close <= next_friday, na.rm = TRUE),
+        `Month 6 Visits` = sum(mo6_window_open <= next_friday & mo6_window_close <= next_friday, na.rm = TRUE)    
+        ) %>%
+    mutate(`Total Visits` = `Week 6 Visits` + `Week 14 Visits` + `Month 6 Visits`) %>% 
+    adorn_totals(name = "Total")
 
-window_summary
+# Convert to flextable
+ft <- flextable(window_summary)
+ft <- theme_vanilla(ft)
+ft <- bold(ft, i = which(window_summary$Facility == "Total"), bold = TRUE)
+ft <- autofit(ft)
+ft <- set_caption(ft, "Follow-ups Due Between August 4 and August 8, 2025")
+
+# Create Word document
+doc <- read_docx() %>%
+    body_add_par("Follow-ups Due Between August 4 and August 8, 2025", style = "heading 1") %>%
+    body_add_par("This summary includes participants whose follow-up windows (Week 6, Week 14, or Month 6) fall between August 4 and August 8, 2025.", style = "Normal") %>%
+    body_add_flextable(ft)
+
+# Save document
+print(doc, target = "Follow-up Summary for this Week.docx")
+
 
 
 # Summary of retentions to be affected by study activities hault
-start_date <- as.Date("2025-06-30")
-end_date <- as.Date("2025-07-16")
+start_date <- as.Date("2025-08-04")
+end_date <- as.Date("2025-08-08")
 
 pending_followups <- all_deliveries %>%
     filter(attended_6wks == 0) %>%
