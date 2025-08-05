@@ -3,8 +3,9 @@ title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
- word_document
+ #word_document
   #pdf_document
+  html_document
 ---
 
 ```{r setup, echo = F, include = F}
@@ -14,14 +15,6 @@ rm(list = ls())
 source("Datateam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
-
-```
-
-
-```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
-
-knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
-
 ```
 
 # Enrollment Status
@@ -78,7 +71,6 @@ source("Consort.R")
 #consort_diagram for weekly reports
 consort_per
 ```
-
 
 ```{r Reasons for ineligibility or not enrolled, message=FALSE, warning=FALSE, include=FALSE}
 
@@ -179,7 +171,11 @@ Enrollments
 ```{r Follow-up Tracking, echo=FALSE, message=FALSE, warning=FALSE}
 #source("PPW RCT follow up.R")
 #kable(combined_summary, 
+<<<<<<< HEAD
      # caption = "Summary of Follow-up Tracking by Facility")
+=======
+    #  caption = "Summary of Follow-up Tracking by Facility")
+>>>>>>> 1dacc39f1c7b2e1bb3d9caa0c5f28432e9db8843
 
 ```
 
@@ -370,7 +366,8 @@ pm_counts <- pm_survey_df %>%
 
 #### PM+ referral QCs-------------------------------------------------------
 merged_pm <- pm_eligible %>% 
-    full_join(pm_counts, by = c("clt_study_site" = "pm_facility"))
+    full_join(pm_counts, by = c("clt_study_site" = "pm_facility")) %>%
+    mutate(Surplus = `PM+ Abstracted`- `PM+ Eligible`)
 
 
 ### Those that are eligible to PM+, but not in the PM+ Survey
@@ -393,7 +390,7 @@ eligible_no_survey <- eligible_pm %>%
 setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
 
 wrong_pm_survey <- pm_survey_df %>% 
-    filter(pm_ptid%in% c(21177049, 21010085, 21094053, 21073077, 21229516, 21198004))
+    filter(pm_ptid%in% c(21177049, 21031052, 21010085, 21094053, 21073077, 21229516, 21198004, 21041517, 21229608))
 ```
 
 
@@ -432,6 +429,10 @@ mutate(facility = str_sub(pm_ptid, 3, 4)) %>%
 
 pm_session_wide <- pm_session_wide %>% 
     mutate(`Pre-intervention PSYCHLOPS measurement` = ifelse(`Pre-intervention PSYCHLOPS measurement` == 1, "Yes", "No"))
+
+# Those who completed Session 5 without Post-intervention PSYCHLOPS measurement
+post_pm_measu <- pm_session_wide %>% 
+    filter(`Session 5 content` == 1 & `Post-intervention PSYCHLOPS measurement` == 0)
 
 #--------------------------------------------------------
 pm_session_wide %>% 
@@ -479,7 +480,6 @@ psychlops_scores <- pm_survey_df %>%
 psychlops_scores
 
 ```
-
 
 ```{r None study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
     # None study participants in PM+
@@ -543,7 +543,6 @@ session_wide %>%
 
 ```
 
-
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
 telepsych_referrals <- pm_telep_df %>% 
     filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
@@ -564,7 +563,6 @@ telepsych_referrals %>%
     tab_options(
         table.font.size = px(12))
 ```
-
 
 ```{r PM+ and Telepsychiatry Referral QCs, message=FALSE, warning=FALSE, include=FALSE}
 referral_qc <- pm_telep_df %>% 
@@ -737,6 +735,7 @@ table6
 ```{r PM+ Participation, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```
+<<<<<<< HEAD
 
 
 
@@ -746,3 +745,5 @@ table7
 
 
 
+=======
+>>>>>>> 1dacc39f1c7b2e1bb3d9caa0c5f28432e9db8843

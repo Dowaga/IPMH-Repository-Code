@@ -6,6 +6,7 @@
 
 # Setup ------------------------------------------------------------------------
 
+rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
@@ -33,7 +34,10 @@ pm_df <- pm_abstractions %>%
     select(pm_ptid, ipmh_participant)
 
 # telepsy
-telepsych$tele_ancid[1] <- telepsych$tele_ancid[4] 
+telepsych <- telepsych %>%
+    mutate(tele_ancid = if_else(row_number() == 1, 
+                                tele_ancid[4], tele_ancid))
+
 
 telepsych_df <- telepsych %>%
     filter(pt_attend == "Yes") %>%               # keep only attended

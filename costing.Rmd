@@ -1,0 +1,91 @@
+---
+title: "Costing Data Report"
+author: "Yuwei Wang"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE, warning = FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+source("Costing.R")
+
+# Set flextable default to full width for Word
+library(flextable)
+set_flextable_defaults(
+  layout = "autofit",
+  width = 1
+)
+
+```
+
+## Initial Screening & Enrollment
+
+```{r initial-screening-enrollment, echo=FALSE, warning = FALSE, message=FALSE}
+table_combined_summary
+```
+
+\pagebreak
+
+```{r initial-screening-enrollment2, echo=FALSE, warning = FALSE, message=FALSE}
+table_screening_int
+```
+
+\pagebreak
+
+```{r initial-screening-enrollment3, echo=FALSE, warning = FALSE, message=FALSE}
+table_screening_int_by_refer
+```
+
+\pagebreak
+
+```{r initial-screening-enrollment4, echo=FALSE, warning = FALSE, message=FALSE}
+table_screening_ctrl
+```
+
+\pagebreak
+
+```{r initial-screening-enrollment5, echo=FALSE, warning = FALSE, message=FALSE}
+table_screening_comparison
+```
+
+\pagebreak
+
+## PM+
+
+```{r pm-plus, echo=FALSE, warning = FALSE, message=FALSE}
+table_pm_summary
+```
+
+\pagebreak
+
+```{r pm-plus2, echo=FALSE, warning = FALSE, message=FALSE}
+table_pm_costing
+```
+
+\pagebreak
+
+## Telepsychiatry
+
+```{r telepsychiatry, echo=FALSE, warning = FALSE, message=FALSE}
+table_telepsychiatry_summary
+```
+
+\pagebreak
+```{r telepsychiatry2, echo=FALSE, warning = FALSE, message=FALSE}
+table_telepsychiatry_costing
+```
+
+\pagebreak
+
+## Audit and Feedback
+
+```{r audit-feedback, echo=FALSE, warning = FALSE, message=FALSE}
+table_audit_feedback_summary
+```
+
+\pagebreak
+
+```{r audit-feedback2, echo=FALSE, warning = FALSE, message=FALSE}
+table_audit_feedback_costing
+```
