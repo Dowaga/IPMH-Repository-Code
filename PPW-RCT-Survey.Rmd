@@ -3,9 +3,9 @@ title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
- #word_document
+ word_document
   #pdf_document
-  html_document
+  #html_document
 ---
 
 ```{r setup, echo = F, include = F}
@@ -171,11 +171,11 @@ Enrollments
 ```{r Follow-up Tracking, echo=FALSE, message=FALSE, warning=FALSE}
 #source("PPW RCT follow up.R")
 #kable(combined_summary, 
-<<<<<<< HEAD
+# HEAD
      # caption = "Summary of Follow-up Tracking by Facility")
-=======
+
     #  caption = "Summary of Follow-up Tracking by Facility")
->>>>>>> 1dacc39f1c7b2e1bb3d9caa0c5f28432e9db8843
+# 1dacc39f1c7b2e1bb3d9caa0c5f28432e9db8843
 
 ```
 
