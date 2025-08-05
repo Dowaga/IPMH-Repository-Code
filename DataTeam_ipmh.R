@@ -29,7 +29,7 @@ if (grepl("DAMARIS", current_wd)) {
 
 ### Working Directory Check ###
 
-if(endsWith(current_wd, "IPMH-Repository-Code")) {ipmh_wd <- current_wd
+if(endsWith(current_wd, "IPMH Code Repository")) {ipmh_wd <- current_wd
 } else {
   print("WARNING: Incorrect Working Directory")
 } 
