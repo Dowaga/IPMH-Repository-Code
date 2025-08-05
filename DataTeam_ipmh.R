@@ -2,7 +2,7 @@
 
 da_users <- data.frame(Analyst = c("David Owaga", "Lincoln Pothan", "Yuwei Wang", "David OWaga"),
                        github_user = c("Dowaga", "lpothan", "yuwei-eve", "Dowaga"),
-                       git_filepath = c("C:/Program Files/Git/", "/usr/local/bin/git", 
+                       git_filepath = c("C:/Program Files/Git/cmd/git.exe", "/usr/local/bin/git", 
                                         "usr/local/bin/git", "C:/Program Files/Git/cmd/git.exe"),
                        ipmh_filepath = c("C:/Users/DAMARIS/UW/ngumbau - IPMH study", 
                                          "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/IPMH study",
@@ -27,7 +27,7 @@ if (grepl("DAMARIS", current_wd)) {
 
 ### Working Directory Check ###
 
-if(endsWith(current_wd, "IPMH-Repository-Code")) {ipmh_wd <- current_wd
+if(endsWith(current_wd, "IPMH Repository Code")) {ipmh_wd <- current_wd
 } else {
   print("WARNING: Incorrect Working Directory")
 } 
