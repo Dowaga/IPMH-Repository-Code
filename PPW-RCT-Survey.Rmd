@@ -50,7 +50,6 @@ setdiff(consent_id$partipant_id, survey_id$clt_ptid)
 ### Those that are in the RCT, while missing in Consent database
 setdiff(survey_id$clt_ptid, consent_id$partipant_id) 
 
-
 # Split data into Enrollment and 6 Weeks groups
 enrolled <- ppw_rct_df %>% 
     filter(clt_visit == "Enrollment") %>% 
@@ -178,9 +177,9 @@ Enrollments
 ## Follow-up Tracking Per Facility
 
 ```{r Follow-up Tracking, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
-kable(combined_summary, 
-      caption = "Summary of Follow-up Tracking by Facility")
+#source("PPW RCT follow up.R")
+#kable(combined_summary, 
+     # caption = "Summary of Follow-up Tracking by Facility")
 
 ```
 
@@ -194,7 +193,8 @@ kable(combined_summary,
 demographics_df <- ppw_rct_df %>% 
     filter(clt_visit == "Enrollment") %>%
     filter(str_detect((redcap_event_name), "Enrollment")) %>%
-    select(clt_date,starts_with("dem_"), demographics_complete)%>% 
+    select(clt_date,starts_with("dem_"), demographics_complete, 
+           med_pre_preg, med_num_preg)%>% 
      mutate(dem_age = if_else(
          dem_dob_uk == "Yes",
          floor(time_length(interval(dem_dob, clt_date), "years")),
@@ -217,10 +217,11 @@ demographics_df <- ppw_rct_df %>%
 # basic demo table
 demographics_df %>% tbl_summary(
     sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
-    include=c(dem_age, dem_current_partner, dem_maritalstat,
-    dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
-    dem_employment, dem_household_num, dem_housesleep, 
-    dem_houserooms,dem_traveltime_min),
+    include=c(dem_age, med_pre_preg, med_num_preg,
+              dem_current_partner, dem_maritalstat, dem_marriage, 
+              dem_pc_residence, dem_current_school, dem_school,
+              dem_employment, dem_household_num, dem_housesleep,
+              dem_houserooms,dem_traveltime_min),
     label = list(dem_age ~ "Age (Years)",
                  dem_current_partner ~ "Do you currently have a partner (Yes)",
                  dem_employment ~ "Do you have regular employment (Yes)",
@@ -232,7 +233,9 @@ demographics_df %>% tbl_summary(
                  dem_household_num ~ "Number of people in Household",
                  dem_housesleep ~ "Number of people sleep in same house",
                  dem_houserooms ~ "Rooms in the house most often sleep in",
-                 dem_traveltime_min ~ "Time to the Clinic (Minutes"),
+                 dem_traveltime_min ~ "Time to the Clinic (Minutes",
+                 med_pre_preg ~ "Ever been pregnant (Yes)",
+                 med_num_preg ~ "Total Pregnancies (incl.current)"),
     missing = "no",
     digits = list(all_continuous() ~ 1), 
     type = list(dem_age ~ "continuous", 
@@ -330,7 +333,9 @@ pm_telep_df <- pm_telep_df %>%
                                 abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
                                 TRUE ~ NA_character_))
 
-
+# Not Referred Correctly
+correct_referra_qc <- pm_telep_df %>% 
+    filter(eligible_for == "Telepsychiatry" & referred_to =="PM+")
 
 #PM+ participants
 pm_plus_df <- pm_telep_df %>% 
@@ -661,6 +666,7 @@ sae_report <- sae_df %>%
 sae_report
 ```
 
+
 ```{r Study Staffs PHQ9 and GAD7 Screening Yield, echo=FALSE, message=FALSE, warning=FALSE, include = F}
 # source("Study Staffs PHQ9 and GAD7 Screening Yield.R")
 # fc_yield_summary
@@ -685,7 +691,13 @@ table1
 ## Infant Outcomes
 
 ```{r Infant Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
 table2a
+```
+
+
+```{r Infant Outcomes2, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
 table2b
 ```
 
@@ -694,7 +706,13 @@ table2b
 ## Clinical Outcomes
 
 ```{r Clinical Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
 table3
+```
+
+\newpage
+```{r Clinical Outcomes1, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
 table4
 ```
 
@@ -719,3 +737,12 @@ table6
 ```{r PM+ Participation, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```
+
+
+
+
+
+
+
+
+
