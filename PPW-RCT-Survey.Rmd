@@ -572,6 +572,7 @@ referral_qc <- pm_telep_df %>%
 
 ```
 
+
 ```{r PM+ Follow-Up, message=FALSE, warning=FALSE, include=FALSE}
 none_study_part <- pm_survey_df %>% 
     filter(is.na(pm_ptid))
@@ -735,15 +736,3 @@ table6
 ```{r PM+ Participation, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```
-<<<<<<< HEAD
-
-
-
-
-
-
-
-
-
-=======
->>>>>>> 1dacc39f1c7b2e1bb3d9caa0c5f28432e9db8843
