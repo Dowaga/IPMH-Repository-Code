@@ -7,7 +7,6 @@ rm(list = ls())
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
-pacman::p_load(googledrive, googlesheets4, readxl,dplyr,purrr, officer)
 
 #----------------------------------------------------------------
 
@@ -131,41 +130,85 @@ all_deliveries <- all_deliveries %>%
       mo6_window_close = delivery_date + weeks(30)
    )
 
-wk6_retention_overall<- all_deliveries %>%
-    reframe(
-        `Window Open` = sum(wk6_window_open > today()),
-        Expected = sum(wk6_window_close < today()|attended_6wks == 1),
-        Attended = sum(attended_6wks == 1),
-        `Percentage Attended` = round(Attended / Expected * 100, 1)
+# Read PPW RCT Database and extracted those who attended their visits
+visits <- ppw_rct_df %>% 
+    filter(grepl("^6 Weeks|^14 Weeks", redcap_event_name),
+           is.na(redcap_repeat_instance),
+           clt_visit %in% c("6 weeks post-partum")|
+               clt_visit %in% c("14 weeks post-partum"))
+
+attendance_df <- visits %>%
+    filter(!mv_visit %in% "6 weeks post-partum") %>% 
+    mutate(
+        six_weeks_flag = if_else(grepl("^6 Weeks", redcap_event_name), 1, 0),
+        fourteen_weeks_flag = if_else(grepl("^14 Weeks", redcap_event_name), 1, 0)
+    ) %>%
+    group_by(record_id) %>%
+    summarise(
+        six_weeks_flag = max(six_weeks_flag, na.rm = TRUE),
+        fourteen_weeks_flag = max(fourteen_weeks_flag, na.rm = TRUE),
+        .groups = "drop"
     )
 
+all_deliveries <- all_deliveries %>% 
+    left_join(attendance_df, by = c("ptid" = "record_id"))
 
-wk6_retention_summary <- all_deliveries %>%
-   group_by(Facility) %>% 
-   reframe(
-      `Window Open` = sum(wk6_window_open > today()),
-      Expected = sum(wk6_window_close < today()|attended_6wks == 1),
-      Attended = sum(attended_6wks == 1),
-      `Percentage Attended` = round(Attended / Expected * 100, 1)
-   )
-
-# 14 Wks visit Retention
-wk14_retention_overall <- all_deliveries %>%
+#### 6 Wks Overall retention
+wk6_overall_retention <- all_deliveries %>%
+    #group_by(Facility) %>% 
     reframe(
-        `Window Open` = sum(wk14_window_open > today()),
-        Expected = sum(wk14_window_close < today()|attended_14wks == 1),
-        Attended = sum(attended_14wks == 1),
+        `Window not Closed` = sum(wk6_window_open > today()),
+        Expected = sum(wk6_window_close < today()|six_weeks_flag == 1, na.rm = TRUE),
+        Attended = sum(six_weeks_flag == 1, na.rm = TRUE),
+        `Percentage Attended` = round(Attended / Expected * 100, 1))
+
+wk6_overall_retention
+
+#### 6 Wks retention by Facility
+wk6_facility_retention <- all_deliveries %>%
+    group_by(Facility) %>% 
+    reframe(
+        `Window not Closed` = sum(wk6_window_open > today()),
+        Expected = sum(wk6_window_close < today()|six_weeks_flag == 1, na.rm = TRUE),
+        Attended = sum(six_weeks_flag == 1, na.rm = TRUE),
         `Percentage Attended` = round(Attended / Expected * 100, 1)
-    )
+    ) #%>%
+#gt() %>%
+# tab_header(
+# title = "Six Weeks Follow-Up Retention Summary"
+#)
+
+wk6_facility_retention
+
+#### 14 Wks Retention
+wk14_overall_retention <- all_deliveries %>%
+    #group_by(Facility) %>% 
+    reframe(
+        `Window not Closed` = sum(wk14_window_open > today()),
+        Expected = sum(wk14_window_close < today()|fourteen_weeks_flag == 1, na.rm = TRUE),
+        Attended = sum(fourteen_weeks_flag == 1, na.rm = TRUE),
+        `Percentage Attended` = round(Attended / Expected * 100, 1)
+    ) #%>%
+#gt() %>%
+#tab_header(
+#title = "Fourteen Weeks Follow-Up Retention Summary")
+
+wk14_overall_retention
 
 wk14_retention_summary <- all_deliveries %>%
-   group_by(Facility) %>% 
-   reframe(
-      `Window Open` = sum(wk14_window_open > today()),
-      Expected = sum(wk14_window_close < today()|attended_14wks == 1),
-      Attended = sum(attended_14wks == 1),
-      `Percentage Attended` = round(Attended / Expected * 100, 1)
-   )
+    group_by(Facility) %>% 
+    reframe(
+        `Window not Closed` = sum(wk14_window_open > today()),
+        Expected = sum(wk14_window_close < today()|fourteen_weeks_flag == 1, na.rm = TRUE),
+        Attended = sum(fourteen_weeks_flag == 1, na.rm = TRUE),
+        `Percentage Attended` = round(Attended / Expected * 100, 1)
+    ) #%>%
+#gt() %>%
+#tab_header(
+# title = "Fourteen Weeks Follow-Up Retention Summary)
+
+wk14_retention_summary
+
 
 
 # Convert both to flextables
