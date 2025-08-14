@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1ue9LN5a2HABastVn97ezgAPSevAlZDlflc6dEToOBl8/edit?gid=1699758718#gid=1699758718"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1ilFdbWIpQFIW8cG17dGNPlRy6ayS1-qDqFhxiqORFVU/edit?gid=1699758718#gid=1699758718"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -134,11 +134,10 @@ all_deliveries <- all_deliveries %>%
 visits <- ppw_rct_df %>% 
     filter(grepl("^6 Weeks|^14 Weeks", redcap_event_name),
            is.na(redcap_repeat_instance),
-           clt_visit %in% c("6 weeks post-partum")|
-               clt_visit %in% c("14 weeks post-partum"))
+           clt_visit == "6 weeks post-partum"|clt_visit == "14 weeks post-partum") %>% 
+    filter(!mv_visit %in% c("6 weeks post-partum", "14 weeks post-partum"))
 
 attendance_df <- visits %>%
-    filter(!mv_visit %in% "6 weeks post-partum") %>% 
     mutate(
         six_weeks_flag = if_else(grepl("^6 Weeks", redcap_event_name), 1, 0),
         fourteen_weeks_flag = if_else(grepl("^14 Weeks", redcap_event_name), 1, 0)
@@ -148,19 +147,27 @@ attendance_df <- visits %>%
         six_weeks_flag = max(six_weeks_flag, na.rm = TRUE),
         fourteen_weeks_flag = max(fourteen_weeks_flag, na.rm = TRUE),
         .groups = "drop"
-    )
+    )%>% 
+    filter(six_weeks_flag == 1)
+
+
 
 all_deliveries <- all_deliveries %>% 
     left_join(attendance_df, by = c("ptid" = "record_id"))
 
+
 #### 6 Wks Overall retention
-wk6_overall_retention <- all_deliveries %>%
+wk6_overall_retention<- all_deliveries %>%
     #group_by(Facility) %>% 
     reframe(
         `Window not Closed` = sum(wk6_window_open > today()),
         Expected = sum(wk6_window_close < today()|six_weeks_flag == 1, na.rm = TRUE),
         Attended = sum(six_weeks_flag == 1, na.rm = TRUE),
-        `Percentage Attended` = round(Attended / Expected * 100, 1))
+        `Percentage Attended` = round(Attended / Expected * 100, 1)
+    )#%>%
+#gt() %>%
+#tab_header(
+#title = "Six Weeks Follow-Up Retention Summary")
 
 wk6_overall_retention
 
@@ -193,9 +200,8 @@ wk14_overall_retention <- all_deliveries %>%
 #tab_header(
 #title = "Fourteen Weeks Follow-Up Retention Summary")
 
-wk14_overall_retention
 
-wk14_faility_retention <- all_deliveries %>%
+wk14_facility_retention <- all_deliveries %>%
     group_by(Facility) %>% 
     reframe(
         `Window not Closed` = sum(wk14_window_open > today()),
@@ -207,14 +213,11 @@ wk14_faility_retention <- all_deliveries %>%
 #tab_header(
 # title = "Fourteen Weeks Follow-Up Retention Summary)
 
-wk14_faility_retention
-
-
 # Convert both to flextables
 ft_6_overall <- flextable(wk6_overall_retention)
 ft_14_overall  <- flextable(wk14_overall_retention)
 ft_6 <- flextable(wk6_facility_retention)
-ft_14  <- flextable(wk14_faility_retention)
+ft_14  <- flextable(wk14_facility_retention)
 
 # Create Word doc and add both
 doc <- read_docx() %>%
