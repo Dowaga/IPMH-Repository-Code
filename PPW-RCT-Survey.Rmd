@@ -3,11 +3,7 @@ title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
-<<<<<<< HEAD
- #word_document
-=======
-  word_document
->>>>>>> f96015f14337ed0d7a4c3a1024062b292ee22a97
+ # word_document
   #pdf_document
   html_document
 ---
@@ -740,3 +736,5 @@ table6
 ```{r PM+ Participation, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```
+
+
