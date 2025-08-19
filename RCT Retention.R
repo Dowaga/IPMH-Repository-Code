@@ -14,16 +14,16 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1ilFdbWIpQFIW8cG17dGNPlRy6ayS1-qDqFhxiqORFVU/edit?gid=1699758718#gid=1699758718"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1sTlgPwJIjyudrvvksp2XBfWTnEcqJ2vY9KuFVa4su5M/edit?gid=705526254#gid=705526254"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
 
 # Read each sheet into a named list of dataframes
-sheet_list <- map(set_names(sheet_names), ~ read_sheet(sheet_id, sheet = .x))
+sheet_list <- map(set_names(sheet_names, sheet_names), ~ read_sheet(sheet_id, sheet = .x))
 
 # Read each sheet, using second row as column names
-sheet_list <- map(set_names(sheet_names), function(sheet) {
+sheet_list <- map(set_names(sheet_names, sheet_names), function(sheet) {
    read_sheet(sheet_id, sheet = sheet, skip = 1)
 })
 
@@ -70,11 +70,13 @@ walk2(sheet_list_clean, names(sheet_list_clean), function(df, name) {
 
 ls(pattern = "_deliveries$")
 
+
 # Get only delivery datasets (excluding 'all_deliveries' itself)
 delivery_dfs <- ls(pattern = "_deliveries$") |>
    setdiff(c("all_deliveries", "sheet1_deliveries")) |>
    mget()
 
+View(miriu_health_centre_deliveries)
 
 # Bind and clean
 all_deliveries <- imap_dfr(delivery_dfs, ~ .x %>%
@@ -134,30 +136,60 @@ all_deliveries <- all_deliveries %>%
 visits <- ppw_rct_df %>% 
     filter(grepl("^6 Weeks|^14 Weeks", redcap_event_name),
            is.na(redcap_repeat_instance),
-           clt_visit == "6 weeks post-partum"|clt_visit == "14 weeks post-partum") %>% 
-    filter(!mv_visit %in% c("6 weeks post-partum", "14 weeks post-partum"))
+           clt_visit == "6 weeks post-partum"|clt_visit == "14 weeks post-partum")
+
 
 attendance_df <- visits %>%
     mutate(
         six_weeks_flag = if_else(grepl("^6 Weeks", redcap_event_name), 1, 0),
-        fourteen_weeks_flag = if_else(grepl("^14 Weeks", redcap_event_name), 1, 0)
+        fourteen_weeks_flag = if_else(grepl("^14 Weeks", redcap_event_name), 1, 0),
+        six_weeks_missed = if_else(grepl("^6 weeks post", mv_visit), 1, 0),
+        fourteen_weeks_missed = if_else(grepl("^14 weeks post", mv_visit), 1, 0)
     ) %>%
     group_by(record_id) %>%
     summarise(
         six_weeks_flag = max(six_weeks_flag, na.rm = TRUE),
         fourteen_weeks_flag = max(fourteen_weeks_flag, na.rm = TRUE),
+        six_weeks_missed = max(six_weeks_missed, na.rm = TRUE),
+        fourteen_weeks_missed = max(fourteen_weeks_missed, na.rm = TRUE),
         .groups = "drop"
-    )%>% 
-    filter(six_weeks_flag == 1)
+    )
 
+attendance_df <- visits %>%
+    mutate(
+        six_weeks_flag = if_else(grepl("^6 Weeks", redcap_event_name), 1, 0),
+        fourteen_weeks_flag = if_else(grepl("^14 Weeks", redcap_event_name), 1, 0),
+        six_weeks_missed = if_else(grepl("^6 weeks post", mv_visit), 1, 0),
+        fourteen_weeks_missed = if_else(grepl("^14 weeks post", mv_visit), 1, 0)
+    ) %>%
+    group_by(record_id) %>%
+    summarise(
+        six_weeks_flag = max(six_weeks_flag, na.rm = TRUE),
+        fourteen_weeks_flag = max(fourteen_weeks_flag, na.rm = TRUE),
+        six_weeks_missed = max(six_weeks_missed, na.rm = TRUE),
+        fourteen_weeks_missed = max(fourteen_weeks_missed, na.rm = TRUE),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        six_weeks_flag = if_else(six_weeks_missed == 1, 0, six_weeks_flag),
+        fourteen_weeks_flag = if_else(fourteen_weeks_missed == 1, 0, fourteen_weeks_flag)
+    )
 
 
 all_deliveries <- all_deliveries %>% 
     left_join(attendance_df, by = c("ptid" = "record_id"))
 
+# 6 Wks Visit is NA and window closed
+missed_6wks <- all_deliveries %>% 
+    filter(is.na(six_weeks_flag) & wk6_window_close < today())
+
+# 14 Wks Visit is NA and window closed
+missed_14wks <- all_deliveries %>% 
+    filter(is.na(fourteen_weeks_flag) & wk14_window_close < today())
+
 
 #### 6 Wks Overall retention
-wk6_overall_retention<- all_deliveries %>%
+wk6_overall_retention <- all_deliveries %>%
     #group_by(Facility) %>% 
     reframe(
         `Window not Closed` = sum(wk6_window_open > today()),
@@ -185,7 +217,7 @@ wk6_facility_retention <- all_deliveries %>%
 # title = "Six Weeks Follow-Up Retention Summary"
 #)
 
-wk6_facility_retention
+View(wk6_facility_retention)
 
 #### 14 Wks Retention
 wk14_overall_retention <- all_deliveries %>%
@@ -208,10 +240,10 @@ wk14_facility_retention <- all_deliveries %>%
         Expected = sum(wk14_window_close < today()|fourteen_weeks_flag == 1, na.rm = TRUE),
         Attended = sum(fourteen_weeks_flag == 1, na.rm = TRUE),
         `Percentage Attended` = round(Attended / Expected * 100, 1)
-    ) #%>%
-#gt() %>%
-#tab_header(
-# title = "Fourteen Weeks Follow-Up Retention Summary)
+    )# %>%
+    #gt() %>%
+    #tab_header(
+       # title = "Fourteen Weeks Follow-Up Retention Summary")
 
 # Convert both to flextables
 ft_6_overall <- flextable(wk6_overall_retention)
