@@ -3,11 +3,7 @@ title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
-<<<<<<< HEAD
- # word_document
-=======
   word_document
->>>>>>> e43f1dc0b66f05a0dd3b6eba0c206c638cc7f61c
   #pdf_document
   #html_document
 ---
@@ -29,7 +25,7 @@ Altogether, we currently have data for `r ppw_rct_df$clt_ptid %>% unique() %>% l
 # check the IDs in the consenting database
 
 consent_df <- screening_consent_df %>% 
-    filter(ipmh_rct_enrollment_consent_complete == "Complete")
+    filter(ipmh_rct_enrollment_consent_v50_complete == "Complete")
 
 consent_id <-consent_df %>% 
     select(partipant_id) %>% 
