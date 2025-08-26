@@ -3,9 +3,9 @@ title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
-  word_document
-  #pdf_document
-  #html_document
+   #word_document
+  # pdf_document
+  # #html_document
 ---
 
 ```{r setup, echo = F, include = F}
@@ -644,8 +644,6 @@ attendance_table %>%
 
 # Severe Adverse Events (SAEs)
 
-## Percent of SAEs reported to ERC
-
 ```{r SAES, echo=FALSE, message=FALSE, warning=FALSE}
 sae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_")) %>% 
@@ -660,7 +658,16 @@ sae_report <- sae_df %>%
     summarise(`Number of Events` = n(),
               `SAE Reported` = n(),
               `% Reported` = ifelse(`Number of Events` > 0, round((`Number of Events` / `SAE Reported`)) * 100, 1)) %>% 
-    gt()
+    gt %>% 
+      # modify with gt functions
+    gt::tab_header(
+      title = "Severe Adverse Events (SAEs)",
+      subtitle = "Showing Percent of SAEs reported to ERC") %>%
+  gt::tab_options(
+    table.font.size = "medium",
+    data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
 
 sae_report
 ```
