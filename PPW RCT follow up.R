@@ -62,6 +62,28 @@ pregnancy_outcomes_6week <- rct_ppw_followup %>%
     select(clt_ptid, all_of(starts_with("tpnc_"))) %>% 
     filter(!is.na(clt_ptid))
 
+# Still birth or Miscourages
+still_misc <- ppw_sae_df %>%
+    select(record_id,starts_with("ae_"))%>% 
+    filter(ae_yn == "Yes") %>%
+    filter(str_detect(ae_cat, "Miscarriage or stillbirth")) %>% 
+    select(record_id, ae_yn, ae_cat) %>% 
+    rename(clt_ptid = record_id)
+
+# Join still birth and Miscarriages with pregnancy outcome
+pregnancy_outcomes_6week <- pregnancy_outcomes_6week %>%
+    left_join(still_misc, by = "clt_ptid") %>%
+    mutate(
+        tpnc_ended = case_when(
+            ae_yn == "Yes" & ae_cat == "Miscarriage or stillbirth (loss of pregnancy) (SAE)" ~ "Yes",
+            TRUE ~ tpnc_ended
+        ),
+        tpnc_lb = case_when(
+            ae_yn == "Yes" & ae_cat == "Miscarriage or stillbirth (loss of pregnancy) (SAE)" ~ "No",
+            TRUE ~ tpnc_lb
+        )
+    )
+
 baseline_lmp <- rct_ppw_baseline %>%
     select(clt_ptid, med_lmp) 
 
@@ -492,7 +514,8 @@ table3
 
 ### Miscarriage & stillbirth & late stillbirth -------
 
-pregnancy_outcomes_6week$tpnc_lb %>% table(useNA = "ifany")
+pregnancy_outcomes_6week$tpnc_lb %>% 
+    table(useNA = "ifany")
 
 adverse_outcomes <- ppw_sae_df %>%
     select(visit_type, record_id, arm, ae_yn, ae_cat, ae_preglosssp, ae_type___1, ae_type___2,
