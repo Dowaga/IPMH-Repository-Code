@@ -133,9 +133,15 @@ table1 <- pregnancy_outcomes_6week %>%
         missing = "no"  # This removes missing values from the display
     ) %>%
     add_n() %>%
-    modify_header(label = "**Pregnancy Outcome**") %>%
-    modify_caption("**Table 1. Pregnancy Outcomes at 6 Weeks Follow-up**") %>%
-    bold_labels()
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "**Pregnancy Outcome**",
+        subtitle = "**Table 1. Pregnancy Outcomes at 6 Weeks Follow-up**") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
 
 table1
 
@@ -188,10 +194,17 @@ table2a <- infant_outcomes %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "**Infant Outcome**") %>%
-    modify_caption("**Table 2a. Infant Outcomes at 6 Weeks Postpartum**") %>%
-    bold_labels()
-
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "Infant Outcome",
+        subtitle = "Table 2a. Infant Outcomes at 6 Weeks Postpartum") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
 table2a
 
 table2b <- infant_outcomes %>%
