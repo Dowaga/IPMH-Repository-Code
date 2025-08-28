@@ -137,8 +137,8 @@ table1 <- pregnancy_outcomes_6week %>%
     as_gt() %>%
     # modify with gt functions
     gt::tab_header(
-        title = "**Pregnancy Outcome**",
-        subtitle = "**Table 1. Pregnancy Outcomes at 6 Weeks Follow-up**") %>%
+        title = "Pregnancy Outcome",
+        subtitle = "Table 1. Pregnancy Outcomes at 6 Weeks Follow-up") %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1))
@@ -237,8 +237,8 @@ table2b <- infant_outcomes %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "**Infant Outcome**") %>%
-    modify_caption("**Table 2b. Infant Outcomes at 14 Weeks Postpartum**") %>%
+    modify_header(label = "Infant Outcome") %>%
+    modify_caption("Table 2b. Infant Outcomes at 14 Weeks Postpartum") %>%
     bold_labels()
 
 table2b
@@ -512,9 +512,13 @@ table3 <- outcomes %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "**Clinical Outcome**") %>%
-    modify_caption("**Table 3. Mental Health & QOL Outcomes Across Visits**") %>%
-    bold_labels()
+    modify_header(label = "Clinical Outcome") %>%
+    modify_caption("Table 3. Mental Health & QOL Outcomes Across Visits") %>%
+    bold_labels()%>%
+    as_gt() %>%
+    opt_table_font(font = list(gt::google_font("Roboto"))) %>%
+    opt_table_font_size(size = 12) %>%
+    opt_table_width(width = px(800))
 
 table3
 
@@ -696,9 +700,13 @@ table4 <- pregnancy_combined_dedup %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "**Clinical Outcome**") %>%
-    modify_caption("**Table 4. Clinical Adverse Outcomes**") %>%
-    bold_labels()
+    modify_header(label = "Clinical Outcome") %>%
+    modify_caption("Table 4. Clinical Adverse Outcomes") %>%
+    bold_labels()%>%
+    as_gt() %>%
+    opt_table_font(font = list(gt::google_font("Roboto"))) %>%
+    opt_table_font_size(size = 12) %>%
+    opt_table_width(width = px(800))
 
 table4
 
@@ -907,7 +915,11 @@ table5 <- psychosocial_data %>%
     add_n() %>%
     modify_header(label = "**Psychosocial Correlates**") %>%
     modify_caption("**Table 5. Psychosocial Correlates Across Visits**") %>%
-    bold_labels()
+    bold_labels()%>%
+    as_gt() %>%
+    opt_table_font(font = list(gt::google_font("Roboto"))) %>%
+    opt_table_font_size(size = 12) %>%
+    opt_table_width(width = px(800))
 
 # Mental Health Service Utilization========
 su <- ppw_rct_df %>% 
@@ -945,7 +957,6 @@ su <- su %>%
 
 
 table6 <- su %>%
-    # Ensure visit_type is a factor with proper ordering
     mutate(visit_type = factor(visit_type, 
                                levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months"))) %>%
     select(visit_type, su_phq2, su_gap2, su_phq9, su_gad7, 
@@ -969,7 +980,13 @@ table6 <- su %>%
     modify_header(label ~ "**Variable**") %>%
     modify_spanning_header(c("stat_1", "stat_2", "stat_3", "stat_4") ~ "**Visit Type**") %>%
     modify_caption("**Screening and Service Utilization by Visit Type**") %>%
-    bold_labels()
+    bold_labels() %>%
+    as_gt() %>%
+    tab_options(
+        table.font.size = 12,
+        table.width = px(800)
+    )
+
 table6
 
 table7 <- su %>%
@@ -1000,7 +1017,11 @@ table7 <- su %>%
     modify_header(label ~ "**Variable**") %>%
     modify_spanning_header(c("stat_1", "stat_2", "stat_3") ~ "**Visit Type**") %>%
     modify_caption("**PM+ Program Participation (Post-Enrollment Visits Only)**") %>%
-    bold_labels()
+    bold_labels()%>%
+    as_gt() %>%
+    tab_options(
+        table.font.size = 12,
+        table.width = px(800))
 
 table7
 
