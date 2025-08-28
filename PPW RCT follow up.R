@@ -515,10 +515,7 @@ table3 <- outcomes %>%
     modify_header(label = "Clinical Outcome") %>%
     modify_caption("Table 3. Mental Health & QOL Outcomes Across Visits") %>%
     bold_labels()%>%
-    as_gt() %>%
-    opt_table_font(font = list(gt::google_font("Roboto"))) %>%
-    opt_table_font_size(size = 12) %>%
-    opt_table_width(width = px(800))
+    as_gt()
 
 table3
 
@@ -703,10 +700,7 @@ table4 <- pregnancy_combined_dedup %>%
     modify_header(label = "Clinical Outcome") %>%
     modify_caption("Table 4. Clinical Adverse Outcomes") %>%
     bold_labels()%>%
-    as_gt() %>%
-    opt_table_font(font = list(gt::google_font("Roboto"))) %>%
-    opt_table_font_size(size = 12) %>%
-    opt_table_width(width = px(800))
+    as_gt()
 
 table4
 
@@ -916,10 +910,7 @@ table5 <- psychosocial_data %>%
     modify_header(label = "**Psychosocial Correlates**") %>%
     modify_caption("**Table 5. Psychosocial Correlates Across Visits**") %>%
     bold_labels()%>%
-    as_gt() %>%
-    opt_table_font(font = list(gt::google_font("Roboto"))) %>%
-    opt_table_font_size(size = 12) %>%
-    opt_table_width(width = px(800))
+    as_gt()
 
 # Mental Health Service Utilization========
 su <- ppw_rct_df %>% 
@@ -983,9 +974,7 @@ table6 <- su %>%
     bold_labels() %>%
     as_gt() %>%
     tab_options(
-        table.font.size = 12,
-        table.width = px(800)
-    )
+        table.font.size = 12)
 
 table6
 
@@ -1020,8 +1009,7 @@ table7 <- su %>%
     bold_labels()%>%
     as_gt() %>%
     tab_options(
-        table.font.size = 12,
-        table.width = px(800))
+        table.font.size = 12)
 
 table7
 
