@@ -26,7 +26,7 @@ mo_history <- ppw_rct_df %>%
         )
     ) %>% 
     filter(visit_type == "Enrollment") %>% 
-    select(record_id, starts_with("med_"), 
+    select(record_id,clt_study_site,starts_with("med_"), 
            medical_and_obstetric_history_complete)
 
 # Pregnancy history and medical history recoding
@@ -60,7 +60,7 @@ mo_history <- mo_history %>%
         med_num_stillbirth == -2 ~ NA_real_ # No answer / missing
     ),
     had_stillbirth = case_when(
-        med_preg_multi == 1 & is.na(had_stillbirth) ~ 0,
+        med_pre_preg == 1 & is.na(had_stillbirth) ~ 0,
         TRUE ~ had_stillbirth
     ),
     stillbirth_count = case_when(
@@ -121,5 +121,19 @@ tbl_summary(sort = list(all_categorical() ~ "frequency"),  # Sort categorical le
     add_n()
 
 moh_summary
+
+# Have been pregnant before and number of pregnancies inluding current <2
+pregnancies_number_QCs <- mo_history %>% 
+    filter(med_pre_preg == "Yes" & is.na(med_num_stillbirth)) %>% 
+    # Remove the facility code
+    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>% 
+    rename(`Facility` = clt_study_site)
+
+
+# Save to Excel in the working directory
+write.xlsx(
+    pregnancies_number_QCs,
+    file = paste0("Current Pregnancy Counts QCs ", Sys.Date(), ".xlsx")
+)
 
 
