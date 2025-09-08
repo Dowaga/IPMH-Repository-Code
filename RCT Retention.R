@@ -14,13 +14,14 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1iUIoz9_kyiRkZamK7Ydjm4lULQmgVhuasw0ijqSG6fI/edit?gid=1699758718#gid=1699758718"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1hlLmUfq3PQVXvfTvlu5OdTCmTyZevo4VvdD0lSMZLTQ/edit?gid=1699758718#gid=1699758718"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
 
 # Read each sheet into a named list of dataframes
 sheet_list <- map(set_names(sheet_names, sheet_names), ~ read_sheet(sheet_id, sheet = .x))
+
 
 # Read each sheet, using second row as column names
 sheet_list <- map(set_names(sheet_names, sheet_names), function(sheet) {
@@ -165,11 +166,11 @@ all_deliveries <- all_deliveries %>%
     left_join(attendance_df, by = c("ptid" = "record_id"))
 
 # 6 Wks Visit is NA and window closed
-missed_6wks <- all_deliveries %>% 
+missing_6wks_data <- all_deliveries %>% 
     filter(is.na(six_weeks_flag) & wk6_window_close < today())
 
 # 14 Wks Visit is NA and window closed
-missed_14wks <- all_deliveries %>% 
+missing_14wks_data <- all_deliveries %>% 
     filter(is.na(fourteen_weeks_flag) & wk14_window_close < today())
 
 
@@ -229,6 +230,17 @@ wk14_facility_retention <- all_deliveries %>%
     #gt() %>%
     #tab_header(
        # title = "Fourteen Weeks Follow-Up Retention Summary")
+
+# Missed Visits----
+missed_6wks <- all_deliveries %>% 
+    select(Facility, ptid, six_weeks_flag) %>% 
+    filter(six_weeks_flag == "0")
+
+missed_14wks <- all_deliveries %>% 
+    select(Facility, ptid, fourteen_weeks_flag, wk14_window_close) %>% 
+    filter(fourteen_weeks_flag == "0" & wk14_window_close <= Sys.Date())
+
+colnames(all_deliveries)
 
 # Convert both to flextables
 ft_6_overall <- flextable(wk6_overall_retention)
@@ -330,7 +342,7 @@ month_summary <- all_deliveries %>%
     summarise(
         `Week 6 Visits` = sum(wk6_window_close >= today & wk6_window_close <= month_end, na.rm = TRUE),
         `Week 14 Visits` = sum(wk14_window_close >= today & wk14_window_close <= month_end, na.rm = TRUE),
-        `Month 6 Visits` = sum(mo6_window_open <= month_end & mo6_window_close <= month_end, na.rm = TRUE)
+        `Month 6 Visits` = sum(mo6_window_open >= today & mo6_window_close <= month_end, na.rm = TRUE)
     ) %>%
     mutate(`Total Visits` = `Week 6 Visits` + `Week 14 Visits` + `Month 6 Visits`) %>%
     adorn_totals(name = "Total")
