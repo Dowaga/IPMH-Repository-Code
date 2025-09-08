@@ -149,7 +149,7 @@ screening_int_table <- screening_int_costing %>%
     tbl_summary(
         by = study_site,
         statistic = list(
-            all_continuous() ~ "{mean} ({sd})",
+            all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
@@ -473,7 +473,7 @@ comparison_table <- combined_data %>%
     tbl_summary(
         by = arm,
         statistic = list(
-            all_continuous() ~ "{mean} ({sd})",
+            all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         label = list(
@@ -592,7 +592,7 @@ pm_summary_table <- pm_plus_costing %>%
     tbl_summary(
         by = study_site,
         statistic = list(
-            all_continuous() ~ "{mean} ({sd})",
+            all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
