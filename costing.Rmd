@@ -11,11 +11,11 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 source("Costing.R")
 
 # Set flextable default to full width for Word
-library(flextable)
-set_flextable_defaults(
-  layout = "autofit",
-  width = 1
-)
+#library(flextable)
+#set_flextable_defaults(
+  #layout = "autofit",
+  #width = 1
+#)
 
 ```
 
@@ -60,7 +60,7 @@ table_pm_summary
 \pagebreak
 
 ```{r pm-plus2, echo=FALSE, warning = FALSE, message=FALSE}
-table_pm_costing
+pm_summary_table
 ```
 
 \pagebreak
