@@ -210,8 +210,16 @@ screening_int_table <- screening_int_costing %>%
         missing = "no"
     ) %>%
     add_n() %>% add_overall() %>% 
-    bold_labels() %>% 
-    modify_caption("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites)") 
+    bold_labels()%>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites)") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
 
 table_screening_int <- screening_int_table %>% 
     as_flex_table() %>% 
@@ -295,7 +303,15 @@ screening_int_table_by_refer <- screening_int_costing %>%
     ) %>%
     add_n() %>% add_overall() %>% add_p() %>% 
     bold_labels() %>% 
-    modify_caption("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites) By Referral Services") 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites) By Referral Services") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
 
 table_screening_int_by_refer <- screening_int_table_by_refer %>% 
     as_flex_table() %>% 
@@ -384,9 +400,18 @@ screening_ctrl_table <- screening_ctrl_costing %>%
         digits = all_continuous() ~ 1,
         missing = "no"
     ) %>%
-    add_n() %>% add_overall() %>% 
-    bold_labels() %>% 
-    modify_caption("Summary of Time Used for Initial Screening and Enrollment (Control Sites)")
+    add_n() %>% 
+    add_overall() %>% 
+    bold_labels() %>%
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Time Used for Initial Screening and Enrollment (Control Sites)") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
 
 table_screening_ctrl <- screening_ctrl_table %>% 
     as_flex_table() %>% 
@@ -487,7 +512,15 @@ comparison_table <- combined_data %>%
     add_overall() %>%
     add_p() %>%
     bold_labels() %>%
-    modify_caption("Comparison of Screening & Enrollment by Study Site (All Arms)") 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Comparison of Screening & Enrollment by Study Site (All Arms)") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
 
 table_screening_comparison <- comparison_table %>%
     as_flex_table() %>% 
@@ -601,9 +634,18 @@ pm_summary_table <- pm_plus_costing %>%
         digits = all_continuous() ~ 1,
         missing = "no"
     ) %>%
-    add_n() %>% add_overall() %>%
+    add_n() %>% 
+    add_overall() %>%
     bold_labels() %>% 
-    modify_caption("Summary of PM+ Sessions (Intervention Sites)")
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of PM+ Sessions (Intervention Sites)") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
 
 table_pm_costing <- pm_summary_table %>% 
     as_flex_table() %>% 
@@ -762,7 +804,7 @@ audit_feedback_table <- audit_feedback_costing %>%
     tbl_summary(
         by = arm,
         statistic = list(
-            all_continuous() ~ "{mean} ({sd})",
+            all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
@@ -808,9 +850,19 @@ audit_feedback_table <- audit_feedback_costing %>%
         digits = all_continuous() ~ 1,
         missing = "no"
     ) %>%
-    add_n() %>% add_overall() %>% add_p() %>%
+    add_n() %>% 
+    add_overall() %>% 
+    add_p() %>%
     bold_labels() %>% 
-    modify_caption("Comparison of Audit and Feedback Time between arms")
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Comparison of Audit and Feedback Time between arms") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
 
 table_audit_feedback_costing<- audit_feedback_table %>%
     as_flex_table() %>% 
