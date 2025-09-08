@@ -714,12 +714,18 @@ telepsychiatry_table <- telepsychiatry_costing %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    bold_labels() %>% 
-    modify_caption("Summary of Telepsychiatry Sessions (Intervention Sites)")
+    bold_labels()
 
-table_telepsychiatry_costing<- telepsychiatry_table %>% 
-    as_flex_table() %>% 
-    autofit()
+
+table_telepsychiatry_costing <- telepsychiatry_table %>%
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Telepsychiatry Sessions (Intervention Sites)") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
 
 # Audit and Feedback ------------------
 audit_feedback_costing <- costing %>%
@@ -861,7 +867,8 @@ audit_feedback_table <- audit_feedback_costing %>%
     tab_options(
         table.font.size = px(14))
 
-table_audit_feedback_costing<- audit_feedback_table %>%
-    as_flex_table() %>% 
-    autofit() %>%
-    add_footer_lines("Note: Total Audit & Feedback Duration includes all components from analysis to feedback.")
+table_audit_feedback_costing<- audit_feedback_table%>%
+    # add a footnote
+    gt::tab_footnote(
+        footnote = "Note: Total Audit & Feedback Duration includes all components from analysis to feedback."
+    )
