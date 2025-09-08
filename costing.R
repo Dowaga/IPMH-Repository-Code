@@ -646,9 +646,6 @@ pm_summary_table <- pm_plus_costing %>%
     tab_options(
         table.font.size = px(14))
 
-table_pm_costing <- pm_summary_table %>% 
-    as_flex_table() %>% 
-    autofit()
 
 # telepsychiatry ------------------
 telepsychiatry_costing <- costing %>%
