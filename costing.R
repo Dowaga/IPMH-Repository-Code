@@ -221,10 +221,11 @@ screening_int_table <- screening_int_costing %>%
     tab_options(
         table.font.size = px(14))
 
-table_screening_int <- screening_int_table %>% 
-    as_flex_table() %>% 
-    autofit() %>% 
-    add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral.")
+table_screening_int <- screening_int_table%>%
+    # add a footnote
+    gt::tab_footnote(
+        footnote = "Note: Waiting time for study eligibility includes time spent in service referral."
+    )
 
 ### By refer_service ---------
 screening_int_table_by_refer <- screening_int_costing %>%
@@ -314,9 +315,10 @@ screening_int_table_by_refer <- screening_int_costing %>%
         table.font.size = px(14))
 
 table_screening_int_by_refer <- screening_int_table_by_refer %>% 
-    as_flex_table() %>% 
-    autofit() %>%
-    add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral.")
+    # add a footnote
+    gt::tab_footnote(
+        footnote = "Note: Waiting time for study eligibility includes time spent in service referral."
+    )
 
 
 ### Time table for control sites ---------
@@ -412,10 +414,6 @@ screening_ctrl_table <- screening_ctrl_costing %>%
         data_row.padding = gt::px(1)) %>%
     tab_options(
         table.font.size = px(14))
-
-table_screening_ctrl <- screening_ctrl_table %>% 
-    as_flex_table() %>% 
-    autofit()
 
 
 ## Compare intervention and control sites ---------
@@ -523,9 +521,10 @@ comparison_table <- combined_data %>%
         table.font.size = px(14))
 
 table_screening_comparison <- comparison_table %>%
-    as_flex_table() %>% 
-    autofit() %>%
-    add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral among intervention sites.")
+    # add a footnote
+    gt::tab_footnote(
+        footnote = "Note: Waiting time for study eligibility includes time spent in service referral among intervention sites."
+    )
 
 # PM+ ---------------
 pm_plus_costing <- costing %>%
