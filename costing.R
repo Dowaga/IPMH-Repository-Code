@@ -128,6 +128,7 @@ screening_int_costing <- screening_int_costing %>%
                                "Self-harm assessment by study staff" = "Self-harm Assessment"),
         refer_service = replace_na(refer_service, "Refer to study eligibility")
     )
+
 screening_int_table <- screening_int_costing %>%
     select(
         study_site,
@@ -348,8 +349,7 @@ screening_ctrl_costing <- screening_ctrl_costing %>%
 #     )
 
 screening_ctrl_table <- screening_ctrl_costing %>%
-    select(study_site,
-        triage_desig_con, triage_duration_con,
+    select(study_site,triage_desig_con, triage_duration_con,
         screen_desig_con, screen_duration_con,
         room_type_con, phq2_cont, gad2_cont,
         score_duration_con,
@@ -405,7 +405,9 @@ screening_ctrl_table <- screening_ctrl_costing %>%
     ) %>%
     add_n() %>% 
     add_overall() %>% 
-    bold_labels() %>%
+    bold_labels() 
+
+table_screening_ctrl <- screening_ctrl_table %>%
     # convert from gtsummary object to gt object
     as_gt() %>%
     # modify with gt functions
@@ -867,7 +869,7 @@ audit_feedback_table <- audit_feedback_costing %>%
     tab_options(
         table.font.size = px(14))
 
-table_audit_feedback_costing<- audit_feedback_table%>%
+table_audit_feedback_costing <- audit_feedback_table%>%
     # add a footnote
     gt::tab_footnote(
         footnote = "Note: Total Audit & Feedback Duration includes all components from analysis to feedback."
