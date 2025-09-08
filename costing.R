@@ -209,7 +209,8 @@ screening_int_table <- screening_int_costing %>%
         digits = all_continuous() ~ 1,
         missing = "no"
     ) %>%
-    add_n() %>% add_overall() %>% 
+    add_n() %>% 
+    add_overall() %>% 
     bold_labels()%>% 
     # convert from gtsummary object to gt object
     as_gt() %>%
