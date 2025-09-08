@@ -37,7 +37,7 @@ screening_ctrl_costing <- costing %>%
     filter(redcap_event_name == "Event 1 (Arm 2: Control)" & 
                study_visit == "Initial screening and enrollment") %>%
     filter(!is.na(pt_id_con)) %>%
-    select(date, study_site, c(98, 100:124), -visit_initial_con)
+    select(date, study_site, c(98, 100:133), -visit_initial_con)
 
 ### data collection table ---------
 total_summary <- tibble(
@@ -236,7 +236,7 @@ screening_int_table_by_refer <- screening_int_costing %>%
     tbl_summary(
         by = refer_service,
         statistic = list(
-            all_continuous() ~ "{mean} ({sd})",
+            all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
@@ -302,6 +302,7 @@ table_screening_int_by_refer <- screening_int_table_by_refer %>%
     autofit() %>%
     add_footer_lines("Note: Waiting time for study eligibility includes time spent in service referral.")
 
+
 ### Time table for control sites ---------
 screening_ctrl_costing <- screening_ctrl_costing %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
@@ -343,7 +344,7 @@ screening_ctrl_table <- screening_ctrl_costing %>%
     tbl_summary(
         by= study_site,
         statistic = list(
-            all_continuous() ~ "{mean} ({sd})",
+            all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
