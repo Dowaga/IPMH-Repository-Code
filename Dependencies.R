@@ -68,5 +68,9 @@ if(length(new.packages) > 0){
 
 # Load packages
 for(p in packages){
+    if (!requireNamespace(p, quietly = TRUE)) {
+        install.packages(p)
+    }
     library(p, character.only = TRUE)
 }
+
