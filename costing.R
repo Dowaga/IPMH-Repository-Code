@@ -132,7 +132,6 @@ screening_int_costing <- screening_int_costing %>%
 screening_int_table <- screening_int_costing %>%
     select(
         study_site,
-        enter_desig,
         triage_desig, triage_duration,
         screen_desig, screen_duration,
         room_type, room_desig,
@@ -153,7 +152,6 @@ screening_int_table <- screening_int_costing %>%
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
-            enter_desig        = "categorical",
             triage_desig       = "categorical",
             screen_desig       = "categorical",
             room_type          = "categorical",
@@ -180,7 +178,6 @@ screening_int_table <- screening_int_costing %>%
             eli_yn           = "categorical"
         ),
         label = list(
-            enter_desig        = "Entry staff",
             triage_desig       = "Triage staff",
             triage_duration    = "Triage time (min)",
             screen_desig       = "Screening staff",
@@ -232,7 +229,6 @@ table_screening_int <- screening_int_table%>%
 ### By refer_service ---------
 screening_int_table_by_refer <- screening_int_costing %>%
     select(
-        enter_desig,
         triage_desig, triage_duration,
         screen_desig, screen_duration,
         room_type, room_desig,
@@ -251,7 +247,6 @@ screening_int_table_by_refer <- screening_int_costing %>%
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
-            enter_desig        = "categorical",
             triage_desig       = "categorical",
             screen_desig       = "categorical",
             room_type          = "categorical",
@@ -276,7 +271,6 @@ screening_int_table_by_refer <- screening_int_costing %>%
             refer_duration     = "continuous"
         ),
         label = list(
-            enter_desig        = "Entry staff",
             triage_desig       = "Triage staff",
             triage_duration    = "Triage time (min)",
             screen_desig       = "Screening staff",
