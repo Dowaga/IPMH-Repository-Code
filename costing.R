@@ -20,7 +20,7 @@ screening_int_costing <- costing %>%
     filter(redcap_event_name == "Event 1 (Arm 1: Intervention)" & 
                study_visit == "Initial screening and enrollment") %>% 
     filter(!is.na(pt_id)) %>% 
-    select(date, study_site, pt_id, enter_desig, enter_time_in,
+    select(date, study_site, pt_id, enter_time_in,
            triage_desig, triage_time_in, triage_time_out,
            screen_desig, screen_time_in, screen_time_out,
            room_type, room_desig, phq2, gad2, score_time_in,
@@ -764,8 +764,9 @@ audit_feedback_costing <- audit_feedback_costing %>%
 audit_feedback_costing <- audit_feedback_costing %>%
     mutate(
         af_analysis_duration = difftime(af_analysis_time_out, af_analysis_time_in, units = "mins") %>% as.numeric(),
-        af_develop_duration = difftime(af_develop_time_out, af_develop_time_in, units = "mins") %>% as.numeric(),
-        af_schedule_duration = as.numeric(af_sche_time_out - af_sche_time_in)*1440,
+        af_develop_duration = difftime(af_develop_time_out, af_develop_time_in, units = "mins") %>% 
+            as.numeric(),
+        af_schedule_duration = as.numeric(difftime(af_sche_time_out, af_sche_time_in, units = "mins")),
         af_hurdle_duration = as.numeric(af_hurdle_time_out - af_hurdle_time_in)*1440,
         af_identify_duration = as.numeric(af_identify_time_out - af_identify_time_in)*1440,
         af_refresh_duration = difftime(af_refresh_time_out, af_refresh_time_in, units = "mins") %>% as.numeric(),
