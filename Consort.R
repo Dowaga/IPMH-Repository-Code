@@ -203,7 +203,8 @@ counts_by_arm <- consort_data %>%
         pm_participants = sum(ipmh_participant == "Yes", na.rm = TRUE),
         tele_participants = sum(tele == "Yes", na.rm = TRUE),
         postpartum_visit = sum(secondvisit == "Yes", na.rm = TRUE),
-        postpartum_visit1 = sum(thirdvisit == "Yes", na.rm = TRUE)
+        postpartum_visit1 = sum(thirdvisit == "Yes", na.rm = TRUE),
+        postpartum_visit2 = sum(fourthvisit == "Yes", na.rm = TRUE)
     )
 
 # Function to generate stage text
@@ -222,7 +223,8 @@ counts_by_arm <- counts_by_arm %>%
         txt_pm = generate_stage_text("PM+", pm_participants, enrolled),
         txt_tele = generate_stage_text("Telepsychiatry", tele_participants, enrolled),
         txt_postpartum = generate_stage_text("6 weeks postpartum visit", postpartum_visit, enrolled),
-        txt_postpartum1 = generate_stage_text("14 weeks postpartum visit", postpartum_visit1, enrolled)
+        txt_postpartum1 = generate_stage_text("14 weeks postpartum visit", postpartum_visit1, enrolled),
+        txt_postpartum2 = generate_stage_text("6 months postpartum visit", postpartum_visit2, enrolled)
     )
 
 # Total text for ANC attendees
@@ -333,7 +335,8 @@ consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = counts_by_arm$txt_enrolled) |>
     add_side_box(txt= counts_by_arm$txt_pm_tele) |>
     add_box(txt = counts_by_arm$txt_postpartum)|>
-    add_box(txt = counts_by_arm$txt_postpartum1)
+    add_box(txt = counts_by_arm$txt_postpartum1)|>
+    add_box(txt = counts_by_arm$txt_postpartum2)
 
 consort_per
 
