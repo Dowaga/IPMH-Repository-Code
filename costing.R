@@ -23,7 +23,7 @@ screening_int_costing <- costing %>%
     select(date, study_site, pt_id, enter_time_in,
            triage_desig, triage_time_in, triage_time_out,
            screen_desig, screen_time_in, screen_time_out,
-           room_type, room_desig, phq2, gad2, score_time_in,
+           room_type, room_desig, phq2, gad2, low_score,score_time_in,
            score_time_out, preg, info_time_in, info_time_out,
            phq9, gad7, phq9_time_in, phq9_time_out, clinic_time_in_int, clinic_time_out_int,
            refer_service, refer_time_in, pm_desig, pmass_time_in,
@@ -31,6 +31,13 @@ screening_int_costing <- costing %>%
            harm_time_in, harm_time_out, eli_yn, eligi_time_in,
            eligi_time_out, enrol_yn, base_time_in,
            base_time_out, visit_time_out)
+
+# Checking those that are PMAD positive
+pmad_positive <- screening_int_costing %>% 
+    filter(low_score == 0)
+
+supervision <- costing %>% 
+    filter(pm_number == "PM+ Supervision")
 
 ## Control sites ---------------
 screening_ctrl_costing <- costing %>%
@@ -119,6 +126,12 @@ screening_int_costing <- screening_int_costing %>%
 #         harm_duration < 0 | eligi_duration < 0 | baseline_duration < 0 |
 #         total_duration < 0 | refer_duration < 0
 #     )
+
+# examine scored but no scoring time
+no_scoring_time <- screening_int_costing %>% 
+    filter(!is.na(phq2)) %>% 
+    filter(is.na(info_time_out))
+
 screening_int_costing <- screening_int_costing %>%
     mutate(
         refer_service = as.character(refer_service), 
