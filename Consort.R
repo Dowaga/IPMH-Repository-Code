@@ -116,7 +116,13 @@ thirdvisit <- ppw_rct_df %>%
     select(clt_ptid) %>% 
     mutate(thirdvisit = "Yes") 
 
-#merge secondvisit people into consort_data
+
+fourthvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "6 months post-partum") %>% 
+    select(clt_ptid) %>% 
+    mutate(fourthvisit = "Yes") 
+
+# merge secondvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
 
@@ -127,6 +133,10 @@ consort_data <- consort_data %>%
 #merge thirdvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(thirdvisit, by = c("partipant_id" = "clt_ptid"))
+
+# merge fourthvisit people into consort_data
+consort_data <- consort_data %>% 
+    left_join(fourthvisit, by = c("partipant_id" = "clt_ptid"))
     
 #generate consort diagram without percentages (also without telepsychiatry)
 consort_diagram <- consort_plot(data = consort_data,
@@ -140,7 +150,8 @@ consort_diagram <- consort_plot(data = consort_data,
                         ipmh_participant = "PM+",
                         tele = "Telepsychiatry",
                         secondvisit = "6 weeks postpartum visit",
-                        thirdvisit = "14 Weeks Postpartum Visit"),
+                        thirdvisit = "14 Weeks Postpartum Visit",
+                        fourthvisit = "6 Months Postpartum Visit"),
                     side_box = c("exclusion", "rct_decline_reason"),
                     allocation = "arm")
 consort_diagram
