@@ -997,15 +997,15 @@ table7 <- su %>%
         label = list(
             su_pmp ~ "PM+ Participation",
             su_many ~ "PM+ Sessions Completed",
-            su_pmrestart___0 ~ "Stopped PM+",
-            su_pmrestart___1 ~ "Restarted PM+", 
-            su_pmrestart___2 ~ "No PM+ Changes"
+            su_pmrestart___0 ~ "No Disruption",
+            su_pmrestart___1 ~ "Stopped PM+", 
+            su_pmrestart___2 ~ "Restarted PM+"
         )
     ) %>%
     add_overall() %>%
     modify_header(label ~ "**Variable**") %>%
     modify_spanning_header(c("stat_1", "stat_2", "stat_3") ~ "**Visit Type**") %>%
-    modify_caption("**PM+ Program Participation (Post-Enrollment Visits Only)**") %>%
+    modify_caption("**PM+ Program Participation Status (Reported During Post-Enrollment Visits)**") %>%
     bold_labels()%>%
     as_gt() %>%
     tab_options(
