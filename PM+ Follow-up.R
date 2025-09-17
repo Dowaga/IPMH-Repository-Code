@@ -5,24 +5,25 @@
 # PM+ Follow-Up for weekly report
 
 # Setup ------------------------------------------------------------------------
-
+rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
 pm_follow_up <- pm_survey_df %>% 
-    select(pm_ptid, pm_facility, pm_date, pm_session) %>%
+    select(pm_ptid, pm_ancid, pm_facility, pm_date, pm_session) %>%
     right_join(ppw_rct_df %>% 
                    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
                    select(record_id, clt_date), 
                by = c("pm_ptid" = "record_id")) %>% 
-    select(pm_ptid, clt_date, pm_date, pm_session) %>% 
+    select(pm_ptid, pm_ancid, clt_date, pm_date, pm_session) %>% 
     filter(!is.na(pm_date)) %>% 
     arrange(pm_ptid)
 
 
-
+pulled_ptid <- pm_follow_up %>% 
+    filter(pm_ptid %in% ("21166501"))
 
 #David's code-------------
 
