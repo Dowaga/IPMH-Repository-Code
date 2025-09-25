@@ -255,6 +255,8 @@ demographics_df %>% tbl_summary(
         table.font.size = px(14))
 ```
 
+## PPW Medical and Obstretric History
+
 ```{r Medical and Obstetric History, message=FALSE, warning=FALSE, include=FALSE}
 source("Medical and Obstetric History.R")
 moh_summary
@@ -444,7 +446,7 @@ post_pm_measu <- pm_session_wide %>%
 
 #--------------------------------------------------------
 pm_session_wide %>% 
-    tbl_summary(include = c(facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
+    tbl_summary(include = c(`Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
                 label = list(facility = "Facility"),
                 statistic = list(all_categorical() ~
     "{n} ({p}%)"),
@@ -488,6 +490,7 @@ psychlops_scores <- pm_survey_df %>%
 psychlops_scores
 
 ```
+
 
 ```{r None study participants in PM+, echo=FALSE, message=FALSE, warning=FALSE}
     # None study participants in PM+
@@ -533,7 +536,7 @@ session_wide <- pm_session %>%
 
 
 session_wide %>% 
-    tbl_summary(include = c(pm_facility, `Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
+    tbl_summary(include = c(`Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
                 label = list(pm_facility = "Facility",
                              `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
