@@ -10,7 +10,7 @@
 
 
 # Setup ------------------------------------------------------------------------
-
+rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
@@ -62,6 +62,7 @@ pregnancy_outcomes_6week <- rct_ppw_followup %>%
     select(clt_ptid, all_of(starts_with("tpnc_"))) %>% 
     filter(!is.na(clt_ptid))
 
+
 # Still birth or Miscourages
 still_misc <- ppw_sae_df %>%
     select(record_id,starts_with("ae_"))%>% 
@@ -69,6 +70,7 @@ still_misc <- ppw_sae_df %>%
     filter(str_detect(ae_cat, "Miscarriage or stillbirth")) %>% 
     select(record_id, ae_yn, ae_cat) %>% 
     rename(clt_ptid = record_id)
+
 
 # Join still birth and Miscarriages with pregnancy outcome
 pregnancy_outcomes_6week <- pregnancy_outcomes_6week %>%
@@ -83,6 +85,11 @@ pregnancy_outcomes_6week <- pregnancy_outcomes_6week %>%
             TRUE ~ tpnc_lb
         )
     )
+
+# Find unmatched PTIDs
+unmatched_still_misc <- still_misc %>%
+    anti_join(pregnancy_outcomes_6week, by = "clt_ptid")
+
 
 baseline_lmp <- rct_ppw_baseline %>%
     select(clt_ptid, med_lmp) 
@@ -110,6 +117,7 @@ pregnancy_outcomes_6week <- pregnancy_outcomes_6week %>%
         )
     )
 
+
 #table(pregnancy_outcomes_6week$gestage, useNA = "ifany")            
 
 table1 <- pregnancy_outcomes_6week %>%
@@ -126,6 +134,7 @@ table1 <- pregnancy_outcomes_6week %>%
             tpnc_place ~ "Place of delivery",
             tpnc_mode ~ "Mode of delivery"
         ),
+        sort = list(all_categorical() ~ "frequency"), # Sort categorical levels by frequency in descending order
         statistic = list(
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
@@ -145,6 +154,10 @@ table1 <- pregnancy_outcomes_6week %>%
 
 table1
 
+# Missed six weeks visit
+pregnancy_end_NA <- pregnancy_outcomes_6week %>% 
+    filter(is.na(tpnc_ended))
+
 # Infant outcomes at 6 weeks, 14 weeks, & 6 months postpartum --------------
 infant_outcomes <- rct_ppw_followup %>%
     select(visit_type, clt_ptid, all_of(starts_with("tpnc_")), -tpnc_date,
@@ -156,9 +169,27 @@ table(infant_outcomes$tpnc_ihiv, infant_outcomes$io_ihiv, useNA = "ifany")
 table(infant_outcomes$tpnc_iarv, infant_outcomes$io_iarv, useNA = "ifany")
 table(infant_outcomes$tpnc_icorti, infant_outcomes$io_icorti, useNA = "ifany")
 
+# PPW HIV Status
+hiv_status <- rct_ppw_baseline %>% 
+    select(clt_ptid, med_pastdiag___2)
+
+infant_outcomes <- infant_outcomes %>% 
+    left_join(hiv_status, by = "clt_ptid")
+
+# Filter PTIDs of none-reactive women with infant HIV status
+infant_hiv_status_QCs <- infant_outcomes %>% 
+    filter(med_pastdiag___2 == "Unhecked" & visit_type == "6 Weeks") %>% 
+    filter(!is.na(tpnc_ihiv))
+
+prophylaxis <- infant_outcomes %>% 
+    filter(med_pastdiag___2 == "Checked") %>% 
+    filter(is.na(io_iarv))
+
+
 table2a <- infant_outcomes %>%
     filter(visit_type == "6 Weeks") %>% 
     select(
+        med_pastdiag___2,
         inf_status,  # Infant status,
         tpnc_sex,
         tpnc_birthweight,
@@ -173,6 +204,7 @@ table2a <- infant_outcomes %>%
         io_icorti, 
     ) %>%
     tbl_summary(
+        by = med_pastdiag___2,
         label = list(
             io_ihiv ~ "Infant HIV status",
             io_iarv ~ "Infant given ARV prophylaxis",
@@ -243,39 +275,43 @@ table2b <- infant_outcomes %>%
 
 table2b
 
-# table2c <- infant_outcomes %>%
-#     filter(visit_type == "6 Months") %>% 
-#     select(
-#         inf_status,  # Infant status,
-#         io_ill,
-#         io_hosp,
-#         io_bf,
-#         io_mf,
-#         io_ihiv,  # HIV status
-#         io_iarv,  # ARV status
-#         io_icorti, 
-#     ) %>%
-#     tbl_summary(
-#         label = list(
-#             io_ihiv ~ "Infant HIV status",
-#             io_iarv ~ "Infant given ARV prophylaxis",
-#             io_icorti ~ "Infant on given cotrimoxazole prophylaxis",
-#             inf_status ~ "Infant status",
-#             io_ill ~ "Infant illness prior to today's visit",
-#             io_hosp ~ "Infant hospitalization prior to today's visit",
-#             io_bf ~ "Currently breastfeeding",
-#             io_mf ~ "Fed infant any drink or food other than breastmilk"
-#         ),
-#         statistic = list(
-#             all_continuous() ~ "{mean} ({sd})",
-#             all_categorical() ~ "{n} ({p}%)"
-#         ),
-#         missing = "no"
-#     ) %>%
-#     add_n() %>%
-#     modify_header(label = "**Infant Outcome**") %>%
-#     modify_caption("**Table 2c. Infant Outcomes at 6 Months Postpartum**") %>%
-#     bold_labels()
+status_prophylaxis <- infant_outcomes %>%
+    filter(visit_type == "14 Weeks") %>% 
+    filter(med_pastdiag___2 == "Checked") %>% 
+    filter(!is.na(inf_status) & is.na(io_iarv))
+
+table2c <- infant_outcomes %>%
+    filter(visit_type == "6 Months") %>% 
+    select(
+        inf_status,  # Infant status,
+        io_ill,
+        io_hosp,
+        io_bf,
+        io_mf,
+        io_ihiv,  # HIV status
+        io_iarv,  # ARV status
+        io_icorti) %>%
+    tbl_summary(
+        label = list(
+            io_ihiv ~ "Infant HIV status",
+            io_iarv ~ "Infant given ARV prophylaxis",
+            io_icorti ~ "Infant on given cotrimoxazole prophylaxis",
+            inf_status ~ "Infant status",
+            io_ill ~ "Infant illness prior to today's visit",
+            io_hosp ~ "Infant hospitalization prior to today's visit",
+            io_bf ~ "Currently breastfeeding",
+            io_mf ~ "Fed infant any drink or food other than breastmilk"),
+        statistic = list(
+            all_continuous() ~ "{mean} ({sd})",
+            all_categorical() ~ "{n} ({p}%)"),
+        missing = "no") %>%
+    add_n() %>%
+    modify_header(label = "**Infant Outcome**") %>%
+    modify_caption("**Table 2c. Infant Outcomes at 6 Months Postpartum**") %>%
+    bold_labels()
+
+
+table2c
 
 # Primary and secondary clinical outcomes across times--------------
 ## PHQ9, GAD7, WHOQOL BREF score 
