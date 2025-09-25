@@ -4,8 +4,8 @@ author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
    # word_document
-    pdf_document
-   # html_document
+   # pdf_document
+   html_document
 ---
 
 ```{r setup, echo = F, include = F}
@@ -66,11 +66,12 @@ first_enrollment
 
 ## Consort Diagram
 
-```{r The Consort, echo=FALSE, message=FALSE, warning=FALSE, fig.width=15, fig.height=9}
+```{r The Consort, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 source("Consort.R")
 #consort_diagram for weekly reports
 consort_per
 ```
+
 
 ```{r Reasons for ineligibility or not enrolled, message=FALSE, warning=FALSE, include=FALSE}
 
@@ -255,8 +256,8 @@ demographics_df %>% tbl_summary(
 ```
 
 ```{r Medical and Obstetric History, message=FALSE, warning=FALSE, include=FALSE}
-#source("Medical and Obstetric History.R")
-#moh_summary
+source("Medical and Obstetric History.R")
+moh_summary
 ```
 
 \newpage
@@ -389,6 +390,7 @@ eligible_no_survey <- eligible_pm %>%
 ### Those that are in the PM+ Survey, while not Eligible
 setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id) 
 
+
 wrong_pm_survey <- pm_survey_df %>% 
     filter(pm_ptid%in% c(21177049, 21031052, 21010085, 21094053, 21073077, 21229516, 21198004, 21041517, 21229608))
 ```
@@ -399,7 +401,7 @@ wrong_pm_survey <- pm_survey_df %>%
 pm_sessions <- 
     pm_survey_df %>% 
     filter(ipmh_participant == "Yes") %>% 
-    select(pm_facility, pm_ptid, pm_session, ipmh_participant, pm_psychlops)
+    select(pm_facility, pm_ancid,pm_ptid, pm_session, ipmh_participant, pm_psychlops)
 
 
 # Duplicates Sessions
@@ -407,6 +409,12 @@ duplicates_sessions <- pm_sessions %>%
   group_by(pm_ptid, pm_session) %>%
   summarise(count = n(), .groups = "drop") %>%
   filter(count > 1)  # Filter those with more than one attendance per session
+
+pm_sessions_redundant <- pm_survey_df %>%
+  arrange(pm_ptid, pm_session) %>%
+  filter(duplicated(paste(pm_ptid, pm_session))) %>% 
+    filter(!is.na(pm_ptid))
+
 
 # Transforming data: One column for ptid, each session as a separate column
 pm_session_wide <- pm_sessions %>%
@@ -503,6 +511,7 @@ pm_session <-
     pm_survey_df %>% 
     filter(ipmh_participant == "No") %>% 
     select(pm_facility, pm_ancid, pm_session)
+
 
 # Duplicates Sessions
 duplicate_sessions <- pm_session %>%
@@ -707,6 +716,11 @@ source("PPW RCT follow up.R")
 table2b
 ```
 
+
+```{r Infant Outcomes3, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
+table2c
+```
 \newpage
 
 ## Clinical Outcomes
