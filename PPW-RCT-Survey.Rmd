@@ -255,6 +255,7 @@ demographics_df %>% tbl_summary(
         table.font.size = px(14))
 ```
 
+\newpage
 ## PPW Medical and Obstretric History
 
 ```{r Medical and Obstetric History, message=FALSE, warning=FALSE, include=FALSE}
