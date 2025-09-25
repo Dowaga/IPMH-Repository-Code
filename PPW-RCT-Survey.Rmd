@@ -3,15 +3,9 @@ title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
-<<<<<<< HEAD
     word_document
    # pdf_document
    # html_document
-=======
-   # word_document
-   # pdf_document
-   html_document
->>>>>>> 635a02c10df7ce82d795b9e23d4ea6832126ed62
 ---
 
 ```{r setup, echo = F, include = F}
