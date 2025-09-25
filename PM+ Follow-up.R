@@ -22,8 +22,10 @@ pm_follow_up <- pm_survey_df %>%
     arrange(pm_ptid)
 
 
-pulled_ptid <- pm_follow_up %>% 
-    filter(pm_ptid %in% ("21166501"))
+# Facility PM+ ANC for clean up
+pulled_ptid <- pm_survey_df %>% 
+    filter(str_detect(pm_facility, "Got")) %>% 
+    filter(str_detect(pm_session, "Session 3"))
 
 #David's code-------------
 
