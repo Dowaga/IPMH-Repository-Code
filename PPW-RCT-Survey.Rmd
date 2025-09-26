@@ -258,7 +258,7 @@ demographics_df %>% tbl_summary(
 \newpage
 ## PPW Medical and Obstretric History
 
-```{r Medical and Obstetric History, message=FALSE, warning=FALSE, include=FALSE}
+```{r Medical and Obstetric History, echo=FALSE, message=FALSE, warning=FALSE}
 source("Medical and Obstetric History.R")
 moh_summary
 ```
