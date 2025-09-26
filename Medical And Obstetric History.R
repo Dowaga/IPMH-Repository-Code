@@ -72,7 +72,7 @@ mo_history <- mo_history %>%
 
 moh_summary <- mo_history %>% 
 tbl_summary(sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
-    include = c(med_pre_preg, med_num_preg, med_preg_multi, med_num_livebirth, had_stillbirth,
+    include = c(med_pre_preg, med_num_preg, med_num_livebirth, had_stillbirth,
                 stillbirth_count, med_num_child, med_dx_currentpreg___1, 
                 med_dx_currentpreg___2, med_dx_currentpreg___3,
                 med_dx_currentpreg___4, med_dx_currentpreg___5, med_dx_currentpreg___6,
@@ -106,8 +106,7 @@ tbl_summary(sort = list(all_categorical() ~ "frequency"),  # Sort categorical le
                          med_dx_currentpreg___7	~ "Antepartum hemorrhage",
                          med_dx_currentpreg___8	~ "Miscarriage",
                          med_dx_currentpreg___9	~ "Diabetes",
-                         med_dx_currentpreg___10 ~ "Other",
-                         med_preg_multi ~ "Multiparous"),
+                         med_dx_currentpreg___10 ~ "Other"),
             missing = "no",
             digits = list(all_continuous() ~ 1), 
             type = list(med_pre_gestage_current ~ "continuous",
