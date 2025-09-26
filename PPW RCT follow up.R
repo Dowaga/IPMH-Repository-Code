@@ -562,10 +562,17 @@ table3 <- outcomes %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "Clinical Outcome") %>%
-    modify_caption("Table 3. Mental Health & QOL Outcomes Across Visits") %>%
-    bold_labels()%>%
-    as_gt()
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "Clinical Outcome",
+        subtitle = "Table 3. Mental Health & QOL Outcomes Across Visits") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
 
 table3
 
@@ -747,10 +754,18 @@ table4 <- pregnancy_combined_dedup %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "Clinical Outcome") %>%
-    modify_caption("Table 4. Clinical Adverse Outcomes") %>%
-    bold_labels()%>%
-    as_gt()
+    
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "Clinical Outcome",
+        subtitle = "Table 4. Clinical Adverse Outcomes") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
 
 table4
 
@@ -770,7 +785,7 @@ sae <- ppw_sae_df %>%
     ) %>%
     mutate(
         stillbirth = if_else(ae_preglosssp == "Stillbirth (>20wks gestation)", TRUE, FALSE, missing = FALSE),
-        miscarriage = if_else(ae_preglosssp == "Miscarriage (< =20wks gestation)", TRUE, FALSE, missing = FALSE),
+        miscarriage = if_else(ae_preglosssp == "Miscarriage (<=20wks gestation)", TRUE, FALSE, missing = FALSE),
         maternal_death = if_else(maternal_death == "Checked", TRUE, FALSE),
         infant_death = if_else(infant_death == "Checked", TRUE, FALSE),
         maternal_hospitalization = if_else(maternal_hospitalization == "Checked", TRUE, FALSE),
