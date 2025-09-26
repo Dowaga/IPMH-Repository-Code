@@ -185,7 +185,6 @@ prophylaxis <- infant_outcomes %>%
     filter(med_pastdiag___2 == "Checked") %>% 
     filter(is.na(io_iarv))
 
-
 table2a <- infant_outcomes %>%
     filter(visit_type == "6 Weeks") %>% 
     select(
@@ -269,16 +268,24 @@ table2b <- infant_outcomes %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "Infant Outcome") %>%
-    modify_caption("Table 2b. Infant Outcomes at 14 Weeks Postpartum") %>%
-    bold_labels()
-
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "Infant Outcome",
+        subtitle = "Table 2b. Infant Outcomes at 14 Weeks Postpartum") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
+    
 table2b
 
 status_prophylaxis <- infant_outcomes %>%
     filter(visit_type == "14 Weeks") %>% 
-    filter(med_pastdiag___2 == "Checked") %>% 
-    filter(!is.na(inf_status) & is.na(io_iarv))
+    filter(med_pastdiag___2 == "Unchecked") %>% 
+    filter(is.na(io_ihiv) & !is.na(io_iarv))
 
 table2c <- infant_outcomes %>%
     filter(visit_type == "6 Months") %>% 
@@ -306,10 +313,17 @@ table2c <- infant_outcomes %>%
             all_categorical() ~ "{n} ({p}%)"),
         missing = "no") %>%
     add_n() %>%
-    modify_header(label = "**Infant Outcome**") %>%
-    modify_caption("**Table 2c. Infant Outcomes at 6 Months Postpartum**") %>%
-    bold_labels()
-
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "Infant Outcome",
+        subtitle = "Table 2c. Infant Outcomes at 6 Months Postpartum") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
 
 table2c
 
