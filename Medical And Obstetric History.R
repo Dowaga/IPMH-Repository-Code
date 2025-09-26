@@ -117,7 +117,16 @@ tbl_summary(sort = list(all_categorical() ~ "frequency"),  # Sort categorical le
     modify_header(label = "**Variable**") %>%
     bold_labels() %>% 
     italicize_levels() %>% 
-    add_n()
+    add_n()%>% 
+    as_gt() %>%
+    gt::tab_header(
+        title = "Medical and Obstretric History",
+        subtitle = "Baseline Clinical and Obstetric Characteristics of Enrolled Participant") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
 
 moh_summary
 
@@ -127,6 +136,9 @@ pregnancies_number_QCs <- mo_history %>%
     # Remove the facility code
     mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>% 
     rename(`Facility` = clt_study_site)
+
+still_misc <- mo_history %>% 
+    filter(med_pre_preg == "Yes" & is.na(had_stillbirth))
 
 
 # Save to Excel in the working directory
