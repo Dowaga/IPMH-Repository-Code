@@ -183,7 +183,7 @@ infant_hiv_status_QCs <- infant_outcomes %>%
 
 prophylaxis <- infant_outcomes %>% 
     filter(med_pastdiag___2 == "Checked") %>% 
-    filter(is.na(io_iarv))
+    filter(is.na(io_ihiv))
 
 table2a <- infant_outcomes %>%
     filter(visit_type == "6 Weeks") %>% 
@@ -285,7 +285,7 @@ table2b
 status_prophylaxis <- infant_outcomes %>%
     filter(visit_type == "14 Weeks") %>% 
     filter(med_pastdiag___2 == "Unchecked") %>% 
-    filter(is.na(io_ihiv) & !is.na(io_iarv))
+    filter(!is.na(io_ihiv) & is.na(io_iarv))
 
 table2c <- infant_outcomes %>%
     filter(visit_type == "6 Months") %>% 
