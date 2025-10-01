@@ -182,8 +182,9 @@ infant_hiv_status_QCs <- infant_outcomes %>%
     filter(!is.na(tpnc_ihiv))
 
 prophylaxis <- infant_outcomes %>% 
-    filter(med_pastdiag___2 == "Checked") %>% 
-    filter(is.na(io_ihiv))
+    filter(med_pastdiag___2 == "Unchecked") %>% 
+    filter(!is.na(io_ihiv)) %>% 
+    filter(visit_type == "6 Months")
 
 table2a <- infant_outcomes %>%
     filter(visit_type == "6 Weeks") %>% 
@@ -241,6 +242,7 @@ table2a
 table2b <- infant_outcomes %>%
     filter(visit_type == "14 Weeks") %>% 
     select(
+        med_pastdiag___2,
         inf_status,  # Infant status,
         io_ill,
         io_hosp,
@@ -251,6 +253,7 @@ table2b <- infant_outcomes %>%
         io_icorti, 
     ) %>%
     tbl_summary(
+        by = med_pastdiag___2,
         label = list(
             io_ihiv ~ "Infant HIV status",
             io_iarv ~ "Infant given ARV prophylaxis",
@@ -290,6 +293,7 @@ status_prophylaxis <- infant_outcomes %>%
 table2c <- infant_outcomes %>%
     filter(visit_type == "6 Months") %>% 
     select(
+        med_pastdiag___2,
         inf_status,  # Infant status,
         io_ill,
         io_hosp,
@@ -299,6 +303,7 @@ table2c <- infant_outcomes %>%
         io_iarv,  # ARV status
         io_icorti) %>%
     tbl_summary(
+        by = med_pastdiag___2,
         label = list(
             io_ihiv ~ "Infant HIV status",
             io_iarv ~ "Infant given ARV prophylaxis",
