@@ -1,0 +1,101 @@
+---
+title: "PM Surveys"
+author: "David Owaga"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+# read data
+source("Datateam_ipmh.R")
+source("Dependencies.R")
+source("data_import.R")
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+pm_follow_up <- pm_survey_df
+
+```
+
+
+```{r Lay Provider in more than 1 Facility, echo=FALSE, message=FALSE, warning=FALSE}
+ duplicate_names <-  pm_follow_up %>%
+  distinct(pm_provider, pm_facility) %>% # Remove duplicate name-facility pairs if any
+  group_by(pm_provider) %>%
+  filter(n_distinct(pm_facility) > 1) %>%
+  ungroup()
+
+
+no_provider <- pm_follow_up %>% 
+    filter(is.na(pm_provider))
+
+# Write to Excel in the same folder with different filenames
+write_xlsx(no_provider, "C:/Users/DAMARIS/Desktop/IPMH/PM+/PM+ Survey QCs/No Provider.xlsx")
+```
+
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+generate_facility_summary <- function(facility_name, pm_follow_up) {
+  summary <- pm_follow_up %>%
+    filter(pm_facility == facility_name) %>%
+    group_by(`PM+ Provider` = pm_provider) %>%
+    reframe(`Total Sessions` = sum(pm_session %in% c(
+      "Session 1 content", "Session 2 content", "Session 3 content",
+      "Session 4 content", "Session 5 content"
+    )),
+      `Pre-intervention PSYCHLOPS measurement` = sum(pm_session == "Pre-intervention PSYCHLOPS measurement"),
+      `Session 1 content` = sum(pm_session == "Session 1 content"),
+      `Session 2 content` = sum(pm_session == "Session 2 content"),
+      `Session 3 content` = sum(pm_session == "Session 3 content"),
+      `Session 4 content` = sum(pm_session == "Session 4 content"), 
+      `Session 5 content` = sum(pm_session == "Session 5 content")
+    ) %>%
+    gt() %>%
+    tab_header(
+      title = paste("Facility:", facility_name),
+      subtitle = "PM Session Summary by Provider"
+    )
+}
+
+
+# List of unique facilities
+facilities <- unique(pm_follow_up$pm_facility)
+
+# Create empty Word document
+doc <- read_docx()
+
+# Loop through facilities and add gt tables to Word
+for (facility in facilities) {
+  gt_table <- generate_facility_summary(facility, pm_follow_up)
+
+  # Save each gt table temporarily as image
+  temp_file <- tempfile(fileext = ".png")
+  gtsave(gt_table, filename = temp_file)
+
+  # Add to Word document
+  doc <- doc %>%
+    body_add_par(paste("Facility:", facility), style = "heading 1") %>%
+    body_add_img(src = temp_file, width = 6, height = 4) %>%
+    body_add_par("", style = "Normal")
+}
+
+# Save final document
+print(doc, target = "PM+ Session Summary by Facility.docx")
+
+# Format date
+today <- format(Sys.Date(), "%Y-%m-%d")
+
+# Combine into filename
+filename <- paste0("PM+ Session Summary by Facility - ", today, ".docx")
+
+# Save the document
+print(doc, target = filename)
+
+
+```
