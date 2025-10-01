@@ -3,9 +3,9 @@ title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
-    word_document
+     word_document
    # pdf_document
-   # html_document
+   #html_document
 ---
 
 ```{r setup, echo = F, include = F}
@@ -706,27 +706,28 @@ table1
 ```
 
 \newpage
-
-## Infant Outcomes
+## Infant outcomes at 6 weeks, 14 weeks, & 6 months postpartum
+### Six Weeks Infant Outcomes
 
 ```{r Infant Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
 table2a
 ```
 
-
+### Fourteen Weeks Infant Outcomes
 ```{r Infant Outcomes2, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
 table2b
 ```
 
-
+### Six Months Infant Outcomes
 ```{r Infant Outcomes3, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
 table2c
 ```
-\newpage
 
+
+\newpage
 ## Clinical Outcomes
 
 ```{r Clinical Outcomes, echo=FALSE, message=FALSE, warning=FALSE}

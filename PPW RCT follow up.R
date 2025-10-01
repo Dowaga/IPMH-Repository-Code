@@ -182,9 +182,9 @@ infant_hiv_status_QCs <- infant_outcomes %>%
     filter(!is.na(tpnc_ihiv))
 
 prophylaxis <- infant_outcomes %>% 
-    filter(med_pastdiag___2 == "Checked") %>% 
-    filter(is.na(io_iarv))
-
+    filter(med_pastdiag___2 == "Unchecked") %>% 
+    filter(!is.na(io_ihiv)) %>% 
+    filter(visit_type == "6 Months")
 
 table2a <- infant_outcomes %>%
     filter(visit_type == "6 Weeks") %>% 
@@ -242,6 +242,7 @@ table2a
 table2b <- infant_outcomes %>%
     filter(visit_type == "14 Weeks") %>% 
     select(
+        med_pastdiag___2,
         inf_status,  # Infant status,
         io_ill,
         io_hosp,
@@ -252,6 +253,7 @@ table2b <- infant_outcomes %>%
         io_icorti, 
     ) %>%
     tbl_summary(
+        by = med_pastdiag___2,
         label = list(
             io_ihiv ~ "Infant HIV status",
             io_iarv ~ "Infant given ARV prophylaxis",
@@ -269,20 +271,29 @@ table2b <- infant_outcomes %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "Infant Outcome") %>%
-    modify_caption("Table 2b. Infant Outcomes at 14 Weeks Postpartum") %>%
-    bold_labels()
-
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "Infant Outcome",
+        subtitle = "Table 2b. Infant Outcomes at 14 Weeks Postpartum") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
+    
 table2b
 
 status_prophylaxis <- infant_outcomes %>%
     filter(visit_type == "14 Weeks") %>% 
-    filter(med_pastdiag___2 == "Checked") %>% 
-    filter(!is.na(inf_status) & is.na(io_iarv))
+    filter(med_pastdiag___2 == "Unchecked") %>% 
+    filter(!is.na(io_ihiv) & is.na(io_iarv))
 
 table2c <- infant_outcomes %>%
     filter(visit_type == "6 Months") %>% 
     select(
+        med_pastdiag___2,
         inf_status,  # Infant status,
         io_ill,
         io_hosp,
@@ -292,6 +303,7 @@ table2c <- infant_outcomes %>%
         io_iarv,  # ARV status
         io_icorti) %>%
     tbl_summary(
+        by = med_pastdiag___2,
         label = list(
             io_ihiv ~ "Infant HIV status",
             io_iarv ~ "Infant given ARV prophylaxis",
@@ -306,10 +318,17 @@ table2c <- infant_outcomes %>%
             all_categorical() ~ "{n} ({p}%)"),
         missing = "no") %>%
     add_n() %>%
-    modify_header(label = "**Infant Outcome**") %>%
-    modify_caption("**Table 2c. Infant Outcomes at 6 Months Postpartum**") %>%
-    bold_labels()
-
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "Infant Outcome",
+        subtitle = "Table 2c. Infant Outcomes at 6 Months Postpartum") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
 
 table2c
 
@@ -548,10 +567,17 @@ table3 <- outcomes %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "Clinical Outcome") %>%
-    modify_caption("Table 3. Mental Health & QOL Outcomes Across Visits") %>%
-    bold_labels()%>%
-    as_gt()
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "Clinical Outcome",
+        subtitle = "Table 3. Mental Health & QOL Outcomes Across Visits") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
 
 table3
 
@@ -733,10 +759,18 @@ table4 <- pregnancy_combined_dedup %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    modify_header(label = "Clinical Outcome") %>%
-    modify_caption("Table 4. Clinical Adverse Outcomes") %>%
-    bold_labels()%>%
-    as_gt()
+    
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header(
+        title = "Clinical Outcome",
+        subtitle = "Table 4. Clinical Adverse Outcomes") %>%
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1))
 
 table4
 
@@ -756,7 +790,7 @@ sae <- ppw_sae_df %>%
     ) %>%
     mutate(
         stillbirth = if_else(ae_preglosssp == "Stillbirth (>20wks gestation)", TRUE, FALSE, missing = FALSE),
-        miscarriage = if_else(ae_preglosssp == "Miscarriage (< =20wks gestation)", TRUE, FALSE, missing = FALSE),
+        miscarriage = if_else(ae_preglosssp == "Miscarriage (<=20wks gestation)", TRUE, FALSE, missing = FALSE),
         maternal_death = if_else(maternal_death == "Checked", TRUE, FALSE),
         infant_death = if_else(infant_death == "Checked", TRUE, FALSE),
         maternal_hospitalization = if_else(maternal_hospitalization == "Checked", TRUE, FALSE),

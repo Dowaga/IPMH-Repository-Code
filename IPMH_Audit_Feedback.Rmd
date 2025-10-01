@@ -13,7 +13,7 @@ source("Audit and feedback script.R")
 
 This script generates the audit and feedback report for each facility based on the calendar months. For the third audit and feedback session, we will report statistics from March 1st to May 31st. Data from the report should be abstracted for each facility and put into the slide template.
 
-# 1. PHQ2 and GAD2 Screening Rate Per Facility (Per month & March-May Combined)
+# 1. PHQ2 and GAD2 Screening Rate Per Facility (Per month & July-September Combined)
 
 ```{r, bar plots for each facility, echo = F, warning=F, fig.width = 6, fig.height = 4}
 # Only rename columns for easier reference - no new columns created
@@ -67,13 +67,13 @@ kable(screening_rate_monthly,
 
 ```{r, total screening rate table per facility, echo = F, warning=F}
 kable(total_screening_rate, 
-      caption = "March-May Combined PHQ2/GAD2 Screening Rate by Facility",
+      caption = "July-September Combined PHQ2/GAD2 Screening Rate by Facility",
       digits = 2)
 ```
 
 \newpage
 
-# 2. PHQ9 and GAD7 Screening Rate Among Study Participants Per Facility (Per month & March-May Combined)
+# 2. PHQ9 and GAD7 Screening Rate Among Study Participants Per Facility (Per month & July-September Combined)
 
 ```{r, phq9 line plots for all facilities, include =F, echo = F, warning=F, fig.width=6, fig.height=4}
 facilities <- unique(phq9_screening$clt_study_site)
@@ -105,13 +105,13 @@ kable(phq9_screening_monthly,
 
 ```{r, total secondary screening rate table, echo = F, warning=F}
 kable(phq9_screening_total, 
-      caption = "March-May Combined PHQ9/GAD7 Screening Rate by Facility",
+      caption = "July-September Combined PHQ9/GAD7 Screening Rate by Facility",
       digits = 2)
 ```
 
 \newpage
 
-# 3. PM+ Referral Rate Per Facility (Per month & March-May Combined)
+# 3. PM+ Referral Rate Per Facility (Per month & July-September Combined)
 
 ```{r, pm referral rate, echo = F, warning=F}
 kable(pm_referral_monthly, 
@@ -119,25 +119,25 @@ kable(pm_referral_monthly,
       digits = 2)
 
 kable(pm_referral_total,
-      caption = "March-May Combined PM+ Referral Rate by Facility",
+      caption = "July-September Combined PM+ Referral Rate by Facility",
       digits = 2)
 ```
 
 \newpage
 
-# 4. Telepsychiatry Referral Rate Per Facility (Per month & March-May Combined)
+# 4. Telepsychiatry Referral Rate Per Facility (Per month & July-September Combined)
 
 ```{r, telepsych referral rate, echo = F, warning=F}
 kable(monthly_referral_summary_tele, caption = "Monthly Telepsychiatry Referral Rate by Facility",
       digits = 2)
 
-kable(total_referral_summary_tele, caption = "March-May Combined Telepsychiatry Referral Rate by Facility",
+kable(total_referral_summary_tele, caption = "July-September Combined Telepsychiatry Referral Rate by Facility",
       digits = 2)
 ```
 
 \newpage
 
-# 5. PM+ initiation rate per facility (Per month & March-May Combined)
+# 5. PM+ initiation rate per facility (Per month & July-September Combined)
 
 ```{r, pm initiation rate, echo = F, warning=F}
 kable(pm_summary_session1%>% select(1,2,3,4,7), 
@@ -145,7 +145,7 @@ kable(pm_summary_session1%>% select(1,2,3,4,7),
       digits = 2)
 
 kable(pm_initiation_all_merge_session1,
-      caption = "March-May Combined PM+ Initiation Rate by Facility",
+      caption = "July-September Combined PM+ Initiation Rate by Facility",
       digits = 2)
 ```
 \newpage
@@ -160,7 +160,7 @@ kable(pm_completion_df,
 
 \newpage
 
-# 7. Telepsychiatry initiation rate per facility (Per month & March-May Combined)
+# 7. Telepsychiatry initiation rate per facility (Per month & July-September Combined)
 
 ```{r, telepsych initiation rate, echo = F, warning=F}
 kable(telepsych_initiation_monthly, 
@@ -168,17 +168,17 @@ kable(telepsych_initiation_monthly,
       digits = 2)
 
 kable(telepsych_initiation_total,
-      caption = "March-May Combined Telepsychiatry Initiation Rate by Facility",
+      caption = "July-September Combined Telepsychiatry Initiation Rate by Facility",
       digits = 2)
 ```
 
 \newpage
 
-# 8. Frequency of conducting health talks & use of flipbook per facility (Per month & March-May Combined)
+# 8. Frequency of conducting health talks & use of flipbook per facility (Per month & July-September Combined)
 
 ```{r health talks, echo = F, warning=F}
 kable(health_talks_monthly, caption = "Monthly Health Talks & Flipbook Usage by Facility",
       digits = 2)
-kable(total_health_talks, caption = "March-May Combined Health Talks & Flipbook Usage by Facility",
+kable(total_health_talks, caption = "July-September Combined Health Talks & Flipbook Usage by Facility",
       digits = 2)
 ```
