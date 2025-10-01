@@ -45,7 +45,7 @@ accep_labels <- c(
     "Completely disagree" = 1
 )
 
-# Recode PHQ9 variables
+# Recode variables
 accep_dt <- accep_dt %>%
     mutate(across(c(af_meets, af_appeal, af_enjoy, af_welcome, af_use, 
                     af_seems, af_doable, af_easy, af_life, af_suitable, 
@@ -98,12 +98,32 @@ summary_wide <- summary_table %>%
     pivot_wider(names_from = visit_type, values_from = mean_sd)%>% 
     select(Domain, Item, `6 Weeks`, `14 Weeks`, `6 Months`)
 
-summary_wide <- summary_wide %>%
+item_summary<- summary_wide %>%
     gt(groupname_col = "Domain") %>%
     tab_header(title = "Mean (SD) of Youth Friendship Bench SA Ratings by Time Point") 
 
 
 # Compute Overall Mean(SD) per Domain----
+domain_overall <- long_data %>%
+    mutate(
+        Domain = case_when(
+            item %in% c("af_meets", "af_appeal", "af_enjoy", "af_welcome") ~ "Acceptability",
+            item %in% c("af_applicable", "af_suitable", "af_match") ~ "Appropriateness",
+            item %in% c("af_use", "af_seems", "af_doable", "af_easy", "af_life") ~ "Feasibility"
+        )
+    ) %>%
+    group_by(Domain, visit_type) %>%
+    summarise(
+        mean = round(mean(response, na.rm = TRUE), 2),
+        sd = round(sd(response, na.rm = TRUE), 2),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        Item = "Overall",
+        mean_sd = paste0(mean, " (", sd, ")")
+    ) %>%
+    select(Domain, Item, visit_type, mean_sd)
+
 domain_overall_wide <- domain_overall %>%
     pivot_wider(names_from = visit_type, values_from = mean_sd) %>%
     select(Domain, Item, `6 Weeks`, `14 Weeks`, `6 Months`)
