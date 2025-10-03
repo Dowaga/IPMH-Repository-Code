@@ -5,19 +5,25 @@
 # Telpsychaitry Sessions
 
 # Setup ------------------------------------------------------------------------
-
+rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
 # data prep --------------------------------------------------------------------
-telepsych_dates <- telepsychiatry_df %>%
-    mutate(tele_date = as_date(tele_date, format = "%Y-%m-%d")) %>% 
+View(telepsych)
+
+telepsych_dates <- telepsych%>%
+    mutate(tele_date = ymd(tele_date)) %>% 
     select(tele_provider, tele_date, pt_attend, tele_ancid) %>% 
     rename(Psychiatrist = tele_provider,
            `Psychiatry Date` = tele_date,
            `Participant Attened` = pt_attend)
+
+# ANC Check
+anc_number <- telepsych %>% 
+    select(record_id, tele_ancid)
 
 # PM+ and Telepsychiatry Referrals
 pm_telep_df <- ppw_rct_df %>% 
