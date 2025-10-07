@@ -33,8 +33,8 @@ pm_follow_up <- pm_survey_df
 no_provider <- pm_follow_up %>% 
     filter(is.na(pm_provider))
 
-# Write to Excel in the same folder with different filenames
-write_xlsx(no_provider, "C:/Users/DAMARIS/Desktop/IPMH/PM+/PM+ Survey QCs/No Provider.xlsx")
+# jh Write to Excel in the same folder with different filenames
+#write_xlsx(no_provider, #"C:/Users/DAMARIS/Desktop/IPMH/PM+/PM+ Survey QCs/No Provider.xlsx")
 ```
 
 
