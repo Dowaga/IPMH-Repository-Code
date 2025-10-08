@@ -38,7 +38,7 @@ rct_ppw <- rct_ppw %>%
 pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$tele_date)
 
-#time period for the data [2025-07-01, 2025-06-30]
+#time period for the data [2025-10-01, 2025-07-01]
 pm_all <- pm
 rct_ppw_all <- rct_ppw
 daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-10-01")
@@ -195,23 +195,27 @@ rct_ppw_int <- rct_ppw %>%
 
 #denominator should just be the number of participants
 n_part <- rct_ppw_int %>%
-    filter(!is.na(clt_ptid)) %>%
-    group_by(clt_study_site, clt_timestamp) %>%
+    filter(!is.na(clt_ptid)) %>% 
+    filter(redcap_event_name != "PM+ Session 5 Abstraction (Arm 1: Intervention)") %>% 
+    group_by(clt_study_site, clt_timestamp, redcap_event_name) %>%
     summarise(n_part = n(), .groups = "drop")
 
-# numerator is the number of participants who have a PHQ9/GAD7 score
+# numerator is the number of new participants who have a PHQ9/GAD7 score
 phq9_screening <- rct_ppw_int %>%
+    filter(redcap_event_name != "PM+ Session 5 Abstraction (Arm 1: Intervention)") %>% 
     filter(!is.na(abs_phq_tired) | !is.na(abs_gad7_afraid)) %>%
-    group_by(clt_study_site, clt_timestamp) %>%
+    group_by(clt_study_site, clt_timestamp, redcap_event_name) %>%
     summarise(num_screened = n(), .groups = "drop")
 
 #merge the two datasets
-phq9_screening <- full_join(phq9_screening, n_part, by = c("clt_study_site" = "clt_study_site", "clt_timestamp" = "clt_timestamp"))
+phq9_screening <- full_join(phq9_screening, n_part, by = c("clt_study_site" = "clt_study_site", 
+                                                           "clt_timestamp" = "clt_timestamp",
+                                                           "redcap_event_name" = "redcap_event_name"))
 
 #weekly data
 phq9_screening_weekly <- phq9_screening %>%
     mutate(week = floor_date(clt_timestamp, "week", week_start = 1)) %>%
-    group_by(clt_study_site, week) %>%
+    group_by(clt_study_site, week, redcap_event_name) %>%
     summarise(
         `Weekly PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
         `Weekly study participants` = sum(n_part, na.rm = TRUE),
@@ -223,7 +227,7 @@ phq9_screening_weekly <- phq9_screening %>%
 #make phq9_screening have one row per day per facility
 phq9_screening_monthly <- phq9_screening %>%
     mutate(month = format(clt_timestamp, "%Y-%m")) %>%
-    group_by(clt_study_site, month) %>%
+    group_by(clt_study_site, mont, redcap_event_name) %>%
     summarise(
         `Monthly PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
         `Monthly study participants` = sum(n_part, na.rm = TRUE),
@@ -233,7 +237,7 @@ phq9_screening_monthly <- phq9_screening %>%
 
 #total data
 phq9_screening_total <- phq9_screening %>%
-    group_by(clt_study_site) %>%
+    group_by(clt_study_site, redcap_event_name) %>%
     summarise(
         `Total PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
         `Total study participants` = sum(n_part, na.rm = TRUE),
