@@ -284,7 +284,10 @@ phq9_high_scores <- rct_ppw_int %>%
 
 # get the numerator from rct_ppw database
 pm_referral <- rct_ppw_int %>% 
-    filter(abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes") 
+    filter(abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes") %>% 
+    mutate(clt_date = ymd(clt_date)) %>%
+    #filter referral based on audit period
+  filter(between(clt_date, ymd("2025-07-01"), ymd("2025-10-01")))
 
 pm_referral <- pm_referral %>%
     mutate(day = floor_date(clt_timestamp, "day")) %>%
