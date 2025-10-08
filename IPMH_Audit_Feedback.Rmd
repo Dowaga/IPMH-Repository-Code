@@ -79,21 +79,23 @@ kable(total_screening_rate,
 facilities <- unique(phq9_screening$clt_study_site)
 
 for (facility in facilities) {
-  facility_data <- phq9_screening_weekly %>% filter(clt_study_site == facility)
+  facility_data <- phq9_screening_weekly %>%
+    filter(clt_study_site == facility)
   
-  p <- ggplot(facility_data, aes(x = week, y = `PHQ9/GAD7 screening rate`)) +
-    geom_line(color = "blue") + 
-    geom_point(color = "red") +
+  p <- ggplot(facility_data, aes(x = week, y = `PHQ9/GAD7 screening rate`, color = redcap_event_name)) +
+    geom_line() + 
+    geom_point() +
     labs(title = paste("Weekly PHQ9/GAD7 Screening Rate -", facility),
          x = "Date", 
-         y = "PHQ9/GAD7 Screening Rate (%)") +
+         y = "PHQ9/GAD7 Screening Rate (%)",
+         color = "Event") +
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1),
           plot.title = element_text(size = 12)) +
     scale_x_date(date_breaks = "1 week", date_labels = "%Y-%m-%d") +
     scale_y_continuous(limits = c(0, 100))
   
-  print(p)  # This will generate separate plots for each facility
+  print(p)
 }
 ```
 
