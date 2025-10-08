@@ -15,19 +15,20 @@ source("data_import.R")
 ```
 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+```{r Sessions Summary, echo=FALSE, message=FALSE, warning=FALSE}
 source("Telepsychiatry Sessions.R")
 summary_table
+
 ```
 
 
-```{r}
+```{r Diagnosis, echo=FALSE, message=FALSE, warning=FALSE}
 source("Telepsychiatry Sessions.R")
 diag_freq
 ```
 
 
-```{r}
+```{r Prescriptions, echo=FALSE, message=FALSE, warning=FALSE}
 source("Telepsychiatry Sessions.R")
 med_freq
 ```
