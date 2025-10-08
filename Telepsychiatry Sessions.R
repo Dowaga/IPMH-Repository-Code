@@ -12,7 +12,6 @@ source("Dependencies.R")
 source("data_import.R")
 
 # data prep --------------------------------------------------------------------
-View(telepsych)
 
 telepsych_dates <- telepsych %>%
     mutate(tele_date = ymd(tele_date)) %>% 
