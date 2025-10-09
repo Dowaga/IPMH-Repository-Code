@@ -193,29 +193,28 @@ rct_ppw_int <- rct_ppw %>%
                clt_study_site == "Ramula Health Centre"|
                clt_study_site == "Airport Health Centre (Kisumu)")
 
-#denominator should just be the number of participants
+#denominator should just be the number of new participants
 n_part <- rct_ppw_int %>%
     filter(!is.na(clt_ptid)) %>% 
-    filter(redcap_event_name != "PM+ Session 5 Abstraction (Arm 1: Intervention)") %>% 
-    group_by(clt_study_site, clt_timestamp, redcap_event_name) %>%
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
+    group_by(clt_study_site, clt_timestamp) %>%
     summarise(n_part = n(), .groups = "drop")
 
 # numerator is the number of new participants who have a PHQ9/GAD7 score
 phq9_screening <- rct_ppw_int %>%
-    filter(redcap_event_name != "PM+ Session 5 Abstraction (Arm 1: Intervention)") %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     filter(!is.na(abs_phq_tired) | !is.na(abs_gad7_afraid)) %>%
-    group_by(clt_study_site, clt_timestamp, redcap_event_name) %>%
+    group_by(clt_study_site, clt_timestamp) %>%
     summarise(num_screened = n(), .groups = "drop")
 
 #merge the two datasets
 phq9_screening <- full_join(phq9_screening, n_part, by = c("clt_study_site" = "clt_study_site", 
-                                                           "clt_timestamp" = "clt_timestamp",
-                                                           "redcap_event_name" = "redcap_event_name"))
+                                                           "clt_timestamp" = "clt_timestamp"))
 
 #weekly data
 phq9_screening_weekly <- phq9_screening %>%
     mutate(week = floor_date(clt_timestamp, "week", week_start = 1)) %>%
-    group_by(clt_study_site, week, redcap_event_name) %>%
+    group_by(clt_study_site, week) %>%
     summarise(
         `Weekly PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
         `Weekly study participants` = sum(n_part, na.rm = TRUE),
@@ -227,7 +226,7 @@ phq9_screening_weekly <- phq9_screening %>%
 #make phq9_screening have one row per day per facility
 phq9_screening_monthly <- phq9_screening %>%
     mutate(month = format(clt_timestamp, "%Y-%m")) %>%
-    group_by(clt_study_site, mont, redcap_event_name) %>%
+    group_by(clt_study_site, month) %>%
     summarise(
         `Monthly PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
         `Monthly study participants` = sum(n_part, na.rm = TRUE),
@@ -237,7 +236,7 @@ phq9_screening_monthly <- phq9_screening %>%
 
 #total data
 phq9_screening_total <- phq9_screening %>%
-    group_by(clt_study_site, redcap_event_name) %>%
+    group_by(clt_study_site) %>%
     summarise(
         `Total PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
         `Total study participants` = sum(n_part, na.rm = TRUE),
