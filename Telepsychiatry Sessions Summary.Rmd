@@ -1,0 +1,35 @@
+---
+title: "Telepsychiatry Sessions"
+author: "David Owaga"
+date: "2025-10-08"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+# read data
+source("Datateam_ipmh.R")
+source("Dependencies.R")
+source("data_import.R")
+```
+
+
+```{r Sessions Summary, echo=FALSE, message=FALSE, warning=FALSE}
+source("Telepsychiatry Sessions.R")
+summary_table
+
+```
+
+
+```{r Diagnosis, echo=FALSE, message=FALSE, warning=FALSE}
+source("Telepsychiatry Sessions.R")
+diag_freq
+```
+
+
+```{r Prescriptions, echo=FALSE, message=FALSE, warning=FALSE}
+source("Telepsychiatry Sessions.R")
+med_freq
+```
+

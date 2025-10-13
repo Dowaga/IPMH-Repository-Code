@@ -184,9 +184,12 @@ infant_hiv_status_QCs <- infant_outcomes %>%
 prophylaxis <- infant_outcomes %>% 
     filter(med_pastdiag___2 == "Unchecked") %>% 
     filter(!is.na(io_ihiv)) %>% 
-    filter(visit_type == "6 Months")
+    filter(visit_type == "6 Weeks")
 
 table2a <- infant_outcomes %>%
+    mutate(med_pastdiag___2 = recode(med_pastdiag___2,
+                                     Checked = "PPWLHIV",
+                                     Unchecked = "PPWNLHIV")) %>% 
     filter(visit_type == "6 Weeks") %>% 
     select(
         med_pastdiag___2,
@@ -240,6 +243,9 @@ table2a <- infant_outcomes %>%
 table2a
 
 table2b <- infant_outcomes %>%
+    mutate(med_pastdiag___2 = recode(med_pastdiag___2,
+                                     Checked = "PPWLHIV",
+                                     Unchecked = "PPWNLHIV")) %>% 
     filter(visit_type == "14 Weeks") %>% 
     select(
         med_pastdiag___2,
@@ -291,6 +297,9 @@ status_prophylaxis <- infant_outcomes %>%
     filter(!is.na(io_ihiv) & is.na(io_iarv))
 
 table2c <- infant_outcomes %>%
+    mutate(med_pastdiag___2 = recode(med_pastdiag___2,
+                                     Checked = "PPWLHIV",
+                                     Unchecked = "PPWNLHIV")) %>%
     filter(visit_type == "6 Months") %>% 
     select(
         med_pastdiag___2,
@@ -728,20 +737,33 @@ pregnancy_combined <- pregnancy_combined %>%
 pregnancy_combined_dedup <- pregnancy_combined %>%
     distinct(clt_ptid, .keep_all = TRUE)
 
+#Recode Logical Columns to "Yes"/"No"
+pregnancy_combined_dedup <- pregnancy_combined %>%
+    distinct(clt_ptid, .keep_all = TRUE) %>%
+    mutate(across(
+        where(is.logical),
+        ~ case_when(
+            .x == TRUE ~ "Yes",
+            .x == FALSE ~ "No",
+            is.na(.x) ~ NA_character_
+        )
+    ))
+
+
 table4 <- pregnancy_combined_dedup %>%
     select(miscarriage_final, stillbirth_final, late_stillbirth_final,
            preterm_birth, low_birthweight, sga, infant_death, any_adverse_outcome) %>%
     tbl_summary(
-        type = list(
-            miscarriage_final ~ "categorical",
-            stillbirth_final ~ "categorical",
-            late_stillbirth_final ~ "categorical",
-            preterm_birth ~ "categorical",
-            low_birthweight ~ "categorical",
-            sga ~ "categorical",
-            infant_death ~ "categorical",
-            any_adverse_outcome ~ "categorical"
-        ),
+        #type = list(
+            #miscarriage_final ~ "categorical",
+            #stillbirth_final ~ "categorical",
+            #late_stillbirth_final ~ "categorical",
+            #preterm_birth ~ "categorical",
+            #low_birthweight ~ "categorical",
+            #sga ~ "categorical",
+            #infant_death ~ "categorical",
+            #any_adverse_outcome ~ "categorical"
+        #),
         label = list(
             miscarriage_final ~ "Miscarriage",
             stillbirth_final ~ "Stillbirth",
@@ -759,7 +781,6 @@ table4 <- pregnancy_combined_dedup %>%
         missing = "no"
     ) %>%
     add_n() %>%
-    
     bold_labels() %>% 
     italicize_levels() %>% 
     # convert from gtsummary object to gt object

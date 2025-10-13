@@ -73,17 +73,18 @@ kable(total_screening_rate,
 
 \newpage
 
-# 2. PHQ9 and GAD7 Screening Rate Among Study Participants Per Facility (Per month & July-September Combined)
+# 2. PHQ9 and GAD7 Screening Rate Among New Study Participants Per Facility (Per month & July-September Combined)
 
 ```{r, phq9 line plots for all facilities, include =F, echo = F, warning=F, fig.width=6, fig.height=4}
 facilities <- unique(phq9_screening$clt_study_site)
 
 for (facility in facilities) {
-  facility_data <- phq9_screening_weekly %>% filter(clt_study_site == facility)
+  facility_data <- phq9_screening_weekly %>%
+    filter(clt_study_site == facility)
   
   p <- ggplot(facility_data, aes(x = week, y = `PHQ9/GAD7 screening rate`)) +
-    geom_line(color = "blue") + 
-    geom_point(color = "red") +
+    geom_line() + 
+    geom_point() +
     labs(title = paste("Weekly PHQ9/GAD7 Screening Rate -", facility),
          x = "Date", 
          y = "PHQ9/GAD7 Screening Rate (%)") +
@@ -93,19 +94,19 @@ for (facility in facilities) {
     scale_x_date(date_breaks = "1 week", date_labels = "%Y-%m-%d") +
     scale_y_continuous(limits = c(0, 100))
   
-  print(p)  # This will generate separate plots for each facility
+  print(p)
 }
 ```
 
 ```{r, monthly secondary screening rate table, echo = F, warning=F}
 kable(phq9_screening_monthly, 
-      caption = "PHQ9/GAD7 Monthly Screening Rate by Facility",
+      caption = "PHQ9/GAD7 Monthly Screening Rate by Facility (for new participants)",
       digits = 2)
 ```
 
 ```{r, total secondary screening rate table, echo = F, warning=F}
 kable(phq9_screening_total, 
-      caption = "July-September Combined PHQ9/GAD7 Screening Rate by Facility",
+      caption = "July-September Combined PHQ9/GAD7 Screening Rate by Facility (for new participants)",
       digits = 2)
 ```
 

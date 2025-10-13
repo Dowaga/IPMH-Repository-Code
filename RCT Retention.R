@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1hlLmUfq3PQVXvfTvlu5OdTCmTyZevo4VvdD0lSMZLTQ/edit?gid=1699758718#gid=1699758718"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1gXLL4aMVKOiYBd7cs2kMj3d_vXBc9NC0XNkwAYCB5M8/edit?gid=13261372#gid=13261372"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -30,14 +30,14 @@ sheet_list <- map(set_names(sheet_names, sheet_names), function(sheet) {
 
 # Drop the first row, making second row column headers
 sheet_list_clean <- map(sheet_list, ~ .x %>% 
-                           slice(-1))
+                          slice(-1))
 
 
 # Rename column 4:15
 ## new column names for positions 4 to 15
 new_names <- c("reminder1_6wks", "reminder2_6wks", "due_date_6wks", "actual_visit_6wks", "reminder1_14wks", "reminder2_14wks", "due_date_14wks", "actual_visit_14wks", "reminder1_6mths", "reminder2_6mths",  "due_date_6mths", "actual_visit_6mths")
 
-sheet_list_clean <- map(sheet_list_clean, function(df) {
+sheet_list_clean <- map(sheet_list, function(df) {
    if (ncol(df) >= 15) {
       colnames(df)[4:15] <- new_names
    }
@@ -52,7 +52,7 @@ list2env(sheet_list_clean, envir = .GlobalEnv)
 
 walk2(sheet_list_clean, names(sheet_list_clean), function(df, name) {
    # Only proceed if required columns exist
-   required_cols <- c("Participant ID", "Delivery Date", "actual_visit_6wks", "actual_visit_14wks")
+   required_cols <- c("Participant ID", "Delivery Date", "actual_visit_6wks", "actual_visit_14wks", "actual_visit_6mths")
    
    if (all(required_cols %in% names(df))) {
       df_clean <- df %>%
@@ -77,19 +77,21 @@ delivery_dfs <- ls(pattern = "_deliveries$") |>
    setdiff(c("all_deliveries", "sheet1_deliveries")) |>
    mget()
 
-View(miriu_health_centre_deliveries)
+View(delivery_dfs)
 
 # Bind and clean
 all_deliveries <- imap_dfr(delivery_dfs, ~ .x %>%
                               mutate(
+                                  `Participant ID` = as.integer(`Participant ID`),
                                  actual_visit_6wks = ymd(actual_visit_6wks),
                                  actual_visit_14wks = ymd(actual_visit_14wks),
+                                 actual_visit_6mths = ymd(actual_visit_6mths),
                                  delivery_date = ymd(`Delivery Date`)
                               ) %>%
                               filter(!is.na(`delivery_date`))
 ) %>% 
    select(ptid = `Participant ID`, delivery_date, actual_visit_6wks, 
-          actual_visit_14wks) %>% 
+          actual_visit_14wks, actual_visit_6mths) %>% 
    mutate(Facility = substr(ptid, 3, 4),
           Facility = dplyr::recode(Facility, 
                                "01" = "Rwambwa Sub-county Hospital",
@@ -135,35 +137,46 @@ all_deliveries <- all_deliveries %>%
 
 # Read PPW RCT Database and extracted those who attended their visits
 visits <- ppw_rct_df %>% 
-    filter(grepl("^6 Weeks|^14 Weeks", redcap_event_name),
-           is.na(redcap_repeat_instance),
-           clt_visit == "6 weeks post-partum"|clt_visit == "14 weeks post-partum")
-
-
+    filter(
+        grepl("^6 Weeks|^14 Weeks|^6 Months", redcap_event_name),
+        is.na(redcap_repeat_instance),
+        clt_visit %in% c("6 weeks post-partum", 
+                         "14 weeks post-partum", 
+                         "6 months post-partum")
+    )
 
 attendance_df <- visits %>%
     mutate(
-        six_weeks_flag = if_else(grepl("^6 Weeks", redcap_event_name), 1, 0),
-        fourteen_weeks_flag = if_else(grepl("^14 Weeks", redcap_event_name), 1, 0),
+        six_weeks_flag = if_else(grepl("^6 weeks", clt_visit), 1, 0),
+        fourteen_weeks_flag = if_else(grepl("^14 weeks", clt_visit), 1, 0),
         six_weeks_missed = if_else(grepl("^6 weeks post", mv_visit), 1, 0),
-        fourteen_weeks_missed = if_else(grepl("^14 weeks post", mv_visit), 1, 0)
-    ) %>%
+        fourteen_weeks_missed = if_else(grepl("^14 weeks post", mv_visit), 1, 0),
+        six_months_flag = if_else(grepl("^6 months post", clt_visit), 1, 0),
+        six_months_missed = if_else(grepl("^6 months post", mv_visit), 1, 0),
+        ) %>%
     group_by(record_id) %>%
     summarise(
         six_weeks_flag = max(six_weeks_flag, na.rm = TRUE),
         fourteen_weeks_flag = max(fourteen_weeks_flag, na.rm = TRUE),
         six_weeks_missed = max(six_weeks_missed, na.rm = TRUE),
         fourteen_weeks_missed = max(fourteen_weeks_missed, na.rm = TRUE),
+        six_months_flag = max(six_months_flag, na.rm = TRUE),
+        six_months_missed = max(six_months_missed, na.rm = TRUE),
         .groups = "drop"
     ) %>%
     mutate(
         six_weeks_flag = if_else(six_weeks_missed == 1, 0, six_weeks_flag),
-        fourteen_weeks_flag = if_else(fourteen_weeks_missed == 1, 0, fourteen_weeks_flag)
+        fourteen_weeks_flag = if_else(fourteen_weeks_missed == 1, 0, fourteen_weeks_flag),
+        six_months_flag = if_else(six_months_missed == 1, 0, six_months_flag)
     )
 
 
 all_deliveries <- all_deliveries %>% 
+    mutate(ptid = as.integer(ptid)) %>% 
     left_join(attendance_df, by = c("ptid" = "record_id"))
+
+mirogi <- all_deliveries %>% 
+    filter(Facility == "Mirogi Health Centre")
 
 # 6 Wks Visit is NA and window closed
 missing_6wks_data <- all_deliveries %>% 
@@ -203,8 +216,6 @@ wk6_facility_retention <- all_deliveries %>%
 # title = "Six Weeks Follow-Up Retention Summary"
 #)
 
-View(wk6_facility_retention)
-
 #### 14 Wks Retention
 wk14_overall_retention <- all_deliveries %>%
     #group_by(Facility) %>% 
@@ -231,6 +242,18 @@ wk14_facility_retention <- all_deliveries %>%
     #tab_header(
        # title = "Fourteen Weeks Follow-Up Retention Summary")
 
+six_mths_facility_retention <- all_deliveries %>%
+    group_by(Facility) %>% 
+    reframe(
+        `Window not Closed` = sum(mo6_window_open > today()),
+        Expected = sum(mo6_window_close < today()|six_months_flag == 1, na.rm = TRUE),
+        Attended = sum(six_months_flag == 1, na.rm = TRUE),
+        `Percentage Attended` = round(Attended / Expected * 100, 1)
+    )# %>%
+#gt() %>%
+#tab_header(
+# title = "Fourteen Weeks Follow-Up Retention Summary")
+
 # Missed Visits----
 missed_6wks <- all_deliveries %>% 
     select(Facility, ptid, six_weeks_flag) %>% 
@@ -240,30 +263,128 @@ missed_14wks <- all_deliveries %>%
     select(Facility, ptid, fourteen_weeks_flag, wk14_window_close) %>% 
     filter(fourteen_weeks_flag == "0" & wk14_window_close <= Sys.Date())
 
-colnames(all_deliveries)
+missed_6months <- all_deliveries %>% 
+    select(Facility, ptid, six_months_flag, mo6_window_close) %>% 
+    filter(six_months_flag == "0" & mo6_window_close <= Sys.Date())
+
+# Create Overall Retention Summaries
+overall_retention_tbl <- all_deliveries %>%
+    reframe(
+        wk6_window_not_closed   = sum(wk6_window_open > today(), na.rm = TRUE),
+        wk6_expected            = sum(wk6_window_close < today() | six_weeks_flag == 1, na.rm = TRUE),
+        wk6_attended            = sum(six_weeks_flag == 1, na.rm = TRUE),
+        wk14_window_not_closed  = sum(wk14_window_open > today(), na.rm = TRUE),
+        wk14_expected           = sum(wk14_window_close < today() | fourteen_weeks_flag == 1, na.rm = TRUE),
+        wk14_attended           = sum(fourteen_weeks_flag == 1, na.rm = TRUE),
+        mo6_window_not_closed   = sum(mo6_window_open > today(), na.rm = TRUE),
+        mo6_expected            = sum(mo6_window_close < today() | six_months_flag == 1, na.rm = TRUE),
+        mo6_attended            = sum(six_months_flag == 1, na.rm = TRUE)
+    ) %>%
+    pivot_longer(
+        everything(),
+        names_to = c("Visit", ".value"),
+        names_pattern = "(wk6|wk14|mo6)_(.*)"
+    ) %>%
+    mutate(
+        Visit = case_when(
+            Visit == "wk6"  ~ "6 Weeks",
+            Visit == "wk14" ~ "14 Weeks",
+            Visit == "mo6"  ~ "6 Months"
+        ),
+        percentage_attended = round(attended / expected * 100, 1)
+    )%>%
+    rename_with(~ str_to_title(.x))   # Capitalize first letter of each word
 
 # Convert both to flextables
+ft_overall <- flextable(overall_retention_tbl) %>%
+    set_header_labels(
+        Visit = "Visit",
+        Window_not_closed = "Window Not Closed",
+        Expected = "Expected",
+        Attended = "Attended",
+        Percentage_attended = "Percentage Attended (%)"
+    )
+
+# Filter enrollments since 2025-09-22
+enrollments_filtered <- ppw_rct_df %>%
+    filter(clt_date >= as.Date("2025-09-22"))
+
+enrollment_summary <- enrollments_filtered %>%
+    # Remove the facility code
+    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
+    group_by(Facility = clt_study_site) %>%
+    summarise(
+        `Enrolled` = n(),
+        days_active = as.integer(Sys.Date() - as.Date("2025-09-22")),
+        `Expected` = days_active * 1,  # 1 per day
+        `Enrollment Gap` = Enrolled - Expected,
+        .groups = "drop"
+    ) %>% 
+    select(`Facility`, `Expected`, `Enrolled`, `Enrollment Gap`) %>% 
+    adorn_totals()
+
+enrollment <- enrollment_summary %>%
+    gt() %>%
+    tab_header(
+        title = md("**Enrollment Performance by Facility**"),
+        subtitle = "Target: 1 enrollment per day per Facility since 22 Sept 2025"
+    ) %>%
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels(everything())
+    ) %>%
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_body(rows = Facility == "Total")
+    ) %>%
+    fmt_number(
+        columns = c(`Expected`, `Enrolled`, `Enrollment Gap`),
+        decimals = 0
+    ) %>%
+    tab_options(
+        table.font.size = "small",
+        data_row.padding = px(4)
+    )
+
+enrollment
+
+# Change to flextables
 ft_6_overall <- flextable(wk6_overall_retention)
 ft_14_overall  <- flextable(wk14_overall_retention)
 ft_6 <- flextable(wk6_facility_retention)
 ft_14  <- flextable(wk14_facility_retention)
+ft_6m <- flextable(six_mths_facility_retention)
+ft_enrollment <- enrollment_summary %>%
+    flextable() %>%
+    set_header_labels(
+        Facility = "Facility",
+        Expected = "Expected",
+        Enrolled = "Enrolled",
+        `Enrollment Gap` = "Enrollment Gap"
+    ) %>%
+    bold(part = "header") %>%
+    bold(i = ~ Facility == "Total", bold = TRUE) %>%
+    autofit() %>%
+    fontsize(size = 9, part = "all")
 
 # Create Word doc and add both
-doc <- read_docx() %>%
-    body_add_par("6-week Overall Retention", style = "heading 1") %>%
-    body_add_flextable(ft_6_overall) %>%
-    body_add_par("") %>%  # Spacer
-    body_add_par("14-week Overall Retention", style = "heading 1") %>%
-    body_add_flextable(ft_14_overall)%>%
-    body_add_par("") %>%  # Spacer
-    body_add_par("6-week Retention Summary", style = "heading 1") %>%
+doc <- read_docx()%>%
+  body_add_par("Overall Retention Summary", style = "heading 1") %>%
+    body_add_flextable(ft_overall) %>%
+    body_add_par("Six Weeks Retention Summary", style = "heading 1") %>%
     body_add_flextable(ft_6) %>%
     body_add_par("") %>%  # Spacer
-    body_add_par("14-week Retention Summary", style = "heading 1") %>%
-    body_add_flextable(ft_14)
+    body_add_par("Fourteen Weeks Retention Summary", style = "heading 1") %>%
+    body_add_flextable(ft_14)%>%
+    body_add_par("") %>%  # Spacer
+    body_add_par("Six Months Retention Summary", style = "heading 1") %>%
+    body_add_flextable(ft_6m) %>% 
+    body_add_par("Enrollment Performance Summary", style = "heading 1") %>%
+    body_add_par("Target: 1 enrollment per day per RO since 22 Sept 2025", style = "Normal") %>%
+    body_add_flextable(ft_enrollment)
 
 # Save Word file
-print(doc, target = paste0("Retention summary ", 
+print(doc, target = paste0("Retention summary", 
                            format(Sys.time(), 
                                   "%Y-%m-%d_%H%M%S"), ".docx"))
 
@@ -369,6 +490,7 @@ ft_week <- flextable(week_summary) %>%
     bold(i = which(week_summary$Facility == "Total"), bold = TRUE) %>%
     autofit()
 
+
 # Create Word document
 doc <- read_docx() %>%body_add_par("Follow-ups Due Within the Next 7 Days", style = "heading 1") %>%
     body_add_par("Summary of participants whose follow-up windows close between September 1 and September 8, 2025.", style = "Normal") %>%
@@ -376,11 +498,9 @@ doc <- read_docx() %>%body_add_par("Follow-ups Due Within the Next 7 Days", styl
     body_add_par("Follow-ups Due in September 2025", style = "heading 1") %>%
     body_add_par("Summary of participants whose follow-up windows close between September 1 and September 30, 2025.", style = "Normal") %>%
     body_add_flextable(ft_month) 
-    
 
 # Save document
 print(doc, target = "Follow-up Summary - Month and Week.docx")
-
 
 
 
@@ -394,4 +514,29 @@ ppw_date_track <- ppw_rct_df %>%
     # Create participant ID if needed
     group_by(clt_study_site) %>%
     ungroup()
+
+# Enrollment per facility since 2025-09-22 (after hault)---
+Enrollments <- screening_consent_df %>%
+    group_by(study_site) %>%
+    reframe(Screened = n(),
+            `Eligible` = sum(rct_eligible == 1),
+            `Enrolled` = sum(rct_enrolling == "Yes", na.rm = "TRUE"),
+            `% Enrolled (of Eligible)` = round((Enrolled / Eligible) * 100)) %>%
+    # Remove the facility code
+    mutate(study_site = gsub("^[0-9]+,\\s*", "", study_site)) %>% 
+    rename(`Facility` = study_site)  %>%
+    bind_rows(summarise(.,Facility = "Overall",
+                        Screened = sum(Screened),
+                        Eligible = sum(Eligible),Enrolled = sum(Enrolled),
+                        `% Enrolled (of Eligible)` = ifelse(sum(Eligible) > 0, round((sum(Enrolled) / sum(Eligible)) * 100, 1), NA)))  %>%
+    arrange(desc(`Enrolled`))%>%
+    gt() %>%
+    tab_header(title = "Summary of Study Enrollment by Facility",subtitle = "Showing Participants enrollments") %>%
+    tab_style(style = cell_text(weight = "bold"),locations = cells_body(rows = Facility == "Overall")) %>%
+    tab_options(table.font.size = px(12))
+
+Enrollments
+
+
+
 

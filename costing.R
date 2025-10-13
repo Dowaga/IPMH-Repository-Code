@@ -13,6 +13,9 @@ source("REDCap_datapull.R")
 # load data
 rm(list = setdiff(ls(), c("costing")))
 
+visit_na <- costing %>% 
+    filter(is.na(study_visit))
+
 # screening & enrollment------------
 
 ## Intervention sites -----------
@@ -541,7 +544,7 @@ pm_plus_costing <- costing %>%
     filter(redcap_event_name == "Event 1 (Arm 1: Intervention)" & 
                study_visit == "PM+") %>%
     filter(!is.na(pt_id_pm)) %>%
-    select(date, study_site, pt_id_pm, starts_with("pm"), -pm_desig, -pmass_time_in,
+    select(date, study_site, pt_id_pm, starts_with("pm"),starts_with("super"), -pm_desig, -pmass_time_in,
            -pmass_time_out, -pmsch_time_in, -pmsch_time_out, -pm_int_complete)
 
 ## Data collection table --------
@@ -584,7 +587,9 @@ pm_plus_costing <- pm_plus_costing %>%
         pm4_total_duration = as.numeric(pm4_end_time_out - pm_enter_time_in)*1440,
         
         pm5_duration = as.numeric(pm5_end_time_out - pm5_time_in)*1440,
-        pm5_total_duration = as.numeric(pm5_end_time_out - pm_enter_time_in)*1440
+        pm5_total_duration = as.numeric(pm5_end_time_out - pm_enter_time_in)*1440,
+        
+        superv_duration = as.numeric(supervision_time_out - supervision_time_in)*1440
     )
 
 pm_summary_table <- pm_plus_costing %>%
@@ -594,7 +599,8 @@ pm_summary_table <- pm_plus_costing %>%
         pm2_desig, pm2_duration, pm2_total_duration,
         pm3_desig, pm3_duration, pm3_total_duration,
         pm4_desig, pm4_duration, pm4_total_duration,
-        pm5_desig, pm5_duration, pm5_total_duration
+        pm5_desig, pm5_duration, pm5_total_duration,
+        superv_duration
     ) %>%
     tbl_summary(
         by = study_site,
@@ -617,7 +623,8 @@ pm_summary_table <- pm_plus_costing %>%
             pm2_total_duration = "continuous",
             pm3_total_duration = "continuous",
             pm4_total_duration = "continuous",
-            pm5_total_duration = "continuous"
+            pm5_total_duration = "continuous",
+            superv_duration = "continuous"
         ),
         label = list(
             pm1_desig = "PM+ Session 1 Staff",
@@ -638,7 +645,8 @@ pm_summary_table <- pm_plus_costing %>%
             
             pm5_desig = "PM+ Session 5 Staff",
             pm5_duration = "Session 5 Component Duration (min)",
-            pm5_total_duration = "Session 5 Total Duration (min)"
+            pm5_total_duration = "Session 5 Total Duration (min)",
+            superv_duration = "PM+ Supervision Duration (min)"
         ),
         digits = all_continuous() ~ 1,
         missing = "no"

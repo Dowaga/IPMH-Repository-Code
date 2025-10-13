@@ -38,7 +38,7 @@ rct_ppw <- rct_ppw %>%
 pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$tele_date)
 
-#time period for the data [2025-07-01, 2025-06-30]
+#time period for the data [2025-10-01, 2025-07-01]
 pm_all <- pm
 rct_ppw_all <- rct_ppw
 daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-10-01")
@@ -193,20 +193,23 @@ rct_ppw_int <- rct_ppw %>%
                clt_study_site == "Ramula Health Centre"|
                clt_study_site == "Airport Health Centre (Kisumu)")
 
-#denominator should just be the number of participants
+#denominator should just be the number of new participants
 n_part <- rct_ppw_int %>%
-    filter(!is.na(clt_ptid)) %>%
+    filter(!is.na(clt_ptid)) %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     group_by(clt_study_site, clt_timestamp) %>%
     summarise(n_part = n(), .groups = "drop")
 
-# numerator is the number of participants who have a PHQ9/GAD7 score
+# numerator is the number of new participants who have a PHQ9/GAD7 score
 phq9_screening <- rct_ppw_int %>%
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     filter(!is.na(abs_phq_tired) | !is.na(abs_gad7_afraid)) %>%
     group_by(clt_study_site, clt_timestamp) %>%
     summarise(num_screened = n(), .groups = "drop")
 
 #merge the two datasets
-phq9_screening <- full_join(phq9_screening, n_part, by = c("clt_study_site" = "clt_study_site", "clt_timestamp" = "clt_timestamp"))
+phq9_screening <- full_join(phq9_screening, n_part, by = c("clt_study_site" = "clt_study_site", 
+                                                           "clt_timestamp" = "clt_timestamp"))
 
 #weekly data
 phq9_screening_weekly <- phq9_screening %>%
@@ -284,7 +287,10 @@ phq9_high_scores <- rct_ppw_int %>%
 
 # get the numerator from rct_ppw database
 pm_referral <- rct_ppw_int %>% 
-    filter(abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes") 
+    filter(abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes") %>% 
+    mutate(clt_date = ymd(clt_date)) %>%
+    #filter referral based on audit period
+  filter(between(clt_date, ymd("2025-07-01"), ymd("2025-10-01")))
 
 pm_referral <- pm_referral %>%
     mutate(day = floor_date(clt_timestamp, "day")) %>%
