@@ -111,5 +111,5 @@ ae_summary <- ae_df %>%
 ae_summary <- ae_summary %>% 
     gt()
 
-# Save the table to a Word document
-gtsave(ae_summary, filename = "Summary of Adverse Events.docx") 
+
+
