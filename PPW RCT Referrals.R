@@ -138,21 +138,21 @@ summary_tbl <- df_long %>%
 # Convert percentages and format table
 referral_summary <- summary_tbl %>%
     mutate(
-        pct_screened = percent(pct_screened / 100, accuracy = 0.1),
-        pct_accepted = percent(pct_accepted / 100, accuracy = 0.1)
+        pct_screened = scales::percent(pct_screened / 100, accuracy = 0.1),
+        pct_accepted = scales::percent(pct_accepted / 100, accuracy = 0.1)
     ) %>%
     gt() %>%
     tab_header(title = "Sub Cohort Referral Summary") %>%
     cols_label(
-        Referral_Condition = "Referral Condition",
-        n_screened = "n Screened",
+        Condition = "Referral Condition",
+        n = "n Screened",
         pct_screened = "% Screened",
         n_accepted = "n Accepted",
         pct_accepted = "% Accepted"
     ) %>%
-    tab_spanner(label = "Screened", columns = c(n_screened, pct_screened)) %>%
+    tab_spanner(label = "Screened", columns = c(n, pct_screened)) %>%
     tab_spanner(label = "Accepted", columns = c(n_accepted, pct_accepted)) %>%
-    fmt_number(columns = c(n_screened, n_accepted), decimals = 0) %>%
+    fmt_number(columns = c(n, n_accepted), decimals = 0) %>%
     fmt_percent(columns = c(pct_screened, pct_accepted), decimals = 1) %>%
     opt_table_lines()
 
