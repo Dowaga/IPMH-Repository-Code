@@ -12,7 +12,6 @@ source("Dependencies.R")
 source("data_import.R")
 
 # data prep --------------------------------------------------------------------
-
 telepsych_dates <- telepsych %>%
     mutate(tele_date = ymd(tele_date)) %>% 
     select(tele_provider, tele_date, pt_attend, tele_ancid) %>% 
@@ -297,10 +296,6 @@ fidelity_summary <- fidelity_table %>%
 
 fidelity_summary
 #
-library(dplyr)
-library(lubridate)
-library(gt)
-
 # Clean and prepare
 tele_clean <- telepsych %>%
     mutate(
@@ -374,7 +369,7 @@ med_long <- tele_clean %>%
     filter(prescribed == "Checked")
 
 med_freq <- med_long %>%
-    count(med_name, sort = TRUE) %>%
+    count(med_code, sort = TRUE) %>%
     gt() %>%
     tab_header(
         title = "Medications Prescribed",
