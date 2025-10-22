@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1gXLL4aMVKOiYBd7cs2kMj3d_vXBc9NC0XNkwAYCB5M8/edit?gid=13261372#gid=13261372"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1YJ7F1hdmpa_KKYKFMHXxPiqFV96d8I09lGxx_RoQXe0/edit?gid=13261372#gid=13261372"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -149,7 +149,7 @@ attendance_df <- visits %>%
     mutate(
         six_weeks_flag = if_else(grepl("^6 weeks", clt_visit), 1, 0),
         fourteen_weeks_flag = if_else(grepl("^14 weeks", clt_visit), 1, 0),
-        six_weeks_missed = if_else(grepl("^6 weeks post", mv_visit), 1, 0),
+        six_weeks_missed = if_else(grepl("^6 weeks", mv_visit), 1, 0),
         fourteen_weeks_missed = if_else(grepl("^14 weeks post", mv_visit), 1, 0),
         six_months_flag = if_else(grepl("^6 months post", clt_visit), 1, 0),
         six_months_missed = if_else(grepl("^6 months post", mv_visit), 1, 0),
@@ -175,18 +175,50 @@ all_deliveries <- all_deliveries %>%
     mutate(ptid = as.integer(ptid)) %>% 
     left_join(attendance_df, by = c("ptid" = "record_id"))
 
-mirogi <- all_deliveries %>% 
-    filter(Facility == "Mirogi Health Centre")
-
-# 6 Wks Visit is NA and window closed
+# 6Wks Visit:----
+## NA, window closed; no data, missed visit not filled.
 missing_6wks_data <- all_deliveries %>% 
     filter(is.na(six_weeks_flag) & wk6_window_close < today())
 
-# 14 Wks Visit is NA and window closed
+## Missed 6 Weeks visit|Missed visit filled
+missed_6wks_visit <- all_deliveries %>% 
+    filter(six_weeks_missed == 1 & wk6_window_close < today())
+
+beyond_window <- all_deliveries %>% 
+    #filter(Facility == "Usigu Health Centre") %>% 
+    filter(wk6_window_close < today() & six_weeks_flag == 0) %>% 
+    filter(six_weeks_missed == 0)
+
+# 14Wks Visit:----
+## NA, window closed; no data, missed visit not filled.
 missing_14wks_data <- all_deliveries %>% 
     filter(is.na(fourteen_weeks_flag) & wk14_window_close < today())
 
+## Missed visit
+missed_14wks_visit <- all_deliveries %>% 
+    filter(wk14_window_close < today() & fourteen_weeks_missed == 1)
 
+beyond_window <- all_deliveries %>% 
+    #filter(Facility == "Usigu Health Centre") %>% 
+    filter(wk14_window_close < today() & fourteen_weeks_flag == 0) %>% 
+    filter(fourteen_weeks_missed == 0)
+
+# 6 Months Visit:----
+## ## NA, window closed; no data, missed visit not filled.
+missing_6mths_data <- all_deliveries %>% 
+    filter(is.na(six_months_flag) & mo6_window_close < today())
+
+## Missed visit
+missed_6mths_visit <- all_deliveries %>% 
+    filter(mo6_window_close < today() & six_months_missed == 1)
+
+beyond_window <- all_deliveries %>% 
+    #filter(Facility == "Usigu Health Centre") %>% 
+    filter(mo6_window_close < today() & six_months_flag == 0) %>% 
+    filter(six_months_missed == 0)
+
+
+# Retention----
 #### 6 Wks Overall retention
 wk6_overall_retention <- all_deliveries %>%
     #group_by(Facility) %>% 
@@ -315,11 +347,11 @@ enrollment_summary <- enrollments_filtered %>%
     group_by(Facility = clt_study_site) %>%
     summarise(
         `Enrolled` = n(),
-        days_active = as.integer(Sys.Date() - as.Date("2025-09-22")),
-        `Expected` = days_active * 1,  # 1 per day
+        days_active = sum(!weekdays(seq.Date(as.Date("2025-09-22"), Sys.Date(), by = "day")) %in% c("Saturday", "Sunday")),
+        `Expected` = days_active * 1,  # 1 per weekday
         `Enrollment Gap` = Enrolled - Expected,
         .groups = "drop"
-    ) %>% 
+    )%>% 
     select(`Facility`, `Expected`, `Enrolled`, `Enrollment Gap`) %>% 
     adorn_totals()
 
