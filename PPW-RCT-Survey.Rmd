@@ -48,8 +48,26 @@ enrolled <- ppw_rct_df %>%
     filter(clt_visit == "Enrollment") %>% 
     select(clt_ptid)
 
+repeating_ptids <- enrolled %>%
+  group_by(clt_ptid) %>%
+  summarise(n = n()) %>%
+  filter(n > 1)
+
+
 six_weeks <- ppw_rct_df %>% 
     filter(clt_visit == "6 weeks post-partum") %>% 
+    select(clt_ptid)
+
+fourteen_weeks <- ppw_rct_df %>% 
+    filter(clt_visit == "14 weeks post-partum") %>% 
+    select(clt_ptid)
+
+six_months <- ppw_rct_df %>% 
+    filter(clt_visit == "6 months post-partum") %>% 
+    select(clt_ptid)
+
+complete_pm_plus <- ppw_rct_df %>% 
+    filter(clt_visit == "PM+ Session 5 Abstraction") %>% 
     select(clt_ptid)
 
 # Find ptid values in "6 weeks" that are missing from "Enrollment"
@@ -535,6 +553,16 @@ session_wide <- pm_session %>%
   mutate(attended = 1) %>%  # Assign 1 for attended
   pivot_wider(names_from = pm_session, values_from = attended, values_fill = list(attended = 0))
 
+# No post PM+ Survey----
+lacks_post <- session_wide %>%
+  group_by(pm_ancid) %>%
+  summarise(
+    has_session5 = any(`Session 5 content` == 1),
+    has_post = any(`Post-intervention PSYCHLOPS measurement` == "1")
+  ) %>%
+  filter(has_session5 & !has_post) %>%
+  select(pm_ancid)
+
 
 session_wide %>% 
     tbl_summary(include = c(`Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
@@ -763,4 +791,10 @@ table6
 table7
 ```
 
+\newpage
+# Acceptability, appropriateness and Feasibility of IPMH
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+source("IPMH - PPW Acceptability and Feasibility.R")
+summary
+```
 
