@@ -175,8 +175,8 @@ hiv_status <- rct_ppw_baseline %>%
 
 infant_outcomes <- infant_outcomes %>% 
     left_join(hiv_status, by = "clt_ptid")
-
-# Filter PTIDs of none-reactive women with infant HIV status
+# 6 Weeks Outcome----
+## Filter PTIDs of none-reactive women with infant HIV status
 infant_hiv_status_QCs <- infant_outcomes %>% 
     filter(med_pastdiag___2 == "Unchecked" & visit_type == "6 Weeks") %>% 
     filter(!is.na(tpnc_ihiv))
@@ -242,6 +242,7 @@ table2a <- infant_outcomes %>%
         data_row.padding = gt::px(1))
 table2a
 
+# 14 Weeks Outcome----
 # Infants HIV status sort for PPWNLHIV
 HIV_status_14 <- infant_outcomes %>% 
     filter(med_pastdiag___2 == "Unchecked") %>% 
@@ -297,11 +298,7 @@ table2b <- infant_outcomes %>%
     
 table2b
 
-status_prophylaxis <- infant_outcomes %>%
-    filter(visit_type == "6 Months") %>% 
-    filter(med_pastdiag___2 == "Unchecked") %>% 
-    filter(!is.na(io_ihiv) & is.na(io_iarv))
-
+# Six Months Outcome----
 table2c <- infant_outcomes %>%
     mutate(med_pastdiag___2 = recode(med_pastdiag___2,
                                      Checked = "PPWLHIV",
@@ -346,6 +343,16 @@ table2c <- infant_outcomes %>%
         data_row.padding = gt::px(1))
 
 table2c
+
+HIV_status_6mo <- infant_outcomes %>% 
+    filter(med_pastdiag___2 == "Unchecked") %>% 
+    filter(!is.na(io_ihiv)) %>% 
+    filter(visit_type == "6 Months")
+
+status_prophylaxis <- infant_outcomes %>%
+    filter(visit_type == "6 Months") %>% 
+    filter(med_pastdiag___2 == "Unchecked") %>% 
+    filter(!is.na(io_ihiv) & is.na(io_iarv))
 
 # Primary and secondary clinical outcomes across times--------------
 ## PHQ9, GAD7, WHOQOL BREF score 
