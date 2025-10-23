@@ -100,7 +100,7 @@ score_combined_df <- score_wide %>%
            phq9_scores_enrollment, phq9_scores_session5, phq9_diff, phq9_pct_reduction,
            gad7_scores_enrollment, gad7_scores_session5, gad7_diff, gad7_pct_reduction)
 
-score_combined_df %>%
+score_combined_ft <- score_combined_df %>%
     flextable() %>%
     set_caption("Participants with <50% Reduction or <5-Point Decrease in PHQ-9 or GAD-7 Scores") %>%
     
@@ -114,14 +114,22 @@ score_combined_df %>%
     bg(i = ~ gad7_pct_reduction < 50, j = "gad7_pct_reduction", bg = "#FADBD8") %>%
     bg(i = ~ abs(gad7_diff) < 5, j = "gad7_diff", bg = "#FADBD8") %>%
     
-    # Optional: bold the highlighted cells
+    # Bold the highlighted cells
     bold(i = ~ phq9_pct_reduction < 50, j = "phq9_pct_reduction", bold = TRUE) %>%
     bold(i = ~ abs(phq9_diff) < 5, j = "phq9_diff", bold = TRUE) %>%
     bold(i = ~ gad7_pct_reduction < 50, j = "gad7_pct_reduction", bold = TRUE) %>%
     bold(i = ~ abs(gad7_diff) < 5, j = "gad7_diff", bold = TRUE) %>%
     
-    # Autofit table
+    # Fit content
     autofit()
+
+doc <- read_docx() %>%
+    body_add_par("Limited Response to PM+: Mental Health Scores Below Remission Threshold", style = "heading 1") %>%
+    body_add_par("Summary table of PHQ-9 and GAD-7 score changes", style = "Normal") %>%
+    body_add_flextable(score_combined_ft)
+
+# Save document
+print(doc, target = "PM+ LimitedResponse.docx")
 
 # Those people need to be referred to telepsychiatry. How many of them have been referred?
 # referral? ========
