@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1YJ7F1hdmpa_KKYKFMHXxPiqFV96d8I09lGxx_RoQXe0/edit?gid=13261372#gid=13261372"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1_SjmTGLUp7wa-anhVGibEMW1_NYX33XVpmTRTA4-O9k/edit?gid=13261372#gid=13261372"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -339,7 +339,8 @@ ft_overall <- flextable(overall_retention_tbl) %>%
 
 # Filter enrollments since 2025-09-22
 enrollments_filtered <- ppw_rct_df %>%
-    filter(clt_date >= as.Date("2025-09-22"))
+    filter(clt_date >= as.Date("2025-09-22")) %>% 
+    filter(clt_visit == "Enrollment")
 
 enrollment_summary <- enrollments_filtered %>%
     # Remove the facility code
