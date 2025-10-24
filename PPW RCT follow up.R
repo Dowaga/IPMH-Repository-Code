@@ -175,6 +175,7 @@ hiv_status <- rct_ppw_baseline %>%
 
 infant_outcomes <- infant_outcomes %>% 
     left_join(hiv_status, by = "clt_ptid")
+
 # 6 Weeks Outcome----
 ## Filter PTIDs of none-reactive women with infant HIV status
 infant_hiv_status_QCs <- infant_outcomes %>% 
@@ -1219,3 +1220,58 @@ combined_summary <- final_summary %>%
     mutate(across(ends_with("_Needs"), ~replace_na(.x, 0)))
 
 combined_summary
+
+#----
+## LHIV and VL and VL date not collected
+hiv_enrolled <- ppw_rct_df %>% 
+    filter(med_pastdiag___2 == "Checked") %>% 
+    select(clt_ptid, med_pastdiag___2)
+
+hiv_care <- ppw_rct_df %>% 
+    select(clt_ptid, clt_visit,hivct_status, hivct_newdiag, 
+           hivct_vl, hivct_date_vl)
+
+# Keep all enrolled with HIV
+hiv_care <- hiv_enrolled %>%
+    left_join(hiv_care, by = "clt_ptid")
+
+# Filter those who sero-converted
+seroconverts <- hiv_care %>%
+    filter(!(clt_ptid %in% hiv_enrolled$clt_ptid),
+           hivct_status == "Living with HIV",
+           clt_visit %in% c("6 weeks post-partum", "14 weeks post-partum", "6 months post-partum"))
+
+lhiv_df <- bind_rows(hiv_care, seroconverts)
+
+# Viral Load not captured
+vl_gap_summary <- lhiv_df %>%
+    filter(!clt_visit %in% ("PM+ Session 5 Abstraction")) %>% 
+    group_by(clt_visit) %>%
+    summarise(
+        total = n(),
+        n_missing_VL = sum(is.na(hivct_vl)),
+        percent_missing = round(100 * n_missing_VL / total, 1)
+    ) %>% 
+    arrange(desc(by = n_missing_VL)) %>% 
+    rename(`Total Seen` = total,
+           `VL Not Captured` = n_missing_VL,
+           `% Not Captured` = percent_missing,
+           Visit = clt_visit)
+
+# Convert to flextable
+ft <- flextable(vl_gap_summary)
+ft <- theme_vanilla(ft)
+ft <- autofit(ft)
+
+# Create Word document
+doc <- read_docx() %>%
+    body_add_par("Summary of Viral Load Results Not Captured by Visit", style = "heading 1") %>% 
+    body_add_flextable(ft)
+
+# Save document
+today <- Sys.Date()
+
+file_name <- paste0("Viral Load Results Gap ",today,".docx")
+
+
+print(doc, target = file_name)
