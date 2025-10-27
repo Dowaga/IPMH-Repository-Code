@@ -608,7 +608,7 @@ pm_summary_table <- pm_plus_costing %>%
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
-        type = list(
+        type = list( 
             pm1_desig = "categorical",
             pm2_desig = "categorical",
             pm3_desig = "categorical",
