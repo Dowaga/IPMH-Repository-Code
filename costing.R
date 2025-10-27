@@ -608,7 +608,7 @@ pm_summary_table <- pm_plus_costing %>%
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
-        type = list(
+        type = list( 
             pm1_desig = "categorical",
             pm2_desig = "categorical",
             pm3_desig = "categorical",
@@ -753,7 +753,7 @@ audit_feedback_costing <- audit_feedback_costing %>%
         redcap_event_name == "Event 1 (Arm 1: Intervention)", "Intervention", "Control"
     )) %>%
     select(date, study_site, arm, part_num, record_id,
-           starts_with("af_"))
+           activity_type, starts_with("af_"), starts_with("flipbook_"))
 
 ## Data collection table for audit and feedback ----------
 total_summary_af <- audit_feedback_costing %>%
@@ -800,8 +800,12 @@ audit_feedback_costing <- audit_feedback_costing %>%
             af_identify_duration, af_refresh_duration, 
             af_map_duration, af_map2_duration, 
             af_implement_duration, af_feedback_duration
-        )), na.rm = TRUE)
+        )), na.rm = TRUE),
+        health_talk_duration = difftime(flipbook_time_out, flipbook_time_in, units = "mins") %>% as.numeric()
     )
+
+negive <- audit_feedback_costing %>% 
+    filter(af_total_duration < 0)
 
 audit_feedback_table <- audit_feedback_costing %>%
     select(arm, part_num, 
@@ -820,7 +824,9 @@ audit_feedback_table <- audit_feedback_costing %>%
         af_implement_duration, 
         af_feedback_desig,
         af_feedback_duration,
-        af_session_duration, af_total_duration,
+        af_session_duration, 
+        af_total_duration,
+        health_talk_duration
     ) %>%
     tbl_summary(
         by = arm,
@@ -841,7 +847,8 @@ audit_feedback_table <- audit_feedback_costing %>%
             af_implement_duration = "continuous",
             af_feedback_duration = "continuous",
             af_session_duration = "continuous",
-            af_total_duration = "continuous"
+            af_total_duration = "continuous",
+            health_talk_duration = "continuous"
         ),
         label = list(
             part_num = "Participant Number",
@@ -866,7 +873,8 @@ audit_feedback_table <- audit_feedback_costing %>%
             af_feedback_desig = "Feedback Relay Staff",
             af_feedback_duration = "Feedback Relay Duration (min)",
             af_session_duration = "Session Total Duration (min)",
-            af_total_duration = "Total Audit & Feedback Duration (min)"
+            af_total_duration = "Total Audit & Feedback Duration (min)",
+            health_talk_duration = "Health Talk Duration (min)"
         ),
         digits = all_continuous() ~ 1,
         missing = "no"
