@@ -206,8 +206,8 @@ Summary <- tbl_merge(
     tab_spanner = c("**Continuous Summary**", "**Categorical Summary**")
 )
 
-write.csv(telepsych_dates, "C:/Users/DAMARIS/Desktop/IPMH/Telepsychiatry/Telepsychiatry Session Dates.csv", 
-          row.names = FALSE)
+#write.csv(telepsych_dates, "C:/Users/DAMARIS/Desktop/IPMH/Telepsychiatry/Telepsychiatry Session Dates.csv", 
+          #row.names = FALSE)
 
 # Fidelity to treatment---------------------------------------------------------
 screened <- screening_consent_df %>% 
