@@ -87,11 +87,31 @@ consort_data <- consort_data %>%
 
 secondvisit <- ppw_rct_df %>% filter(
     clt_visit == "6 weeks post-partum") %>% 
-    select(clt_ptid) %>% mutate(secondvisit = "Yes") 
+    select(clt_ptid) %>% mutate(secondvisit = "Yes")
+
+thirdvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "14 weeks post-partum") %>% 
+    select(clt_ptid) %>% 
+    mutate(thirdvisit = "Yes") 
+
+
+fourthvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "6 months post-partum") %>% 
+    select(clt_ptid) %>% 
+    mutate(fourthvisit = "Yes") 
 
 #merge secondvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
+
+#merge thirdvisit people into consort_data
+consort_data <- consort_data %>% 
+    left_join(thirdvisit, by = c("partipant_id" = "clt_ptid"))
+
+# merge fourthvisit people into consort_data
+consort_data <- consort_data %>% 
+    left_join(fourthvisit, by = c("partipant_id" = "clt_ptid"))
+    
 
 # HIV
 hiv <- ppw_rct_df %>% filter(
@@ -135,7 +155,9 @@ counts_by_arm <- consort_data %>%
         hiv = sum(WLWH == "Yes", na.rm = TRUE),
         pm_participants = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
         tele_participants = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
-        postpartum_visit = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE)
+        six_weeks_visit = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+        fourteen_weeks_visit = sum(thirdvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+        six_months_visit = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE)
     )
 
 # Function to generate stage text
@@ -154,7 +176,9 @@ counts_by_arm <- counts_by_arm %>%
         txt_hiv = generate_stage_text("HIV+ (WLWH)", hiv, enrolled),
         txt_pm = generate_stage_text("PM+", pm_participants, hiv),
         txt_tele = generate_stage_text("Telepsychiatry", tele_participants, hiv),
-        txt_postpartum = generate_stage_text("6 weeks postpartum visit", postpartum_visit, hiv)
+        txt_6weeks_postpartum = generate_stage_text("6 weeks postpartum visit", six_weeks_visit, hiv),
+        txt_14weeks_postpartum = generate_stage_text("14 weeks postpartum visit", fourteen_weeks_visit, hiv),
+        txt_6months_postpartum = generate_stage_text("6 months postpartum visit", six_months_visit, hiv)
     )
 
 # Total text for ANC attendees
@@ -263,7 +287,10 @@ consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = counts_by_arm$txt_enrolled) |>
     add_box(txt = counts_by_arm$txt_hiv) |>
     add_side_box(txt= counts_by_arm$txt_pm_tele) |>
-    add_box(txt = counts_by_arm$txt_postpartum)
+    add_box(txt = counts_by_arm$txt_6weeks_postpartum) %>% 
+    add_box(txt = counts_by_arm$txt_14weeks_postpartum) %>% 
+    add_box(txt = counts_by_arm$txt_6months_postpartum)
+
 
 consort_per
 
