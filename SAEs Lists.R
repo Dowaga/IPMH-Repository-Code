@@ -11,7 +11,7 @@ source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
-ae_df <- ppw_sae_df %>% 
+ae_df <- ppw_sae_df%>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), 
            redcap_event_name, redcap_repeat_instance) %>% 
     filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
@@ -96,7 +96,7 @@ sae_summary <- tbl_summary(
     modify_caption("**Summary of Serious Adverse Events by Study Arm**")
 
 
-sae_summary 
+sae_summary  
 
 # Summary of Adverse events-----------------------------------------------------
 # Select age and site from main df
@@ -127,6 +127,8 @@ ae_summary <- ae_df %>%
 
 ae_summary <- ae_summary %>% 
     gt()
+
+
 
 
 
