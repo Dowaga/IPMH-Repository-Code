@@ -319,8 +319,16 @@ n_pm <- consort_data %>% filter(ipmh_participant == "Yes" & WLWH == "Yes") %>% n
 n_tele <- consort_data %>% filter(tele == "Yes" & WLWH == "Yes") %>% nrow()
 
 # Total postpartum visits
-n_postpartum <- consort_data %>%
+six_weeks_postpartum <- consort_data %>%
     filter(secondvisit == "Yes" & WLWH == "Yes") %>%
+    nrow()
+
+fourteen_weeks_postpartum <- consort_data %>%
+    filter(thirdvisit == "Yes" & WLWH == "Yes") %>%
+    nrow()
+
+six_months_postpartum <- consort_data %>%
+    filter(fourthvisit == "Yes" & WLWH == "Yes") %>%
     nrow()
 
 # ANC attendees (no percentage)
@@ -346,7 +354,9 @@ txt_pm <- sprintf("PM+\n (n=%d, %.2f%%)", n_pm, (n_pm / n_hiv) * 100)
 txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.2f%%)", n_tele, (n_tele / n_hiv) * 100)
 
 # Postpartum
-txt_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.2f%%)", n_postpartum, (n_postpartum / n_hiv) * 100)
+six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.2f%%)", six_weeks_postpartum, (six_weeks_postpartum / n_hiv) * 100)
+fourteen_weeks_postpartum <- sprintf("14 weeks postpartum visit\n (n=%d, %.2f%%)", fourteen_weeks_postpartum, (fourteen_weeks_postpartum / n_hiv) * 100)
+six_months_postpartum <- sprintf("6 months postpartum visit\n (n=%d, %.2f%%)", six_months_postpartum, (six_months_postpartum / n_hiv) * 100)
 
 #combining pm+ and telepsychiatry
 txt_pm_tele <- paste(txt_pm, txt_tele, sep = "\n")
@@ -400,6 +410,8 @@ consort_single <- add_box(txt = txt_anc) |>
     add_box(txt = txt_enrolled) |>
     add_box(txt = txt_hiv) |>
     add_side_box(txt = txt_pm_tele) |>
-    add_box(txt = txt_postpartum)
+    add_box(txt = six_weeks_postpartum)|>
+    add_box(txt = fourteen_weeks_postpartum)|>
+    add_box(txt = six_months_postpartum)
 
 consort_single
