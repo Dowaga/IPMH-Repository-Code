@@ -30,11 +30,28 @@ clean_sae_df <- sae_df %>%
                             ae_cat)) %>% 
     rename(Event = ae_cat) 
 
-sae_report <- clean_sae_df %>% 
+sae_summary <- clean_sae_df %>% 
     summarise(`Number of Events` = n(),
               `SAE Reported` = n(),
-              `% Reported` = ifelse(`Number of Events` > 0, round((`Number of Events` / `SAE Reported`)) * 100, 1)) %>%
-    gt()
+              `% Reported` = ifelse(`Number of Events` > 0, round((`Number of Events` / `SAE Reported`)) * 100, 1))
+
+sae_total <- sae_summary %>%
+    summarise(
+        Event = "Total",
+        `Number of Events` = sum(`Number of Events`),
+        `SAE Reported` = sum(`SAE Reported`),
+        `% Reported` = ifelse(`SAE Reported` > 0, round((`Number of Events` / `SAE Reported`) * 100, 1), 0)
+    )
+
+sae_report <- bind_rows(sae_summary, sae_total) %>%
+    gt()%>%
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_body(
+            rows = Event == "Total"
+        )
+    )
+
 
 sae_report
 
