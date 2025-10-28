@@ -17,7 +17,8 @@ theme_update(plot.title = element_text(hjust = 0.5))
 #find WLWH in rct_ppw_df
 hiv <- ppw_rct_df %>% filter(
     med_pastdiag___2 == "Checked") %>% 
-    select(clt_ptid) %>% mutate(WLWH = "Yes") 
+    select(clt_ptid) %>% 
+    mutate(WLWH = "Yes") 
 
 #merge with screening_consent_df
 screening_consent_df <- screening_consent_df %>% 
@@ -38,8 +39,13 @@ weekly_count <- enrollment_progress %>%
     group_by(study_site, week) %>%
     summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
 
-# Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
-date_seq <- seq(as.Date("2025-02-16"), as.Date("2025-03-29"), by = "week", week_start = 1)
+# Define the sequence of weekly dates from enrollment start to system date
+date_seq <- seq(
+    from = as.Date("2025-02-16"),
+    to = Sys.Date(),
+    by = "week"
+)
+
 
 # Convert to a dataframe
 dateSeq_df <- data.frame(week = date_seq)
