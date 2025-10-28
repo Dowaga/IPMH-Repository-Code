@@ -444,11 +444,22 @@ first_6w <- ppw_rct_df %>%
 earliest_due <- first_6w %>%
   slice_min(sixmo_duedate, n = 1) %>%
   select(clt_ptid, clt_date, sixmo_duedate) %>% 
-    pull(sixmo_duedate)                                  
+    pull(sixmo_duedate)      
+
+total_exits <- ppw_rct_df%>%
+    # Filter to "6 weeks" and grab the first per participant
+  filter(clt_visit == "6 months post-partum")
+
+completed_follow_up <- total_exits %>% 
+    filter(dis_today == "Yes") %>% 
+    nrow()
+
 ```
 
 
-We have not yet had any early terminations; our first expected termination is `r earliest_due`.
+To date, we have not recorded any early terminations. However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`.
+
+
 
 # 7. Referrals
 
@@ -488,16 +499,38 @@ fidelity_summary
 
 
 # 8 AEs and SAEs
+```{r AEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
+source("SAEs Lists.R")
+total_EAs <- ae_df %>%
+    nrow()
+```
+
 
 ## 8.1 AEs Summary
-To `r Sys.Date()`, one adverse event has been observed. This event will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
+
+As of `r Sys.Date()`, a total of `r total_EAs` adverse events have been observed. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
+
 
 
 ## 8.2 SAEs Summary
 ```{r SAEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
+total_SAEs <- clean_sae_df %>% 
+    nrow()
+total_deaths <- clean_sae_df %>% 
+    filter(Event == "Death (Infant or Maternal) (SAE)") %>% 
+    nrow()
+
+pregnancy_loss <- clean_sae_df %>% 
+    filter(Event == "Miscarriage or stillbirth (loss of pregnancy) (SAE)") %>% 
+    nrow()
+
+total_hosp <- clean_sae_df %>% 
+    filter(Event == "New/prolonged hospitalization (SAE)") %>% 
+    nrow()
 
 ```
+As of `r Sys.Date()`, we have had `r total_SAEs` serious adverse events, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
 
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
