@@ -375,9 +375,15 @@ n_tele <- consort_data %>%
     nrow()
 
 # Total postpartum visits
-n_postpartum <- consort_data %>%
+w6_postpartum <- consort_data %>%
          filter(rct_enrolling == "Yes", secondvisit == "Yes") %>%
          nrow()
+w14_postpartum <- consort_data %>%
+    filter(rct_enrolling == "Yes", thirdvisit == "Yes") %>%
+    nrow()
+m6_postpartum <- consort_data %>%
+    filter(rct_enrolling == "Yes", fourthvisit == "Yes") %>%
+    nrow()
 
 # ANC attendees (no percentage)
 txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
@@ -398,10 +404,12 @@ txt_enrolled <- sprintf("Enrolled\n (n=%d, %.2f%%)", n_enrolled, (n_enrolled / n
 txt_pm <- sprintf("PM+\n (n=%d, %.2f%%)", n_pm, (n_pm / n_enrolled) * 100)
 
 #telepsychiatry
-txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.2f%%)", n_tele, (n_tele / n_enrolled) * 100)
+txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.2f%%)", 10, (10 / n_enrolled) * 100)
 
 # Postpartum
-txt_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.2f%%)", n_postpartum, (n_postpartum / n_enrolled) * 100)
+six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.2f%%)", w6_postpartum, (w6_postpartum / n_enrolled) * 100)
+fourteen_weeks_postpartum <- sprintf("14 weeks postpartum visit\n (n=%d, %.2f%%)", w14_postpartum, (w14_postpartum / n_enrolled) * 100)
+six_months_postpartum <- sprintf("6 months postpartum visit\n (n=%d, %.2f%%)", m6_postpartum, (m6_postpartum / n_enrolled) * 100)
 
 
 #combining pm+ and telepsychiatry
@@ -455,7 +463,9 @@ consort_single <- add_box(txt = txt_anc) |>
     add_side_box(txt = txt_decline) |>
     add_box(txt = txt_enrolled) |>
     add_side_box(txt = txt_pm_tele) |>
-    add_box(txt = txt_postpartum)
+    add_box(txt = six_weeks_postpartum)|>
+    add_box(txt = fourteen_weeks_postpartum)|>
+    add_box(txt = six_months_postpartum)
 
 consort_single
 
