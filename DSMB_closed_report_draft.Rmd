@@ -160,7 +160,7 @@ In general, the enrollment had a good start and has progressed well despite chal
 \newpage
 # 3. Study Enrollment
 
-```{r Consort, warning=FALSE, message=FALSE}
+```{r Consort,echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 source("Consort.R")
 consort_per
 
