@@ -5,6 +5,7 @@
 # This is a script that analyzes the costing data.
 
 # Setup ------------------------------------------------------------------------
+rm(list = ls())
 # Reference source codes & other dependencies:
 source("dependencies.R")
 source("DataTeam_ipmh.R")
@@ -41,6 +42,50 @@ pmad_positive <- screening_int_costing %>%
 
 supervision <- costing %>% 
     filter(pm_number == "PM+ Supervision")
+
+facility_supervisions <- supervision %>% 
+    group_by(study_site) %>% 
+    summarise(`Total Supervisions` = n()) %>% 
+    arrange(desc(`Total Supervisions`))
+
+# Create flextable with heading
+ft_supervision <- flextable(facility_supervisions) %>%
+    add_header_lines(values = "Supervision Summary by Facility") %>%
+    bg(i = ~ `Total Supervisions` < 2, j = "Total Supervisions", bg = "yellow") %>%
+    color(i = ~ `Total Supervisions` < 2, j = "Total Supervisions", color = "black") %>%
+    autofit()
+
+
+activity_summary <- costing %>%
+    filter(study_visit == "Audit and feedback") %>% 
+    filter(activity_type %in% c("Audit and Feedback", "Health Talk")) %>%
+    group_by(study_site, activity_type) %>%
+    summarise(n = n(), .groups = "drop")
+
+
+activity_summary <- activity_summary %>%
+    pivot_wider(
+        names_from = activity_type,
+        values_from = n,
+        values_fill = 0  # fills missing combinations with 0
+    )%>% 
+    arrange(desc(`Audit and Feedback`))
+
+# Create flextable with conditional formatting
+ft <- flextable(activity_summary) %>%
+    set_header_labels(
+        study_site = "Study Site",
+        `Audit and Feedback` = "Audit & Feedback",
+        `Health Talk` = "Health Talk"
+    ) %>%
+    add_header_lines(values = "Summary of Observed Activities: Audit & Feedback and Health Talks") %>%
+    color(i = ~ `Audit and Feedback` < 2, j = "Audit and Feedback", color = "black") %>%
+    bg(i = ~ `Audit and Feedback` < 2, j = "Audit and Feedback", bg = "yellow") %>%
+    color(i = ~ `Health Talk` < 2, j = "Health Talk", color = "black") %>%
+    bg(i = ~ `Health Talk` < 2, j = "Health Talk", bg = "pink") %>%
+    autofit()
+
+
 
 ## Control sites ---------------
 screening_ctrl_costing <- costing %>%
@@ -755,6 +800,10 @@ audit_feedback_costing <- audit_feedback_costing %>%
     select(date, study_site, arm, part_num, record_id,
            activity_type, starts_with("af_"), starts_with("flipbook_"))
 
+#Audit and Feedback Visit type Query
+audit_feedback_QCs <- audit_feedback_costing %>% 
+    filter(is.na(activity_type))
+
 ## Data collection table for audit and feedback ----------
 total_summary_af <- audit_feedback_costing %>%
     group_by(arm) %>%
@@ -804,8 +853,20 @@ audit_feedback_costing <- audit_feedback_costing %>%
         health_talk_duration = difftime(flipbook_time_out, flipbook_time_in, units = "mins") %>% as.numeric()
     )
 
+# Negative time duration
 negive <- audit_feedback_costing %>% 
     filter(af_total_duration < 0)
+
+# Summarize designation choices per facility for selected activities
+designation_summary <- audit_feedback_costing %>%
+    group_by(study_site) %>%
+    summarise(
+        `Report generation` = paste(unique(af_analysis_desig), collapse = ", "),
+        `Presentation Development Staff` = paste(unique(af_develop_desig), collapse = ", "),
+        `Map Updating Staff` = paste(unique(af_map2_desig), collapse = ", "),
+        `Map Revisit Staff` = paste(unique(af_map_desig), collapse = ", ")
+        )
+
 
 audit_feedback_table <- audit_feedback_costing %>%
     select(arm, part_num, 
@@ -898,3 +959,24 @@ table_audit_feedback_costing <- audit_feedback_table%>%
     gt::tab_footnote(
         footnote = "Note: Total Audit & Feedback Duration includes all components from analysis to feedback."
     )
+
+
+#----
+# Change to flextables
+ft_designation  <- flextable(designation_summary)
+
+# Create Word doc and add both
+doc <- read_docx()%>%
+    body_add_par("PM+ Supervision Per Facility", style = "heading 1") %>%
+    body_add_flextable(ft_supervision) %>%
+    body_add_par("Audit and Feedback Designation", style = "heading 1") %>%
+    body_add_flextable(ft_designation) %>%
+    body_add_par("") %>%  # Spacer
+        body_add_flextable(ft)%>%
+    body_add_par("") 
+
+# Save Word file
+print(doc, target = paste0("Time and Motion QCs", 
+                           format(Sys.time(), 
+                                  "%Y-%m-%d_%H%M%S"), ".docx"))
+
