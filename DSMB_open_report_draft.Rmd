@@ -321,16 +321,19 @@ p2
 source("Consort_WLWH.R")
 ```
 
-From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled*100, 1)`%) women were HIV positive, meeting `r round(n_hiv/405*100, 1)`% of our WLWH cohort enrollment target. Of these, `r n_postpartum` (`r round(n_postpartum/n_hiv *100,1 )`%) have completed their 6 week postpartum follow-up with our study team.
+From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled*100, 1)`%) women were HIV positive, meeting `r round(n_hiv/enrolled*100, 1)`% of our WLWH cohort enrollment target. Of these, `r six_weeks_postpartum` (`r round(six_weeks_postpartum/n_hiv *100,1 )`%) have completed their 6 week postpartum follow-up with our study team. Additionally, `r fourteen_weeks_postpartum` (`r round(fourteen_weeks_postpartum / n_hiv * 100, 1)`%) have completed their 14-week follow-up, and `r six_months_postpartum` (`r round(six_months_postpartum / n_hiv * 100, 1)`%) have completed their 6-month follow-up.
 
 
-```{r consort_mortality, warning = F}
+
+```{r consort_mortality,echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 source("Consort_WLWH.R")
 
 add_box(txt = txt_enrolled) |>
     add_box(txt = txt_hiv) |>
     add_side_box(txt = txt_pm_tele) |>
-    add_box(txt = txt_postpartum)
+    add_box(txt = six_weeks_postpartum)|>
+    add_box(txt = fourteen_weeks_postpartum)|>
+    add_box(txt = six_months_postpartum)
 ```
 
 \newpage
