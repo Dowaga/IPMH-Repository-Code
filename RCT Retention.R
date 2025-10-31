@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1_SjmTGLUp7wa-anhVGibEMW1_NYX33XVpmTRTA4-O9k/edit?gid=13261372#gid=13261372"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1RqVYEIYzeLzjdZUb11Fa_6CAya900NGxHsia3Z_yTxQ/edit?gid=13261372#gid=13261372"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -342,19 +342,32 @@ enrollments_filtered <- ppw_rct_df %>%
     filter(clt_date >= as.Date("2025-09-22")) %>% 
     filter(clt_visit == "Enrollment")
 
-enrollment_summary <- enrollments_filtered %>%
-    # Remove the facility code
+facility_list <- ppw_rct_df %>%
+    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
+    distinct(Facility = clt_study_site)
+
+# Summarize actual enrollments
+enrollment_counts <- enrollments_filtered %>%
     mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
     group_by(Facility = clt_study_site) %>%
-    summarise(
-        `Enrolled` = n(),
-        days_active = sum(!weekdays(seq.Date(as.Date("2025-09-22"), Sys.Date(), by = "day")) %in% c("Saturday", "Sunday")),
-        `Expected` = days_active * 1,  # 1 per weekday
-        `Enrollment Gap` = Enrolled - Expected,
-        .groups = "drop"
-    )%>% 
-    select(`Facility`, `Expected`, `Enrolled`, `Enrollment Gap`) %>% 
+    summarise(Enrolled = n(), .groups = "drop")
+
+# Calculate days active (same for all facilities)
+days_active <- sum(!weekdays(seq.Date(as.Date("2025-09-22"), 
+                                      Sys.Date(), by = "day")) %in% c("Saturday", "Sunday"))
+
+# Merge and compute expected + gap
+enrollment_summary <- facility_list %>%
+    left_join(enrollment_counts, by = "Facility") %>%
+    mutate(
+        Enrolled = replace_na(Enrolled, 0),
+        Expected = days_active,
+        `Enrollment Gap` = Enrolled - Expected
+    ) %>%
+    arrange(desc(Enrolled)) %>% 
+    select(Facility, Expected, Enrolled, `Enrollment Gap`) %>%
     adorn_totals()
+
 
 enrollment <- enrollment_summary %>%
     gt() %>%
