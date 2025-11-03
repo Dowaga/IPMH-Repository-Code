@@ -17,7 +17,16 @@ theme_update(plot.title = element_text(hjust = 0.5))
 
 ## Figure 1: Enrollment progress since the beginning of the study to today
 enrollment_progress <- screening_consent_df %>% 
-    filter(rct_enrolling == "Yes") %>% 
+    filter(rct_enrolling == "Yes"| latest_consent == 
+               'Yes') %>% 
+    select(study_site, consent_date_auto, consent_date_auto_v2)
+
+
+## 
+enrollment_progress <- enrollment_progress %>%
+    mutate(
+        consent_date_auto = coalesce(consent_date_auto, consent_date_auto_v2)
+    ) %>%
     select(study_site, consent_date_auto)
 
 ## Convert consent_date_auto column to date format
@@ -32,6 +41,12 @@ weekly_count <- enrollment_progress %>%
 
 # Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
 date_seq <- seq(as.Date("2025-02-16"), as.Date("2025-03-29"), by = "week", week_start = 1)
+
+date_seq <- seq(
+    from = as.Date("2025-02-16"),
+    to = Sys.Date(),
+    by = "week"
+)
 
 # Convert to a dataframe
 dateSeq_df <- data.frame(week = date_seq)
