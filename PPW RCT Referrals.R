@@ -201,10 +201,10 @@ arm_referral_summary <- arm_summary_wide %>%
     tab_header(title = "Referral Summary by Arm") %>%
     cols_label(
         Condition = "Referral Condition",
-        n_control = "Screened (Control)",
-        accepted_control = "Accepted (Control)",
-        n_intervention = "Screened (Intervention)",
-        accepted_intervention = "Accepted (Intervention)",
+        n_control = "Screened (Arm X)",
+        accepted_control = "Accepted (Arm X)",
+        n_intervention = "Screened (Arm Y)",
+        accepted_intervention = "Accepted (Arm Y)",
         n_total = "Total Screened",
         accepted_total = "Total Accepted") %>%
     fmt_number(columns = starts_with("n"), decimals = 0) %>%
