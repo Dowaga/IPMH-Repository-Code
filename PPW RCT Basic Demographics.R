@@ -130,9 +130,15 @@ wlwh_demo
 
 #------------------------------------------------------------------------------
 #### By Arm
+demographics_df <- demographics_df %>% 
+    mutate(
+        dummy_arm = case_when(
+            arm_group == "Control" ~ "Arm X",
+            arm_group == "Intervention" ~ "Arm Y"))
+
 # basic demo table
 arm_demo <- demographics_df %>%
-    tbl_summary(by =arm_group, 
+    tbl_summary(by =dummy_arm, 
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner, dem_maritalstat,
                   dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
@@ -178,8 +184,12 @@ arm_demo
 # WLWH Cohort Baseline Demographics by arm
 # basic demo table
 arm_wlwh_demo <- demographics_df %>%
+    mutate(
+        dummy_arm = case_when(
+            arm_group == "Control" ~ "Arm X",
+            arm_group == "Intervention" ~ "Arm Y")) %>% 
     filter(med_pastdiag___2 == "Checked") %>% 
-    tbl_summary(by = arm_group,
+    tbl_summary(by = dummy_arm,
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner, dem_maritalstat,
                   dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
@@ -196,7 +206,7 @@ arm_wlwh_demo <- demographics_df %>%
                      dem_household_num ~ "Number of people in Household",
                      dem_housesleep ~ "Number of people sleep in same house",
                      dem_houserooms ~ "Rooms in the house most often sleep in",
-                     dem_traveltime_min ~ "Time to the Clinic (Minutes",
+                     dem_traveltime_min ~ "Time to the Clinic (Minutes)",
                      med_pre_preg ~ "Have you been pregnant before(Yes)"),
         missing = "no",
         digits = list(all_continuous() ~ 1), 
