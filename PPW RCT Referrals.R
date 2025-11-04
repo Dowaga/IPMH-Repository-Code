@@ -70,7 +70,7 @@ control_psy_qcs <- control_psy_qcs %>%
 # Save each clt_study_site as a separate CSV file with date in the filename
 control_psy_qcs %>%
     group_split(clt_study_site) %>%
-    walk(~ write_xlsx(.x, path = paste0("C:/Users/DAMARIS/Desktop/IPMH/QCs/",
+    walk(~ write_xlsx(.x, path = paste0("C:/Users/hp/OneDrive/Desktop/IPMH/QCs/",
                                         "Psychosocial Support Referral_",
                                        unique(.x$clt_study_site), "_", 
                                        format(Sys.Date(), "%Y-%m-%d"), ".xlsx")))
@@ -97,7 +97,7 @@ condition_labels <- tribble(
 # 2. Pivot longer & flag accepted
 df_long <- referral_df %>%
     # keep only the risk_* + referral_accept columns you need
-    select(record_id, starts_with("screened_"), referral_accept) %>%
+    select(record_id, Arm, starts_with("screened_"), referral_accept) %>%
     pivot_longer(
         cols      = starts_with("screened_"),
         names_to  = "risk_col",
@@ -112,7 +112,7 @@ df_long <- referral_df %>%
 total_n <- nrow(ppw_rct_df)    # total participants
 
 summary_tbl <- df_long %>%
-    group_by(risk_col) %>%
+    group_by(risk_col, Arm) %>%
     reframe(
         n                = n(),                                        # positives
         pct_screened     = n / total_n * 100,                          # % of all
@@ -159,3 +159,64 @@ referral_summary <- summary_tbl %>%
 # Display table
 referral_summary
 
+# Referral by Arm
+arm_summary_tbl <- df_long %>%
+    group_by(risk_col, Arm) %>%
+    reframe(
+        n = n(),
+        n_accepted = sum(accepted, na.rm = TRUE)
+    ) %>%
+    ungroup() %>%
+    left_join(condition_labels, by = "risk_col")
+
+
+arm_summary_wide <- arm_summary_tbl %>%
+    pivot_wider(
+        names_from = Arm,
+        values_from = c(n, n_accepted),
+        names_glue = "{.value}_{Arm}"
+    ) %>%
+    mutate(
+        n_total = coalesce(n_control, 0) + coalesce(n_intervention, 0),
+        n_accepted_total = coalesce(n_accepted_control, 0) + coalesce(n_accepted_intervention, 0),
+        pct_accepted_total = n_accepted_total / n_total * 100,
+        pct_accepted_control = n_accepted_control / n_control * 100,
+        pct_accepted_intervention = n_accepted_intervention / n_intervention * 100
+    )
+
+arm_referral_summary <- arm_summary_wide %>%
+    select(-risk_col) %>%
+    mutate(
+        accepted_control = sprintf("%d (%.1f%%)", n_accepted_control, pct_accepted_control),
+        accepted_intervention = sprintf("%d (%.1f%%)", n_accepted_intervention, pct_accepted_intervention),
+        accepted_total = sprintf("%d (%.1f%%)", n_accepted_total, pct_accepted_total)
+    ) %>%
+    select(
+        Condition,
+        n_control, accepted_control,
+        n_intervention, accepted_intervention,
+        n_total, accepted_total
+    ) %>%
+    gt() %>%
+    tab_header(title = "Referral Summary by Arm") %>%
+    cols_label(
+        Condition = "Referral Condition",
+        n_control = "Screened (Control)",
+        accepted_control = "Accepted (Control)",
+        n_intervention = "Screened (Intervention)",
+        accepted_intervention = "Accepted (Intervention)",
+        n_total = "Total Screened",
+        accepted_total = "Total Accepted") %>%
+    fmt_number(columns = starts_with("n"), decimals = 0) %>%
+    tab_options(
+        table.font.size = px(11),      # control font size inside the table
+        data_row.padding = px(3),      # padding inside cells
+        column_labels.font.size = px(12),
+        table.width = pct(95)          # ensure table fits the page
+    ) %>%
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels()
+    )
+
+arm_referral_summary
