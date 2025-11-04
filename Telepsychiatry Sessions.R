@@ -34,8 +34,8 @@ pm_telep_df <- ppw_rct_df %>%
     select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
     filter(!is.na(clt_date)) 
 
-#PM+ Session 5 abstractions
-telep_df <-ppw_rct_df%>% 
+# PM+ Session 5 abstractions
+telep_df <- ppw_rct_df%>% 
     filter(redcap_event_name == "PM+ Session 5 Abstraction (Arm 1: Intervention)") %>% 
     select(record_id, clt_study_site, clt_date, starts_with("abs_"))
 
@@ -95,7 +95,7 @@ pm_telep_df <- pm_telep_df %>%
                                 TRUE ~ NA_character_))
 
 
-#PM+ participants
+# PM+ participants
 pm_plus_df <- pm_telep_df %>% 
     filter(max_score >= 10 & max_score < 15) %>%
     select(-max_score)  # Remove max_score if not needed
@@ -108,6 +108,9 @@ telepsych_referrals <- pm_telep_df %>%
 telepsych_ids <- telepsych_referrals %>% 
     select(clt_study_site, record_id) %>% 
     mutate(tele = "Yes")
+
+telep_referrals <- telepsych_referrals %>% 
+    nrow()
 
 consent_ids <- screening_consent_df %>% 
     filter(rct_enrolling == "Yes") %>% 
@@ -214,9 +217,15 @@ screened <- screening_consent_df %>%
     select(partipant_id, anc_num, study_site) %>% 
     mutate(screened = "Yes")
 
+screened_pmad <- screened %>% 
+    nrow()
+
 pm_participants <- pm_plus_df %>% 
     select(record_id, clt_study_site) %>% 
     mutate(pm_plus = "Yes")
+
+PM_referrals <- pm_participants %>% 
+    nrow()
 
 # Select distinct ptids in the PM+ Survey
 pm_ptids <- pm_survey_df %>% 
@@ -295,7 +304,9 @@ fidelity_summary <- fidelity_table %>%
     )
 
 fidelity_summary
-#
+
+
+#----
 # Clean and prepare
 tele_clean <- telepsych %>%
     mutate(
