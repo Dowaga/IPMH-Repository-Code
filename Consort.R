@@ -137,7 +137,15 @@ consort_data <- consort_data %>%
 # merge fourthvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(fourthvisit, by = c("partipant_id" = "clt_ptid"))
-    
+
+# Create a dummy arm for DSMB Closed report
+consort_data <- consort_data %>% 
+    mutate(
+        dummy_arm = case_when(
+            is.na(arm) ~ NA_character_,        # keep NA as NA
+            grepl("Control", arm) ~ "Arm X",   # if arm contains "Control"
+            TRUE ~ "Arm Y"                     # everything else
+        ))
 #generate consort diagram without percentages (also without telepsychiatry)
 consort_diagram <- consort_plot(data = consort_data,
                     orders = c(anc_attendees = "ANC Attendees",
@@ -479,6 +487,29 @@ ineligibility_summary <- consort_data %>%
         label = list(exclusion ~ "Reasons for Ineligibility"))
 
 ineligibility_summary
+
+#### Ineligibility Reasons by Arm
+
+arm_ineligibility_summary <- consort_data %>% 
+    filter(!is.na(exclusion)) %>% 
+    tbl_summary(by = dummy_arm,
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include = c(exclusion),
+        label = list(exclusion ~ "Reasons for Ineligibility")) %>% 
+    bold_labels() %>%
+    #add_p() %>% 
+    add_overall() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Study Ineligibility by Arm") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
+
+arm_ineligibility_summary
 
 #-------------------------------------------------------------------------------
 
