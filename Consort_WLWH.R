@@ -113,6 +113,15 @@ consort_data <- consort_data %>%
     left_join(fourthvisit, by = c("partipant_id" = "clt_ptid"))
     
 
+# Create a dummy arm for DSMB Closed report
+consort_data <- consort_data %>% 
+    mutate(
+        dummy_arm = case_when(
+            is.na(arm) ~ NA_character_,        # keep NA as NA
+            grepl("Control", arm) ~ "Arm X",   # if arm contains "Control"
+            TRUE ~ "Arm Y"                     # everything else
+        ))
+
 # HIV
 hiv <- ppw_rct_df %>% filter(
     med_pastdiag___2 == "Checked") %>% 
@@ -319,15 +328,15 @@ n_pm <- consort_data %>% filter(ipmh_participant == "Yes" & WLWH == "Yes") %>% n
 n_tele <- consort_data %>% filter(tele == "Yes" & WLWH == "Yes") %>% nrow()
 
 # Total postpartum visits
-six_weeks_postpartum <- consort_data %>%
+six_weeks <- consort_data %>%
     filter(secondvisit == "Yes" & WLWH == "Yes") %>%
     nrow()
 
-fourteen_weeks_postpartum <- consort_data %>%
+fourteen_weeks <- consort_data %>%
     filter(thirdvisit == "Yes" & WLWH == "Yes") %>%
     nrow()
 
-six_months_postpartum <- consort_data %>%
+six_months <- consort_data %>%
     filter(fourthvisit == "Yes" & WLWH == "Yes") %>%
     nrow()
 
@@ -354,9 +363,9 @@ txt_pm <- sprintf("PM+\n (n=%d, %.2f%%)", n_pm, (n_pm / n_hiv) * 100)
 txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.2f%%)", n_tele, (n_tele / n_hiv) * 100)
 
 # Postpartum
-six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.2f%%)", six_weeks_postpartum, (six_weeks_postpartum / n_hiv) * 100)
-fourteen_weeks_postpartum <- sprintf("14 weeks postpartum visit\n (n=%d, %.2f%%)", fourteen_weeks_postpartum, (fourteen_weeks_postpartum / n_hiv) * 100)
-six_months_postpartum <- sprintf("6 months postpartum visit\n (n=%d, %.2f%%)", six_months_postpartum, (six_months_postpartum / n_hiv) * 100)
+six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.2f%%)", six_weeks, (six_weeks / n_hiv) * 100)
+fourteen_weeks_postpartum <- sprintf("14 weeks postpartum visit\n (n=%d, %.2f%%)", fourteen_weeks, (fourteen_weeks / n_hiv) * 100)
+six_months_postpartum <- sprintf("6 months postpartum visit\n (n=%d, %.2f%%)", six_months, (six_months / n_hiv) * 100)
 
 #combining pm+ and telepsychiatry
 txt_pm_tele <- paste(txt_pm, txt_tele, sep = "\n")
