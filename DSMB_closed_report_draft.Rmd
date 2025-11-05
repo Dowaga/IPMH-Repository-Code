@@ -151,26 +151,181 @@ n_enrol <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
 n_enrol_per <- round(n_enrol/n_eligible *100, 1)
 n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
 n_second_per <- round(n_second/n_enrol * 100, 1)
+# 14 Weeks Visit
+n_third <- consort_data %>% filter(!is.na(thirdvisit)) %>% nrow()
+n_third_per <- round(n_third/n_enrol * 100, 1)
+
+# 6 Months Visit
+n_fourth <- consort_data %>%
+    filter(rct_enrolling == "Yes", fourthvisit == "Yes") %>%nrow()
+
+n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
+
 ```
 
-We began recruiting pregnant women into the study on Feb 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970, 1)`% of our enrollment target. Of these, `r n_second` (`r n_second_per`%) have completed their 6 week postpartum follow-up with our study team.
+We began recruiting pregnant women into the study on Feb 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970 *100, 1)`% of our enrollment target. Of these, `r n_second` (`r n_second_per`%) have completed their 6 week postpartum follow-up, `r n_third` (`r n_third_per`%) and `r n_fourth` (`r n_fourth_per`%) have completed 14 weeks and 6 months postpartum follow-up respectively.
 
-In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
+In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivated as a result of uncertainty with the continuation of their contracts. 
 
 \newpage
 # 3. Study Enrollment
 
 ```{r Consort,echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 source("Consort.R")
-consort_per
+counts_by_arm <- consort_data %>%
+    filter(!is.na(arm)) %>%
+    group_by(dummy_arm) %>%
+    summarise(
+        assessed = n(),
+        excluded = sum(!is.na(exclusion)),
+        eligible = sum(eligible == 1, na.rm = TRUE),
+        enrolled = sum(rct_enrolling == "Yes", na.rm = TRUE),
+        pm_participants = sum(ipmh_participant == "Yes", na.rm = TRUE),
+        tele_participants = sum(tele == "Yes", na.rm = TRUE),
+        postpartum_visit = sum(secondvisit == "Yes", na.rm = TRUE),
+        postpartum_visit1 = sum(thirdvisit == "Yes", na.rm = TRUE),
+        postpartum_visit2 = sum(fourthvisit == "Yes", na.rm = TRUE)
+    )
 
+# Function to generate stage text
+generate_stage_text <- function(stage_label, numerator, denominator, decimals = 2) {
+    percent <- ifelse(denominator > 0, (numerator / denominator) * 100, 0)
+    sprintf("%s\n (n=%d, %.*f%%)", stage_label, numerator, decimals, percent)
+}
+
+# Apply to each arm
+counts_by_arm <- counts_by_arm %>%
+    rowwise() %>%
+    mutate(
+        txt_eligible = generate_stage_text("Eligible", eligible, assessed),
+        txt_excluded = generate_stage_text("Excluded", excluded, assessed),
+        txt_enrolled = generate_stage_text("Enrolled", enrolled, eligible),
+        txt_pm = generate_stage_text("PM+", pm_participants, enrolled),
+        txt_tele = generate_stage_text("Telepsychiatry", tele_participants, enrolled),
+        txt_postpartum = generate_stage_text("6 weeks postpartum visit", postpartum_visit, enrolled),
+        txt_postpartum1 = generate_stage_text("14 weeks postpartum visit", postpartum_visit1, enrolled),
+        txt_postpartum2 = generate_stage_text("6 months postpartum visit", postpartum_visit2, enrolled)
+    )
+
+# Total text for ANC attendees
+txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
+
+# Total assessment
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.2f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+
+txt_arm <- counts_by_arm %>%
+    mutate(
+        txt = sprintf("%s\n (n=%d, %.2f%%)", dummy_arm, assessed, (assessed / n_assessed) * 100)
+    ) %>%
+    pull(txt)
+
+#combine PM+ and telepsychiatry
+counts_by_arm <- counts_by_arm %>%
+    mutate(
+        txt_pm_tele = paste(txt_pm, txt_tele, sep = "\n"))
+
+generate_box_header <- function(label, numerator, denominator, decimals = 2) {
+percent <- ifelse(denominator > 0, (numerator / denominator) * 100, 0)
+sprintf("%s (n=%d, %.*f%%):", label, numerator, decimals, percent)
+}
+
+# Build exclusion string per arm
+exclusion_side_boxes <- consort_data %>%
+    filter(!is.na(exclusion)) %>%
+    group_by(dummy_arm, exclusion_reason = exclusion) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    left_join(
+        counts_by_arm %>% select(dummy_arm, excluded, assessed),
+        by = "dummy_arm"
+    ) %>%
+    group_split(dummy_arm) %>%
+    lapply(function(df_arm) {
+        arm_label <- unique(df_arm$dummy_arm)
+        excluded <- unique(df_arm$excluded)
+        assessed <- unique(df_arm$assessed)
+        
+        # Header line (no real line break)
+        header <- generate_box_header("Excluded", excluded, assessed)
+        
+        # Bullet lines (keep \\n as character)
+        reason_lines <- mapply(
+            function(reason, count) {
+                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / excluded) * 100)
+            },
+            df_arm$exclusion_reason,
+            df_arm$count
+        )
+        
+        # Combine header + bullets with literal \n characters
+        box_text <- paste(c(header, reason_lines), collapse = "\n")
+        
+        box_text
+    })
+
+# Combine into character vector
+txt_ex <- unlist(exclusion_side_boxes)
+
+# Build decline side boxes per arm
+decline_side_boxes <- consort_data %>%
+    filter(!is.na(rct_decline_reason)) %>%
+    group_by(dummy_arm, decline_reason = rct_decline_reason) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    left_join(
+        counts_by_arm %>%
+            mutate(declined = eligible - enrolled) %>%
+            select(dummy_arm, declined, eligible),
+        by = "dummy_arm"
+    ) %>%
+    group_split(dummy_arm) %>%
+    lapply(function(df_arm) {
+        arm_label <- unique(df_arm$dummy_arm)
+        declined <- unique(df_arm$declined)
+        eligible <- unique(df_arm$eligible)
+        
+        # Header line (with real line break later)
+        header <- sprintf("Declined Enrollment (n=%d, %.2f%%):", declined, (declined / eligible) * 100)
+        
+        # Bullet lines with Unicode bullets and percentages
+        reason_lines <- mapply(
+            function(reason, count) {
+                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / declined) * 100)
+            },
+            df_arm$decline_reason,
+            df_arm$count
+        )
+        
+        # Combine header + bullets with **real line breaks**
+        box_text <- paste(c(header, reason_lines), collapse = "\n")
+        
+        box_text
+    })
+
+# Combine into character vector
+txt_decline <- unlist(decline_side_boxes)
+
+# 14d834c07edb977b556fed4c00a6c156b7d65458
+
+consort_per <- add_box(txt = txt_anc) |>
+    add_box(txt = txt_ass) |>
+    add_split(txt = txt_arm) |>
+    add_side_box(txt = txt_ex) |>
+    add_box(txt = counts_by_arm$txt_eligible) |>
+    add_side_box(txt = txt_decline) |>
+    add_box(txt = counts_by_arm$txt_enrolled) |>
+    add_side_box(txt= counts_by_arm$txt_pm_tele) |>
+    add_box(txt = counts_by_arm$txt_postpartum)|>
+    add_box(txt = counts_by_arm$txt_postpartum1)|>
+    add_box(txt = counts_by_arm$txt_postpartum2)
+
+consort_per
 ```
 
+\newpage
 ## 3.2  Enrollment Progress
 
 ## 3.2.1  Enrollment Progress - Overall
 
-```{r enrollment_prohress, echo=FALSE}
+```{r enrollment_prohress, fig.width=9, fig.height=6, echo=FALSE}
 source("Enrollment Progress.R")
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
@@ -233,13 +388,17 @@ combined_enrollment <- bind_rows(
   weekly_enrollment,
   total_enrollment,
   target_25_line
-)
+) %>% 
+    mutate(
+  dummy_arm = case_when(
+        arm_group == "Control" ~ "Arm X",
+        arm_group == "Intervention" ~ "Arm Y"))
 
 p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
                                       color = study_site, group = study_site)) +
   geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +
   scale_linewidth_identity() +
-  facet_wrap(~ arm_group, scales = "free_y") +  # one panel per arm
+  facet_wrap(~ dummy_arm, ncol = 1) +  # one panel per arm
   labs(
     title = "Enrollment Trends by Study Arm",
     x = "Date",
@@ -248,7 +407,7 @@ p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment,
   ) +
   theme_minimal() +
   theme(
-    legend.position = "right",
+    legend.position = "left",
     legend.box = "vertical",
     legend.title = element_text(size = 10),
     legend.text = element_text(size = 9),
@@ -275,9 +434,9 @@ reached_25per_target <- weekly_enrollment %>%
 
 ```
 
-`r reached_25per_target` facilities have reached the 25% enrollment target of 37 perinatal women per facility cluster. The first cluster to achieve this milestone was Nyalenda in mid-April 2024.
+All (`r reached_25per_target`) facilities have surpassed our first enrollment milestone, with more than 37 perinatal women enrolled per facility cluster - exceeding 25% of the overall target enrollment. Nyalenda was the first facility to achieve this milestone in mid-April 2024.
 
-```{r enrollment_sub_facility}
+```{r enrollment_sub_facility, fig.width=9, fig.height=6, echo=FALSE}
 source("Enrollment Progress.R")
 
 #shorten the names of the study sites
@@ -307,7 +466,7 @@ weekly_enrollment <- weekly_enrollment %>%
   mutate(
     arm = stringr::str_extract(study_site, "^\\d{2}"),
     arm_group = ifelse(arm %in% c("02", "05", "06", "08", "11", "15", "18", "20", "21"),
-                       "Control", "Intervention")
+                       "Arm X", "Arm Y")
   )
 
 p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
@@ -320,18 +479,17 @@ p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
        x = "Date",
        y = "Cumulative Enrollment",
        color = "Study Site") +
-  facet_wrap(~ arm_group) +  # ??? facet by arm_group
+  facet_wrap(~ arm_group, ncol = 1) +  # ??? facet by arm_group
   theme_minimal() +
   theme(
-    legend.position = "right",
+    legend.position = "left",
     legend.box = "vertical",
     legend.title = element_text(size = 10),
     legend.text = element_text(size = 9),
     strip.text = element_text(size = 10, face = "bold"),
     axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold", size = 14)  # Center and bold title
-  ) +
-  guides(color = guide_legend(ncol = 2))
+  )
 
 
 p2
@@ -343,30 +501,171 @@ p2
 
 ## 4.1 Current subject status
 
-
 ```{r consortnumsource, echo=FALSE, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
 source("Consort_WLWH.R")
 ```
 
-From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled*100, 1)`%) women were HIV positive, meeting `r round(n_hiv/405*100, 1)`% of our WLWH cohort enrollment target. Of these, `r n_postpartum` (`r round(n_postpartum/n_hiv *100,1 )`%) have completed their 6 week postpartum follow-up with our study team.
+From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled*100, 1)`%) women were HIV positive, meeting `r round(n_hiv/405*100, 1)`% of our WLWH cohort enrollment target. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 week postpartum follow-up with our study team. Additionally.
+`r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed fourteen weeks and six months visits respectively. 
 
 
-```{r consort_mortality, warning = F}
+```{r consort_WLWHIV, echo=FALSE, fig.height=9, fig.width = 15, message = FALSE, warning = FALSE}
 source("Consort_WLWH.R")
 
-add_box(txt = txt_enrolled) |>
-    add_box(txt = txt_hiv) |>
-    add_side_box(txt = txt_pm_tele) |>
-    add_box(txt = txt_postpartum)
+counts_by_arm <- consort_data %>%
+    filter(!is.na(dummy_arm)) %>%
+    group_by(dummy_arm) %>%
+    summarise(
+        assessed = n(),
+        excluded = sum(!is.na(exclusion)),
+        eligible = sum(eligible == 1, na.rm = TRUE),
+        enrolled = sum(rct_enrolling == "Yes", na.rm = TRUE),
+        hiv = sum(WLWH == "Yes", na.rm = TRUE),
+        pm_participants = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
+        tele_participants = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
+        six_weeks_visit = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+        fourteen_weeks_visit = sum(thirdvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+        six_months_visit = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE)
+    )
+
+# Function to generate stage text
+generate_stage_text <- function(stage_label, numerator, denominator, decimals = 2) {
+    percent <- ifelse(denominator > 0, (numerator / denominator) * 100, 0)
+    sprintf("%s\n (n=%d, %.*f%%)", stage_label, numerator, decimals, percent)
+}
+
+# Apply to each arm
+counts_by_arm <- counts_by_arm %>%
+    rowwise() %>%
+    mutate(
+        txt_eligible = generate_stage_text("Eligible", eligible, assessed),
+        txt_excluded = generate_stage_text("Excluded", excluded, assessed),
+        txt_enrolled = generate_stage_text("Enrolled", enrolled, eligible),
+        txt_hiv = generate_stage_text("HIV+ (WLWH)", hiv, enrolled),
+        txt_pm = generate_stage_text("PM+", pm_participants, hiv),
+        txt_tele = generate_stage_text("Telepsychiatry", tele_participants, hiv),
+        txt_6weeks_postpartum = generate_stage_text("6 weeks postpartum visit", six_weeks_visit, hiv),
+        txt_14weeks_postpartum = generate_stage_text("14 weeks postpartum visit", fourteen_weeks_visit, hiv),
+        txt_6months_postpartum = generate_stage_text("6 months postpartum visit", six_months_visit, hiv)
+    )
+
+# Total text for ANC attendees
+txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
+
+# Total assessment
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.2f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+
+txt_arm <- counts_by_arm %>%
+    mutate(
+        txt = sprintf("%s\n (n=%d, %.2f%%)", dummy_arm, assessed, (assessed / n_assessed) * 100)
+    ) %>%
+    pull(txt)
+
+#combine PM+ and telepsychiatry
+counts_by_arm <- counts_by_arm %>%
+    mutate(
+        txt_pm_tele = paste(txt_pm, txt_tele, sep = "\n")
+    )
+
+generate_box_header <- function(label, numerator, denominator, decimals = 2) {
+    percent <- ifelse(denominator > 0, (numerator / denominator) * 100, 0)
+    sprintf("%s (n=%d, %.*f%%):", label, numerator, decimals, percent)
+}
+
+# Build exclusion string per arm
+exclusion_side_boxes <- consort_data %>%
+    filter(!is.na(exclusion)) %>%
+    group_by(dummy_arm, exclusion_reason = exclusion) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    left_join(
+        counts_by_arm %>% 
+            select(dummy_arm, excluded, assessed),
+        by = "dummy_arm"
+    ) %>%
+    group_split(dummy_arm) %>%
+    lapply(function(df_arm) {
+        arm_label <- unique(df_arm$dummy_arm)
+        excluded <- unique(df_arm$excluded)
+        assessed <- unique(df_arm$assessed)
+        
+        # Header line (no real line break)
+        header <- generate_box_header("Excluded", excluded, assessed)
+        
+        # Bullet lines (keep \\n as character)
+        reason_lines <- mapply(
+            function(reason, count) {
+                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / excluded) * 100)
+            },
+            df_arm$exclusion_reason,
+            df_arm$count
+        )
+        
+        # Combine header + bullets with literal \n characters
+        box_text <- paste(c(header, reason_lines), collapse = "\n")
+        
+        box_text
+    })
+
+# Combine into character vector
+txt_ex <- unlist(exclusion_side_boxes)
+
+# Build decline side boxes per arm
+decline_side_boxes <- consort_data %>%
+    filter(!is.na(rct_decline_reason)) %>%
+    group_by(dummy_arm, decline_reason = rct_decline_reason) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    left_join(
+        counts_by_arm %>%
+            mutate(declined = eligible - enrolled) %>%
+            select(dummy_arm, declined, eligible),
+        by = "dummy_arm"
+    ) %>%
+    group_split(dummy_arm) %>%
+    lapply(function(df_arm) {
+        arm_label <- unique(df_arm$arm)
+        declined <- unique(df_arm$declined)
+        eligible <- unique(df_arm$eligible)
+        
+        # Header line (with real line break later)
+        header <- sprintf("Declined Enrollment (n=%d, %.2f%%):", declined, (declined / eligible) * 100)
+        
+        # Bullet lines with Unicode bullets and percentages
+        reason_lines <- mapply(
+            function(reason, count) {
+                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / declined) * 100)
+            },
+            df_arm$decline_reason,
+            df_arm$count
+        )
+        
+        # Combine header + bullets with **real line breaks**
+        box_text <- paste(c(header, reason_lines), collapse = "\n")
+        
+        box_text
+    })
+
+# Combine into character vector
+txt_decline <- unlist(decline_side_boxes)
+
+consort_per <- add_box(txt = txt_anc) |>
+    add_box(txt = txt_ass) |>
+    add_split(txt = txt_arm) |>
+    #add_side_box(txt = txt_ex) |>
+    add_box(txt = counts_by_arm$txt_eligible) |>
+    #add_side_box(txt = txt_decline) |>
+    add_box(txt = counts_by_arm$txt_enrolled) |>
+    add_box(txt = counts_by_arm$txt_hiv) |>
+    add_side_box(txt= counts_by_arm$txt_pm_tele) |>
+    add_box(txt = counts_by_arm$txt_6weeks_postpartum) %>% 
+    add_box(txt = counts_by_arm$txt_14weeks_postpartum) %>% 
+    add_box(txt = counts_by_arm$txt_6months_postpartum)
+
+
+consort_per
+                
 ```
 
 \newpage
-
-## 4.2 WLWH Cohort Baseline Demographics
-
-Participant characteristics are generally (similar/different) across arms. We do, however, see a (statistically significant/non statistically significant) difference in (XXXX).
-
-
 
 ```{r morcohort_demo, echo=FALSE}
 
@@ -380,7 +679,7 @@ Total ineligible visits represents ANC visits at which a woman was assessed as i
 
 ```{r subcohort_prog, echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort.R")
-ineligibility_summary
+arm_ineligibility_summary
 ```
 
 \newpage
@@ -396,8 +695,10 @@ source("PPW RCT Basic Demographics.R")
 arm_demo
 ```
 
+\newpage
 ## 6.2 WLWH Cohort Baseline Demographics
 
+Participant characteristics are generally (similar/different) across arms.
 ```{r WLWH_demo, echo=FALSE}
 source("PPW RCT Basic Demographics.R")
 arm_wlwh_demo
@@ -408,31 +709,54 @@ arm_wlwh_demo
 
 # 7. Study Terminations
 ```{r Ealiest Expected termination}
-first_6w <- ppw_rct_df %>%
-    # Filter to "6 weeks" and grab the first per participant
-  filter(clt_visit == "6 weeks post-partum") %>%
+first_6ths <- ppw_rct_df %>%
+    # Filter to "6 months" and grab the first per participant
+  filter(clt_visit == "6 months post-partum") %>%
     mutate(
-    clt_date = as_date(clt_date, format = "%Y-%m-%d")) %>% 
+    clt_timestamp = as_date(clt_date, format = "%Y-%m-%d")) %>% 
   group_by(clt_ptid) %>%
   slice_min(clt_date, n = 1) %>%    # in case there are duplicates
   ungroup() %>% 
-    select(clt_study_site,clt_ptid, clt_date, ) %>% 
-    # Compute the six-month due date
+    select(clt_study_site,clt_ptid, clt_date)
+
+# First six-month visit date across participants
+earliest_due <- first_6ths %>%
+  slice_min(clt_date, n = 1) %>%
+  select(clt_ptid, clt_date) %>% 
+    pull(clt_date) 
+
+total_exits <- ppw_rct_df%>%
+    # Filter to "6 weeks" and grab the first per participant
+  filter(clt_visit == "6 months post-partum") %>% 
     mutate(
-    sixmo_duedate = clt_date %m+% months(6)
+    dummy_arm = case_when(
+      grepl("Control", redcap_event_name) ~ "Arm X",
+      TRUE ~ "Arm Y"
+    )
   )
 
-# Earliest due date
-earliest_due <- first_6w %>%
-  slice_min(sixmo_duedate, n = 1) %>%
-  select(clt_ptid, clt_date, sixmo_duedate) %>% 
-    pull(sixmo_duedate)                                  
+completed_follow_up <- total_exits %>% 
+    filter(dis_today == "Yes") %>% 
+    nrow()
+
+completed_follow_upX <- total_exits %>% 
+    filter(dummy_arm == "Arm X") %>% 
+    select(clt_ptid, dis_today) %>% 
+    filter(dis_today == "Yes") %>% 
+    nrow()
+    
+completed_follow_upY <- total_exits %>% 
+    filter(dummy_arm == "Arm Y") %>% 
+    select(clt_ptid, dis_today) %>% 
+    filter(dis_today == "Yes") %>% 
+    nrow()
+
 ```
 
+To date, we have not recorded any early terminations. However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`. Of which, `r completed_follow_upX` and `r completed_follow_upY` were from arm X and arm Y respective. 
 
-We have not yet had any early terminations; our first expected termination is `r earliest_due`.
 
-
+\newpage
 # 8. Referrals
 
 ## 8.1 Psychosocial Referrals
@@ -456,15 +780,30 @@ At, both, enrollment and 6-week follow up study visits participants are asked if
 ## generate report using data from psychosocial referrals form in REDCap  
 source("PPW RCT Referrals.R")
 
-referral_summary
+arm_referral_summary
 ```
 
 
 ## 8.2 Treatment Referrals
-
-```{r treatment_referrals}
-#Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
+```{r treatment_referrals_numsource, echo=FALSE, message=FALSE, warning=FALSE}
+source("Telepsychiatry Sessions.R")
+# Summarise ANC attendees and extract the sum as a numeric value
+Attendees <- daily_closeout_df %>%
+    summarise(`anc attendees` = sum(rct_anc_number, na.rm = TRUE)) %>%
+    pull(`anc attendees`)  # Extract the sum value as a number
 ```
+
+During the reporting period, `r Attendees` participants attended MCH clinic withing the study sites and were screened for PMAD symptoms, of whom `r screened_pmad` (`r round(screened_pmad / Attendees *100,1)`%) screened positive for PMAD. Among these, `r PM_referrals`(`r round (PM_referrals / screened_pmad *100,1)`%) had moderate symptoms in either PHQ9 or GAD7 and were referred to PM+, and `r telep_referrals` (`r round (telep_referrals / screened_pmad * 100,1)`%) had severe symptoms and were referred to psychiatrist.
+
+
+```{r treatment_referrals, echo=FALSE, message=FALSE, warning=FALSE}
+source("Telepsychiatry Sessions.R")
+#Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
+fidelity_summary
+
+```
+
+\newpage
 # 9. Serious Adverse Events
 
 ```{r Summary of SAEs}
@@ -473,30 +812,29 @@ sae_summary
 
 ```
 
-
+\newpage
 # 10. Adverse Events
 ## 10.1 Adverse Events Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
+source("SAEs Lists.R")
+ae_tbl
 ```
 
 
-\newpage
 
+### 10.1.1 List of AEs: Arm X 
 
-### 10.1.1 List of SAEs: Arm X 
-
-```{r saes_intervention, echo=FALSE, message = FALSE}
-
-
+```{r ArmX_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+source("SAEs Lists.R")
+armx_aes_gt
 ```
 
-\newpage
-### 10.1.2 List of SAEs: Arm Y 
+### 10.1.2 List of AEs: Arm Y 
 
-
-```{r saes_control, echo=FALSE, message = FALSE}
-
+```{r ArmY_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+source("SAEs Lists.R")
+army_aes_gt
 ```
 
 
