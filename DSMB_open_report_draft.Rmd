@@ -98,7 +98,7 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
            "Pregnant Kenyan women", 
            "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
            "2970, including 405 women living with HIV (WLWH)", 
-           "1166",
+           "[place holder]",
            "0",
            "Follow-up through 6 months postpartum", 
            "September 19, 2023", 
@@ -429,25 +429,21 @@ wlwh_demo
 
 # 6. Study Terminations
 ```{r Ealiest Expected termination}
-first_6m <- ppw_rct_df %>%
-    # Filter to "6 weeks" and grab the first per participant
+first_6ths <- ppw_rct_df %>%
+    # Filter to "6 months" and grab the first per participant
   filter(clt_visit == "6 months post-partum") %>%
     mutate(
-    clt_date = as_date(clt_date, format = "%Y-%m-%d")) %>% 
+    clt_timestamp = as_date(clt_date, format = "%Y-%m-%d")) %>% 
   group_by(clt_ptid) %>%
   slice_min(clt_date, n = 1) %>%    # in case there are duplicates
   ungroup() %>% 
-    select(clt_study_site,clt_ptid, clt_date, ) %>% 
-    # Compute the six-month due date
-    mutate(
-    sixmo_duedate = clt_date %m+% months(6)
-  )
+    select(clt_study_site,clt_ptid, clt_date)
 
-# Earliest due date
-earliest_due <- first_6m %>%
-  slice_min(sixmo_duedate, n = 1) %>%
-  select(clt_ptid, clt_date, sixmo_duedate) %>% 
-    pull(sixmo_duedate)      
+# First six-month visit date across participants
+earliest_due <- first_6ths %>%
+  slice_min(clt_date, n = 1) %>%
+  select(clt_ptid, clt_date) %>% 
+    pull(clt_date) 
 
 total_exits <- ppw_rct_df%>%
     # Filter to "6 weeks" and grab the first per participant
