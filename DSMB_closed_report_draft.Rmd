@@ -79,7 +79,7 @@ Keshet Ronen, PhD, MPH, University of Washington
 
 Amritha Bhat, MBBS, MD, MPH, University of Washington
 
-Report prepared by: David Owaga & Yuwei Wang
+Report prepared by: David Owaga
 
 Date of data freeze: `r data_freeze`
 
@@ -136,7 +136,7 @@ study_summary
 -   [Place holder, we are not about 22%]: 25% of planned enrollment
 
 ## 1.2 Key Changes to Study Protocol
--N/A
+We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on 29th April 2025 to include women from ???20 weeks gestation because most of the participants enrolled from ???28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study. 
 
 # 2. Study Progress
 
@@ -163,7 +163,9 @@ n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
 
 ```
 
-We began recruiting pregnant women into the study on Feb 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970 *100, 1)`% of our enrollment target. Of these, `r n_second` (`r n_second_per`%) have completed their 6 week postpartum follow-up, `r n_third` (`r n_third_per`%) and `r n_fourth` (`r n_fourth_per`%) have completed 14 weeks and 6 months postpartum follow-up respectively.
+We began recruiting pregnant women into the study on Feb 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970 *100, 1)`% of our enrollment target. 
+
+Of the enrolled participants, `r n_second` (`r n_second_per`%) have completed their 6 weeks, `r n_third` (`r n_third_per`%) have completed 14 weeks and `r n_fourth` (`r n_fourth_per`%) have completed 6 months postpartum follow-up visits.
 
 In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivated as a result of uncertainty with the continuation of their contracts. 
 
@@ -211,11 +213,11 @@ counts_by_arm <- counts_by_arm %>%
 txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
 
 # Total assessment
-txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.2f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)", n_assessed, (n_assessed / n_attendees) * 100)
 
 txt_arm <- counts_by_arm %>%
     mutate(
-        txt = sprintf("%s\n (n=%d, %.2f%%)", dummy_arm, assessed, (assessed / n_assessed) * 100)
+        txt = sprintf("%s\n (n=%d, %.1f%%)", dummy_arm, assessed, (assessed / n_assessed) * 100)
     ) %>%
     pull(txt)
 
@@ -250,7 +252,7 @@ exclusion_side_boxes <- consort_data %>%
         # Bullet lines (keep \\n as character)
         reason_lines <- mapply(
             function(reason, count) {
-                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / excluded) * 100)
+                sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / excluded) * 100)
             },
             df_arm$exclusion_reason,
             df_arm$count
@@ -283,12 +285,12 @@ decline_side_boxes <- consort_data %>%
         eligible <- unique(df_arm$eligible)
         
         # Header line (with real line break later)
-        header <- sprintf("Declined Enrollment (n=%d, %.2f%%):", declined, (declined / eligible) * 100)
+        header <- sprintf("Declined Enrollment (n=%d, %.1f%%):", declined, (declined / eligible) * 100)
         
         # Bullet lines with Unicode bullets and percentages
         reason_lines <- mapply(
             function(reason, count) {
-                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / declined) * 100)
+                sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / declined) * 100)
             },
             df_arm$decline_reason,
             df_arm$count
@@ -553,11 +555,11 @@ counts_by_arm <- counts_by_arm %>%
 txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
 
 # Total assessment
-txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.2f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)", n_assessed, (n_assessed / n_attendees) * 100)
 
 txt_arm <- counts_by_arm %>%
     mutate(
-        txt = sprintf("%s\n (n=%d, %.2f%%)", dummy_arm, assessed, (assessed / n_assessed) * 100)
+        txt = sprintf("%s\n (n=%d, %.1f%%)", dummy_arm, assessed, (assessed / n_assessed) * 100)
     ) %>%
     pull(txt)
 
@@ -594,7 +596,7 @@ exclusion_side_boxes <- consort_data %>%
         # Bullet lines (keep \\n as character)
         reason_lines <- mapply(
             function(reason, count) {
-                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / excluded) * 100)
+                sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / excluded) * 100)
             },
             df_arm$exclusion_reason,
             df_arm$count
@@ -627,12 +629,12 @@ decline_side_boxes <- consort_data %>%
         eligible <- unique(df_arm$eligible)
         
         # Header line (with real line break later)
-        header <- sprintf("Declined Enrollment (n=%d, %.2f%%):", declined, (declined / eligible) * 100)
+        header <- sprintf("Declined Enrollment (n=%d, %.1f%%):", declined, (declined / eligible) * 100)
         
         # Bullet lines with Unicode bullets and percentages
         reason_lines <- mapply(
             function(reason, count) {
-                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / declined) * 100)
+                sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / declined) * 100)
             },
             df_arm$decline_reason,
             df_arm$count
