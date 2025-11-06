@@ -129,7 +129,8 @@ wlwh_demo <- demographics_df %>%
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>%
     tab_options(
-        table.font.size = px(14))
+        table.font.size = px(14)) %>%
+    opt_table_lines()
 
 wlwh_demo
 
@@ -181,7 +182,8 @@ arm_demo <- demographics_df %>%
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>%
     tab_options(
-        table.font.size = px(14))
+        table.font.size = px(14)) %>%
+    opt_table_lines()
 
 arm_demo
 
@@ -232,6 +234,7 @@ arm_wlwh_demo <- demographics_df %>%
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>%
     tab_options(
-        table.font.size = px(14))
+        table.font.size = px(14))%>%
+    opt_table_lines()
 
 arm_wlwh_demo
