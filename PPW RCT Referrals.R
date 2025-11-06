@@ -112,7 +112,7 @@ df_long <- referral_df %>%
 total_n <- nrow(ppw_rct_df)    # total participants
 
 summary_tbl <- df_long %>%
-    group_by(risk_col, Arm) %>%
+    group_by(risk_col) %>%
     reframe(
         n                = n(),                                        # positives
         pct_screened     = n / total_n * 100,                          # % of all
@@ -134,27 +134,31 @@ summary_tbl <- df_long %>%
         )
     )
 
-
 # Convert percentages and format table
+
 referral_summary <- summary_tbl %>%
-    mutate(
-        pct_screened = scales::percent(pct_screened / 100, accuracy = 0.1),
-        pct_accepted = scales::percent(pct_accepted / 100, accuracy = 0.1)
-    ) %>%
-    gt() %>%
-    tab_header(title = "Sub Cohort Referral Summary") %>%
+  mutate(
+    screened = sprintf("%d (%.1f%%)", n, pct_screened),
+    accepted = sprintf("%d (%.1f%%)", n_accepted, pct_accepted)
+  ) %>%
+  select(Condition, screened, accepted) %>%
+  gt() %>%
+    tab_header(title = "Referral Summary") %>%
     cols_label(
         Condition = "Referral Condition",
-        n = "n Screened",
-        pct_screened = "% Screened",
-        n_accepted = "n Accepted",
-        pct_accepted = "% Accepted"
-    ) %>%
-    tab_spanner(label = "Screened", columns = c(n, pct_screened)) %>%
-    tab_spanner(label = "Accepted", columns = c(n_accepted, pct_accepted)) %>%
-    fmt_number(columns = c(n, n_accepted), decimals = 0) %>%
-    fmt_percent(columns = c(pct_screened, pct_accepted), decimals = 1) %>%
-    opt_table_lines()
+        screened  = "Screened Positive N (%)",
+        accepted  = "Accepted Referral N (%)") %>%
+    fmt_number(columns = starts_with("n"), decimals = 0) %>%
+    tab_options(
+        table.font.size = px(11),      # control font size inside the table
+        data_row.padding = px(3),      # padding inside cells
+        column_labels.font.size = px(12),
+        table.width = pct(95))  %>%        # ensure table fits the page
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels()) %>% 
+        opt_table_lines()
+
 
 # Display table
 referral_summary
@@ -201,12 +205,12 @@ arm_referral_summary <- arm_summary_wide %>%
     tab_header(title = "Referral Summary by Arm") %>%
     cols_label(
         Condition = "Referral Condition",
-        n_control = "Screened (Arm X)",
-        accepted_control = "Accepted (Arm X)",
-        n_intervention = "Screened (Arm Y)",
-        accepted_intervention = "Accepted (Arm Y)",
-        n_total = "Total Screened",
-        accepted_total = "Total Accepted") %>%
+        n_control = "Screened Positve (Arm X)",
+        accepted_control = "Accepted Referral (Arm X)",
+        n_intervention = "Screened Positoive (Arm Y)",
+        accepted_intervention = "Accepted Referral (Arm Y)",
+        n_total = "Total Screened Positive",
+        accepted_total = "Total Accepted Referral") %>%
     fmt_number(columns = starts_with("n"), decimals = 0) %>%
     tab_options(
         table.font.size = px(11),      # control font size inside the table
@@ -217,6 +221,7 @@ arm_referral_summary <- arm_summary_wide %>%
     tab_style(
         style = cell_text(weight = "bold"),
         locations = cells_column_labels()
-    )
+    ) %>% 
+    opt_table_lines()
 
 arm_referral_summary
