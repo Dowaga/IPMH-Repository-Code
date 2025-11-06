@@ -5,7 +5,7 @@
 # Baseline Demographics
 
 # Setup ------------------------------------------------------------------------
-
+rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
@@ -31,7 +31,8 @@ demographics_df <- ppw_rct_df %>%
                             `Prefer not to answer` = "Yes"),
     dem_pc_residence = recode(dem_pc_residence,
                               "Yes (Ndio) [Kamano]" = "Yes",
-                              "No (La) [Ooyo]" = "No")
+                              "No (La) [Ooyo]" = "No",
+                              "Prefer not to answer (Singependa kujibu) [Ok daher mar duoko penjo ni]" = "Prefer not to answer")
     )%>%
     mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
            arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "22"),
@@ -58,7 +59,7 @@ basic_demo <- demographics_df %>%
                  dem_housesleep ~ "Number of people sleep in same house",
                  dem_houserooms ~ "Rooms in the house most often sleep in",
                  dem_traveltime_min ~ "Time to the Clinic (Minutes",
-                 med_pre_preg ~ "Have you been pregnant before(Yes)"),
+                 med_pre_preg ~ "Have you been pregnant before (Yes)"),
     missing = "no",
     digits = list(all_continuous() ~ 1), 
     type = list(dem_age ~ "continuous", 
@@ -72,6 +73,10 @@ basic_demo <- demographics_df %>%
     #add_p() %>% 
     # convert from gtsummary object to gt object
     as_gt() %>%
+    fmt_number(
+        columns = where(is.numeric),
+        sep_mark = ""      # removes commas
+    ) %>% 
     # modify with gt functions
     gt::tab_header("Basic Demographic Summary") %>% 
     gt::tab_options(
@@ -97,14 +102,14 @@ wlwh_demo <- demographics_df %>%
                      dem_employment ~ "Do you have regular employment (Yes)",
                      dem_maritalstat ~ "Currently Married (Yes)",
                      dem_pc_residence ~ "Shares residence with partner (Yes)",
-                     dem_marriage ~ "Marriage(Monogamous)",
+                     dem_marriage ~ "Marriage (Monogamous)",
                      dem_current_school ~ "Currently in School",
                      dem_school ~ "Completed years in School",
                      dem_household_num ~ "Number of people in Household",
                      dem_housesleep ~ "Number of people sleep in same house",
                      dem_houserooms ~ "Rooms in the house most often sleep in",
                      dem_traveltime_min ~ "Time to the Clinic (Minutes",
-                     med_pre_preg ~ "Have you been pregnant before(Yes)"),
+                     med_pre_preg ~ "Have you been pregnant before (Yes)"),
         missing = "no",
         digits = list(all_continuous() ~ 1), 
         type = list(dem_age ~ "continuous", 
