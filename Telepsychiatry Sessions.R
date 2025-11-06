@@ -301,7 +301,8 @@ fidelity_summary <- fidelity_table %>%
         row.striping.include_table_body = TRUE,
         column_labels.font.weight = "bold",
         heading.title.font.size = 16
-    )
+    )%>% 
+    opt_table_lines()
 
 fidelity_summary
 
