@@ -72,7 +72,7 @@ Keshet Ronen, PhD, MPH, University of Washington
 
 Amritha Bhat, MBBS, MD, MPH, University of Washington
 
-Report prepared by: David Owaga & Yuwei Wang
+Report prepared by: David Owaga
 
 Date of data freeze: `r data_freeze`
 
@@ -133,7 +133,7 @@ study_summary
 -   [Place holder, we are not about 22%]: 25% of planned enrollment
 
 ## 1.2 Key Changes to Study Protocol
--N/A
+We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on 29th April 2025 to include women from >=20 weeks gestation because most of the participants enrolled from >=28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study. 
 
 # 2. Study Progress
 
@@ -148,9 +148,21 @@ n_enrol <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
 n_enrol_per <- round(n_enrol/n_eligible *100, 1)
 n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
 n_second_per <- round(n_second/n_enrol * 100, 1)
+# 14 Weeks Visit
+n_third <- consort_data %>% filter(!is.na(thirdvisit)) %>% nrow()
+n_third_per <- round(n_third/n_enrol * 100, 1)
+
+# 6 Months Visit
+n_fourth <- consort_data %>%
+    filter(rct_enrolling == "Yes", fourthvisit == "Yes") %>%nrow()
+
+n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
+
 ```
 
-We began recruiting pregnant women into the study on February 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970, 1)`% of our enrollment target. Of these, `r n_second` (`r n_second_per`%) have completed their 6-week postpartum follow-up with our study team.
+We began recruiting pregnant women into the study on February 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970, 1)`% of our enrollment target.
+
+Of the enrolled participants, `r n_second` (`r n_second_per`%) have completed their 6 weeks, `r n_third` (`r n_third_per`%) have completed 14 weeks and `r n_fourth` (`r n_fourth_per`%) have completed 6 months postpartum follow-up visits.
 
 In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
 
@@ -173,11 +185,14 @@ consort_single
 \newpage
 
 ### 3.1.2 Enrollment Progress - Overall
+```{r enrollment_numsource, message=FALSE, warning=FALSE, include=FALSE}
+source("Enrollment Progress.R")
+```
 
 On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on
-[placeholder].
+`r target_date`.
 
-```{r enrollment_sub,  message=FALSE}
+```{r enrollment_sub, echo=FALSE, message=FALSE, warning=FALSE}
 source("Enrollment Progress.R")
 
 #shorten the names of the study sites
@@ -258,8 +273,7 @@ reached_25per_target <- weekly_enrollment %>%
 
 ```
 
-
-`r reached_25per_target` facilities have reached the 25% enrollment target of 37 perinatal women per facility cluster. The first cluster to achieve this milestone was Nyalenda in mid-April 2024.
+All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone, with each site expected to enroll a total of 148 perinatal women. This corresponds to at least 37 participants per facility. The first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2024.
 
 ```{r enrollment_sub_facility}
 source("Enrollment Progress.R")
@@ -313,7 +327,7 @@ p2
 
 \newpage
 
-## 3.2 WLWH Cohort
+## 3.2 Women Living with HIV
 
 ### 3.2.1 Current subject status
 
@@ -321,7 +335,7 @@ p2
 source("Consort_WLWH.R")
 ```
 
-From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled*100, 1)`%) women were HIV positive, meeting `r round(n_hiv/n_enrolled*100, 1)`% of our WLWH cohort enrollment target. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 week postpartum follow-up with our study team. Additionally, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed their 14-week follow-up, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6-month follow-up.
+Overal `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
 
 
 
@@ -340,7 +354,7 @@ add_box(txt = txt_enrolled) |>
 
 ### 3.2.2 Enrollment Progress - Overall
 
-Recruitment into the WLWH cohort has been slower than expected but has been steadily improving. Two facilities have reached the 50% enrollment target of 10 WLWH per facility cluster, and six facilities have reached the 25% enrollment target of 5 WLWH per facility cluster. 
+Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, two facilities have reached the halfway mark with 10 participants each, while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
 
 ```{r enrollment_mor, warning=F}
 source("Enrollment_WLWH.R")
@@ -396,7 +410,7 @@ ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
 
 # 4. Ineligibility
 
-Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. 
+Women were ineligible if their gestational age at eligibility assessment was <20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems. . 
 
 ```{r subcohort_prog, echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort.R")
@@ -410,9 +424,7 @@ ineligibility_summary
 ## 5.1 Participant Baseline Demographics
 
 ```{r demographics, warning=F}
-
 source("PPW RCT Basic Demographics.R")
-
 
 basic_demo
 ```
@@ -456,8 +468,7 @@ completed_follow_up <- total_exits %>%
 ```
 
 
-To date, we have not recorded any early terminations. However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`.
-
+To date, no early terminations have been recorded. However, `r completed_follow_up` participants have completed the study and exited at the scheduled end of follow-up. The first study exit occurred on `r earliest_due`
 
 
 # 7. Referrals
@@ -476,7 +487,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
 
-At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions. Of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals for those conditions.
+During enrollment and follow up study visits,  participants are asked if they would like to be referred for psychosocial support if they screen positive for depresion, anxiety and IPV. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted referrals for those conditions.
 
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
@@ -507,7 +518,7 @@ total_EAs <- ae_df %>%
 
 ## 8.1 AEs Summary
 
-As of `r Sys.Date()`, a total of `r total_EAs` adverse events have been observed. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
+As of `r Sys.Date()`, `r total_EAs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
 
 
 
@@ -529,7 +540,7 @@ total_hosp <- clean_sae_df %>%
     nrow()
 
 ```
-As of `r Sys.Date()`, we have had `r total_SAEs` serious adverse events, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
+As of `r Sys.Date()`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
 
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
