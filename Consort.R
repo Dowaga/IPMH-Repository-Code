@@ -70,7 +70,7 @@ consort_data <- screening_consent_df %>%
             rct_eligible == 1 ~ "1",
             TRUE ~ NA_character_)) %>% 
     mutate(exclusion = case_when(
-        rct_eligible == 0 & rct_eligible_gestation == "No" ~ "Gestation <28 Weeks",
+        rct_eligible == 0 & rct_eligible_gestation == "No" ~ "Gestation <20 Weeks",
         rct_harm_thought == "Yes" & rct_memory_problem == "No" ~"Self harm",
         rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~"Self harm and memory problem",
         rct_eligible == 0 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
@@ -239,11 +239,11 @@ counts_by_arm <- counts_by_arm %>%
 txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
 
 # Total assessment
-txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.2f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)", n_assessed, (n_assessed / n_attendees) * 100)
 
 txt_arm <- counts_by_arm %>%
     mutate(
-        txt = sprintf("%s\n (n=%d, %.2f%%)", arm, assessed, (assessed / n_assessed) * 100)
+        txt = sprintf("%s\n (n=%d, %.1f%%)", arm, assessed, (assessed / n_assessed) * 100)
     ) %>%
     pull(txt)
 
@@ -279,7 +279,7 @@ exclusion_side_boxes <- consort_data %>%
         # Bullet lines (keep \\n as character)
         reason_lines <- mapply(
             function(reason, count) {
-                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / excluded) * 100)
+                sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / excluded) * 100)
             },
             df_arm$exclusion_reason,
             df_arm$count
@@ -312,12 +312,12 @@ decline_side_boxes <- consort_data %>%
         eligible <- unique(df_arm$eligible)
         
         # Header line (with real line break later)
-        header <- sprintf("Declined Enrollment (n=%d, %.2f%%):", declined, (declined / eligible) * 100)
+        header <- sprintf("Declined Enrollment (n=%d, %.1f%%):", declined, (declined / eligible) * 100)
         
         # Bullet lines with Unicode bullets and percentages
         reason_lines <- mapply(
             function(reason, count) {
-                sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / declined) * 100)
+                sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / declined) * 100)
             },
             df_arm$decline_reason,
             df_arm$count
@@ -397,27 +397,27 @@ m6_postpartum <- consort_data %>%
 txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
 
 # Assessed
-txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.2f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)", n_assessed, (n_assessed / n_attendees) * 100)
 
 # Eligible
-txt_eligible <- sprintf("Eligible\n (n=%d, %.2f%%)", n_eligible, (n_eligible / n_assessed) * 100)
+txt_eligible <- sprintf("Eligible\n (n=%d, %.1f%%)", n_eligible, (n_eligible / n_assessed) * 100)
 
 # Excluded
-txt_excluded <- sprintf("Excluded\n (n=%d, %.2f%%)", n_excluded, (n_excluded / n_assessed) * 100)
+txt_excluded <- sprintf("Excluded\n (n=%d, %.1f%%)", n_excluded, (n_excluded / n_assessed) * 100)
 
 # Enrolled
-txt_enrolled <- sprintf("Enrolled\n (n=%d, %.2f%%)", n_enrolled, (n_enrolled / n_eligible) * 100)
+txt_enrolled <- sprintf("Enrolled\n (n=%d, %.1f%%)", n_enrolled, (n_enrolled / n_eligible) * 100)
 
 # PM+
-txt_pm <- sprintf("PM+\n (n=%d, %.2f%%)", n_pm, (n_pm / n_enrolled) * 100)
+txt_pm <- sprintf("PM+\n (n=%d, %.1f%%)", n_pm, (n_pm / n_enrolled) * 100)
 
 #telepsychiatry
-txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.2f%%)", 10, (10 / n_enrolled) * 100)
+txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.1f%%)", 10, (10 / n_enrolled) * 100)
 
 # Postpartum
-six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.2f%%)", w6_postpartum, (w6_postpartum / n_enrolled) * 100)
-fourteen_weeks_postpartum <- sprintf("14 weeks postpartum visit\n (n=%d, %.2f%%)", w14_postpartum, (w14_postpartum / n_enrolled) * 100)
-six_months_postpartum <- sprintf("6 months postpartum visit\n (n=%d, %.2f%%)", m6_postpartum, (m6_postpartum / n_enrolled) * 100)
+six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.1f%%)", w6_postpartum, (w6_postpartum / n_enrolled) * 100)
+fourteen_weeks_postpartum <- sprintf("14 weeks postpartum visit\n (n=%d, %.1f%%)", w14_postpartum, (w14_postpartum / n_enrolled) * 100)
+six_months_postpartum <- sprintf("6 months postpartum visit\n (n=%d, %.1f%%)", m6_postpartum, (m6_postpartum / n_enrolled) * 100)
 
 
 #combining pm+ and telepsychiatry
@@ -429,11 +429,11 @@ exclusion_summary <- consort_data %>%
     group_by(exclusion_reason = exclusion) %>%
     summarise(count = n(), .groups = "drop")
 
-header_ex <- sprintf("Excluded (n=%d, %.2f%%):", n_excluded, (n_excluded / n_assessed) * 100)
+header_ex <- sprintf("Excluded (n=%d, %.1f%%):", n_excluded, (n_excluded / n_assessed) * 100)
 
 reason_lines_ex <- mapply(
     function(reason, count) {
-        sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / n_excluded) * 100)
+        sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / n_excluded) * 100)
     },
     exclusion_summary$exclusion_reason,
     exclusion_summary$count
@@ -451,11 +451,11 @@ decline_summary <- consort_data %>%
     group_by(decline_reason = rct_decline_reason) %>%
     summarise(count = n(), .groups = "drop")
 
-header_decline <- sprintf("Declined Enrollment (n=%d, %.2f%%):", n_declined, (n_declined / n_eligible) * 100)
+header_decline <- sprintf("Declined Enrollment (n=%d, %.1f%%):", n_declined, (n_declined / n_eligible) * 100)
 
 reason_lines_decline <- mapply(
     function(reason, count) {
-        sprintf("\u2022 %s (n=%d, %.2f%%)", reason, count, (count / n_declined) * 100)
+        sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / n_declined) * 100)
     },
     decline_summary$decline_reason,
     decline_summary$count
@@ -484,7 +484,15 @@ ineligibility_summary <- consort_data %>%
     tbl_summary(
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include = c(exclusion),
-        label = list(exclusion ~ "Reasons for Ineligibility"))
+        label = list(exclusion ~ "Reasons for Ineligibility")) %>%
+    as_gt() %>% 
+    # modify with gt functions
+    gt::tab_header("Summary of Reasons for Study Ineligibility") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
 
 ineligibility_summary
 
