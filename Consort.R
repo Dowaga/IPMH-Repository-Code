@@ -74,6 +74,7 @@ consort_data <- screening_consent_df %>%
         rct_harm_thought == "Yes" & rct_memory_problem == "No" ~"Self harm",
         rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~"Self harm and memory problem",
         rct_eligible == 0 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
+        rct_eligible == 0 & rct_vis_hallucinations == "Yes" ~"Seeing things that others cannot see",
         rct_memory_problem == "Yes" ~"Memory problem",
         rct_delusions == "Yes" ~ "Holding unusual beliefs",
         rct_paranoia == "Yes" ~ "Feels watched/followed",
@@ -92,6 +93,7 @@ consort_data <- screening_consent_df %>%
             rct_decline_reason == "Other (specify) ___" ~ "Relocate post delivery",
             TRUE ~ rct_decline_reason  # Keep other values unchanged
         )) 
+
 
 # Merge consort data with pm_df
 consort_data <- consort_data %>% 
