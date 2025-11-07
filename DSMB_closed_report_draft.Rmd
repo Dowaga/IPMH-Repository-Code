@@ -327,7 +327,7 @@ consort_per
 
 ## 3.2.1  Enrollment Progress - Overall
 
-```{r enrollment_prohress, fig.width=9, fig.height=6, echo=FALSE}
+```{r enrollment_progress, fig.width=9, fig.height=6, echo=FALSE}
 source("Enrollment Progress.R")
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
