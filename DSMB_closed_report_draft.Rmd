@@ -1,5 +1,5 @@
 ---
-title: "IPMH: Community-based digital communication to support neonatal health"
+title: "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics"
 
 subtitle: 'Data and Safety Monitoring Board (DSMB): Closed Report '
 date: "`r format(Sys.time(), '%d %B %Y')`"
@@ -99,7 +99,7 @@ vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Cr
 vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatment of perinatal mood and anxiety disorders (PMADs), and its implementation strategies, into maternal and child health clinics and pragmatically evaluate its clinical, service delivery, and implementation outcomes",
            "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of IPMH and associated implementation strategies on depression, anxiety, quality of life, and adverse perinatal outcomes vs. control (standard of care) among Kenyan women", 
            "Pregnant Kenyan women", 
-           "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
+           "-Receiving antenatal care at study facility\n->=28 weeks gestation (changed to >=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
            "2970, including 405 women living with HIV (WLWH)", 
            "[place holder]",
            "0",
@@ -123,56 +123,9 @@ study_summary
 ```
 
 \newpage
+# 2. Study Enrollment
 
-## 1.1 Study Timeline Since Initiation:
--   May 12, 2023: Initial IRB approval
--   Jun 05, 2023: Initial ERC approval
--   Sep 19, 2023: RO1 Start date
--   Oct 04, 2024: Research assistant (RA) training initiation
--   Oct 11, 2024: 1st DSMB meeting
--   Oct 23, 2024: Facility randomization
--   Nov 06, 2024: Facility staff training initiation
--   Feb 17, 2025: Perinatal women recruitment initiation
--   [Place holder, we are not about 22%]: 25% of planned enrollment
-
-## 1.2 Key Changes to Study Protocol
-We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on 29th April 2025 to include women from ???20 weeks gestation because most of the participants enrolled from ???28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study. 
-
-# 2. Study Progress
-
-## 2.1 Recruitment Timeline
-```{r source_consort, echo=FALSE, warning=FALSE}
-source("Consort.R")
-n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
-n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
-n_eligible <- consort_data %>% filter(rct_eligible == 1) %>% nrow()
-n_eligible_per <- round(n_eligible/n_ass *100, 1)
-n_enrol <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
-n_enrol_per <- round(n_enrol/n_eligible *100, 1)
-n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
-n_second_per <- round(n_second/n_enrol * 100, 1)
-# 14 Weeks Visit
-n_third <- consort_data %>% filter(!is.na(thirdvisit)) %>% nrow()
-n_third_per <- round(n_third/n_enrol * 100, 1)
-
-# 6 Months Visit
-n_fourth <- consort_data %>%
-    filter(rct_enrolling == "Yes", fourthvisit == "Yes") %>%nrow()
-
-n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
-
-```
-
-We began recruiting pregnant women into the study on Feb 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970 *100, 1)`% of our enrollment target. 
-
-Of the enrolled participants, `r n_second` (`r n_second_per`%) have completed their 6 weeks, `r n_third` (`r n_third_per`%) have completed 14 weeks and `r n_fourth` (`r n_fourth_per`%) have completed 6 months postpartum follow-up visits.
-
-In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivated as a result of uncertainty with the continuation of their contracts. 
-
-\newpage
-# 3. Study Enrollment
-
-```{r Consort,echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+```{r Consort,echo=FALSE, fig.height=12, fig.width=16, message=FALSE, warning=FALSE}
 source("Consort.R")
 counts_by_arm <- consort_data %>%
     filter(!is.na(arm)) %>%
@@ -323,9 +276,9 @@ consort_per
 ```
 
 \newpage
-## 3.2  Enrollment Progress
+## 2.2  Enrollment Progress
 
-## 3.2.1  Enrollment Progress - Overall
+## 2.2.1  Enrollment Progress - Overall
 
 ```{r enrollment_progress, fig.width=9, fig.height=6, echo=FALSE}
 source("Enrollment Progress.R")
@@ -424,7 +377,7 @@ p1
 
 \newpage
 
-### 3.2.2 Enrollment Progress - Per Facility
+### 2.2.2 Enrollment Progress - Per Facility
 ```{r Facility target reached}
 source("Enrollment Progress.R")
 reached_25per_target <- weekly_enrollment %>%
@@ -499,17 +452,15 @@ p2
 
 \newpage
 
-# 4. WLWH Cohort
+# 3. WLWH Cohort
 
-## 4.1 Current subject status
+## 3.1 Current subject status
 
 ```{r consortnumsource, echo=FALSE, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
 source("Consort_WLWH.R")
 ```
 
-From `r n_enrolled` participants, `r n_hiv` (`r round(n_hiv/n_enrolled*100, 1)`%) women were HIV positive, meeting `r round(n_hiv/405*100, 1)`% of our WLWH cohort enrollment target. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 week postpartum follow-up with our study team. Additionally.
-`r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed fourteen weeks and six months visits respectively. 
-
+Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed their 6 months postpartum follow-up visits. 
 
 ```{r consort_WLWHIV, echo=FALSE, fig.height=9, fig.width = 15, message = FALSE, warning = FALSE}
 source("Consort_WLWH.R")
@@ -669,14 +620,9 @@ consort_per
 
 \newpage
 
-```{r morcohort_demo, echo=FALSE}
+# 4. Ineligibility
 
-
-```
-
-# 5. Ineligibility
-
-Total ineligible visits represents ANC visits at which a woman was assessed as ineligible to participate in the study. *{Clients are non-unique in this dataset because individual clients could be screened multiple times at different visits. A client may be determined as ineligible for multiple reasons.}*
+Women were ineligible if their gestational age at eligibility assessment was <20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
 
 
 ```{r subcohort_prog, echo=FALSE, message=FALSE, warning=FALSE}
@@ -686,9 +632,9 @@ arm_ineligibility_summary
 
 \newpage
 
-# 6. Baseline Demographics
+# 5. Baseline Demographics
 
-## 6.1 Participant Baseline Demographics
+## 5.1 Participant Baseline Demographics
 
 ```{r demographics, warning=F}
 
@@ -698,7 +644,7 @@ arm_demo
 ```
 
 \newpage
-## 6.2 WLWH Cohort Baseline Demographics
+## 5.2 WLWH Cohort Baseline Demographics
 
 Participant characteristics are generally (similar/different) across arms.
 ```{r WLWH_demo, echo=FALSE}
@@ -709,7 +655,7 @@ arm_wlwh_demo
 
 \newpage
 
-# 7. Study Terminations
+# 6. Study Terminations
 ```{r Ealiest Expected termination}
 first_6ths <- ppw_rct_df %>%
     # Filter to "6 months" and grab the first per participant
@@ -759,9 +705,9 @@ To date, we have not recorded any early terminations. However, `r completed_foll
 
 
 \newpage
-# 8. Referrals
+# 7. Referrals
 
-## 8.1 Psychosocial Referrals
+## 7.1 Psychosocial Referrals
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 source("PPW RCT Referrals.R")
@@ -775,7 +721,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
 
-At, both, enrollment and 6-week follow up study visits participants are asked if they would like to be referred for any conditions that they may have screened positive for during the study visit. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions. Of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals for those conditions.
+During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions. Of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals.
 
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
@@ -786,7 +732,7 @@ arm_referral_summary
 ```
 
 
-## 8.2 Treatment Referrals
+## 7.2 Treatment Referrals
 ```{r treatment_referrals_numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("Telepsychiatry Sessions.R")
 # Summarise ANC attendees and extract the sum as a numeric value
@@ -795,7 +741,7 @@ Attendees <- daily_closeout_df %>%
     pull(`anc attendees`)  # Extract the sum value as a number
 ```
 
-During the reporting period, `r Attendees` participants attended MCH clinic withing the study sites and were screened for PMAD symptoms, of whom `r screened_pmad` (`r round(screened_pmad / Attendees *100,1)`%) screened positive for PMAD. Among these, `r PM_referrals`(`r round (PM_referrals / screened_pmad *100,1)`%) had moderate symptoms in either PHQ9 or GAD7 and were referred to PM+, and `r telep_referrals` (`r round (telep_referrals / screened_pmad * 100,1)`%) had severe symptoms and were referred to psychiatrist.
+During this study period, `r Attendees` women attended MCH in the study clinics and were screened for PMAD symptoms, of whom `r screened_pmad` (`r round(screened_pmad / Attendees *100,1)`%) screened positive for PMAD. Among these, `r PM_referrals`(`r round (PM_referrals / screened_pmad *100,1)`%) had moderate symptoms in either PHQ9 or GAD7 and were referred to PM+, and `r telep_referrals` (`r round (telep_referrals / screened_pmad * 100,1)`%) had severe symptoms and were referred to psychiatrist.
 
 
 ```{r treatment_referrals, echo=FALSE, message=FALSE, warning=FALSE}
@@ -806,7 +752,7 @@ fidelity_summary
 ```
 
 \newpage
-# 9. Serious Adverse Events
+# 8. Serious Adverse Events
 
 ```{r Summary of SAEs}
 source("SAEs Lists.R")
@@ -815,8 +761,8 @@ sae_summary
 ```
 
 \newpage
-# 10. Adverse Events
-## 10.1 Adverse Events Summary
+# 9. Adverse Events
+## 9.1 Adverse Events Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
 source("SAEs Lists.R")
@@ -825,14 +771,14 @@ ae_tbl
 
 
 
-### 10.1.1 List of AEs: Arm X 
+### 9.1.1 List of AEs: Arm X 
 
 ```{r ArmX_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 armx_aes_gt
 ```
 
-### 10.1.2 List of AEs: Arm Y 
+### 9.1.2 List of AEs: Arm Y 
 
 ```{r ArmY_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")

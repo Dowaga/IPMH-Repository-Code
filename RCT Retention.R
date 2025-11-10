@@ -352,6 +352,7 @@ enrollment_counts <- enrollments_filtered %>%
     group_by(Facility = clt_study_site) %>%
     summarise(Enrolled = n(), .groups = "drop")
 
+
 # Calculate days active (same for all facilities)
 days_active <- sum(!weekdays(seq.Date(as.Date("2025-09-22"), 
                                       Sys.Date(), by = "day")) %in% c("Saturday", "Sunday"))
