@@ -61,7 +61,10 @@ basic_demo <- demographics_df %>%
                  dem_traveltime_min ~ "Time to the Clinic (Minutes",
                  med_pre_preg ~ "Have you been pregnant before (Yes)"),
     missing = "no",
-    digits = list(all_continuous() ~ 1), 
+    digits = list(
+        all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+        all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+    ), 
     type = list(dem_age ~ "continuous", 
                 dem_household_num ~ "continuous",
                 dem_housesleep ~ "continuous", 
@@ -111,7 +114,10 @@ wlwh_demo <- demographics_df %>%
                      dem_traveltime_min ~ "Time to the Clinic (Minutes",
                      med_pre_preg ~ "Have you been pregnant before (Yes)"),
         missing = "no",
-        digits = list(all_continuous() ~ 1), 
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ), 
         type = list(dem_age ~ "continuous", 
                     dem_household_num ~ "continuous",
                     dem_housesleep ~ "continuous", 
@@ -164,7 +170,10 @@ arm_demo <- demographics_df %>%
                      dem_traveltime_min ~ "Time to the Clinic (Minutes",
                      med_pre_preg ~ "Have you been pregnant before (Yes)"),
         missing = "no",
-        digits = list(all_continuous() ~ 1), 
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ), 
         type = list(dem_age ~ "continuous", 
                     dem_household_num ~ "continuous",
                     dem_housesleep ~ "continuous", 
