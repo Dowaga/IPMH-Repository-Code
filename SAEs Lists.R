@@ -94,10 +94,21 @@ sae_summary <- tbl_summary(
     by = dummy_arm,
     type = all_continuous() ~ "continuous",
     statistic = all_continuous() ~ "{sum}",
+    percent = "cell",
     missing = "no"
 ) %>%
-    modify_header(label = "**SAE Category**") %>%
-    modify_caption("**Summary of Serious Adverse Events by Study Arm**")
+    bold_labels() %>%
+    #add_p() %>% 
+    add_overall() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Serious Adverse Events by Study Arm") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
 
 
 sae_summary  
@@ -163,21 +174,23 @@ ae_bin <- arm_ae %>%
 
 # AEs summary
 ae_tbl <- ae_bin %>% 
-    tbl_summary(by = dummy_arm,
-                include = c(ae_define___1_bin, ae_define___2_bin, 
-                            ae_define___5_bin),
-                label = list(
-                    ae_define___1_bin ~ "Kicked out of home", 
-                    ae_define___2_bin ~ "Experienced violence or abuse", 
-                    ae_define___5_bin ~ "Persistent or significant psychosocial distress"
-                )) %>% 
+    tbl_summary(
+        by = dummy_arm,
+        include = c(ae_define___1_bin, ae_define___2_bin, ae_define___5_bin),
+        label = list(
+            ae_define___1_bin ~ "Kicked out of home", 
+            ae_define___2_bin ~ "Experienced violence or abuse", 
+            ae_define___5_bin ~ "Persistent or significant psychosocial distress"
+        ),
+        percent = "cell" 
+    ) %>% 
     bold_labels() %>%
     #add_p() %>% 
     add_overall() %>% 
     # convert from gtsummary object to gt object
     as_gt() %>%
     # modify with gt functions
-    gt::tab_header("Summary of Adverse Events") %>% 
+    gt::tab_header("Summary of Adverse Events by Arm") %>% 
     gt::tab_source_note(gt::md("A single participant may experience multiple AEs")) %>% 
     gt::tab_options(
         table.font.size = "medium",
@@ -272,4 +285,21 @@ army_aes_gt <- army_aes %>%
     )
 
 
+# Calculate overall denominator (all rows in ae_bin)
+overall_n <- nrow(ae_bin)
 
+# Create the summary table
+ae_tbl <- ae_bin %>%
+    tbl_summary(
+        by = dummy_arm,
+        include = c(ae_define___1_bin, ae_define___2_bin, ae_define___5_bin),
+        label = list(
+            ae_define___1_bin ~ "Kicked out of home",
+            ae_define___2_bin ~ "Experienced violence or abuse",
+            ae_define___5_bin ~ "Persistent or significant psychosocial distress"
+        )
+    ) %>%
+    modify_statistic(all_categorical() ~ function(x) {
+        overall_n <- nrow(ae_bin)
+        paste0(x$n, " (", round(100 * x$n / overall_n, 1), "%)")
+    })
