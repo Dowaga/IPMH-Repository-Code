@@ -24,8 +24,17 @@ anc_number <- telepsych %>%
     select(record_id, tele_ancid)
 
 #Total Telepsychiatry participants
-total_telep <-  anc_number %>%
-    summarise(unique_tele = n_distinct(tele_ancid))
+telep_ids <-  anc_number %>%
+    #Offered telepyschaitry as treatment but not referred
+    filter(!tele_ancid == "2025-03-0092") %>%
+   distinct(tele_ancid)
+
+total_telep <- anc_number %>%
+    #Offered telepyschaitry as treatment but not referred
+    filter(!tele_ancid == "2025-03-0092") %>% 
+    summarise(total = n_distinct(tele_ancid)) %>%
+    pull(total)
+
 
 
 # PM+ and Telepsychiatry Referrals
@@ -259,8 +268,6 @@ fidelity_df <- screened %>%
     left_join(telepsych_ids, by = c("partipant_id" = "record_id")) %>% 
     select(-clt_study_site)
 
-fidelity_df %>% 
-    tabyl(tele)
 
 # Get counts
 step_counts <- fidelity_df %>%
