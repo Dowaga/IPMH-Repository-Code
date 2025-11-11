@@ -125,7 +125,7 @@ study_summary
 \newpage
 # 2. Study Enrollment
 
-```{r Consort,echo=FALSE, fig.height=12, fig.width=16, message=FALSE, warning=FALSE}
+```{r Consort,echo=FALSE, fig.height=12, fig.width=15, message=FALSE, warning=FALSE}
 source("Consort.R")
 counts_by_arm <- consort_data %>%
     filter(!is.na(arm)) %>%
@@ -280,7 +280,7 @@ consort_per
 
 ## 2.2.1  Enrollment Progress - Overall
 
-```{r enrollment_progress, fig.width=9, fig.height=6, echo=FALSE}
+```{r enrollment_progress, fig.width=12, fig.height=10, echo=FALSE}
 source("Enrollment Progress.R")
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
@@ -368,7 +368,7 @@ p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment,
     legend.text = element_text(size = 9),
     strip.text = element_text(size = 10, face = "bold")
   ) +
-  guides(color = guide_legend(ncol = 2))
+  guides(color = guide_legend(ncol = 1))
 
 p1
 
@@ -391,7 +391,7 @@ reached_25per_target <- weekly_enrollment %>%
 
 All (`r reached_25per_target`) facilities have surpassed our first enrollment milestone, with more than 37 perinatal women enrolled per facility cluster - exceeding 25% of the overall target enrollment. Nyalenda was the first facility to achieve this milestone in mid-April 2024.
 
-```{r enrollment_sub_facility, fig.width=9, fig.height=6, echo=FALSE}
+```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
 source("Enrollment Progress.R")
 
 #shorten the names of the study sites
@@ -462,7 +462,7 @@ source("Consort_WLWH.R")
 
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed their 6 months postpartum follow-up visits. 
 
-```{r consort_WLWHIV, echo=FALSE, fig.height=9, fig.width = 15, message = FALSE, warning = FALSE}
+```{r consort_WLWHIV, echo=FALSE, fig.height=10, fig.width = 15, message = FALSE, warning = FALSE}
 source("Consort_WLWH.R")
 
 counts_by_arm <- consort_data %>%
@@ -751,8 +751,10 @@ fidelity_summary
 
 ```
 
+
 \newpage
-# 8. Serious Adverse Events
+# 9. Adverse Events
+## 9.1. Serious Adverse Events Summary
 
 ```{r Summary of SAEs}
 source("SAEs Lists.R")
@@ -760,9 +762,7 @@ sae_summary
 
 ```
 
-\newpage
-# 9. Adverse Events
-## 9.1 Adverse Events Summary
+## 9.2 Adverse Events Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
 source("SAEs Lists.R")
@@ -770,15 +770,14 @@ ae_tbl
 ```
 
 
-
-### 9.1.1 List of AEs: Arm X 
+### 9.2.1 List of AEs: Arm X 
 
 ```{r ArmX_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 armx_aes_gt
 ```
 
-### 9.1.2 List of AEs: Arm Y 
+### 9.2.2 List of AEs: Arm Y 
 
 ```{r ArmY_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
