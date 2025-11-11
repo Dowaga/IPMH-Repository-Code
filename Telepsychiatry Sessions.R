@@ -35,7 +35,7 @@ pm_telep_df <- ppw_rct_df %>%
     filter(!is.na(clt_date)) 
 
 # PM+ Session 5 abstractions
-telep_df <- ppw_rct_df%>% 
+pm_session5_df <- ppw_rct_df%>% 
     filter(redcap_event_name == "PM+ Session 5 Abstraction (Arm 1: Intervention)") %>% 
     select(record_id, clt_study_site, clt_date, starts_with("abs_"))
 
@@ -85,15 +85,22 @@ pm_telep_df <- pm_telep_df %>%
     filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
     mutate(
         max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
-        eligible_for = case_when(
-            abs_phq_dead > 0 ~ "Telepsychiatry",
-            (max_score >= 10 & max_score < 15 & (max_score == phq9_scores | max_score == gad7_scores)) ~ "PM+",
-            max_score >= 15 ~ "Telepsychiatry",
-            TRUE ~ "Not Eligible"),
-        referred_to = case_when(abs_phq_ref_pm == "Yes"|abs_gad7_ref_pm == "Yes" ~ "PM+",
-                                abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
-                                TRUE ~ NA_character_))
+            eligible_for = case_when(
+                abs_phq_dead > 0 ~ "Telepsychiatry",
+                (max_score >= 10 & max_score < 15 &
+                     (max_score == phq9_scores | max_score == gad7_scores)) ~ "PM+",
+                max_score >= 15 ~ "Telepsychiatry",
+                TRUE ~ "Not Eligible"
+            ),
+            referred_to = case_when(
+                abs_gad7_ref_tele == "Yes" | abs_phq_ref_tele == "Yes" ~ "Telepsychiatry",
+                abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes" ~ "PM+",
+                TRUE ~ NA_character_
+            )
+        )
 
+referral_QCs <- pm_telep_df %>% 
+    filter(eligible_for == "PM+" & referred_to == "Telepsychiatry")
 
 # PM+ participants
 pm_plus_df <- pm_telep_df %>% 
@@ -102,8 +109,10 @@ pm_plus_df <- pm_telep_df %>%
 
 # Tele-psychiatry referrals
 telepsych_referrals <- pm_telep_df %>% 
-    filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead >0 & abs_phq_ref_tele == "Yes"))
+    filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead > 0 & abs_phq_ref_tele == "Yes"))
 
+tel_refer <- pm_telep_df %>% 
+    filter(abs_phq_ref_tele == "Yes" & referred_to == "PM+")
 
 telepsych_ids <- telepsych_referrals %>% 
     select(clt_study_site, record_id) %>% 
@@ -250,7 +259,8 @@ fidelity_df <- screened %>%
     left_join(telepsych_ids, by = c("partipant_id" = "record_id")) %>% 
     select(-clt_study_site)
 
-
+fidelity_df %>% 
+    tabyl(tele)
 
 # Get counts
 step_counts <- fidelity_df %>%
