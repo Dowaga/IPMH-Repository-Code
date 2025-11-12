@@ -35,9 +35,8 @@ demographics_df <- ppw_rct_df %>%
                               "Prefer not to answer (Singependa kujibu) [Ok daher mar duoko penjo ni]" = "Prefer not to answer")
     )%>%
     mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
-           arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "22"),
+           arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
                               "Control", "Intervention"))
-
 
 # basic demo table
 basic_demo <- demographics_df %>%
