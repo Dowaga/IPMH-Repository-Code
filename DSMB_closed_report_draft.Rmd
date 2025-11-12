@@ -675,7 +675,26 @@ Women were ineligible if their gestational age at eligibility assessment was <20
 
 
 ```{r subcohort_prog, echo=FALSE, message=FALSE, warning=FALSE}
-source("Consort.R")
+# source("Consort.R")
+arm_ineligibility_summary <- consort_data %>% 
+    filter(!is.na(exclusion)) %>% 
+    tbl_summary(by = arm,
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include = c(exclusion),
+        label = list(exclusion ~ "Reasons for Ineligibility")) %>% 
+    bold_labels() %>%
+    #add_p() %>% 
+    add_overall() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Study Ineligibility by Arm") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
+
 arm_ineligibility_summary
 ```
 
