@@ -512,11 +512,11 @@ source("Consort_WLWH.R")
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed their 6 months postpartum follow-up visits. 
 
 ```{r consort_WLWHIV, echo=FALSE, fig.height=10, fig.width = 15, message = FALSE, warning = FALSE}
-source("Consort_WLWH.R")
+# source("Consort_WLWH.R")
 
 counts_by_arm <- consort_data %>%
-    filter(!is.na(dummy_arm)) %>%
-    group_by(dummy_arm) %>%
+    filter(!is.na(arm)) %>%
+    group_by(arm) %>%
     summarise(
         assessed = n(),
         excluded = sum(!is.na(exclusion)),
@@ -559,7 +559,7 @@ txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)", n_assessed, (n_a
 
 txt_arm <- counts_by_arm %>%
     mutate(
-        txt = sprintf("%s\n (n=%d, %.1f%%)", dummy_arm, assessed, (assessed / n_assessed) * 100)
+        txt = sprintf("%s\n (n=%d, %.1f%%)", arm, assessed, (assessed / n_assessed) * 100)
     ) %>%
     pull(txt)
 
@@ -577,16 +577,16 @@ generate_box_header <- function(label, numerator, denominator, decimals = 2) {
 # Build exclusion string per arm
 exclusion_side_boxes <- consort_data %>%
     filter(!is.na(exclusion)) %>%
-    group_by(dummy_arm, exclusion_reason = exclusion) %>%
+    group_by(arm, exclusion_reason = exclusion) %>%
     summarise(count = n(), .groups = "drop") %>%
     left_join(
         counts_by_arm %>% 
-            select(dummy_arm, excluded, assessed),
-        by = "dummy_arm"
+            select(arm, excluded, assessed),
+        by = "arm"
     ) %>%
-    group_split(dummy_arm) %>%
+    group_split(arm) %>%
     lapply(function(df_arm) {
-        arm_label <- unique(df_arm$dummy_arm)
+        arm_label <- unique(df_arm$arm)
         excluded <- unique(df_arm$excluded)
         assessed <- unique(df_arm$assessed)
         
@@ -614,15 +614,15 @@ txt_ex <- unlist(exclusion_side_boxes)
 # Build decline side boxes per arm
 decline_side_boxes <- consort_data %>%
     filter(!is.na(rct_decline_reason)) %>%
-    group_by(dummy_arm, decline_reason = rct_decline_reason) %>%
+    group_by(arm, decline_reason = rct_decline_reason) %>%
     summarise(count = n(), .groups = "drop") %>%
     left_join(
         counts_by_arm %>%
             mutate(declined = eligible - enrolled) %>%
-            select(dummy_arm, declined, eligible),
-        by = "dummy_arm"
+            select(arm, declined, eligible),
+        by = "arm"
     ) %>%
-    group_split(dummy_arm) %>%
+    group_split(arm) %>%
     lapply(function(df_arm) {
         arm_label <- unique(df_arm$arm)
         declined <- unique(df_arm$declined)
