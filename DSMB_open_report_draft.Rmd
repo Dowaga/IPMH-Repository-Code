@@ -193,7 +193,7 @@ source("Enrollment Progress.R")
 ```
 
 On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on
-`r target_date`.
+`r target_reached`.
 
 ```{r enrollment_sub, fig.height=10, fig.width=12, message=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 source("Enrollment Progress.R")
@@ -236,6 +236,10 @@ total_enrollment <- weekly_enrollment %>%
     mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
     mutate(study_site = "Total")
 
+target_reached <- total_enrollment %>%
+  filter(cumulative_enrollment >= 743) %>%
+  slice_head(n = 1)
+
 combined_enrollment <- bind_rows(
   weekly_enrollment,
   total_enrollment,
@@ -250,14 +254,33 @@ p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment,
          x = "Date",
          y = "Cumulative Enrollment",
          color = "Study Site") +
-    theme_minimal() +
-    theme(
-        legend.position = "left",
-        legend.box = "vertical",
-        legend.title = element_text(size = 10),
-        legend.text = element_text(size = 9)
-    ) +
-    guides(color = guide_legend(ncol = 2))
+  theme(
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    legend.position = "right",              # place legend neatly
+    legend.text = element_text(size = 9),
+    legend.key.height = unit(0.5, "cm"),
+    legend.key.width = unit(0.5, "cm"),
+    legend.title = element_text(face = "bold")
+  ) +
+  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns
+    # arrange legend in 2 columns
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  theme(plot.margin = margin(10, 20, 10, 10))+
+  geom_point(
+    data = target_reached,
+    aes(x = week, y = cumulative_enrollment),
+    color = "red", size = 3
+  ) +
+  geom_text(
+    data = target_reached,
+    aes(x = week, y = cumulative_enrollment,
+        label = paste0("Target reached on\n", format(week, "%b %d, %Y"))),
+    vjust = -1, hjust = 0.5, color = "red", size = 3.5, fontface = "bold"
+  ) +
+  geom_hline(yintercept = 743, linetype = "dashed", color = "red", linewidth = 0.7)
+    
+
 p1
 ```
 
@@ -306,8 +329,7 @@ weekly_enrollment <- weekly_enrollment %>%
     "22, Ndiru Level 4 Hospital" = "22, Ndiru"
   ))
 
-p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
-                                    color = study_site, group = study_site)) +
+p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, color = study_site, group = study_site)) +
     geom_line(linewidth = 1) +  
     geom_hline(yintercept = 37, linetype = "dashed", color = "blue", linewidth = 1.5) +
     annotate("text", x = min(weekly_enrollment$week), y = 37.125, 
@@ -316,14 +338,19 @@ p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
          x = "Date",
          y = "Number of Enrollments",
          color = "Study Site") +
-    theme_minimal() +
-    theme(
-        legend.position = "left",
-        legend.box = "vertical",
-        legend.title = element_text(size = 10),
-        legend.text = element_text(size = 9)
-    ) +
-    guides(color = guide_legend(ncol = 2))
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    legend.position = "right",              # place legend neatly
+    legend.text = element_text(size = 9),
+    legend.key.height = unit(0.5, "cm"),
+    legend.key.width = unit(0.5, "cm"),
+    legend.title = element_text(face = "bold")
+  ) +
+  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+    theme(plot.margin = margin(10, 20, 10, 10))
 
 p2
 ```
@@ -357,7 +384,7 @@ add_box(txt = txt_enrolled) |>
 
 ### 3.2.2 Enrollment Progress - Overall
 
-Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, two facilities have reached the halfway mark with 10 participants each, while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
+Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, three facilities have reached the halfway mark with 10 participants each, while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
 
 ```{r enrollment_mor, fig.height=12, fig.width=16, message=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 source("Enrollment_WLWH.R")
@@ -386,27 +413,44 @@ weekly_enrollment <- weekly_enrollment %>%
     "22, Ndiru Level 4 Hospital" = "22, Ndiru"
   ))
 
-ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
-                                    color = study_site, group = study_site)) +
-    geom_line(linewidth = 1) +  
-    geom_hline(yintercept = 5, linetype = "dashed", color = "blue", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 5, 
-             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
-    geom_hline(yintercept = 10, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 10, 
-             label = "50% Target", vjust = -1, hjust = 0, size = 3) +
-    labs(title = "WLWH Enrollment Trends by Study Site",
-         x = "Date",
-         y = "Number of WLWH Enrollments",
-         color = "Study Site") +
-    theme_minimal() +
-    theme(
-        legend.position = "right",
-        legend.box = "vertical",
-        legend.title = element_text(size = 10),
-        legend.text = element_text(size = 9)
-    ) +
-    guides(color = guide_legend(ncol = 2))
+ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
+                              color = study_site, group = study_site)) +
+  geom_line(linewidth = 1) +  
+
+  # Add target lines
+  geom_hline(yintercept = 5, linetype = "dashed", color = "blue", linewidth = 1.5) +
+  geom_hline(yintercept = 10, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+
+  # Annotate target lines
+  annotate("text", x = min(weekly_enrollment$week), y = 5, 
+           label = "25% Target", vjust = -0.5, hjust = 0, size = 3.5, color = "blue") +
+  annotate("text", x = min(weekly_enrollment$week), y = 10, 
+           label = "50% Target", vjust = -0.5, hjust = 0, size = 3.5, color = "darkgreen") +
+
+  labs(
+    title = "WLWH Enrollment Trends by Study Site",
+    x = "Date",
+    y = "Cumulative WLWH Enrolled",
+    color = "Study Site"
+  ) +
+# Apply your professional theme
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    legend.position = "right",
+    legend.box = "vertical",
+    legend.title = element_text(face = "bold", size = 10),
+    legend.text = element_text(size = 9),
+    legend.key.height = unit(0.5, "cm"),
+    legend.key.width = unit(0.5, "cm"),
+    plot.margin = margin(10, 20, 10, 10)
+  ) +
+
+  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")+
+    theme(plot.margin = margin(10, 20, 10, 10))
+
 ```
 
 \newpage
@@ -460,12 +504,12 @@ earliest_due <- first_6ths %>%
   select(clt_ptid, clt_date) %>% 
     pull(clt_date) 
 
-total_exits <- ppw_rct_df%>%
+total_exits <- ppw_rct_df %>%
     # Filter to "6 weeks" and grab the first per participant
   filter(clt_visit == "6 months post-partum")
 
 completed_follow_up <- total_exits %>% 
-    filter(dis_today == "Yes") %>% 
+    #filter(dis_today == "Yes") %>% 
     nrow()
 
 ```
@@ -511,7 +555,17 @@ fidelity_summary
 ```
 
 
-# 8 AEs and SAEs
+# 8 Study endpoints  
+
+## 8.1 Primary and secondary study endpoints at 14 weeks postpartum (descriptive analysis)
+```{r outcome numsource, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
+outcome_summary
+```
+
+
+
+# 9 AEs and SAEs
 ```{r AEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 total_EAs <- ae_df %>%
@@ -519,13 +573,13 @@ total_EAs <- ae_df %>%
 ```
 
 
-## 8.1 AEs Summary
+## 9.1 AEs Summary
 
 As of `r Sys.Date()`, `r total_EAs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
 
 
 
-## 8.2 SAEs Summary
+## 9.2 SAEs Summary
 ```{r SAEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 total_SAEs <- clean_sae_df %>% 
