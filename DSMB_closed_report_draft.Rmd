@@ -293,7 +293,55 @@ consort_per
 ## 2.2.1  Enrollment Progress - Overall
 
 ```{r enrollment_progress, fig.width=12, fig.height=10, echo=FALSE}
-source("Enrollment Progress.R")
+# source("Enrollment Progress.R")
+
+## Figure 1: Enrollment progress since the beginning of the study to today
+enrollment_progress <- screening_consent_df %>% 
+    filter(rct_enrolling == "Yes"| latest_consent == 
+               'Yes') %>% 
+    select(study_site, consent_date_auto, consent_date_auto_v2)
+
+
+## 
+enrollment_progress <- enrollment_progress %>%
+    mutate(consent_date_auto = coalesce(consent_date_auto, consent_date_auto_v2)) %>%
+    select(study_site, consent_date_auto)
+
+## Convert consent_date_auto column to date format
+enrollment_progress <- enrollment_progress %>%
+    mutate(consent_date_auto = as.Date(consent_date_auto, origin = "1899-12-30"))
+
+# Aggregate weekly enrollments per site
+weekly_count <- enrollment_progress %>%
+    mutate(week = floor_date(consent_date_auto, "week", week_start = 1)) %>%  # Group by week
+    group_by(study_site, week) %>%
+    summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
+
+# Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
+date_seq <- seq(as.Date("2025-02-16"), as.Date("2025-03-29"), by = "week", week_start = 1)
+
+date_seq <- seq(
+    from = as.Date("2025-02-16"),
+    to = Sys.Date(),
+    by = "week"
+)
+
+# Convert to a dataframe
+dateSeq_df <- data.frame(week = date_seq)
+
+weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
+    arrange(week) %>%  # Ensure weeks are in order
+    mutate(enrollment_count = ifelse(is.na(enrollment_count), 
+                                     0, enrollment_count)) %>%   # Fill missing counts with 0
+    filter(!is.na(study_site))
+
+# Compute cumulative enrollment per site
+weekly_enrollment <- weekly_enrollment %>%
+    group_by(study_site) %>%
+    mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+    ungroup()
+
+
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
   mutate(study_site = recode(study_site,
@@ -327,21 +375,15 @@ arm_groups <- unique(weekly_enrollment %>%
                        pull(arm_group) %>%
                        unique())
 
-target_25_line <- expand.grid(
-  week = unique(weekly_enrollment$week),
-  arm_group = arm_groups
-) %>%
-  mutate(
-    cumulative_enrollment = 372,
-    study_site = "25% Target"
-  )
+target_25_line <- expand.grid(week = unique(weekly_enrollment$week),
+                              arm_group = arm_groups) %>%
+  mutate(cumulative_enrollment = 372,
+         study_site = "25% Target")
 
 weekly_enrollment <- weekly_enrollment %>%
-  mutate(
-    arm = stringr::str_extract(study_site, "^\\d{2}"),
-    arm_group = ifelse(arm %in% c("01", "02", "03", "04", "05", "06", "07"),
-                       "Control", "Intervention")
-  )
+  mutate(arm = stringr::str_extract(study_site, "^\\d{2}"),
+         arm_group = ifelse(arm %in% c("01", "02", "03", "04", "05", "06", "07"),
+                       "Control", "Intervention"))
 
 total_enrollment <- weekly_enrollment %>%
   group_by(week, arm_group) %>%
@@ -351,21 +393,16 @@ total_enrollment <- weekly_enrollment %>%
   mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
   mutate(study_site = "Total")
 
-combined_enrollment <- bind_rows(
-  weekly_enrollment,
-  total_enrollment,
-  target_25_line
-) %>% 
-    mutate(
-  dummy_arm = case_when(
-        arm_group == "Control" ~ "Arm X",
-        arm_group == "Intervention" ~ "Arm Y"))
+combined_enrollment <- bind_rows(weekly_enrollment, total_enrollment, target_25_line)
+    # mutate(dummy_arm = case_when(
+    #        arm_group == "Control" ~ "Arm X",
+    #        arm_group == "Intervention" ~ "Arm Y"))
 
 p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
                                       color = study_site, group = study_site)) +
   geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +
   scale_linewidth_identity() +
-  facet_wrap(~ dummy_arm, ncol = 1) +  # one panel per arm
+  facet_wrap(~ arm_group, ncol = 1) +  # one panel per arm
   labs(
     title = "Enrollment Trends by Study Arm",
     x = "Date",
@@ -391,7 +428,7 @@ p1
 
 ### 2.2.2 Enrollment Progress - Per Facility
 ```{r Facility target reached}
-source("Enrollment Progress.R")
+# source("Enrollment Progress.R")
 reached_25per_target <- weekly_enrollment %>%
   group_by(study_site) %>%
   summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
@@ -404,37 +441,37 @@ reached_25per_target <- weekly_enrollment %>%
 All (`r reached_25per_target`) facilities have surpassed our first enrollment milestone, with more than 37 perinatal women enrolled per facility cluster - exceeding 25% of the overall target enrollment. Nyalenda was the first facility to achieve this milestone in mid-April 2024.
 
 ```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
-source("Enrollment Progress.R")
+# source("Enrollment Progress.R")
 
 #shorten the names of the study sites
-weekly_enrollment <- weekly_enrollment %>%
-  mutate(study_site = recode(study_site,
-    "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
-    "02, Sigomere Sub County Hospital" = "02, Sigomere",
-    "03, Uyawi Sub County Hospital" = "03, Uyawi",
-    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
-    "05, Ukwala Sub County Hospital" = "05, Ukwala",
-    "06, Madiany Sub County Hospital" = "06, Madiany",
-    "07, Kabondo Sub County Hospital" = "07, Kabondo",
-    "08, Mbita Sub-County Hospital" = "08, Mbita",
-    "09, Miriu Health Centre" = "09, Miriu",
-    "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
-    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
-    "14, Gita Sub County Hospital" = "14, Gita",
-    "15, Akala Health Centre" = "15, Akala",
-    "16, Usigu Health Centre" = "16, Usigu",
-    "17, Ramula Health Centre" = "17, Ramula",
-    "18, Simenya Health Centre" = "18, Simenya",
-    "19, Airport Health Centre (Kisumu)" = "19, Airport",
-    "20, Nyalenda Health Centre" = "20, Nyalenda",
-    "21, Mirogi Health Centre" = "21, Mirogi",
-    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
-  )) %>%
-  mutate(
-    arm = stringr::str_extract(study_site, "^\\d{2}"),
-    arm_group = ifelse(arm %in% c("02", "05", "06", "08", "11", "15", "18", "20", "21"),
-                       "Arm X", "Arm Y")
-  )
+# weekly_enrollment <- weekly_enrollment %>%
+#   mutate(study_site = recode(study_site,
+#     "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+#     "02, Sigomere Sub County Hospital" = "02, Sigomere",
+#     "03, Uyawi Sub County Hospital" = "03, Uyawi",
+#     "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+#     "05, Ukwala Sub County Hospital" = "05, Ukwala",
+#     "06, Madiany Sub County Hospital" = "06, Madiany",
+#     "07, Kabondo Sub County Hospital" = "07, Kabondo",
+#     "08, Mbita Sub-County Hospital" = "08, Mbita",
+#     "09, Miriu Health Centre" = "09, Miriu",
+#     "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+#     "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+#     "14, Gita Sub County Hospital" = "14, Gita",
+#     "15, Akala Health Centre" = "15, Akala",
+#     "16, Usigu Health Centre" = "16, Usigu",
+#     "17, Ramula Health Centre" = "17, Ramula",
+#     "18, Simenya Health Centre" = "18, Simenya",
+#     "19, Airport Health Centre (Kisumu)" = "19, Airport",
+#     "20, Nyalenda Health Centre" = "20, Nyalenda",
+#     "21, Mirogi Health Centre" = "21, Mirogi",
+#     "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+#   )) %>%
+#   mutate(
+#     arm = stringr::str_extract(study_site, "^\\d{2}"),
+#     arm_group = ifelse(arm %in% c("02", "05", "06", "08", "11", "15", "18", "20", "21"),
+#                        "Arm X", "Arm Y")
+#   )
 
 p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
                                     color = study_site, group = study_site)) +
