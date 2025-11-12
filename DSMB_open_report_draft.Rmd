@@ -446,10 +446,8 @@ ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
     legend.key.width = unit(0.5, "cm"),
     plot.margin = margin(10, 20, 10, 10)
   ) +
-
   guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")+
-    theme(plot.margin = margin(10, 20, 10, 10))
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
 
 ```
 
