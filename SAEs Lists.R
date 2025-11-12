@@ -28,7 +28,8 @@ clean_sae_df <- sae_df %>%
     mutate(ae_cat = if_else(record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)",
                             "Death (Infant or Maternal) (SAE)",
                             ae_cat)) %>% 
-    rename(Event = ae_cat) 
+    rename(Event = ae_cat)%>%
+    mutate(Event = str_remove(Event, fixed("(SAE)")))
 
 sae_summary <- clean_sae_df %>% 
     summarise(`Number of Events` = n(),
@@ -242,6 +243,28 @@ ae_long <- ae_list %>%
     ) %>%
     arrange(dummy_arm, record_id, ae_dateonset)
 
+# Overall AEs summary
+overal_aes <- ae_long %>% 
+    tbl_summary(dummy_arm,
+        include = c(ae_type),
+        label = list(ae_type ~ "AE Type")
+    ) %>%
+    add_n() %>%
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Adverse Events by Arm") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))%>%
+    opt_table_lines()
+
+overal_aes
+
 # Arm X AE list
 armx_aes <- ae_long %>% 
     filter(dummy_arm == "Arm X") %>% 
@@ -285,21 +308,3 @@ army_aes_gt <- army_aes %>%
     )
 
 
-# Calculate overall denominator (all rows in ae_bin)
-overall_n <- nrow(ae_bin)
-
-# Create the summary table
-ae_tbl <- ae_bin %>%
-    tbl_summary(
-        by = dummy_arm,
-        include = c(ae_define___1_bin, ae_define___2_bin, ae_define___5_bin),
-        label = list(
-            ae_define___1_bin ~ "Kicked out of home",
-            ae_define___2_bin ~ "Experienced violence or abuse",
-            ae_define___5_bin ~ "Persistent or significant psychosocial distress"
-        )
-    ) %>%
-    modify_statistic(all_categorical() ~ function(x) {
-        overall_n <- nrow(ae_bin)
-        paste0(x$n, " (", round(100 * x$n / overall_n, 1), "%)")
-    })
