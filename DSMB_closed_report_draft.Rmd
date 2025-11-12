@@ -16,7 +16,13 @@ rm(list = ls())
 
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
-source("Dependencies.R")
+# source("Dependencies.R")
+
+pacman::p_load(flextable, officer, redcapAPI, magrittr, zoo, openxlsx, png, knitr, DiagrammeR, tidyverse, eeptools, 
+               haven, reshape2, here, Hmisc, anthro, devtools, kableExtra, foreign,gdata, httr, table1, compareGroups, 
+               janitor, gmodels, data.table, consort, flowchart, officer, webshot2, rmarkdown, gt, gtExtras, gtsummary,
+               writexl, tidyr, tibble, purrr, patchwork, officedown, flextable, googledrive, googlesheets4, readxl)
+
 
 ## WORKING DIRECTORY
 # Setup ------------------------------------------------------------------------
@@ -34,11 +40,12 @@ source("Dependencies.R")
 # tinytex::reinstall_tinytex()
 
 # Set file paths: Use this section to set input and output filepaths
-file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
-file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
-file_date <- gsub("^.*?_2","2",file_date)
-file_date <- str_remove(file_date,".csv")
-file_date <- format(file_date, format="%d %B %Y")
+file_date <- list.files(path = paste0(ipmh_filepath, "/Data/6. RCT PPW data/"), pattern = "*.csv")
+file_date <- str_replace(file_date, "-Yuwei's MacBook Pro", "")
+file_date <- str_replace(file_date, "RCT_PPW_", "")
+file_date <- str_replace(file_date, ".csv", "")
+file_date <- max(file_date)
+# file_date <- format(file_date, format="%d %B %Y")
 ppw_rct_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
                               file_date, ".csv", sep="")) %>% 
     filter(is.na(redcap_repeat_instance)) #PPW data
@@ -57,9 +64,15 @@ ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_",
                                              file_date, ".csv", sep="")) %>% 
     filter(redcap_repeat_instrument == "ADMIN: Adverse Experience")
 
+# reading in additional needed dataframes so that we don't need to import from REDCap each time report is run
+telepsych <- read.csv(paste0(ipmh_filepath,"/Data/7. RCT admin data/Telepsych_",Sys.Date(),".csv"))
+rct_ppw_consenting <- read.csv(paste0(ipmh_filepath,"/Data/2. Consenting database/RCT_PPW_consenting_",
+                                      Sys.Date(),".csv"))
+
+
 data_freeze <- file_date
 
-data_freeze <- format(data_freeze, format="%d %B %Y")
+data_freeze <- format(as.Date(data_freeze), format="%d %B %Y")
 options(scipen = 0)
 ```
 
@@ -126,10 +139,11 @@ study_summary
 # 2. Study Enrollment
 
 ```{r Consort,echo=FALSE, fig.height=12, fig.width=16, message=FALSE, warning=FALSE}
-source("Consort.R")
+# source("Consort.R")
+
 counts_by_arm <- consort_data %>%
     filter(!is.na(arm)) %>%
-    group_by(dummy_arm) %>%
+    group_by(arm) %>%  
     summarise(
         assessed = n(),
         excluded = sum(!is.na(exclusion)),
@@ -163,21 +177,20 @@ counts_by_arm <- counts_by_arm %>%
     )
 
 # Total text for ANC attendees
+n_attendees <- consort_data %>% filter(anc_attendees == "Yes") %>% nrow()
 txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
 
 # Total assessment
+n_assessed <- consort_data %>% filter(!is.na(arm)) %>% nrow()
 txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)", n_assessed, (n_assessed / n_attendees) * 100)
 
 txt_arm <- counts_by_arm %>%
-    mutate(
-        txt = sprintf("%s\n (n=%d, %.1f%%)", dummy_arm, assessed, (assessed / n_assessed) * 100)
-    ) %>%
+    mutate(txt = sprintf("%s\n (n=%d, %.1f%%)", arm, assessed, (assessed / n_assessed) * 100)) %>%
     pull(txt)
 
 #combine PM+ and telepsychiatry
 counts_by_arm <- counts_by_arm %>%
-    mutate(
-        txt_pm_tele = paste(txt_pm, txt_tele, sep = "\n"))
+    mutate(txt_pm_tele = paste(txt_pm, txt_tele, sep = "\n"))
 
 generate_box_header <- function(label, numerator, denominator, decimals = 2) {
 percent <- ifelse(denominator > 0, (numerator / denominator) * 100, 0)
@@ -187,15 +200,15 @@ sprintf("%s (n=%d, %.*f%%):", label, numerator, decimals, percent)
 # Build exclusion string per arm
 exclusion_side_boxes <- consort_data %>%
     filter(!is.na(exclusion)) %>%
-    group_by(dummy_arm, exclusion_reason = exclusion) %>%
+    group_by(arm, exclusion_reason = exclusion) %>%
     summarise(count = n(), .groups = "drop") %>%
     left_join(
-        counts_by_arm %>% select(dummy_arm, excluded, assessed),
-        by = "dummy_arm"
+        counts_by_arm %>% select(arm, excluded, assessed),
+        by = "arm"
     ) %>%
-    group_split(dummy_arm) %>%
+    group_split(arm) %>%
     lapply(function(df_arm) {
-        arm_label <- unique(df_arm$dummy_arm)
+        arm_label <- unique(df_arm$arm)
         excluded <- unique(df_arm$excluded)
         assessed <- unique(df_arm$assessed)
         
@@ -223,17 +236,17 @@ txt_ex <- unlist(exclusion_side_boxes)
 # Build decline side boxes per arm
 decline_side_boxes <- consort_data %>%
     filter(!is.na(rct_decline_reason)) %>%
-    group_by(dummy_arm, decline_reason = rct_decline_reason) %>%
+    group_by(arm, decline_reason = rct_decline_reason) %>%
     summarise(count = n(), .groups = "drop") %>%
     left_join(
         counts_by_arm %>%
             mutate(declined = eligible - enrolled) %>%
-            select(dummy_arm, declined, eligible),
-        by = "dummy_arm"
+            select(arm, declined, eligible),
+        by = "arm"
     ) %>%
-    group_split(dummy_arm) %>%
+    group_split(arm) %>%
     lapply(function(df_arm) {
-        arm_label <- unique(df_arm$dummy_arm)
+        arm_label <- unique(df_arm$arm)
         declined <- unique(df_arm$declined)
         eligible <- unique(df_arm$eligible)
         
