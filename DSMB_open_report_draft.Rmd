@@ -191,11 +191,9 @@ source("Enrollment Progress.R")
 
 On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on
 `r target_reached`.
-```{bash}
 
-```
 
-```{r enrollment_sub, echo=FALSE, message=FALSE, warning=FALSE}
+```{r enrollment_sub, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
 
 #shorten the names of the study sites
@@ -242,15 +240,35 @@ combined_enrollment <- bind_rows(
   target_25_line
 )
 
+target_value <- 743
+
+# Find the first date when cumulative enrollment reached or exceeded 25%
+target_reached <- total_enrollment %>%
+  filter(cumulative_enrollment >= target_value) %>%
+  slice_min(week, n = 1)
+
 p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
                                 color = study_site, group = study_site)) +
-    geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +  # thicker total line
-    scale_linewidth_identity() +  
-    labs(title = "Enrollment Trends",
-         x = "Date",
-         y = "Cumulative Enrollment",
-         color = "Study Site") +
-# Apply your professional theme
+  geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +
+  scale_linewidth_identity() +
+  
+  # Add the point and text annotation
+  geom_point(data = target_reached, aes(x = week, y = cumulative_enrollment),
+             color = "black", size = 3, shape = 21, fill = "red") +
+  geom_text(
+    data = target_reached,
+    aes(
+      x = week,
+      y = cumulative_enrollment,
+      label = paste0("25% target reached\n", format(week, "%b %d, %Y"))
+    ),
+    vjust = -1, size = 3.5, color = "black", fontface = "bold"
+  ) +
+
+  labs(title = "Enrollment Trends",
+       x = "Date",
+       y = "Cumulative Enrollment",
+       color = "Study Site") +
   theme_minimal(base_size = 12) +
   theme(
     plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
@@ -261,11 +279,10 @@ p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment,
     legend.text = element_text(size = 9),
     legend.key.height = unit(0.5, "cm"),
     legend.key.width = unit(0.5, "cm"),
-    plot.margin = margin(10, 20, 10, 10)
+    plot.margin = margin(10, 10, 20, 10)
   ) +
-  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
+  guides(color = guide_legend(ncol = 2)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
-
 p1
 ```
 
@@ -286,7 +303,7 @@ reached_25per_target <- weekly_enrollment %>%
 
 All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone, with each site expected to enroll a total of 148 perinatal women. This corresponds to at least 37 participants per facility. The first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2024.
 
-```{r enrollment_sub_facility}
+```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
 
 #shorten the names of the study sites
@@ -358,7 +375,7 @@ Overal `r n_enrolled` participants have been enrolled into the study, of which `
 
 
 
-```{r consort_mortality,echo=FALSE, message=FALSE, warning=FALSE}
+```{r consort_mortality, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
 source("Consort_WLWH.R")
 
 add_box(txt = txt_enrolled) |>
@@ -375,7 +392,7 @@ add_box(txt = txt_enrolled) |>
 
 Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, two facilities have reached the halfway mark with 10 participants each, while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
 
-```{r enrollment_mor, warning=F}
+```{r enrollment_mor, echo=FALSE, fig.height=5, fig.width=8, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
@@ -553,7 +570,7 @@ total_AEs <- ae_long %>%
     nrow()
 ```
 
-As of `r Sys.Date()`, `r total_aes` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
+As of `r format(Sys.Date(), "%b %d, %Y")`, `r total_AEs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
 
 ```{r AEs report, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
@@ -580,7 +597,7 @@ total_hosp <- clean_sae_df %>%
     nrow()
 ```
 
-As of `r Sys.Date()`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
+As of `r format(Sys.Date(), "%b %d, %Y")`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
 
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
