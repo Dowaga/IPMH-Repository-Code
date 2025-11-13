@@ -160,11 +160,15 @@ n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
 
 ```
 
-We began recruiting pregnant women into the study on February 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round(n_enrol/2970, 1)`% of our enrollment target.
+We began recruiting pregnant women into the study on February 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round((n_enrol / 2970) * 100, 1)`% of our enrollment target.
 
 Of the enrolled participants, `r n_second` (`r n_second_per`%) have completed their 6 weeks, `r n_third` (`r n_third_per`%) have completed 14 weeks and `r n_fourth` (`r n_fourth_per`%) have completed 6 months postpartum follow-up visits.
 
 In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
+
+We halted enrollment of new participants on August 1, 2025 after the grant period ended on July 31, 2025, pending approval of the Notice of Award from the National Institute of Health. We received the Notice of Award on September 8, 2025, and enrollments resumed on September 22, 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued. 
+
+In Siaya County, there is an ongoing nurses strike which begun on September 18, 2025. The strike has affected participant enrollment in 5 intervention and 4 control sites, where we have not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility has hired a locum nurse for the maternal child health clinic, and enrollment has been ongoing for the past 2 weeks. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists has been ongoing. 
 
 \newpage
 
