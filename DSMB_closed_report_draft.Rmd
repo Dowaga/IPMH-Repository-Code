@@ -527,21 +527,11 @@ arm_groups <- unique(weekly_enrollment %>%
                        pull(arm_group) %>%
                        unique())
 
-<<<<<<< HEAD
-target_25_line <- expand.grid(
-  week = unique(weekly_enrollment$week),
-  arm_group = arm_groups
-) %>%
-  mutate(
-    cumulative_enrollment = 74,
-    study_site = "25% Target"
-  )
-=======
 target_25_line <- expand.grid(week = unique(weekly_enrollment$week),
                               arm_group = arm_groups) %>%
   mutate(cumulative_enrollment = 372,
          study_site = "25% Target")
->>>>>>> 11190eb3b8a3ffaad94234ed401926aad6778568
+
 
 weekly_enrollment <- weekly_enrollment %>%
   mutate(arm = stringr::str_extract(study_site, "^\\d{2}"),
