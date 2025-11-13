@@ -139,7 +139,161 @@ study_summary
 # 2. Study Enrollment
 
 ```{r Consort,echo=FALSE, fig.height=12, fig.width=15, message=FALSE, warning=FALSE}
-source("Consort.R")
+# source("Consort.R")
+
+#data prep ----------------
+# Summarise ANC attendees and extract the sum as a numeric value
+Attendees <- daily_closeout_df %>%
+    summarise(`anc attendees` = sum(rct_anc_number, na.rm = TRUE)) %>%
+    pull(`anc attendees`)  # Extract the sum value as a number
+
+# Create a new data frame with anc_count rows, value = "Yes"
+anc_attendees_df <- data.frame(
+    anc_id = paste0("anc_", seq_len(Attendees)),
+    anc_attendees = rep("Yes", Attendees)
+)
+
+#Study participants in the PM+ Survey
+pm_abstractions <- pm_survey_df %>%
+    mutate(pm_ptid = as.numeric(pm_ptid)) %>%       # if needed
+    filter(ipmh_participant == "Yes") %>%
+    distinct(pm_ptid, .keep_all = TRUE)
+
+pm_df <- pm_abstractions %>% 
+    select(pm_ptid, ipmh_participant)
+
+# telepsy
+#telepsych <- telepsych %>%
+    #mutate(tele_ancid = if_else(row_number() == 1, 
+                                #tele_ancid[4], tele_ancid))
+
+
+telepsych_df <- telepsych %>%
+    #filter(pt_attend == "Yes") %>%               # keep only attended
+    arrange(tele_ancid, tele_date) %>%            # sort by person and date
+    #Offered telepyschaitry as treatment but not referred
+    filter(!tele_ancid == "2025-03-0092") %>%
+    group_by(tele_ancid) %>%
+    slice(1) %>%                                 # keep first record per person
+    ungroup()
+
+#now match this with consenting database to get their pt_id
+tele_with_id <- telepsych_df %>%
+    left_join(
+        rct_ppw_consenting %>% 
+            select(anc_num, partipant_id),
+        by = c("tele_ancid" = "anc_num")
+    )
+
+tele_with_id <- tele_with_id %>%
+    select(tele_ancid, partipant_id) %>% 
+    mutate(tele = "Yes") 
+
+tele_sessions <-tele_with_id %>% 
+    nrow()
+
+# Records that do not match with consent database
+no_match <- tele_with_id %>% 
+    filter(is.na(partipant_id))
+    
+telepsy_unmatched <- telepsych %>%
+    filter(tele_ancid %in% no_match$tele_ancid)
+
+
+# merging data
+consort_data <- screening_consent_df %>% 
+    select(record_id, partipant_id, rct_harm_thought, rct_aud_hallucinations, 
+           rct_vis_hallucinations, rct_paranoia,rct_delusions,
+           rct_memory_problem,rct_eligible_gestation, rct_eligible_harm, 
+           rct_risk, rct_eligible, rct_enrolling, rct_decline_reason, 
+           rct_other_reasons) %>% 
+    mutate(
+        eligible = case_when(
+            rct_eligible == 1 ~ "1",
+            TRUE ~ NA_character_)) %>% 
+    mutate(exclusion = case_when(
+        rct_eligible == 0 & rct_eligible_gestation == "No" ~ "Gestation <20 Weeks",
+        rct_harm_thought == "Yes" & rct_memory_problem == "No" ~"Self harm",
+        rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~"Self harm and memory problem",
+        rct_eligible == 0 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
+        rct_eligible == 0 & rct_vis_hallucinations == "Yes" ~"Seeing things that others cannot see",
+        rct_memory_problem == "Yes" ~"Memory problem",
+        rct_delusions == "Yes" ~ "Holding unusual beliefs",
+        rct_paranoia == "Yes" ~ "Feels watched/followed",
+                TRUE ~ NA_character_)) %>% 
+    mutate(
+        exclusion = case_when(
+            eligible == 1 & exclusion == "Self harm" & rct_risk %in% c("Low", "Moderate") ~ NA_character_,
+            TRUE ~ exclusion
+              )) %>% 
+    mutate(facility = as.numeric(str_sub(partipant_id, 3, 4))) %>% 
+    mutate(arm = case_when(
+        facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21) ~ "Control",
+        TRUE ~ "Intervention"
+    )) %>% 
+    mutate(rct_decline_reason = case_when(
+            rct_decline_reason == "Other (specify) ___" ~ "Relocate post delivery",
+            TRUE ~ rct_decline_reason  # Keep other values unchanged
+        )) 
+
+
+# Merge consort data with pm_df
+consort_data <- consort_data %>% 
+    left_join(pm_df, by = c("partipant_id"="pm_ptid"))
+
+consort_data <- bind_rows(anc_attendees_df, consort_data)
+
+elig <- consort_data %>% 
+    filter(is.na(eligible)) %>% 
+    filter(is.na(exclusion))
+
+decline_reason <- consort_data %>% 
+    filter(!is.na(rct_decline_reason))
+
+secondvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "6 weeks post-partum") %>% 
+    select(clt_ptid) %>% 
+    mutate(secondvisit = "Yes") 
+
+thirdvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "14 weeks post-partum") %>% 
+    select(clt_ptid) %>% 
+    mutate(thirdvisit = "Yes") 
+
+
+fourthvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "6 months post-partum") %>% 
+    select(clt_ptid) %>% 
+    mutate(fourthvisit = "Yes") 
+
+# merge secondvisit people into consort_data
+consort_data <- consort_data %>% 
+    left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
+
+consort_data <- consort_data %>% 
+    left_join(tele_with_id, by = c("partipant_id" = "partipant_id")) 
+
+
+#merge thirdvisit people into consort_data
+consort_data <- consort_data %>% 
+    left_join(thirdvisit, by = c("partipant_id" = "clt_ptid"))
+
+# merge fourthvisit people into consort_data
+consort_data <- consort_data %>% 
+    left_join(fourthvisit, by = c("partipant_id" = "clt_ptid"))
+
+# Create a dummy arm for DSMB Closed report
+consort_data <- consort_data %>% 
+    mutate(
+        dummy_arm = case_when(
+            is.na(arm) ~ NA_character_,        # keep NA as NA
+            grepl("Control", arm) ~ "Arm X",   # if arm contains "Control"
+            TRUE ~ "Arm Y"                     # everything else
+        ))
+
+
+
+# build consort diagram
 counts_by_arm <- consort_data %>%
     filter(!is.na(arm)) %>%
     group_by(arm) %>%  
@@ -269,8 +423,6 @@ decline_side_boxes <- consort_data %>%
 
 # Combine into character vector
 txt_decline <- unlist(decline_side_boxes)
-
-# 14d834c07edb977b556fed4c00a6c156b7d65458
 
 consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = txt_ass) |>
@@ -769,7 +921,7 @@ completed_follow_upY <- total_exits %>%
 
 ```
 
-To date, we have not recorded any early terminations. However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`. Of which, `r completed_follow_upX` and `r completed_follow_upY` were from arm X and arm Y respective. 
+To date, we have not recorded any early terminations. However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`. Of which, `r completed_follow_upX` and `r completed_follow_upY` were from the control and intervention arm, respectively. 
 
 
 \newpage
@@ -794,7 +946,7 @@ During enrollment and follow-up visits participants are asked if they would like
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
 ## generate report using data from psychosocial referrals form in REDCap  
-source("PPW RCT Referrals.R")
+# source("PPW RCT Referrals.R")
 
 arm_referral_summary
 ```
