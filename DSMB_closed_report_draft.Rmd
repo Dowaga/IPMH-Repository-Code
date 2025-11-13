@@ -267,7 +267,7 @@ consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = counts_by_arm$txt_eligible) |>
     add_side_box(txt = txt_decline) |>
     add_box(txt = counts_by_arm$txt_enrolled) |>
-    add_side_box(txt= counts_by_arm$txt_pm_tele) |>
+    #add_side_box(txt= counts_by_arm$txt_pm_tele) |>
     add_box(txt = counts_by_arm$txt_postpartum)|>
     add_box(txt = counts_by_arm$txt_postpartum1)|>
     add_box(txt = counts_by_arm$txt_postpartum2)
@@ -320,7 +320,7 @@ target_25_line <- expand.grid(
   arm_group = arm_groups
 ) %>%
   mutate(
-    cumulative_enrollment = 372,
+    cumulative_enrollment = 74,
     study_site = "25% Target"
   )
 
@@ -360,15 +360,21 @@ p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment,
     y = "Cumulative Enrollment",
     color = "Study Site"
   ) +
-  theme_minimal() +
+# Apply your professional theme
+  theme_minimal(base_size = 12) +
   theme(
-    legend.position = "left",
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    legend.position = "right",
     legend.box = "vertical",
-    legend.title = element_text(size = 10),
+    legend.title = element_text(face = "bold", size = 10),
     legend.text = element_text(size = 9),
-    strip.text = element_text(size = 10, face = "bold")
+    legend.key.height = unit(0.5, "cm"),
+    legend.key.width = unit(0.5, "cm"),
+    plot.margin = margin(10, 20, 10, 10)
   ) +
-  guides(color = guide_legend(ncol = 1))
+  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
 
 p1
 
@@ -444,7 +450,8 @@ p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
     strip.text = element_text(size = 10, face = "bold"),
     axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5, face = "bold", size = 14)  # Center and bold title
-  )
+  ) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
 
 
 p2
@@ -603,12 +610,12 @@ txt_decline <- unlist(decline_side_boxes)
 consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = txt_ass) |>
     add_split(txt = txt_arm) |>
-    #add_side_box(txt = txt_ex) |>
+    add_side_box(txt = txt_ex) |>
     add_box(txt = counts_by_arm$txt_eligible) |>
-    #add_side_box(txt = txt_decline) |>
+    add_side_box(txt = txt_decline) |>
     add_box(txt = counts_by_arm$txt_enrolled) |>
     add_box(txt = counts_by_arm$txt_hiv) |>
-    add_side_box(txt= counts_by_arm$txt_pm_tele) |>
+    #add_side_box(txt= counts_by_arm$txt_pm_tele) |>
     add_box(txt = counts_by_arm$txt_6weeks_postpartum) %>% 
     add_box(txt = counts_by_arm$txt_14weeks_postpartum) %>% 
     add_box(txt = counts_by_arm$txt_6months_postpartum)
@@ -635,6 +642,7 @@ arm_ineligibility_summary
 # 5. Baseline Demographics
 
 ## 5.1 Participant Baseline Demographics
+Demographic characteristics were balanced across study arms, supporting baseline comparability.
 
 ```{r demographics, warning=F}
 
@@ -646,7 +654,8 @@ arm_demo
 \newpage
 ## 5.2 WLWH Cohort Baseline Demographics
 
-Participant characteristics are generally (similar/different) across arms.
+Demographic characteristics were balanced across study arms, supporting baseline comparability.
+
 ```{r WLWH_demo, echo=FALSE}
 source("PPW RCT Basic Demographics.R")
 arm_wlwh_demo
@@ -751,6 +760,14 @@ fidelity_summary
 
 ```
 
+# 8 Study endpoints  
+
+## 8.1 Primary and secondary study endpoints at 14 weeks postpartum (descriptive analysis)
+```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
+source("PPW RCT follow up.R")
+arm_outcome_summary
+```
+
 
 \newpage
 # 9. Adverse Events
@@ -766,7 +783,7 @@ sae_summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
 source("SAEs Lists.R")
-ae_tbl
+overal_aes
 ```
 
 
