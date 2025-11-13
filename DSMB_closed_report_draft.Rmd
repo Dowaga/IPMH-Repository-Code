@@ -597,7 +597,7 @@ reached_25per_target <- weekly_enrollment %>%
 
 ```
 
-All (`r reached_25per_target`) facilities have surpassed our first enrollment milestone, with more than 37 perinatal women enrolled per facility cluster - exceeding 25% of the overall target enrollment. Nyalenda was the first facility to achieve this milestone in mid-April 2024.
+All (`r reached_25per_target`) facilities have surpassed our first enrollment milestone, with more than 37 perinatal women enrolled per facility cluster - exceeding 25% of the overall target enrollment. Nyalenda was the first facility to achieve this milestone in mid-April 2025.
 
 ```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
 # source("Enrollment Progress.R")
