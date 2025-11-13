@@ -5,11 +5,11 @@
 # Baseline Demographics
 
 # Setup ------------------------------------------------------------------------
-rm(list = ls())
+# rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
-source("Dependencies.R")
-source("data_import.R")
+# source("Dependencies.R")
+# source("data_import.R")
 
 # data prep --------------------------------------------------------------------
 demographics_df <- ppw_rct_df %>% 
@@ -35,9 +35,8 @@ demographics_df <- ppw_rct_df %>%
                               "Prefer not to answer (Singependa kujibu) [Ok daher mar duoko penjo ni]" = "Prefer not to answer")
     )%>%
     mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
-           arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "22"),
+           arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
                               "Control", "Intervention"))
-
 
 # basic demo table
 basic_demo <- demographics_df %>%
@@ -150,7 +149,7 @@ demographics_df <- demographics_df %>%
 
 # basic demo table
 arm_demo <- demographics_df %>%
-    tbl_summary(by =dummy_arm, 
+    tbl_summary(by =arm_group, 
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner, dem_maritalstat,
                   dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
@@ -205,7 +204,7 @@ arm_wlwh_demo <- demographics_df %>%
             arm_group == "Control" ~ "Arm X",
             arm_group == "Intervention" ~ "Arm Y")) %>% 
     filter(med_pastdiag___2 == "Checked") %>% 
-    tbl_summary(by = dummy_arm,
+    tbl_summary(by = arm_group,
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner, dem_maritalstat,
                   dem_marriage, dem_pc_residence, dem_current_school, dem_school, 

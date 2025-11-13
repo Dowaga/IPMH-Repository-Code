@@ -716,7 +716,7 @@ arm_demo
 
 Participant characteristics are generally (similar/different) across arms.
 ```{r WLWH_demo, echo=FALSE}
-source("PPW RCT Basic Demographics.R")
+# source("PPW RCT Basic Demographics.R")
 arm_wlwh_demo
 
 ```
