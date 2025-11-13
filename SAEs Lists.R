@@ -5,11 +5,11 @@
 # AEs Lists
 
 # Setup ------------------------------------------------------------------------
-rm(list = ls())
+# rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
-source("Dependencies.R")
-source("data_import.R")
+# source("Dependencies.R")
+# source("data_import.R")
 
 ae_df <- ppw_sae_df%>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), 
@@ -85,14 +85,14 @@ clean_sae_df <- clean_sae_df %>%
 
 sae_wide <- clean_sae_df %>%
     mutate(event_flag = 1) %>%  # to allow counting
-    select(record_id, dummy_arm, Event, event_flag) %>%
+    select(record_id, Arm, Event, event_flag) %>%
     tidyr::pivot_wider(names_from = Event, values_from = event_flag, values_fill = 0) %>% 
     select(-record_id)
 
 # Step 3: Summarize using tbl_summary by arm
 sae_summary <- tbl_summary(
     data = sae_wide,
-    by = dummy_arm,
+    by = Arm,
     type = all_continuous() ~ "continuous",
     statistic = all_continuous() ~ "{sum}",
     percent = "cell",
@@ -163,7 +163,10 @@ arm_ae <- ae_df %>%
             grepl("Intervention", redcap_event_name, ignore.case = TRUE) ~ "Arm Y",
             TRUE ~ NA_character_
         )
-    )
+    ) |>
+    mutate(Arm = case_when(dummy_arm=="Arm X"~  "Control",
+                           dummy_arm=="Arm Y" ~ "Intervention",
+                           TRUE ~ NA))
 
 ae_bin <- arm_ae %>% 
     mutate(
@@ -176,7 +179,7 @@ ae_bin <- arm_ae %>%
 # AEs summary
 ae_tbl <- ae_bin %>% 
     tbl_summary(
-        by = dummy_arm,
+        by = Arm,
         include = c(ae_define___1_bin, ae_define___2_bin, ae_define___5_bin),
         label = list(
             ae_define___1_bin ~ "Kicked out of home", 
@@ -200,9 +203,9 @@ ae_tbl <- ae_bin %>%
         table.font.size = px(14))
 
 # List of AEs
-ae_list <- ae_df %>%
+ae_list <- arm_ae %>%
     select(
-        record_id, dem_age, dummy_arm,
+        record_id, dem_age, Arm,
         ae_cat,ae_define___1, ae_define___2,
         ae_define___3, ae_define___4, ae_define___5,
         ae_define___6, ae_relation, ae_narrative,
@@ -237,15 +240,15 @@ ae_long <- ae_list %>%
         days_to_report = as.integer(ae_datereport - ae_dateonset)
     ) %>%
     select(
-        record_id, dem_age, dummy_arm,
+        record_id, dem_age, Arm,
         ae_type, ae_dateonset, ae_datereport,
         days_to_report, ae_relation, ae_narrative
     ) %>%
-    arrange(dummy_arm, record_id, ae_dateonset)
+    arrange(Arm, record_id, ae_dateonset)
 
 # Overall AEs summary
 overal_aes <- ae_long %>% 
-    tbl_summary(dummy_arm,
+    tbl_summary(Arm,
         include = c(ae_type),
         label = list(ae_type ~ "AE Type")
     ) %>%
@@ -267,8 +270,8 @@ overal_aes
 
 # Arm X AE list
 armx_aes <- ae_long %>% 
-    filter(dummy_arm == "Arm X") %>% 
-    select(-c(dummy_arm, ae_narrative, ae_datereport)) %>% 
+    filter(Arm == "Control") %>% 
+    select(-c(Arm, ae_narrative, ae_datereport)) %>% 
     rename(
         Record_ID             = record_id,
         `AE Type`         = ae_type,
@@ -283,13 +286,13 @@ armx_aes <- ae_long %>%
 armx_aes_gt <- armx_aes %>%
     gt() %>%
     tab_header(
-        title = "Summary of Adverse Events for Arm X"
+        title = "Summary of Adverse Events for Control Arm"
     )
 
 # Arm Y AE list
 army_aes <- ae_long %>% 
-    filter(dummy_arm == "Arm Y") %>% 
-    select(-c(dummy_arm, ae_narrative, ae_datereport)) %>% 
+    filter(Arm == "Intervention") %>% 
+    select(-c(Arm, ae_narrative, ae_datereport)) %>% 
     rename(
         Record_ID             = record_id,
         `AE Type`         = ae_type,
@@ -304,7 +307,7 @@ army_aes <- ae_long %>%
 army_aes_gt <- army_aes %>%
     gt() %>%
     tab_header(
-        title = "Summary of Adverse Events for Arm Y"
+        title = "Summary of Adverse Events for Intervention Arm"
     )
 
 
