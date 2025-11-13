@@ -96,7 +96,7 @@ vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Cr
 vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatment of perinatal mood and anxiety disorders (PMADs), and its implementation strategies, into maternal and child health clinics and pragmatically evaluate its clinical, service delivery, and implementation outcomes",
            "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of IPMH and associated implementation strategies on depression, anxiety, quality of life, and adverse perinatal outcomes vs. control (standard of care) among Kenyan women", 
            "Pregnant Kenyan women", 
-           "-Receiving antenatal care at study facility\n->=28 weeks gestation (changed to >=20 weeks gestation)\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
+           "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
            "2970, including 405 women living with HIV (WLWH)", 
            "[place holder]",
            "0",
@@ -104,8 +104,8 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
            "September 19, 2023", 
            "February 17, 2025",
            "July 31, 2028",
-           "Primary: Depression and anxiety", 
-           "Secondary:\n-Depression and anxiety among WLWH\n-Quality of Life\n-Adverse perinatal outcomes")
+           "Primary: Depression (Patient Health Questionnaire-9 [PHQ-9] score) and anxiety (Generalized Anxiety Disorder-7 [GAD-7] score)", 
+           "Secondary:\n-Problem Management Plus (PM+) Skill Acquisition (Reducing Tension Checklist score)\n-Quality of Life (World Health Organization Quality of Life [WHOQOL-BREF] score)\n-Any adverse perinatal outcome")
 
 stdy_summ <- data.frame(vars, vars2)
 
@@ -133,7 +133,7 @@ study_summary
 -   [Place holder, we are not about 22%]: 25% of planned enrollment
 
 ## 1.2 Key Changes to Study Protocol
-We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on 29th April 2025 to include women from >=20 weeks gestation because most of the participants enrolled from >=28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study. 
+We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on May 12, 2025 to include women from >=20 weeks gestation because most of the participants enrolled from >=28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study. 
 
 # 2. Study Progress
 
@@ -166,10 +166,6 @@ Of the enrolled participants, `r n_second` (`r n_second_per`%) have completed th
 
 In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
 
-We halted enrollment of new participants on 1st  August 2025 after the grant period ended on 31<sup>st</sup> July 2025, pending approval of the Notice of Award from the National Institute of Health.  We received the Notice of Award on 8th September 2025, and enrollments resumed on 22<sup>nd<sup> September 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued. 
-
-In Siaya County, there is an ongoing nurses strike which begun on 18<sup>th<sup> September 2025. The strike has affected participant enrollment in 5 intervention and 4 control sites, where we have not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility has hired a locum nurse for the maternal child health clinic, and enrollment has been ongoing for the past 2 weeks. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists has been ongoing. 
-
 \newpage
 
 # 3. Study Enrollment 
@@ -178,9 +174,10 @@ In Siaya County, there is an ongoing nurses strike which begun on 18<sup>th<sup>
 
 ### 3.1.1 Current subject status
 
-So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study.
+So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6-weeks postpartum visit.
 
-```{r consort, echo=FALSE, fig.height=12, fig.width=16, message=FALSE, warning=FALSE}
+
+```{r consort, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
 source("Consort.R")
 consort_single
 ```
@@ -194,8 +191,11 @@ source("Enrollment Progress.R")
 
 On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on
 `r target_reached`.
+```{bash}
 
-```{r enrollment_sub, fig.height=10, fig.width=12, message=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+```
+
+```{r enrollment_sub, echo=FALSE, message=FALSE, warning=FALSE}
 source("Enrollment Progress.R")
 
 #shorten the names of the study sites
@@ -236,10 +236,6 @@ total_enrollment <- weekly_enrollment %>%
     mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
     mutate(study_site = "Total")
 
-target_reached <- total_enrollment %>%
-  filter(cumulative_enrollment >= 743) %>%
-  slice_head(n = 1)
-
 combined_enrollment <- bind_rows(
   weekly_enrollment,
   total_enrollment,
@@ -254,32 +250,21 @@ p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment,
          x = "Date",
          y = "Cumulative Enrollment",
          color = "Study Site") +
+# Apply your professional theme
+  theme_minimal(base_size = 12) +
   theme(
     plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    legend.position = "right",              # place legend neatly
+    legend.position = "right",
+    legend.box = "vertical",
+    legend.title = element_text(face = "bold", size = 10),
     legend.text = element_text(size = 9),
     legend.key.height = unit(0.5, "cm"),
     legend.key.width = unit(0.5, "cm"),
-    legend.title = element_text(face = "bold")
+    plot.margin = margin(10, 20, 10, 10)
   ) +
-  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns
-    # arrange legend in 2 columns
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
-  theme(plot.margin = margin(10, 20, 10, 10))+
-  geom_point(
-    data = target_reached,
-    aes(x = week, y = cumulative_enrollment),
-    color = "red", size = 3
-  ) +
-  geom_text(
-    data = target_reached,
-    aes(x = week, y = cumulative_enrollment,
-        label = paste0("Target reached on\n", format(week, "%b %d, %Y"))),
-    vjust = -1, hjust = 0.5, color = "red", size = 3.5, fontface = "bold"
-  ) +
-  geom_hline(yintercept = 743, linetype = "dashed", color = "red", linewidth = 0.7)
-    
+  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
 
 p1
 ```
@@ -301,7 +286,7 @@ reached_25per_target <- weekly_enrollment %>%
 
 All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone, with each site expected to enroll a total of 148 perinatal women. This corresponds to at least 37 participants per facility. The first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2024.
 
-```{r enrollment_sub_facility, fig.height=10, fig.width=12, message=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+```{r enrollment_sub_facility}
 source("Enrollment Progress.R")
 
 #shorten the names of the study sites
@@ -329,7 +314,8 @@ weekly_enrollment <- weekly_enrollment %>%
     "22, Ndiru Level 4 Hospital" = "22, Ndiru"
   ))
 
-p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, color = study_site, group = study_site)) +
+p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                    color = study_site, group = study_site)) +
     geom_line(linewidth = 1) +  
     geom_hline(yintercept = 37, linetype = "dashed", color = "blue", linewidth = 1.5) +
     annotate("text", x = min(weekly_enrollment$week), y = 37.125, 
@@ -338,19 +324,22 @@ p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, color =
          x = "Date",
          y = "Number of Enrollments",
          color = "Study Site") +
+# Apply your professional theme
   theme_minimal(base_size = 12) +
   theme(
     plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    legend.position = "right",              # place legend neatly
+    legend.position = "right",
+    legend.box = "vertical",
+    legend.title = element_text(face = "bold", size = 10),
     legend.text = element_text(size = 9),
     legend.key.height = unit(0.5, "cm"),
     legend.key.width = unit(0.5, "cm"),
-    legend.title = element_text(face = "bold")
+    plot.margin = margin(10, 20, 10, 10)
   ) +
-  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
-    theme(plot.margin = margin(10, 20, 10, 10))
+  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+
 
 p2
 ```
@@ -365,11 +354,11 @@ p2
 source("Consort_WLWH.R")
 ```
 
-Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
+Overal `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
 
 
 
-```{r consort_mortality,echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+```{r consort_mortality,echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort_WLWH.R")
 
 add_box(txt = txt_enrolled) |>
@@ -384,9 +373,9 @@ add_box(txt = txt_enrolled) |>
 
 ### 3.2.2 Enrollment Progress - Overall
 
-Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, three facilities have reached the halfway mark with 10 participants each, while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
+Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, two facilities have reached the halfway mark with 10 participants each, while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
 
-```{r enrollment_mor, fig.height=12, fig.width=16, message=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+```{r enrollment_mor, warning=F}
 source("Enrollment_WLWH.R")
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
@@ -413,26 +402,19 @@ weekly_enrollment <- weekly_enrollment %>%
     "22, Ndiru Level 4 Hospital" = "22, Ndiru"
   ))
 
-ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
-                              color = study_site, group = study_site)) +
-  geom_line(linewidth = 1) +  
-
-  # Add target lines
-  geom_hline(yintercept = 5, linetype = "dashed", color = "blue", linewidth = 1.5) +
-  geom_hline(yintercept = 10, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
-
-  # Annotate target lines
-  annotate("text", x = min(weekly_enrollment$week), y = 5, 
-           label = "25% Target", vjust = -0.5, hjust = 0, size = 3.5, color = "blue") +
-  annotate("text", x = min(weekly_enrollment$week), y = 10, 
-           label = "50% Target", vjust = -0.5, hjust = 0, size = 3.5, color = "darkgreen") +
-
-  labs(
-    title = "WLWH Enrollment Trends by Study Site",
-    x = "Date",
-    y = "Cumulative WLWH Enrolled",
-    color = "Study Site"
-  ) +
+ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                    color = study_site, group = study_site)) +
+    geom_line(linewidth = 1) +  
+    geom_hline(yintercept = 5, linetype = "dashed", color = "blue", linewidth = 1.5) +
+    annotate("text", x = min(weekly_enrollment$week), y = 5, 
+             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
+    geom_hline(yintercept = 10, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+    annotate("text", x = min(weekly_enrollment$week), y = 10, 
+             label = "50% Target", vjust = -1, hjust = 0, size = 3) +
+    labs(title = "WLWH Enrollment Trends by Study Site",
+         x = "Date",
+         y = "Cummulative WLWH Enrolled",
+         color = "Study Site") +
 # Apply your professional theme
   theme_minimal(base_size = 12) +
   theme(
@@ -457,7 +439,7 @@ ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
 
 Women were ineligible if their gestational age at eligibility assessment was <20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems. . 
 
-```{r subcohort_prog, echo=FALSE, message=FALSE, warning=FALSE}
+```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort.R")
 ineligibility_summary
 ```
@@ -499,15 +481,16 @@ first_6ths <- ppw_rct_df %>%
 # First six-month visit date across participants
 earliest_due <- first_6ths %>%
   slice_min(clt_date, n = 1) %>%
-  select(clt_ptid, clt_date) %>% 
-    pull(clt_date) 
+  select(clt_ptid, clt_date) %>%
+  mutate(clt_date = format(as.Date(clt_date), "%b %d, %Y")) %>% 
+  pull(clt_date) 
 
-total_exits <- ppw_rct_df %>%
+total_exits <- ppw_rct_df%>%
     # Filter to "6 weeks" and grab the first per participant
   filter(clt_visit == "6 months post-partum")
 
 completed_follow_up <- total_exits %>% 
-    #filter(dis_today == "Yes") %>% 
+    filter(dis_today == "Yes") %>% 
     nrow()
 
 ```
@@ -532,7 +515,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
 
-During enrollment and follow up study visits,  participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
+During enrollment and follow up study visits,  participants are asked if they would like to be referred for psychosocial support if they screen positive for depresion, anxiety and IPV. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted referrals for those conditions.
 
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
@@ -556,25 +539,26 @@ fidelity_summary
 # 8 Study endpoints  
 
 ## 8.1 Primary and secondary study endpoints at 14 weeks postpartum (descriptive analysis)
-```{r outcome numsource, echo=FALSE, message=FALSE, warning=FALSE}
+```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
 outcome_summary
 ```
 
-
-
 # 9 AEs and SAEs
+
+## 9.1 AEs Summary
 ```{r AEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
-total_EAs <- ae_df %>%
+total_AEs <- ae_long %>% 
     nrow()
 ```
 
+As of `r Sys.Date()`, `r total_aes` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
 
-## 9.1 AEs Summary
-
-As of `r Sys.Date()`, `r total_EAs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
-
+```{r AEs report, echo=FALSE, message=FALSE, warning=FALSE}
+source("SAEs Lists.R")
+total_aes
+```
 
 
 ## 9.2 SAEs Summary
@@ -582,19 +566,20 @@ As of `r Sys.Date()`, `r total_EAs` adverse events were reported. These will be 
 source("SAEs Lists.R")
 total_SAEs <- clean_sae_df %>% 
     nrow()
+
 total_deaths <- clean_sae_df %>% 
-    filter(Event == "Death (Infant or Maternal) (SAE)") %>% 
+    filter(Event == "Death (Infant or Maternal) ") %>% 
     nrow()
 
 pregnancy_loss <- clean_sae_df %>% 
-    filter(Event == "Miscarriage or stillbirth (loss of pregnancy) (SAE)") %>% 
+    filter(Event == "Miscarriage or stillbirth (loss of pregnancy) ") %>% 
     nrow()
 
 total_hosp <- clean_sae_df %>% 
-    filter(Event == "New/prolonged hospitalization (SAE)") %>% 
+    filter(Event == "New/prolonged hospitalization ") %>% 
     nrow()
-
 ```
+
 As of `r Sys.Date()`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
 
 
