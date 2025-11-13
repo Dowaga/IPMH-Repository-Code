@@ -118,7 +118,7 @@ pm_plus_df <- pm_telep_df %>%
 
 # Tele-psychiatry referrals
 telepsych_referrals <- pm_telep_df %>% 
-    filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead > 0 & abs_phq_ref_tele == "Yes"))
+    filter((phq9_scores>=15)|(gad7_scores>=15)|(abs_phq_dead > 0 & abs_phq_ref_tele == "Yes"))
 
 tel_refer <- pm_telep_df %>% 
     filter(abs_phq_ref_tele == "Yes" & referred_to == "PM+")
