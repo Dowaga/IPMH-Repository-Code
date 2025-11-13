@@ -10,11 +10,11 @@
 
 
 # Setup ------------------------------------------------------------------------
-rm(list = ls())
+# rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
-source("Dependencies.R")
-source("data_import.R")
+# source("Dependencies.R")
+# source("data_import.R")
 
 # Data for baseline vs. follow-up
 ppw_sae_df <- ppw_sae_df %>%
@@ -1357,7 +1357,7 @@ arm_joined <- arm_ids %>%
 # Create summary table
 arm_outcome_summary <- arm_joined %>%
     tbl_summary(
-        by = dummy_arm, 
+        by = arm, 
         include = c(phq9_total, gad7_total, qol_overall_scaled, 
                     any_adverse_outcome, rtc_total),
         type = list(
