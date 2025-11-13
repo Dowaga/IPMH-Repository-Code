@@ -361,6 +361,7 @@ outcomes <- ppw_rct_df %>%
     select(visit_type, clt_ptid, all_of(starts_with("phq_")), 
            all_of(starts_with("gad7_")), all_of(starts_with("qol_"))) %>% 
     filter(!is.na(clt_ptid)) 
+
 ## PHQ9 & GAD7 scores ------
 outcomes <- outcomes %>% 
     mutate(across(c(starts_with("phq_")), 
@@ -1002,8 +1003,8 @@ table5 <- psychosocial_data %>%
             ace_total ~ "Adverse Childhood Experiences (Number)\n (14 weeks)"
         ),
         digits = list(
-            all_continuous() ~ 0,
-            all_categorical() ~ 0
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
         ),
         statistic = list(
             all_continuous() ~ "{median} ({p25}, {p75})",
@@ -1275,3 +1276,124 @@ file_name <- paste0("Viral Load Results Gap ",today,".docx")
 
 
 print(doc, target = file_name)
+
+
+
+
+# Filter dataset for relevant timepoint (e.g., 6 weeks postpartum)
+end_points <- outcomes %>%
+    filter(visit_type == "14 Weeks") %>% 
+    select(clt_ptid, phq9_total, gad7_total, qol_overall_scaled)
+
+# Reducing Tension Checklist totals
+end_rtc <- psychosocial_data %>%
+    filter(visit_type == "14 Weeks") %>%
+    select(clt_ptid, visit_type, rtc_total)
+
+# Any adverse outcome
+adverse_end <- pregnancy_combined_dedup %>% 
+    select(clt_ptid, any_adverse_outcome)
+
+end_joined <- end_points %>%
+    inner_join(end_rtc, by = "clt_ptid") %>% 
+    inner_join(adverse_end, by = "clt_ptid") %>% 
+    mutate(any_adverse_outcome = as.factor(any_adverse_outcome))
+
+# Create summary table
+outcome_summary <- end_joined %>%
+    tbl_summary(
+        include = c(phq9_total, gad7_total, qol_overall_scaled, 
+                    any_adverse_outcome, rtc_total),
+        type = list(
+            all_continuous() ~ "continuous",
+            all_categorical() ~ "categorical",
+            phq9_total ~ "continuous", 
+            gad7_total ~ "continuous", 
+            qol_overall_scaled ~ "continuous", 
+            rtc_total ~ "continuous",
+            any_adverse_outcome ~ "categorical"),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ),
+        label = list(
+            phq9_total ~ "Patient Health Questionnaire-9 score",
+            gad7_total ~ "Generalized Anxiety Disorder-7 score",
+            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+            any_adverse_outcome ~ "Any adverse perinatal outcome (by 6 weeks postpartum)",
+            rtc_total ~ "Reducing Tensions Checklist score (6 weeks postpartum)"
+        )
+    )  %>% 
+    modify_table_body(
+        ~ .x %>%
+            filter(!(variable == "any_adverse_outcome" & label == "No"))
+    ) %>%
+    add_n() %>%
+    modify_header(label ~ "**Characteristic**") %>%
+    modify_caption("**Primary and Secondary Outcomes Summary**")
+
+outcome_summary
+
+## Oucome summary by arm
+arm_ids <- ppw_rct_df %>%
+    filter(visit_type == "14 Weeks") %>% 
+    select(clt_ptid, arm) %>% 
+    mutate(dummy_arm = recode(arm,
+                              "Control" = "Arm X",
+                              "Intervention" = "Arm Y")) %>%
+    distinct(clt_ptid, .keep_all = TRUE)
+
+
+
+arm_joined <- arm_ids %>%
+    inner_join(end_joined, by = "clt_ptid")
+
+
+# Create summary table
+arm_outcome_summary <- arm_joined %>%
+    tbl_summary(
+        by = dummy_arm, 
+        include = c(phq9_total, gad7_total, qol_overall_scaled, 
+                    any_adverse_outcome, rtc_total),
+        type = list(
+            all_continuous() ~ "continuous",
+            all_categorical() ~ "categorical",
+            phq9_total ~ "continuous", 
+            gad7_total ~ "continuous", 
+            qol_overall_scaled ~ "continuous", 
+            rtc_total ~ "continuous",
+            any_adverse_outcome ~ "categorical"),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ),
+        label = list(
+            phq9_total ~ "Patient Health Questionnaire-9 score",
+            gad7_total ~ "Generalized Anxiety Disorder-7 score",
+            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+            any_adverse_outcome ~ "Any adverse perinatal outcome",
+            rtc_total ~ "Reducing Tensions Checklist score"
+        )
+    )  %>% 
+    modify_table_body(
+        ~ .x %>%
+            filter(!(variable == "any_adverse_outcome" & label == "No"))
+    ) %>%
+    add_n() %>%
+    modify_header(label ~ "**Characteristic**") %>%
+    modify_caption("**Primary and Secondary Outcomes Summary by Arm**")
+
+arm_outcome_summary
+
+
+    
