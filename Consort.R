@@ -35,15 +35,14 @@ pm_df <- pm_abstractions %>%
 
 # telepsy
 #telepsych <- telepsych %>%
-    #mutate(tele_ancid = if_else(row_number() == 1, 
+   # mutate(tele_ancid = if_else(row_number() == 1, 
                                 #tele_ancid[4], tele_ancid))
 
 
 telepsych_df <- telepsych %>%
+    filter(!tele_ancid == "2025-03-0092")%>% 
     #filter(pt_attend == "Yes") %>%               # keep only attended
     arrange(tele_ancid, tele_date) %>%            # sort by person and date
-    #Offered telepyschaitry as treatment but not referred
-    filter(!tele_ancid == "2025-03-0092") %>%
     group_by(tele_ancid) %>%
     slice(1) %>%                                 # keep first record per person
     ungroup()
@@ -59,17 +58,6 @@ tele_with_id <- telepsych_df %>%
 tele_with_id <- tele_with_id %>%
     select(tele_ancid, partipant_id) %>% 
     mutate(tele = "Yes") 
-
-tele_sessions <-tele_with_id %>% 
-    nrow()
-
-# Records that do not match with consent database
-no_match <- tele_with_id %>% 
-    filter(is.na(partipant_id))
-    
-telepsy_unmatched <- telepsych %>%
-    filter(tele_ancid %in% no_match$tele_ancid)
-
 
 # merging data
 consort_data <- screening_consent_df %>% 
@@ -393,7 +381,7 @@ n_pm <- consort_data %>%
     nrow()
 
 # Total telepsychiatry participants
-n_tele <- consort_data %>% 
+n_tele <- tele_with_id %>% 
     filter(tele == "Yes") %>% 
     nrow()
 
@@ -401,11 +389,9 @@ n_tele <- consort_data %>%
 w6_postpartum <- consort_data %>%
          filter(rct_enrolling == "Yes", secondvisit == "Yes") %>%
          nrow()
-
 w14_postpartum <- consort_data %>%
     filter(rct_enrolling == "Yes", thirdvisit == "Yes") %>%
     nrow()
-
 m6_postpartum <- consort_data %>%
     filter(rct_enrolling == "Yes", fourthvisit == "Yes") %>%
     nrow()
@@ -429,7 +415,7 @@ txt_enrolled <- sprintf("Enrolled\n (n=%d, %.1f%%)", n_enrolled, (n_enrolled / n
 txt_pm <- sprintf("PM+\n (n=%d, %.1f%%)", n_pm, (n_pm / n_enrolled) * 100)
 
 #telepsychiatry
-txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.1f%%)", n_tele, (n_tele / n_enrolled) * 100)
+txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.1f%%)", n_tele , (n_tele  / n_enrolled) * 100)
 
 # Postpartum
 six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.1f%%)", w6_postpartum, (w6_postpartum / n_enrolled) * 100)
