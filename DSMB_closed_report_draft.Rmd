@@ -965,7 +965,7 @@ During this study period, `r Attendees` women attended MCH in the study clinics 
 
 
 ```{r treatment_referrals, echo=FALSE, message=FALSE, warning=FALSE}
-source("Telepsychiatry Sessions.R")
+# source("Telepsychiatry Sessions.R")
 #Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
 fidelity_summary
 
@@ -990,17 +990,17 @@ ae_tbl
 ```
 
 
-### 9.2.1 List of AEs: Arm X 
+### 9.2.1 List of AEs: Control Arm
 
 ```{r ArmX_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
-source("SAEs Lists.R")
+# source("SAEs Lists.R")
 armx_aes_gt
 ```
 
-### 9.2.2 List of AEs: Arm Y 
+### 9.2.2 List of AEs: Intervention Arm
 
 ```{r ArmY_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
-source("SAEs Lists.R")
+# source("SAEs Lists.R")
 army_aes_gt
 ```
 
