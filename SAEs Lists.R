@@ -247,6 +247,27 @@ ae_long <- ae_list %>%
     arrange(Arm, record_id, ae_dateonset)
 
 # Overall AEs summary
+total_aes <- ae_long %>% 
+    tbl_summary(
+        include = c(ae_type),
+                label = list(ae_type ~ "AE Type")
+    ) %>%
+    add_n() %>%
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Adverse Events") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))%>%
+    opt_table_lines()
+
+total_aes
+
 overal_aes <- ae_long %>% 
     tbl_summary(Arm,
         include = c(ae_type),
