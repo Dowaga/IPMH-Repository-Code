@@ -10,11 +10,11 @@
 
 
 # Setup ------------------------------------------------------------------------
-#rm(list = ls())
+rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
-#source("Dependencies.R")
-#source("data_import.R")
+source("Dependencies.R")
+source("data_import.R")
 
 # Data for baseline vs. follow-up
 ppw_sae_df <- ppw_sae_df %>%
@@ -1081,7 +1081,6 @@ table6 <- su %>%
     tbl_summary(
         by = visit_type,
         statistic = list(all_categorical() ~ "{n} ({p}%)"),
-        digits = list(all_categorical() ~ c(0, 1)),
         missing = "no",
         digits = list(
             all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
