@@ -10,11 +10,11 @@
 
 
 # Setup ------------------------------------------------------------------------
-# rm(list = ls())
+#rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
-# source("Dependencies.R")
-# source("data_import.R")
+#source("Dependencies.R")
+#source("data_import.R")
 
 # Data for baseline vs. follow-up
 ppw_sae_df <- ppw_sae_df %>%
@@ -139,7 +139,11 @@ table1 <- pregnancy_outcomes_6week %>%
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
-        missing = "no"  # This removes missing values from the display
+        missing = "no",# This removes missing values from the display
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
     ) %>%
     add_n() %>%
     # convert from gtsummary object to gt object
@@ -227,7 +231,11 @@ table2a <- infant_outcomes %>%
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
-        missing = "no"
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
     ) %>%
     add_n() %>%
     bold_labels() %>% 
@@ -282,7 +290,11 @@ table2b <- infant_outcomes %>%
             all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
         ),
-        missing = "no"
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
     ) %>%
     add_n() %>%
     bold_labels() %>% 
