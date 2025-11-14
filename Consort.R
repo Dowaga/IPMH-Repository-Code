@@ -487,7 +487,11 @@ ineligibility_summary <- consort_data %>%
     tbl_summary(
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include = c(exclusion),
-        label = list(exclusion ~ "Reasons for Ineligibility")) %>%
+        label = list(exclusion ~ "Reasons for Ineligibility"),
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables  1 d.p.
+            all_categorical() ~ c(0, 1) # categorical 0 decimals for n, 1 d.p. for %
+        )) %>%
     as_gt() %>% 
     # modify with gt functions
     gt::tab_header("Summary of Reasons for Study Ineligibility") %>% 
