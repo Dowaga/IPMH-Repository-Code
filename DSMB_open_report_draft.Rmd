@@ -305,7 +305,7 @@ reached_25per_target <- weekly_enrollment %>%
 
 ```
 
-All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone, with each site expected to enroll a total of 148 perinatal women. This corresponds to at least 37 participants per facility. The first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2024.
+All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone, with each site expected to enroll a total of 148 perinatal women. This corresponds to at least 37 participants per facility. The first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2025.
 
 ```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
@@ -375,7 +375,7 @@ p2
 source("Consort_WLWH.R")
 ```
 
-Overal `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
+Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
 
 
 
@@ -394,7 +394,7 @@ add_box(txt = txt_enrolled) |>
 
 ### 3.2.2 Enrollment Progress - Overall
 
-Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, two facilities have reached the halfway mark with 10 participants each, while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
+Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, three facilities have reached the halfway mark with 10 participants each, while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
 
 ```{r enrollment_mor, echo=FALSE, fig.height=5, fig.width=8, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
@@ -458,7 +458,7 @@ ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
 
 # 4. Ineligibility
 
-Women were ineligible if their gestational age at eligibility assessment was <20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems. . 
+Women were ineligible if their gestational age at eligibility assessment was <20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort.R")
@@ -488,7 +488,7 @@ wlwh_demo
 \newpage
 
 # 6. Study Terminations
-```{r Ealiest Expected termination}
+```{r Ealiest Expected termination, echo=FALSE, message=FALSE, warning=FALSE}
 first_6ths <- ppw_rct_df %>%
     # Filter to "6 months" and grab the first per participant
   filter(clt_visit == "6 months post-partum") %>%
@@ -536,7 +536,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
 
-During enrollment and follow up study visits,  participants are asked if they would like to be referred for psychosocial support if they screen positive for depresion, anxiety and IPV. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted referrals for those conditions.
+During enrollment and follow up study visits,  participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
 
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
