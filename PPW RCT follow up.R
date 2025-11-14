@@ -1086,7 +1086,7 @@ table6 <- su %>%
         digits = list(
             all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
             all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
-        )
+        ),
         label = list(
             su_phq2 ~ "Screened by PHQ-2",
             su_gap2 ~ "Screened by GAD-2", 
@@ -1123,7 +1123,7 @@ table7 <- su %>%
         digits = list(
             all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
             all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
-        )
+        ),
         label = list(
             su_pmp ~ "PM+ Participation",
             su_many ~ "PM+ Sessions Completed",
