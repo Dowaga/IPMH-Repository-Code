@@ -86,7 +86,7 @@ knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 
 \newpage
 
-ohn Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
 
 Keshet Ronen, PhD, MPH, University of Washington
 
@@ -112,10 +112,10 @@ vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Cr
 vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatment of perinatal mood and anxiety disorders (PMADs), and its implementation strategies, into maternal and child health clinics and pragmatically evaluate its clinical, service delivery, and implementation outcomes",
            "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of IPMH and associated implementation strategies on depression, anxiety, quality of life, and adverse perinatal outcomes vs. control (standard of care) among Kenyan women", 
            "Pregnant Kenyan women", 
-           "-Receiving antenatal care at study facility\n->=28 weeks gestation (changed to >=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
+           "-Receiving antenatal care at study facility\n-???28 weeks gestation (changed to ???20 weeks gestation\n-Age???14\n-screen positive for PMAD symptoms (PHQ-2???3 and/or GAD-2???3)", 
            "2970, including 405 women living with HIV (WLWH)", 
-           "[place holder]",
-           "0",
+           "1288",
+           "334",
            "Follow-up through 6 months postpartum", 
            "September 19, 2023", 
            "February 17, 2025",
@@ -527,21 +527,11 @@ arm_groups <- unique(weekly_enrollment %>%
                        pull(arm_group) %>%
                        unique())
 
-<<<<<<< HEAD
-target_25_line <- expand.grid(
-  week = unique(weekly_enrollment$week),
-  arm_group = arm_groups
-) %>%
-  mutate(
-    cumulative_enrollment = 74,
-    study_site = "25% Target"
-  )
-=======
 target_25_line <- expand.grid(week = unique(weekly_enrollment$week),
                               arm_group = arm_groups) %>%
   mutate(cumulative_enrollment = 372,
          study_site = "25% Target")
->>>>>>> 11190eb3b8a3ffaad94234ed401926aad6778568
+
 
 weekly_enrollment <- weekly_enrollment %>%
   mutate(arm = stringr::str_extract(study_site, "^\\d{2}"),
@@ -607,7 +597,7 @@ reached_25per_target <- weekly_enrollment %>%
 
 ```
 
-All (`r reached_25per_target`) facilities have surpassed our first enrollment milestone, with more than 37 perinatal women enrolled per facility cluster - exceeding 25% of the overall target enrollment. Nyalenda was the first facility to achieve this milestone in mid-April 2024.
+All (`r reached_25per_target`) facilities have surpassed our first enrollment milestone, with more than 37 perinatal women enrolled per facility cluster - exceeding 25% of the overall target enrollment. Nyalenda was the first facility to achieve this milestone in mid-April 2025.
 
 ```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
 # source("Enrollment Progress.R")
@@ -671,7 +661,7 @@ p2
 
 \newpage
 
-# 3. WLWH Cohort
+# 3. Women Living with HIV Cohort
 
 ## 3.1 Current subject status
 

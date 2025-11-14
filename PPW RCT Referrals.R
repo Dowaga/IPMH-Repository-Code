@@ -5,11 +5,11 @@
 # Baseline Demographics
 
 # Setup ------------------------------------------------------------------------
-rm(list = ls())     
+# rm(list = ls())     
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
-source("Dependencies.R")
-source("data_import.R")
+# source("Dependencies.R")
+# source("data_import.R")
 
 # data prep --------------------------------------------------------------------
 referral_df <- ppw_rct_df %>% 
@@ -205,10 +205,10 @@ arm_referral_summary <- arm_summary_wide %>%
     tab_header(title = "Referral Summary by Arm") %>%
     cols_label(
         Condition = "Referral Condition",
-        n_control = "Screened Positve (Arm X)",
-        accepted_control = "Accepted Referral (Arm X)",
-        n_intervention = "Screened Positoive (Arm Y)",
-        accepted_intervention = "Accepted Referral (Arm Y)",
+        n_control = "Screened Positive (Control)",
+        accepted_control = "Accepted Referral (Control)",
+        n_intervention = "Screened Positive (Intervention)",
+        accepted_intervention = "Accepted Referral (Intervention)",
         n_total = "Total Screened Positive",
         accepted_total = "Total Accepted Referral") %>%
     fmt_number(columns = starts_with("n"), decimals = 0) %>%
