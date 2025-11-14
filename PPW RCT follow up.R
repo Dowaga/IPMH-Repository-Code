@@ -600,7 +600,11 @@ table3 <- outcomes %>%
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
-        missing = "no"
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
     ) %>%
     add_n() %>%
     bold_labels() %>% 
@@ -805,7 +809,11 @@ table4 <- pregnancy_combined_dedup %>%
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
-        missing = "no"
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
     ) %>%
     add_n() %>%
     bold_labels() %>% 
@@ -1075,6 +1083,10 @@ table6 <- su %>%
         statistic = list(all_categorical() ~ "{n} ({p}%)"),
         digits = list(all_categorical() ~ c(0, 1)),
         missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
         label = list(
             su_phq2 ~ "Screened by PHQ-2",
             su_gap2 ~ "Screened by GAD-2", 
@@ -1107,11 +1119,11 @@ table7 <- su %>%
             all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
         ),
-        digits = list(
-            all_continuous() ~ c(1, 1),
-            all_categorical() ~ c(0, 1)
-        ),
         missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
         label = list(
             su_pmp ~ "PM+ Participation",
             su_many ~ "PM+ Sessions Completed",
