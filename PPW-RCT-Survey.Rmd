@@ -140,7 +140,12 @@ not_enrolled %>%
     filter(rct_enrolling == "No") %>% 
     tbl_summary(include = c(rct_decline_reason),
                 sort = list(all_categorical() ~ "frequency"),# Sort categorical levels by frequency in descending order
-                label = list(rct_decline_reason ~ "Reasons for declining Enrollment")) %>% 
+                label = list(rct_decline_reason ~ "Reasons for declining Enrollment"),
+                missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables  1 d.p.
+            all_categorical() ~ c(0, 1) # categorical  0 decimals for n, 1 d.p. for %
+        )) %>% 
     bold_labels() %>%
     as_gt() %>%
   # modify with gt functions
@@ -252,7 +257,10 @@ demographics_df %>% tbl_summary(
                  med_pre_preg ~ "Ever been pregnant (Yes)",
                  med_num_preg ~ "Total Pregnancies (incl.current)"),
     missing = "no",
-    digits = list(all_continuous() ~ 1), 
+    digits = list(
+        all_continuous() ~ 1, # continuous variables 1 d.p.
+        all_categorical() ~ c(0, 1) # categorical 0 decimals for n, 1 d.p. for %
+    ), 
     type = list(dem_age ~ "continuous", 
               dem_household_num ~ "continuous",
               dem_housesleep ~ "continuous", 
@@ -469,7 +477,12 @@ pm_session_wide %>%
                 label = list(facility = "Facility"),
                 statistic = list(all_categorical() ~
     "{n} ({p}%)"),
-        sort = list(all_categorical() ~ "frequency")
+        sort = list(all_categorical() ~ "frequency"),
+    missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables  1 d.p.
+            all_categorical() ~ c(0, 1) # categorical  0 decimals for n, 1 d.p. for %
+        )
         )%>% 
   as_gt() %>%
     gt::tab_header(
@@ -568,6 +581,11 @@ session_wide %>%
     tbl_summary(include = c(`Pre-intervention PSYCHLOPS measurement`, `Session 1 content`, `Session 2 content`, `Session 3 content`, `Session 4 content`, `Session 5 content`, `Post-intervention PSYCHLOPS measurement`),
                 label = list(pm_facility = "Facility",
                              `Pre-intervention PSYCHLOPS measurement` ~ "Pre-Intervention Psychlops"),
+                missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables  1 d.p.
+            all_categorical() ~ c(0, 1) # categorical 0 decimals for n, 1 d.p. for %
+        ),
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
         )%>% 
   # convert from gtsummary object to gt object
@@ -592,7 +610,12 @@ telepsych_referrals %>%
     tbl_summary(
         sort = list(all_categorical() ~ "frequency"),
         include = c(clt_study_site),
-                label = list(clt_study_site ~ "Facility"))%>% 
+                label = list(clt_study_site ~ "Facility"),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical  0 decimals for n, 1 d.p. for %
+        ))%>% 
     as_gt %>% 
       # modify with gt functions
     gt::tab_header(
