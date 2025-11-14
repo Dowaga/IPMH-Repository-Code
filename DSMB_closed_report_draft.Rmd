@@ -914,19 +914,19 @@ total_exits <- ppw_rct_df%>%
   )
 
 completed_follow_up <- total_exits %>% 
-    filter(dis_today == "Yes") %>% 
+    filter(clt_visit=="6 months post-partum") %>% 
     nrow()
 
 completed_follow_upX <- total_exits %>% 
     filter(dummy_arm == "Arm X") %>% 
-    select(clt_ptid, dis_today) %>% 
-    filter(dis_today == "Yes") %>% 
+    select(clt_ptid, clt_visit) %>% 
+    filter(clt_visit=="6 months post-partum") %>% 
     nrow()
     
 completed_follow_upY <- total_exits %>% 
     filter(dummy_arm == "Arm Y") %>% 
-    select(clt_ptid, dis_today) %>% 
-    filter(dis_today == "Yes") %>% 
+    select(clt_ptid, clt_visit) %>% 
+    filter(clt_visit=="6 months post-partum") %>% 
     nrow()
 
 ```
