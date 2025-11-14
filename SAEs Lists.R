@@ -96,7 +96,11 @@ sae_summary <- tbl_summary(
     type = all_continuous() ~ "continuous",
     statistic = all_continuous() ~ "{sum}",
     percent = "cell",
-    missing = "no"
+    missing = "no",
+    digits = list(
+        all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+        all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+    )
 ) %>%
     bold_labels() %>%
     #add_p() %>% 
@@ -186,7 +190,11 @@ ae_tbl <- ae_bin %>%
             ae_define___2_bin ~ "Experienced violence or abuse", 
             ae_define___5_bin ~ "Persistent or significant psychosocial distress"
         ),
-        percent = "cell" 
+        percent = "cell",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
     ) %>% 
     bold_labels() %>%
     #add_p() %>% 
@@ -250,7 +258,11 @@ ae_long <- ae_list %>%
 total_aes <- ae_long %>% 
     tbl_summary(
         include = c(ae_type),
-                label = list(ae_type ~ "AE Type")
+                label = list(ae_type ~ "AE Type"),
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
     ) %>%
     add_n() %>%
     bold_labels() %>% 
@@ -271,7 +283,11 @@ total_aes
 overal_aes <- ae_long %>% 
     tbl_summary(Arm,
         include = c(ae_type),
-        label = list(ae_type ~ "AE Type")
+        label = list(ae_type ~ "AE Type"),
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        )
     ) %>%
     add_n() %>%
     bold_labels() %>% 
