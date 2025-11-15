@@ -36,7 +36,7 @@ pm_df <- pm_abstractions %>%
 telepsych$tele_ancid[1] <- telepsych$tele_ancid[4] 
 
 telepsych_df <- telepsych %>%
-    #filter(pt_attend == "Yes") %>%               # keep only attended
+    filter(pt_attend == "Yes") %>%               # keep only attended
     arrange(tele_ancid, tele_date) %>%            # sort by person and date
     group_by(tele_ancid) %>%
     slice(1) %>%                                 # keep first record per person
