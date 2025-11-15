@@ -31,7 +31,7 @@ pm_abstractions <- pm_survey_df %>%
     distinct(pm_ptid, .keep_all = TRUE)
 
 pm_df <- pm_abstractions %>% 
-    select(pm_ptid, ipmh_participant)
+    select(pm_ptid, ipmh_participant, pm_facility)
 
 # telepsy
 #telepsych <- telepsych %>%
@@ -59,7 +59,95 @@ tele_with_id <- tele_with_id %>%
     select(tele_ancid, partipant_id) %>% 
     mutate(tele = "Yes") 
 
-# merging data
+# PM+ and Telepsychiatry Referrals ----
+pm_telep_df <- ppw_rct_df %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
+    select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
+    filter(!is.na(clt_date)) 
+
+
+# Define PHQ9 recoding
+phq9_labels <- c(
+    "not at all" = 0,
+    "several days" = 1,
+    "more than half the days" = 2,
+    "nearly every day" = 3
+)
+
+gad7_labels <-c(
+    "Not at all" = 0,
+    "Several days" = 1,
+    "Over half the days"= 2,
+    "Nearly every day" = 3)
+
+
+# Recode PHQ9 variables
+pm_telep_df <- pm_telep_df %>%
+    mutate(across(c(abs_phq_interest, abs_phq_down, abs_phq_sleep,
+                    abs_phq_tired, abs_phq_appetite, abs_phq_bad,
+                    abs_phq_concentrate, abs_phq_slow, abs_phq_dead), ~ recode(., !!!phq9_labels)),
+           across(c(abs_gad7_nerve, abs_gad7_uncontrol, 
+                    abs_gad7_worry, abs_gad7_relax, abs_gad7_restless,
+                    abs_gad7_annoyed, abs_gad7_afraid), ~ recode(., !!!gad7_labels)))
+
+
+
+pm_telep_df <- pm_telep_df %>% 
+    mutate(phq9_scores = rowSums(select(., abs_phq_interest, abs_phq_down,
+                                        abs_phq_sleep, abs_phq_tired, 
+                                        abs_phq_appetite, abs_phq_bad,
+                                        abs_phq_concentrate, abs_phq_slow, 
+                                        abs_phq_dead), na.rm = TRUE),
+           gad7_scores = rowSums(select(., abs_gad7_nerve, abs_gad7_uncontrol,
+                                        abs_gad7_worry, abs_gad7_relax, 
+                                        abs_gad7_restless, abs_gad7_annoyed,
+                                        abs_gad7_afraid), na.rm = TRUE))
+
+# Endorsed PHQ9 Question 9
+self_harm <- pm_telep_df %>% 
+    filter(abs_phq_dead > 0)
+
+pm_telep_df <- pm_telep_df %>% 
+    filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
+    mutate(
+        max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
+        eligible_for = case_when(
+            abs_phq_dead > 0 ~ "Telepsychiatry",
+            (max_score >= 10 & max_score < 15 &
+                 (max_score == phq9_scores | max_score == gad7_scores)) ~ "PM+",
+            max_score >= 15 ~ "Telepsychiatry",
+            TRUE ~ "Not Eligible"
+        ),
+        referred_to = case_when(
+            abs_gad7_ref_tele == "Yes" | abs_phq_ref_tele == "Yes" ~ "Telepsychiatry",
+            abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes" ~ "PM+",
+            TRUE ~ NA_character_
+        )
+    )
+
+referral_QCs <- pm_telep_df %>% 
+    filter(eligible_for == "PM+" & referred_to == "Telepsychiatry")
+
+# PM+ participants
+pm_plus_df <- pm_telep_df %>% 
+    filter(max_score >= 10 & max_score < 15) %>%
+    select(-max_score)  # Remove max_score if not needed
+
+# Tele-psychiatry referrals
+telepsych_referrals <- pm_telep_df %>% 
+    filter((phq9_scores>=15)|(gad7_scores>=15)|(abs_phq_dead > 0 & abs_phq_ref_tele == "Yes"))
+
+tel_refer <- pm_telep_df %>% 
+    filter(abs_phq_ref_tele == "Yes" & referred_to == "PM+")
+
+telepsych_ids <- telepsych_referrals %>% 
+    select(record_id) %>% 
+    mutate(tele = "Yes")
+
+telep_referrals <- telepsych_ids %>% 
+    nrow()
+
+# merging data----
 consort_data <- screening_consent_df %>% 
     select(record_id, partipant_id, rct_harm_thought, rct_aud_hallucinations, 
            rct_vis_hallucinations, rct_paranoia,rct_delusions,
@@ -130,7 +218,7 @@ consort_data <- consort_data %>%
     left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
 
 consort_data <- consort_data %>% 
-    left_join(tele_with_id, by = c("partipant_id" = "partipant_id")) 
+    left_join(telepsych_ids, by = c("partipant_id" = "record_id")) 
 
 
 #merge thirdvisit people into consort_data
