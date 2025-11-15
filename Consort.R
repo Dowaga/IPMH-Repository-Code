@@ -220,6 +220,8 @@ consort_data <- consort_data %>%
 consort_data <- consort_data %>% 
     left_join(telepsych_ids, by = c("partipant_id" = "record_id")) 
 
+consort_data %>% 
+    tabyl(tele)
 
 #merge thirdvisit people into consort_data
 consort_data <- consort_data %>% 
@@ -469,8 +471,7 @@ n_pm <- consort_data %>%
     nrow()
 
 # Total telepsychiatry participants
-n_tele <- tele_with_id %>% 
-    filter(tele == "Yes") %>% 
+n_tele <- telepsych_ids %>%
     nrow()
 
 # Total postpartum visits
