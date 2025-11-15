@@ -1348,8 +1348,8 @@ outcome_summary <- end_joined %>%
             phq9_total ~ "Patient Health Questionnaire-9 score",
             gad7_total ~ "Generalized Anxiety Disorder-7 score",
             qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
-            any_adverse_outcome ~ "Any adverse perinatal outcome (by 6 weeks postpartum)",
-            rtc_total ~ "Reducing Tensions Checklist score (6 weeks postpartum)"
+            any_adverse_outcome ~ "Any adverse pregnancy outcome",
+            rtc_total ~ "Reducing Tensions Checklist score"
         )
     )  %>% 
     modify_table_body(
@@ -1404,7 +1404,7 @@ arm_outcome_summary <- arm_joined %>%
             phq9_total ~ "Patient Health Questionnaire-9 score",
             gad7_total ~ "Generalized Anxiety Disorder-7 score",
             qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
-            any_adverse_outcome ~ "Any adverse perinatal outcome",
+            any_adverse_outcome ~ "Any adverse pregnancy outcome",
             rtc_total ~ "Reducing Tensions Checklist score"
         )
     )  %>% 
