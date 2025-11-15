@@ -105,7 +105,7 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
            "February 17, 2025",
            "July 31, 2028",
            "Primary: Depression (Patient Health Questionnaire-9 [PHQ-9] score) and anxiety (Generalized Anxiety Disorder-7 [GAD-7] score)", 
-           "Secondary:\n-Problem Management Plus (PM+) Skill Acquisition (Reducing Tension Checklist score)\n-Quality of Life (World Health Organization Quality of Life [WHOQOL-BREF] score)\n-Any adverse perinatal outcome")
+           "Secondary:\n-Problem Management Plus (PM+) Skill Acquisition (Reducing Tension Checklist score)\n-Quality of Life (World Health Organization Quality of Life [WHOQOL-BREF] score)\n-Any adverse pregnancy outcome")
 
 stdy_summ <- data.frame(vars, vars2)
 
@@ -162,7 +162,7 @@ n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
 
 We began recruiting pregnant women into the study on February 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round((n_enrol / 2970) * 100, 1)`% of our enrollment target.
 
-Of the enrolled participants, `r n_second` (`r n_second_per`%) have completed their 6 weeks, `r n_third` (`r n_third_per`%) have completed 14 weeks and `r n_fourth` (`r n_fourth_per`%) have completed 6 months postpartum follow-up visits.
+Of the enrolled participants, `r n_second` (`r round(n_second / n_enrol * 100, 1)`%) have completed their 6 weeks, `r n_third` (`r round(n_third / n_enrol * 100, 1)`%) have completed 14 weeks and `r n_fourth` (`r round(n_fourth / n_enrol * 100, 1)`%) have completed 6 months postpartum follow-up visits.
 
 In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
 
@@ -305,7 +305,7 @@ reached_25per_target <- weekly_enrollment %>%
 
 ```
 
-All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone, with each site expected to enroll a total of 148 perinatal women. This corresponds to at least 37 participants per facility. The first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2025.
+All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 37 participants. Notable, the first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2025.
 
 ```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
@@ -394,7 +394,7 @@ add_box(txt = txt_enrolled) |>
 
 ### 3.2.2 Enrollment Progress - Overall
 
-Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, three facilities have reached the halfway mark with 10 participants each, while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
+Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, three facilities have achieved 50% of the target (10 participants each), while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
 
 ```{r enrollment_mor, echo=FALSE, fig.height=5, fig.width=8, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
@@ -511,7 +511,7 @@ total_exits <- ppw_rct_df%>%
   filter(clt_visit == "6 months post-partum")
 
 completed_follow_up <- total_exits %>% 
-    filter(dis_today == "Yes") %>% 
+    filter(clt_visit=="6 months post-partum") %>% 
     nrow()
 
 ```
