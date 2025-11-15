@@ -261,11 +261,20 @@ new_pm_ptids <- pm_ptids %>%
 # Then, bind these new participants to the original pm_participants
 pm_participants <- bind_rows(pm_participants, new_pm_ptids)
 
+#Study participants in the PM+ Survey
+pm_abstractions <- pm_survey_df %>%
+    mutate(pm_ptid = as.numeric(pm_ptid)) %>%       # if needed
+    filter(ipmh_participant == "Yes") %>%
+    distinct(pm_ptid, .keep_all = TRUE)
+
+pm_df <- pm_abstractions %>% 
+    select(pm_ptid, pm_facility) %>% 
+    mutate(pm_plus = "Yes")
+
 
 fidelity_df <- screened %>% 
-    left_join(pm_participants, by = c("partipant_id" = "record_id", 
-                                      "study_site" = "clt_study_site")) %>% 
-    left_join(telepsych_ids, by = c("partipant_id" = "record_id")) %>% 
+    left_join(pm_df, by = c("partipant_id" = "pm_ptid")) %>% 
+    left_join(telepsy_ancids, by = c("partipant_id" = "partipant_id")) %>% 
     select(-clt_study_site)
 
 
