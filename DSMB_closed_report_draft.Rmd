@@ -114,8 +114,8 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
            "Pregnant Kenyan women", 
            "-Receiving antenatal care at study facility\n->=28 weeks gestation (changed to >=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
            "2970, including 405 women living with HIV (WLWH)", 
-           "[place holder]",
-           "0",
+           "1312",
+           "348",
            "Follow-up through 6 months postpartum", 
            "September 19, 2023", 
            "February 17, 2025",
@@ -671,7 +671,7 @@ p2
 
 \newpage
 
-# 3. WLWH Cohort
+# 3. Women Living with HIV Cohort
 
 ## 3.1 Current subject status
 
@@ -961,7 +961,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
 
-During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions. Of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals.
+During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals.
 
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
@@ -981,7 +981,7 @@ Attendees <- daily_closeout_df %>%
     pull(`anc attendees`)  # Extract the sum value as a number
 ```
 
-During this study period, `r Attendees` women attended MCH in the study clinics and were screened for PMAD symptoms, of whom `r screened_pmad` (`r round(screened_pmad / Attendees *100,1)`%) screened positive for PMAD. Among these, `r PM_referrals`(`r round (PM_referrals / screened_pmad *100,1)`%) had moderate symptoms in either PHQ9 or GAD7 and were referred to PM+, and `r telep_referrals` (`r round (telep_referrals / screened_pmad * 100,1)`%) had severe symptoms and were referred to psychiatrist.
+During this study period, `r Attendees` women attended MCH in the study clinics and were screened for PMAD symptoms, of whom `r screened_pmad` (`r round(screened_pmad / Attendees *100,1)`%) screened positive for PMAD. Among these, `r PM_referrals`(`r round (PM_referrals / screened_pmad *100,1)`%) had moderate symptoms in either PHQ9 or GAD7 and were referred to PM+, and `r telep_referrals` (`r round (telep_referrals / screened_pmad * 100,1)`%) had severe symptoms and were referred to a psychiatrist.
 
 
 ```{r treatment_referrals, echo=FALSE, message=FALSE, warning=FALSE}
