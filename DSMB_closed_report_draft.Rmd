@@ -121,7 +121,7 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
            "February 17, 2025",
            "July 31, 2028",
            "Primary: Depression and anxiety", 
-           "Secondary:\n-Depression and anxiety among WLWH\n-Quality of Life\n-Adverse perinatal outcomes")
+           "Secondary:\n-Problem Management Plus (PM+) Skill Acquisition (Reducing Tension Checklist score)\n-Quality of Life (World Health Organization Quality of Life [WHOQOL-BREF] score)\n-Any adverse pregnancy outcome")
 
 stdy_summ <- data.frame(vars, vars2)
 
@@ -522,12 +522,12 @@ weekly_enrollment <- weekly_enrollment %>%
 # Create target line repeated for each arm_group
 arm_groups <- unique(weekly_enrollment %>%
                        mutate(arm = stringr::str_extract(study_site,"^\\d{2}"),
-                              arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "22"),
+                              arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
                                                  "Control", "Intervention")) %>%
                        pull(arm_group) %>%
                        unique())
 
-<<<<<<< HEAD
+
 target_25_line <- expand.grid(
   week = unique(weekly_enrollment$week),
   arm_group = arm_groups
@@ -545,7 +545,7 @@ target_25_line <- expand.grid(week = unique(weekly_enrollment$week),
 
 weekly_enrollment <- weekly_enrollment %>%
   mutate(arm = stringr::str_extract(study_site, "^\\d{2}"),
-         arm_group = ifelse(arm %in% c("01", "02", "03", "04", "05", "06", "07"),
+         arm_group = ifelse(arm %in% c("02", "05", "06", "08", "11", "14", "15", "18", "20", "21"),
                        "Control", "Intervention"))
 
 total_enrollment <- weekly_enrollment %>%
