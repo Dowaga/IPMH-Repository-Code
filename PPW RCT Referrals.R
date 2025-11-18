@@ -55,7 +55,7 @@ control_psy_qcs <- referral_df %>%
     select(record_id, clt_study_site, Arm, starts_with("screened_"), referred, 
            referral_accept) %>% 
     filter(referred == 0) %>% 
-    filter(Arm == "control") %>% 
+    filter(Arm == "intervention") %>% 
     select(-Arm)
 
 # Select PHQ9 and GAD7 Scores
