@@ -225,7 +225,7 @@ table2a <- infant_outcomes %>%
             io_ill ~ "Infant illness prior to today's visit",
             io_hosp ~ "Infant hospitalization prior to today's visit",
             io_bf ~ "Currently breastfeeding",
-            io_mf ~ "Fed infant any drink or food other than breastmilk"
+            io_mf ~ "Fed infant any drink or food other than  breast-milk"
         ),
         statistic = list(
             all_continuous() ~ "{median} ({p25}, {p75})",
@@ -284,7 +284,7 @@ table2b <- infant_outcomes %>%
             io_ill ~ "Infant illness prior to today's visit",
             io_hosp ~ "Infant hospitalization prior to today's visit",
             io_bf ~ "Currently breastfeeding",
-            io_mf ~ "Fed infant any drink or food other than breastmilk"
+            io_mf ~ "Fed infant any drink or food other than  breast-milk"
         ),
         statistic = list(
             all_continuous() ~ "{mean} ({sd})",
@@ -337,7 +337,7 @@ table2c <- infant_outcomes %>%
             io_ill ~ "Infant illness prior to today's visit",
             io_hosp ~ "Infant hospitalization prior to today's visit",
             io_bf ~ "Currently breastfeeding",
-            io_mf ~ "Fed infant any drink or food other than breastmilk"),
+            io_mf ~ "Fed infant any drink or food other than breast-milk"),
         statistic = list(
             all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"),
