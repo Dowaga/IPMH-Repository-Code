@@ -40,16 +40,8 @@ weekly_count <- enrollment_progress %>%
     summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
 
 # Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
-date_seq <- seq(as.Date("2025-02-16"), as.Date("2025-03-29"), by = "week", week_start = 1)
+dateSeq_df <- data.frame(week = seq(as.Date("2025-02-16"), as.Date("2025-11-15"), by = "week"))
 
-date_seq <- seq(
-    from = as.Date("2025-02-16"),
-    to = Sys.Date(),
-    by = "week"
-)
-
-# Convert to a dataframe
-dateSeq_df <- data.frame(week = date_seq)
 
 weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
     arrange(week) %>%  # Ensure weeks are in order
@@ -97,4 +89,20 @@ Enrollment_wide_ft <- Enrollment_wide %>%
     autofit()  # Adjust table to fit content
 
 Enrollment_wide_ft
+
+# Date when 25% of the overall enrollment was met
+total_enrollment <- weekly_enrollment %>%
+    group_by(week) %>%
+    summarise(enrollment_count = sum(enrollment_count)) %>%
+    arrange(week) %>%
+    mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+    mutate(study_site = "Total")
+
+target_reached <- total_enrollment %>%
+    mutate(week = format(as.Date(week), "%b %d, %Y"))%>% 
+    filter(cumulative_enrollment >= 743) %>%
+    slice(1) %>%
+    pull(week) 
+
+
 
