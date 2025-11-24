@@ -49,8 +49,8 @@ facility_supervisions <- supervision %>%
     arrange(desc(`Total Supervisions`))
 
 # Create flextable with heading
-ft_supervision <- flextable(facility_supervisions) %>%
-    add_header_lines(values = "Supervision Summary by Facility") %>%
+pm_plus_supervision <- flextable(facility_supervisions) %>%
+    add_header_lines(values = "PM+ Supervision Summary by Facility") %>%
     bg(i = ~ `Total Supervisions` < 2, j = "Total Supervisions", bg = "yellow") %>%
     color(i = ~ `Total Supervisions` < 2, j = "Total Supervisions", color = "black") %>%
     autofit()
@@ -78,7 +78,7 @@ ft <- flextable(activity_summary) %>%
         `Audit and Feedback` = "Audit & Feedback",
         `Health Talk` = "Health Talk"
     ) %>%
-    add_header_lines(values = "Summary of Observed Activities: Audit & Feedback and Health Talks") %>%
+    add_header_lines(values = "Audit & Feedback and Health Talks") %>%
     color(i = ~ `Audit and Feedback` < 2, j = "Audit and Feedback", color = "black") %>%
     bg(i = ~ `Audit and Feedback` < 2, j = "Audit and Feedback", bg = "yellow") %>%
     color(i = ~ `Health Talk` < 2, j = "Health Talk", color = "black") %>%

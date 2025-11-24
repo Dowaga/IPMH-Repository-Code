@@ -5,11 +5,11 @@
 # AEs Lists
 
 # Setup ------------------------------------------------------------------------
-# rm(list = ls())
+ rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
-# source("Dependencies.R")
-# source("data_import.R")
+source("Dependencies.R")
+source("data_import.R")
 
 ae_df <- ppw_sae_df%>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), 
@@ -79,20 +79,96 @@ clean_sae_df <- clean_sae_df %>%
     dummy_arm = case_when(
         Arm == "Control" ~ "Arm X",
         Arm == "Intervention" ~ "Arm Y")
+    )%>%
+    mutate(
+        death_type = case_when(
+            ae_type___1 == "Checked" ~ "Maternal Death",
+            ae_type___2 == "Checked" ~ "Infant Death",
+            TRUE ~ NA_character_
+        )
     )
+
+
+
+deaths <- clean_sae_df %>% 
+    filter(ae_type___1 == "Checked"|ae_type___2 == "Checked") %>% 
+    select(record_id, Event, death_type, ae_narrative) 
+# Convert to flextable
+death_tbl <- flextable(deaths)
+
+# --- IMPORTANT FIXES FOR LONG TEXT ----
+# Wrap text
+death_tbl <- valign(death_tbl, j = everything(), valign = "top")
+death_tbl <- align(death_tbl, j = everything(), align = "left")
+death_tbl <- height_all(death_tbl, height = NA)
+death_tbl <- autofit(death_tbl)
+
+# Set specific max widths (A4 width after margins is approx 6.5 inches)
+death_tbl <- width(death_tbl, j = "record_id", width = 1)
+death_tbl <- width(death_tbl, j = "Event", width = 1.5)
+death_tbl <- width(death_tbl, j = "death_type", width = 1.3)
+death_tbl <- width(death_tbl, j = "ae_narrative", width = 4.5)  # main text column
+
+# Allow word wrapping
+death_tbl <- wordwrap(death_tbl)
+
+# Create Word document
+doc <- read_docx()
+
+doc <- body_add_par(doc, "Death Cases Narrative Summary", style = "heading 1")
+doc <- body_add_par(doc, "For Physician Review and Classification", style = "heading 2")
+
+# Add table
+doc <- body_add_flextable(doc, death_tbl)
+
+# Save
+print(doc, target = "Death_Narratives_For_Review.docx")
+
+clean_sae_df <- clean_sae_df %>% 
+    mutate(
+        infant_cause_category =  case_when(
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("milk.*nose|milk.*mouth|foam.*mouth|foam.*nose|frothing|choking|aspiration", ignore_case = TRUE)) ~ "Respiratory failure / Aspiration",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("vomiting blood|gastrointestinal bleeding|peptic ulcer", ignore_case = TRUE)) ~ "Gastrointestinal bleeding / Peptic ulcer complications",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("breathing|respiratory|asphyxia", ignore_case = TRUE)) ~ "Respiratory complications",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("infection|sepsis", ignore_case = TRUE)) ~ "Infection / Sepsis",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("hemorrhage|bleeding", ignore_case = TRUE)) ~ "Hemorrhage",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("fever|vomiting", ignore_case = TRUE)) ~ "Fever/Vomiting",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("congenital|malformation|birth defect|imperforate anus|hand anomaly", ignore_case = TRUE)) ~ "Congenital malformations / Birth defects",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("without signs of active movements| nor did she cry at birth|no movements|did not cry|apnea at birth|stillborn", ignore_case = TRUE)) ~ "Birth asphyxia / Intrapartum hypoxia",
+            (death_type == "Infant Death") ~ "Other / Unknown",
+            TRUE ~ NA_character_   # keep cause_of_death as NA if death_type is NA
+        ),
+        maternal_cause_category =  case_when(
+                (death_type == "Maternal Death") & str_detect(ae_narrative, regex("hemorrhage|bleeding", ignore_case = TRUE)) ~ "Hemorrhage",
+                (death_type == "Maternal Death") ~ "Other / Unknown",
+                TRUE ~ NA_character_   # keep cause_of_death as NA if death_type is NA
+        )
+    )
+
 
 # Step 2: Create a binary variable for each Event category
 
 sae_wide <- clean_sae_df %>%
     mutate(event_flag = 1) %>%  # to allow counting
-    select(record_id, Arm, Event, event_flag) %>%
+    select(record_id, death_type, Arm, Event, event_flag, infant_cause_category,
+           maternal_cause_category) %>%
     tidyr::pivot_wider(names_from = Event, values_from = event_flag, values_fill = 0) %>% 
     select(-record_id)
 
+sae_wide <- sae_wide %>%
+    relocate(death_type, .after = "Death (Infant or Maternal) ")
+
+
 # Step 3: Summarize using tbl_summary by arm
-sae_summary <- tbl_summary(
-    data = sae_wide,
-    by = Arm,
+sae_summary <- sae_wide %>% 
+    tbl_summary(by = Arm,
+        include = c(
+            "Death (Infant or Maternal) ",
+            "death_type",
+            "infant_cause_category",
+            "maternal_cause_category",
+            "Miscarriage or stillbirth (loss of pregnancy) ",
+            "New/prolonged hospitalization " ),
     type = all_continuous() ~ "continuous",
     statistic = all_continuous() ~ "{sum}",
     percent = "cell",
@@ -100,11 +176,17 @@ sae_summary <- tbl_summary(
     digits = list(
         all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
         all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
-    )
+    ),
+    label = list(
+        death_type = "Death Classification",
+        infant_cause_category = "Infants Death Cause",
+        maternal_cause_category = "Maternal Death Cause"),
+    sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
 ) %>%
     bold_labels() %>%
     #add_p() %>% 
     add_overall() %>% 
+    add_n() %>% 
     # convert from gtsummary object to gt object
     as_gt() %>%
     # modify with gt functions
