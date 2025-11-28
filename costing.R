@@ -49,7 +49,7 @@ facility_supervisions <- supervision %>%
     arrange(desc(`Total Supervisions`))
 
 # Create flextable with heading
-pm_plus_supervision <- flextable(facility_supervisions) %>%
+ft_supervision <- flextable(facility_supervisions) %>%
     add_header_lines(values = "PM+ Supervision Summary by Facility") %>%
     bg(i = ~ `Total Supervisions` < 2, j = "Total Supervisions", bg = "yellow") %>%
     color(i = ~ `Total Supervisions` < 2, j = "Total Supervisions", color = "black") %>%
@@ -592,6 +592,9 @@ pm_plus_costing <- costing %>%
     select(date, study_site, pt_id_pm, starts_with("pm"),starts_with("super"), -pm_desig, -pmass_time_in,
            -pmass_time_out, -pmsch_time_in, -pmsch_time_out, -pm_int_complete)
 
+na <-pm_plus_costing %>% 
+    filter(is.na(pm_numbr))
+
 ## Data collection table --------
 # Total N as a tibble row
 total_summary_pm <- tibble(
@@ -611,6 +614,59 @@ summary_table_pm <- bind_rows(total_summary_pm, facility_summary_pm)
 table_pm_summary <- flextable(summary_table_pm) %>%
     autofit() %>% 
     set_caption("Number of Participants for PM+")
+
+#PM+ per facility by session
+pm_session <- pm_plus_costing %>%
+    filter(!pm_number %in% "PM+ Supervision") %>% 
+    select(study_site, pm_number)
+
+session_table <- pm_session %>%
+    group_by(study_site, pm_number) %>%
+    summarise(n = n(), .groups = "drop") %>%
+    pivot_wider(
+        names_from = pm_number,
+        values_from = n,
+        values_fill = 0
+    )
+
+session_table <- session_table %>%
+    bind_rows(
+        session_table %>%
+            summarise(
+                study_site = "TOTAL",
+                across(-study_site, sum)
+            )
+    )
+
+
+# --- Make GT table ---
+gt_session_table <- session_table %>%
+    gt() %>%
+    
+    # ---- BOLD the TOTAL row ----
+tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_body(
+        rows = study_site == "TOTAL"
+    )
+) %>%
+    
+    # ---- Add heading ----
+tab_header(
+    title = md("*PM+ Sessions Completed by Facility*")
+) %>%
+    
+    # Format numbers
+    fmt_number(
+        columns = where(is.numeric),
+        decimals = 0
+    ) %>%
+    
+    tab_options(
+        table.font.size = px(12),
+        data_row.padding = px(3)
+    )
+
 
 ## Time table ---------
 pm_plus_costing <- pm_plus_costing %>%
