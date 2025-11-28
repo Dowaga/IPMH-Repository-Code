@@ -159,6 +159,12 @@ not_enrolled %>%
 
 \newpage
 
+## Overall Retention Summary
+```{r retention number source, echo=FALSE, message=FALSE, warning=FALSE}
+source("RCT Retention.R")
+ft_overall
+```
+
 ## Enrollment Per Facility
 
 ```{r Summary of Study Enrollment by Facility, echo=FALSE, message=FALSE, warning=FALSE}
