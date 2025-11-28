@@ -592,8 +592,6 @@ pm_plus_costing <- costing %>%
     select(date, study_site, pt_id_pm, starts_with("pm"),starts_with("super"), -pm_desig, -pmass_time_in,
            -pmass_time_out, -pmsch_time_in, -pmsch_time_out, -pm_int_complete)
 
-na <-pm_plus_costing %>% 
-    filter(is.na(pm_numbr))
 
 ## Data collection table --------
 # Total N as a tibble row
