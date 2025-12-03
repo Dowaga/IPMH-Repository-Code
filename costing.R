@@ -62,6 +62,11 @@ activity_summary <- costing %>%
     group_by(study_site, activity_type) %>%
     summarise(n = n(), .groups = "drop")
 
+ukwala <- costing %>%
+    filter(study_visit == "Audit and feedback") %>% 
+    filter(activity_type %in% c("Audit and Feedback", "Health Talk")) %>% 
+    filter(study_site == "Ukwala Sub County Hospital") %>% 
+    filter(activity_type == "Health Talk")
 
 activity_summary <- activity_summary %>%
     pivot_wider(
@@ -912,6 +917,14 @@ negive <- audit_feedback_costing %>%
     filter(af_total_duration < 0)
 
 # Summarize designation choices per facility for selected activities
+wrong_designation <- audit_feedback_costing %>% 
+    filter(
+        !is.na(af_analysis_desig) & af_analysis_desig != "Data manager"|
+            !is.na(af_develop_desig) & af_develop_desig != "Study coordinator"|
+            !is.na(af_map_desig) & af_map_desig != "Research officer"|
+            !is.na(af_map2_desig) & af_map2_desig != "Research officer" )
+
+
 designation_summary <- audit_feedback_costing %>%
     group_by(study_site) %>%
     summarise(
