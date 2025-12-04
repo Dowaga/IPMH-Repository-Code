@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1RqVYEIYzeLzjdZUb11Fa_6CAya900NGxHsia3Z_yTxQ/edit?gid=13261372#gid=13261372"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1lpTOe8F7k6sG1gWYseb8TXEQwRsuN_O2_2cNrC_4rnY/edit?gid=13261372#gid=13261372"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -65,7 +65,7 @@ walk2(sheet_list_clean, names(sheet_list_clean), function(df, name) {
          envir = .GlobalEnv
       )
    } else {
-      message("Skipping '", name, "' â missing required columns.")
+      message("Skipping '", name, "' - missing required columns.")
    }
 })
 
@@ -77,7 +77,6 @@ delivery_dfs <- ls(pattern = "_deliveries$") |>
    setdiff(c("all_deliveries", "sheet1_deliveries")) |>
    mget()
 
-View(delivery_dfs)
 
 # Bind and clean
 all_deliveries <- imap_dfr(delivery_dfs, ~ .x %>%
@@ -415,25 +414,60 @@ ft_enrollment <- enrollment_summary %>%
     fontsize(size = 9, part = "all")
 
 # Create Word doc and add both
-doc <- read_docx()%>%
-  body_add_par("Overall Retention Summary", style = "heading 1") %>%
-    body_add_flextable(ft_overall) %>%
-    body_add_par("Six Weeks Retention Summary", style = "heading 1") %>%
-    body_add_flextable(ft_6) %>%
-    body_add_par("") %>%  # Spacer
-    body_add_par("Fourteen Weeks Retention Summary", style = "heading 1") %>%
-    body_add_flextable(ft_14)%>%
-    body_add_par("") %>%  # Spacer
-    body_add_par("Six Months Retention Summary", style = "heading 1") %>%
-    body_add_flextable(ft_6m) %>% 
-    body_add_par("Enrollment Performance Summary", style = "heading 1") %>%
-    body_add_par("Target: 1 enrollment per day per RO since 22 Sept 2025", style = "Normal") %>%
-    body_add_flextable(ft_enrollment)
 
-# Save Word file
-print(doc, target = paste0("Retention summary", 
-                           format(Sys.time(), 
-                                  "%Y-%m-%d_%H%M%S"), ".docx"))
+gt_overall <- overall_retention_tbl %>% 
+    gt() %>%
+    cols_label(
+        Visit = "Visit",
+        Window_not_closed = "Window Not Closed",
+        Expected = "Expected",
+        Attended = "Attended",
+        Percentage_attended = "Percentage Attended (%)"
+    ) %>%
+    tab_header(
+        title = "Overall Retention Summary"
+    )
+
+
+gt_6 <- wk6_facility_retention %>%
+    gt() %>%
+    tab_header(title = "Six Weeks Retention Summary")
+
+gt_14 <- wk14_facility_retention %>%
+    gt() %>%
+    tab_header(title = "Fourteen Weeks Retention Summary")
+
+gt_6m <- six_mths_facility_retention %>%
+    gt() %>%
+    tab_header(title = "Six Months Retention Summary")
+
+gt_enrollment <- enrollment_summary %>% 
+    gt() %>% 
+    cols_label(
+        Facility = "Facility",
+        Expected = "Expected",
+        Enrolled = "Enrolled",
+        `Enrollment Gap` = "Enrollment Gap"
+    ) %>% 
+    # Bold header
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels(everything())
+    ) %>% 
+    # Bold total row
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_body(rows = Facility == "Total")
+    ) %>% 
+    # Global font size
+    tab_style(
+        style = cell_text(size = px(11)),
+        locations = cells_body()
+    ) %>% 
+    tab_style(
+        style = cell_text(size = px(11)),
+        locations = cells_column_labels()
+    )
 
 
 # -----------------------------------------
