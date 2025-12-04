@@ -86,7 +86,7 @@ demo %>% tbl_summary(
                  yearcare ~ "Duration of offering care to PW in the facility (Years)",
                  hrscare ~ "Hours/week taking care of PW in the facility", 
                  wlwh ~ "Currently providing care to PW living with HIV (Yes)"),
-    missing = "no",
+    missing = "ifany",
     digits = list(all_continuous() ~ 1), 
     type = list(age_final ~ "continuous", 
                 yearjob ~ "continuous",
@@ -228,7 +228,7 @@ facility_baseline_layonly <- facility_baseline_layonly %>%
 
 ## Daily screening rate database ----------------
 daily_closeout$rct_dcr_date <- as.Date(daily_closeout$rct_dcr_date)
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-07-01")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-12-01")
 
 daily_closeout <- daily_closeout %>%
     mutate(rct_facility_name = str_replace(rct_facility_name, "Mirogi Heath Centre", "Mirogi Health Centre"))
@@ -431,7 +431,8 @@ anova(daily_model_basic_layonly, daily_model_combined_layonly)
 
 # Graphs requested by Keshet ---------------
 ## line graph of daily screening ----------
-ggplot(daily_trends, aes(x = day_number, y = screening_rate, color = study_site)) +
+ggplot(daily_trends, aes(x = day_number, y = screening_rate)) +
+    facet_wrap(~ study_site) +
     geom_line(size = 1) +
     geom_point(alpha = 0.6) +
     scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
@@ -443,7 +444,8 @@ ggplot(daily_trends, aes(x = day_number, y = screening_rate, color = study_site)
     ) +
     theme_minimal()
 
-ggplot(daily_trends, aes(x = day_number, y = screening_rate, color = study_site)) +
+ggplot(daily_trends, aes(x = day_number, y = screening_rate)) +
+    facet_wrap(~ study_site) +
     geom_point(alpha = 0.4, size = 0.8) +
     geom_smooth(method = "loess", se = FALSE, size = 1.2) +
     scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
