@@ -18,7 +18,8 @@ knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 source("REDCap_datapull.R")
 # read data
 data <- aim1quant_data %>%
-  filter(pt_id > 14999999)
+  filter(pt_id > 14999999) %>% 
+    filter(pt_id > 15010000) # for non-specialist only. If you want all HCW, remove this line
 ```
 
 ## Health Care Workers Demographics
@@ -632,7 +633,7 @@ data %>%
            dx_trt_hiv_time, dx_trt_hiv_times, dxtrt_hiv_long, 
            trt_med___1, trt_med___2, trt_med___3, trt_med___4, trt_med___5, 
            trt_diff, trt_type_hiv___2, trt_type_hiv___1, trt_type_hiv___3,
-           trt_diff_couns,  trt_hiv_other, trt_med_hiv___1,  trt_med_hiv___2, 
+           trt_med_hiv___1,  trt_med_hiv___2, 
            trt_med_hiv___3, dx_trt_who___4,
            dx_trt_who___5, dx_trt_who___1, dx_trt_who___2, 
            dx_trt_who___6, dx_trt_who___7, dx_trt_who___8, dx_trt_who___12,
@@ -710,8 +711,6 @@ data %>%
             dx_way_other ~ "Other tools usedto diagnosis PMAD among PW",
             trt_other ~ "Other PMAD treatments used",
             trt_other_now ~ "Other PMAD treatments used in the current facility",
-            trt_diff_couns ~ "Different types of manualized counselling among PWLHIV",
-             trt_hiv_other ~ "Other types of treatment different among PWLHIV",
             trt_who_other ~ "Others who should diagnose or treat PW with PMAD in this facility",
             dxtrt_who_other_hiv ~ "Others who should diagnose or treat PWLHIV with PMAD in this facility" )) %>%
     modify_caption("**Diagnosis and Treatment**") %>%
@@ -1762,7 +1761,7 @@ stats <- stats %>%
                                          "incentive" = "Incentive: Provide financial incentives to HCWs",
                                          "chv" = "CHV: Involve community health promoters",
                                          "partner" = "Partner: Encourage male partner involvement",
-                                         "info" = "Info: Provide IPMH information and reassurance \nat the triage desk to ensure confidentiality"))
+                                         "info" = "Info: Provide IPMH information and reassurance \nat the triage desk"))
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
