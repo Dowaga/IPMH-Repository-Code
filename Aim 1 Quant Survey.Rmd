@@ -1511,7 +1511,7 @@ stats <- stats %>%
                                         "partner" = "Partner: Lack of partner involvement"))
                                         
 
-ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
+p_all <- ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
   geom_point(aes(color = barrier_detail, size = se_average), shape =1) + 
   scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
   scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
@@ -1537,6 +1537,166 @@ ggplot(stats, aes(x = mean_importance, y = mean_addressability)) +
         legend.position = "bottom",
         plot.margin = margin(1, 1, 1, 1, "cm"))
 
+```
+
+
+```{r subgroup analysis}
+# --- 1) Subset IPMH items ---
+ipmh_hcw <- data %>% 
+  select(record_id, starts_with("ipmh_"), starts_with("hcw_job___"))
+
+ipmh_screen <- ipmh_hcw %>% 
+  select(record_id, starts_with("ipmh_scre_"), starts_with("hcw_job___"))
+
+# --- 2) Create hcw_job and provider_type (lay vs formally trained) ---
+ipmh_screen <- ipmh_screen %>%
+  mutate(
+    hcw_job = case_when(
+      hcw_job___1  == "Checked" ~ "Medical officer",
+      hcw_job___2  == "Checked" ~ "Psychiatrists",
+      hcw_job___3  == "Checked" ~ "Obstetrician/gynaecologist",
+      hcw_job___4  == "Checked" ~ "Clinical officer",
+      hcw_job___5  == "Checked" ~ "Nurses",
+      hcw_job___6  == "Checked" ~ "Psychologist",
+      hcw_job___7  == "Checked" ~ "Mental health social worker",
+      hcw_job___8  == "Checked" ~ "Other social worker",
+      hcw_job___9  == "Checked" ~ "HTS counsellor",
+      hcw_job___10 == "Checked" ~ "Community health worker",
+      hcw_job___11 == "Checked" ~ "Mentor mother",
+      hcw_job___12 == "Checked" ~ "Other",
+      TRUE ~ NA_character_
+    ),
+    hcw_job = fct_relevel(
+      factor(hcw_job),
+      "Medical officer", "Psychiatrists", "Obstetrician/gynaecologist",
+      "Clinical officer", "Nurses", "Psychologist",
+      "Mental health social worker", "Other social worker",
+      "HTS counsellor", "Community health worker", "Mentor mother", "Other"
+    ),
+    provider_type = case_when(
+      hcw_job %in% c("HTS counsellor", "Mentor mother") ~ "Lay providers",
+      !is.na(hcw_job) ~ "Formally trained providers",
+      TRUE ~ NA_character_
+    ),
+    provider_type = factor(provider_type,
+                           levels = c("Lay providers", "Formally trained providers"))
+  )
+
+# --- 3) Barrier dataset + missing handling (99) ---
+ipmh_screen_barrier <- ipmh_screen %>% 
+  select(record_id, provider_type, ipmh_scre_barrier_other, matches("ipmh_scre_.*(bar|add).*")) %>%
+  mutate(across(where(is.numeric), ~ na_if(., 99)))
+
+# --- 4) Long format + harmonize response options ---
+long_data <- ipmh_screen_barrier %>%
+  pivot_longer(
+    cols = -c(record_id, provider_type, ipmh_scre_barrier_other),
+    names_to = c("type", "barrier"),
+    names_pattern = "ipmh_scre_(.*)_(.*)"
+  ) %>%
+  mutate(
+    value_1 = case_when(
+      value == "Not applicable" ~ NA_real_,
+      value %in% c("Not at all addressable", "Not at all") ~ 1,
+      value %in% c("Somewhat addressable", "A little") ~ 2,
+      value %in% c("Addressable", "Somewhat") ~ 3,
+      value %in% c("Very addressable", "Very much") ~ 4,
+      TRUE ~ NA_real_
+    )
+  ) %>%
+  filter(!is.na(provider_type))  # keep only records with a provider type
+
+# --- 5) Subgroup stats (means and SEs by provider_type) ---
+stats_subgroup <- long_data %>%
+  group_by(provider_type, barrier, type) %>%
+  summarise(
+    mean_value = mean(value_1, na.rm = TRUE),
+    se_value   = sd(value_1, na.rm = TRUE) / sqrt(sum(!is.na(value_1))),
+    n_nonmiss  = sum(!is.na(value_1)),
+    .groups    = "drop"
+  ) %>%
+  pivot_wider(names_from = type, values_from = c(mean_value, se_value, n_nonmiss)) %>%
+  rename(
+    mean_importance     = mean_value_bar,
+    se_importance       = se_value_bar,
+    n_importance        = n_nonmiss_bar,
+    mean_addressability = mean_value_add,
+    se_addressability   = se_value_add,
+    n_addressability    = n_nonmiss_add
+  ) %>%
+  mutate(se_average = (se_importance + se_addressability) / 2) %>%
+  mutate(
+    barrier_detail = dplyr::recode(
+      barrier,
+      "reach"     = "Reach: Lay providers do not reach\nall PPW coming to the facility",
+      "workload"  = "Workload: Increased staff workload",
+      "staff"     = "Staff: Shortage of staff",
+      "incentive" = "Incentive: Lack of financial incentives to motivate HCW",
+      "flow"      = "Flow: Complex flow from screening to getting PM+,\nleading to loss of patients",
+      "confi"     = "Confi: Fear of breach of confidentiality",
+      "long"      = "Long: Lengthening of patient visits",
+      "partner"   = "Partner: Lack of partner involvement",
+      .default    = barrier
+    )
+  )
+
+# --- 6) Plot function (subgroup-specific cutoffs) ---
+plot_prioritization <- function(df, title_text) {
+
+  cutoff_importance <- mean(df$mean_importance, na.rm = TRUE)
+  cutoff_address    <- mean(df$mean_addressability, na.rm = TRUE)
+
+  ggplot(df, aes(x = mean_importance, y = mean_addressability)) +
+    geom_point(aes(color = barrier_detail, size = se_average), shape = 1) +
+    geom_text_repel(aes(label = barrier, color = barrier_detail), size = 4) +
+    scale_x_continuous(breaks = 1:4, limits = c(1, 4)) +
+    scale_y_continuous(breaks = 1:4, limits = c(1, 4)) +
+    geom_hline(yintercept = cutoff_address, linetype = "dashed", color = "grey") +
+    geom_vline(xintercept = cutoff_importance, linetype = "dashed", color = "grey") +
+    annotate("text", x = cutoff_importance, y = 4,
+             label = paste0("Cutoff: ", round(cutoff_importance, 2)),
+             hjust = -0.1, size = 3.5) +
+    annotate("text", x = 1.1, y = cutoff_address,
+             label = paste0("Cutoff: ", round(cutoff_address, 2)),
+             vjust = -1, size = 3.5) +
+    labs(
+      title = title_text,
+      x = "Importance",
+      y = "Addressability",
+      color = "Barrier detail",
+      size = "Average SE"
+    ) +
+    guides(
+      size = "none",
+      color = guide_legend(ncol = 2, override.aes = list(shape = 16, size = 6))
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.y = element_text(size = 12),
+      axis.text.x = element_text(size = 12),
+      axis.title.y = element_text(size = 12, face = "bold"),
+      axis.title.x = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 18, face = "bold"),
+      legend.text = element_text(size = 10),
+      legend.direction = "vertical",
+      legend.position = "bottom",
+      plot.margin = margin(1, 1, 1, 1, "cm")
+    )
+}
+
+# --- 7) Two subgroup plots ---
+p_lay <- plot_prioritization(
+  stats_subgroup %>% filter(provider_type == "Lay providers"),
+  "Barrier prioritization for IPMH screening: Lay providers"
+)
+
+p_formal <- plot_prioritization(
+  stats_subgroup %>% filter(provider_type == "Formally trained providers"),
+  "Barrier prioritization for IPMH screening: Formally trained providers"
+)
+
+p_lay
+p_formal
 ```
 
 
