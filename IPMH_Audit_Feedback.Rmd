@@ -11,7 +11,7 @@ rm(list = ls())
 source("Audit and feedback script.R")
 ```
 
-This script generates the audit and feedback report for each facility based on the calendar months. For the third audit and feedback session, we will report statistics from Sept 1st to Nov 31st. Data from the report should be abstracted for each facility and put into the slide template.
+This script generates the audit and feedback report for each facility based on the calendar months. For the fifth audit and feedback session, we will report statistics from October 1st to December 31st. Data from the report should be abstracted for each facility and put into the slide template.
 
 # 1. PHQ2 and GAD2 Screening Rate Per Facility (Per month & October - December Combined)
 
