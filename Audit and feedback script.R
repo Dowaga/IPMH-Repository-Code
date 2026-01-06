@@ -38,19 +38,19 @@ rct_ppw <- rct_ppw %>%
 pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$tele_date)
 
-#time period for the data [2025-11-30, 2025-09-01]
+#time period for the data [2025-12-31, 2025-10-01]
 pm_all <- pm
 rct_ppw_all <- rct_ppw
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-11-30")
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date >= "2025-09-01")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2025-11-30")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date >= "2025-09-01")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-11-30")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp >= "2025-09-01")
-pm <- pm %>% filter(pm_date <= "2025-11-30")
-pm <- pm %>% filter(pm_date >= "2025-09-01")
-telepsych <- telepsych %>% filter(tele_date <= "2025-11-30")
-telepsych <- telepsych %>% filter(tele_date >= "2025-09-01")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-12-31")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date >= "2025-10-01")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2025-12-31")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date >= "2025-10-01")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-12-31")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp >= "2025-10-01")
+pm <- pm %>% filter(pm_date <= "2025-12-31")
+pm <- pm %>% filter(pm_date >= "2025-10-01")
+telepsych <- telepsych %>% filter(tele_date <= "2025-12-31")
+telepsych <- telepsych %>% filter(tele_date >= "2025-10-01")
 
 
 #uniform study site number for all datasets
@@ -290,7 +290,7 @@ pm_referral <- rct_ppw_int %>%
     filter(abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes") %>% 
     mutate(clt_date = ymd(clt_date)) %>%
     #filter referral based on audit period
-  filter(between(clt_date, ymd("2025-09-01"), ymd("2025-11-30")))
+  filter(between(clt_date, ymd("2025-10-01"), ymd("2025-12-31")))
 
 pm_referral <- pm_referral %>%
     mutate(day = floor_date(clt_timestamp, "day")) %>%
@@ -304,6 +304,7 @@ pm_referral <- full_join(pm_referral, phq9_high_scores,
 #calculate referral rate
 pm_referral <- pm_referral %>%
     mutate(referral_rate = num_referred / total_high_scores * 100)
+
 #### based on the abstraction form, there are three participants being referred to PM+ but their score is not high enough to be referred.
 
 
@@ -498,7 +499,9 @@ telepsych_initiation_monthly <- full_join(telepsych_initiation, telepsych_referr
                                            by = c("study_site" = "clt_study_site", "month" = "month"))
 
 #change num_initiated to 0 if NA
-telepsych_initiation_monthly[is.na(telepsych_initiation_monthly)] <- 0
+telepsych_initiation_monthly <- telepsych_initiation_monthly %>%
+    mutate(num_initiated = if_else(is.na(num_initiated), 0, num_initiated))
+
 
 #calculate initiation rate
 telepsych_initiation_monthly <- telepsych_initiation_monthly %>%
@@ -518,7 +521,8 @@ telepsych_initiation_total <- full_join(telepsych_initiation_total, telepsych_re
                                          by = c("study_site" = "clt_study_site"))
 
 #change num_initiated to 0 if NA
-telepsych_initiation_total[is.na(telepsych_initiation_total)] <- 0
+telepsych_initiation_total <- telepsych_initiation_total %>%
+    mutate(num_initiated = if_else(is.na(num_initiated), 0, num_initiated))
 
 #calculate initiation rate
 telepsych_initiation_total <- telepsych_initiation_total %>%
