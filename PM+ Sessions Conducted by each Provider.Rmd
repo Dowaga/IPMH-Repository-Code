@@ -17,7 +17,8 @@ source("data_import.R")
 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-pm_follow_up <- pm_survey_df
+pm_follow_up <- pm_survey_df %>%
+  filter(!is.na(pm_facility))
 
 ```
 
@@ -96,6 +97,5 @@ filename <- paste0("PM+ Session Summary by Facility - ", today, ".docx")
 
 # Save the document
 print(doc, target = filename)
-
 
 ```
