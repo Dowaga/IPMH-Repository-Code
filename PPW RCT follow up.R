@@ -10,7 +10,7 @@
 
 
 # Setup ------------------------------------------------------------------------
-# rm(list = ls())
+ rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
@@ -473,7 +473,7 @@ outcomes <- outcomes %>%
     )) %>% 
     mutate(across(
         .cols = c(qol_sleep, qol_perf, qol_cap, qol_self, qol_rel, qol_sex,
-                  qol_sup, qol_con_, qol_serv, qol_trans),
+                  qol_sup, qol_con, qol_serv, qol_trans),
         .fns = ~ case_when(
             . == "Very dissatisfied" ~ 1,
             . == "Dissatisfied" ~ 2,
@@ -502,7 +502,7 @@ outcomes <- outcomes %>%
                qol_self_number + qol_blue_number,
            qol_social = qol_rel_number + qol_sex_number + qol_sup_number,
            qol_environ = qol_safe_number + qol_env_number + qol_money_number + qol_info_number +
-               qol_leis_number + qol_con__number + qol_trans_number + qol_serv_number
+               qol_leis_number + qol_con_number + qol_trans_number + qol_serv_number
     )
 
 #scoring instruction: https://depts.washington.edu/seaqol/docs/WHOQOL-BREF%20and%20Scoring%20Instructions.pdf
@@ -517,7 +517,7 @@ psych_items <- c("qol_enjoy_number", "qol_mean_number", "qol_conc_number",
 social_items <- c("qol_rel_number", "qol_sex_number", "qol_sup_number")
 
 env_items <- c("qol_safe_number", "qol_env_number", "qol_money_number",
-               "qol_info_number", "qol_leis_number", "qol_con__number",
+               "qol_info_number", "qol_leis_number", "qol_con_number",
                "qol_trans_number", "qol_serv_number")
 
 # Impute physical domain
