@@ -53,23 +53,23 @@ head(token_df)
 # write.csv(aim1qual_consenting, paste0(ipmh_filepath,"/Data/2. Consenting database/Aim1_qual_",Sys.Date(),".csv"))
 
 
-# #Aim1 qual demographics database---------------------
-# # Set file paths: Use this section to set input and output filepaths
-# data_aim1qual_demo_dir <- file.path(ipmh_filepath, "/Data/3. Aim 1 qualitative demo")
-# 
-# # Create a REDCap database connection ###
-# httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
-# 
-# redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
-#                             token = aim1qual_demo_token) 
-# 
-# ### Import the REDCap dataset ###
-# aim1qual_demo <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
-#                                           records = NULL, events = NULL, survey = FALSE, factors = FALSE, 
-#                                           dag = FALSE, checkboxLabels = TRUE)
-# 
-# ### Creating datafile ###
-# write.csv(aim1qual_demo, paste0(ipmh_filepath,"/Data/3. Aim 1 qualitative demo/Aim1_qual_demo_",Sys.Date(),".csv"))
+#Aim1 qual demographics database---------------------
+# Set file paths: Use this section to set input and output filepaths
+data_aim1qual_demo_dir <- file.path(ipmh_filepath, "/Data/3. Aim 1 qualitative demo")
+
+# Create a REDCap database connection ###
+httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
+
+redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+                            token = aim1qual_demo_token)
+
+### Import the REDCap dataset ###
+aim1qual_demo <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL,
+                                          records = NULL, events = NULL, survey = FALSE, factors = FALSE,
+                                          dag = FALSE, checkboxLabels = TRUE)
+
+### Creating datafile ###
+write.csv(aim1qual_demo, paste0(ipmh_filepath,"/Data/3. Aim 1 qualitative demo/Aim1_qual_demo_",Sys.Date(),".csv"))
 
 
 
@@ -94,23 +94,23 @@ head(token_df)
 
 
 # #Aim 1 quant survey database-------------------------
-# # Set file paths: Use this section to set input and output filepaths
-# data_aim1quant_data_dir <- file.path(ipmh_filepath, "/Data/4. Aim 1 quantitative data")
-# 
-# # Create a REDCap database connection ###
-# httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
-# 
-# redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
-#                             token = aim1quant_data_token) 
-# 
-# ### Import the REDCap dataset ###
-# aim1quant_data <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
-#                                     records = NULL, events = NULL, survey = FALSE, factors = FALSE, 
-#                                     dag = FALSE, checkboxLabels = TRUE)
-# 
-# ### Creating datafile ###
-# write.csv(aim1quant_data, paste0(ipmh_filepath,"/Data/4. Aim 1 quantitative data/Aim1_quant_data_",Sys.Date(),".csv"))
-# 
+# Set file paths: Use this section to set input and output filepaths
+data_aim1quant_data_dir <- file.path(ipmh_filepath, "/Data/4. Aim 1 quantitative data")
+
+# Create a REDCap database connection ###
+httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
+
+redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+                            token = aim1quant_data_token)
+
+### Import the REDCap dataset ###
+aim1quant_data <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL,
+                                    records = NULL, events = NULL, survey = FALSE, factors = FALSE,
+                                    dag = FALSE, checkboxLabels = TRUE)
+
+### Creating datafile ###
+write.csv(aim1quant_data, paste0(ipmh_filepath,"/Data/4. Aim 1 quantitative data/Aim1_quant_data_",Sys.Date(),".csv"))
+
 # 
 
 # #Aim 1 facility checklist database--------------------
