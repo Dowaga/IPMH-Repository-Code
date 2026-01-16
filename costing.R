@@ -1089,7 +1089,10 @@ doc <- read_docx()%>%
     body_add_par("") 
 
 # Save Word file
-print(doc, target = paste0("Time and Motion QCs", 
-                           format(Sys.time(), 
-                                  "%Y-%m-%d_%H%M%S"), ".docx"))
-
+print(
+    doc,
+    target = file.path("C:/Users/hp/OneDrive/Desktop/IPMH/Time and Motion (Costing)",
+                       paste0("Time and Motion QCs ",
+                              format(Sys.time(), "%Y-%m-%d_%H%M%S"),
+                              ".docx"))
+)
