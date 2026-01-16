@@ -49,9 +49,14 @@ mo_history <- mo_history %>%
 
 mo_history <- mo_history %>% 
     mutate(med_pastdiag_othrspec = case_when(
-        str_detect(med_pastdiag_othrspec, "(?i)anemia|Anemia in pregnancy") ~ "Anaemia",
-        str_detect(med_pastdiag_othrspec, "(?i)asthmatic") ~ "Asthma",
-        str_detect(med_pastdiag_othrspec, "(?i)pneumonia and ulcers") ~ "Ulcers",
+        str_detect(med_pastdiag_othrspec, "(?i)anemia|Anemia in pregnancy|Anaemia in pregnancy|
+                   Severe Anaemia|Savere Anaemia") ~ "Anaemia",
+        str_detect(med_pastdiag_othrspec, "(?i)asthmatic|Asthma|Pneumonia") ~ "Respiratory",
+        str_detect(med_pastdiag_othrspec, "(?i)pneumonia and ulcers|Ulcers") ~ "Gastrointestinal",
+        str_detect(med_pastdiag_othrspec, "(?i)Backache") ~ "Muskuloskeletal",
+        str_detect(med_pastdiag_othrspec, "(?i)Bleeding during pregnancy") ~ "Obstetric",
+        str_detect(med_pastdiag_othrspec, "(?i)Hepatitis|Hepatitis") ~ "Obstetric",
+        str_detect(med_pastdiag_othrspec, "(?i)UTI") ~ "Urinary Tract Infections",
         TRUE ~ med_pastdiag_othrspec  # Keep other values unchanged
     ),
     med_preg_multi = if_else(med_num_preg > 1, 1, 0),
@@ -141,11 +146,14 @@ pregnancies_number_QCs <- mo_history %>%
 still_misc <- mo_history %>% 
     filter(med_pre_preg == "Yes" & is.na(had_stillbirth))
 
-
 # Save to Excel in the working directory
 write.xlsx(
     pregnancies_number_QCs,
-    file = paste0("Current Pregnancy Counts QCs ", Sys.Date(), ".xlsx")
+    file = file.path(
+        "C:/Users/hp/OneDrive/Desktop/IPMH/QCs",
+        paste0("Current Pregnancy Counts QCs ", Sys.Date(), ".xlsx")
+    )
 )
+
 
 
