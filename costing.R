@@ -623,6 +623,7 @@ pm_session <- pm_plus_costing %>%
     filter(!pm_number %in% "PM+ Supervision") %>% 
     select(study_site, pm_number)
 
+
 session_table <- pm_session %>%
     group_by(study_site, pm_number) %>%
     summarise(n = n(), .groups = "drop") %>%
@@ -768,6 +769,51 @@ pm_summary_table <- pm_plus_costing %>%
     tab_options(
         table.font.size = px(14))
 
+# PM+ duration----
+pm_ave_time <- pm_plus_costing %>% 
+    filter(pm_number %in% c ('Session 1','Session 2', 'Session 3','Session 4', 'Session 5')) %>% 
+    mutate( pm1_duration = as.numeric(pm1_time_out - pm1_time_in)*1440, 
+            pm2_duration = as.numeric(pm2_time_out - pm2_time_in)*1440, 
+            pm3_duration = as.numeric(pm3_time_out - pm3_time_in)*1440, 
+            pm4_duration = as.numeric(pm4_time_out - pm4_time_in)*1440, 
+            pm5_duration = as.numeric(pm5_time_out - pm5_time_in)*1440, 
+            total_time = pm1_duration + pm2_duration + pm3_duration + pm4_duration + pm5_duration)
+
+# Average duration per session
+pm_duration_table <- pm_ave_time %>%
+    select(pm1_duration, pm2_duration, pm3_duration, 
+           pm4_duration, pm5_duration) %>%
+    tbl_summary(
+        statistic = list(
+            all_continuous() ~ "{mean} ({sd})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        type = list(
+            pm1_duration = "continuous",
+            pm2_duration = "continuous",
+            pm3_duration = "continuous",
+            pm4_duration = "continuous",
+            pm5_duration = "continuous"),
+        label = list(
+            pm1_duration = "PM+ Session 1 Duration (min)",
+            pm2_duration = "PM+ Session 2 Duration (min)",
+            pm3_duration = "PM+ Session 3 Duration (min)",
+            pm4_duration = "PM+ Session 4 Duration (min)",
+            pm5_duration = "PM+ Session 5 Duration (min)"
+        ),
+        digits = all_continuous() ~ 1,
+        missing = "no"
+    ) %>%
+    add_n() %>%
+    bold_labels() %>% 
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Observed Session Durations Across PM+ Participants") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
 
 # telepsychiatry ------------------
 telepsychiatry_costing <- costing %>%
