@@ -63,6 +63,10 @@ table_pm_summary
 pm_summary_table
 ```
 
+
+```{r Average duration per session, echo=FALSE, warning = FALSE, message=FALSE}
+pm_duration_table
+```
 \pagebreak
 
 ## Telepsychiatry
