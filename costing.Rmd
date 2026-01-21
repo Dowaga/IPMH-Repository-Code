@@ -19,6 +19,27 @@ source("Costing.R")
 
 ```
 
+
+## First Data collection
+```{r}
+#---------------------------------------------------------------------------
+# Enrollment Dates
+first_last <- costing %>% mutate(date = ymd(str_remove(date, "EAT")) %>% force_tz(tzone = "Africa/Nairobi")) %>% filter(!is.na(date)) %>% summarise(`First Enrollment` = min(date, na.rm = TRUE), `Last Enrollment` = max(date, na.rm = TRUE))%>% 
+    gt() %>%
+  tab_header(
+    title = "Enrollment Timeline",
+    subtitle = "Earliest and Latest Recorded Dates"
+  ) %>%
+  fmt_date(
+    columns = c(`First Enrollment`, `Last Enrollment`),
+    date_style = 3   # e.g., "Jun 26, 2025"
+  )
+
+first_last
+```
+
+
+
 ## Initial Screening & Enrollment
 
 ```{r initial-screening-enrollment, echo=FALSE, warning = FALSE, message=FALSE}
