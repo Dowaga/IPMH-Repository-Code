@@ -20,10 +20,9 @@ source("Costing.R")
 ```
 
 
-## First Data collection
-```{r}
-#---------------------------------------------------------------------------
-# Enrollment Dates
+## Enrollment Timelines
+```{r enro timelines, echo=FALSE, message=FALSE, warning=FALSE}
+
 first_last <- costing %>% mutate(date = ymd(str_remove(date, "EAT")) %>% force_tz(tzone = "Africa/Nairobi")) %>% filter(!is.na(date)) %>% summarise(`First Enrollment` = min(date, na.rm = TRUE), `Last Enrollment` = max(date, na.rm = TRUE))%>% 
     gt() %>%
   tab_header(
