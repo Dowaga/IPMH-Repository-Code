@@ -13,22 +13,22 @@ source("Dependencies.R") # Where we store all needed R packages
 
 # Where we refer to token
 token_df <- read.csv(file.path (ipmh_filepath, "/Data/Tokens.csv"))
-aim1qual_consenting_token <- token_df[1,2]
-aim1qual_demo_token <- token_df[2,2]
-aim1quant_consenting_token <- token_df[3,2]
-aim1quant_data_token <-token_df[4,2]
-aim1_facilitychecklist_token <- token_df[5,2]
-rct_hcw_token <- token_df[6,2]
-rct_hcw_consenting_token <- token_df[7,2]
-rct_ppw_consenting_token <- token_df[8,2]
-rct_ppw_token <- token_df[9,2]
-daily_closeout_token <- token_df[10,2]
-equip_hcw_token <- token_df[11,2]
-equip_ro_token <- token_df[12,2]
-phq2_gad2_abstract_token <- token_df[13,2]
-pm_token <- token_df[14,2]
-telepsych_token <- token_df[15,2]
-costing_token <- token_df[16,2]
+aim1qual_consenting_token <- token_df[1,3]
+aim1qual_demo_token <- token_df[2,3]
+aim1quant_consenting_token <- token_df[3,3]
+aim1quant_data_token <-token_df[4,3]
+aim1_facilitychecklist_token <- token_df[5,3]
+rct_hcw_token <- token_df[6,3]
+rct_hcw_consenting_token <- token_df[7,3]
+rct_ppw_consenting_token <- token_df[8,3]
+rct_ppw_token <- token_df[9,3]
+daily_closeout_token <- token_df[10,3]
+equip_hcw_token <- token_df[11,3]
+equip_ro_token <- token_df[12,3]
+phq2_gad2_abstract_token <- token_df[13,3]
+pm_token <- token_df[14,3]
+telepsych_token <- token_df[15,3]
+costing_token <- token_df[16,3]
 
 # Display the first few rows of the dataframe to confirm successful loading
 head(token_df)
