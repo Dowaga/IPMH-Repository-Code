@@ -41,7 +41,7 @@ head(token_df)
 # # Create a REDCap database connection ###
 # httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 # 
-# redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+# redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
 #                             token = aim1qual_consenting_token) 
 # 
 # ### Import the REDCap dataset ###
@@ -60,7 +60,7 @@ data_aim1qual_demo_dir <- file.path(ipmh_filepath, "/Data/3. Aim 1 qualitative d
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = aim1qual_demo_token)
 
 ### Import the REDCap dataset ###
@@ -80,7 +80,7 @@ write.csv(aim1qual_demo, paste0(ipmh_filepath,"/Data/3. Aim 1 qualitative demo/A
 # # Create a REDCap database connection ###
 # httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 # 
-# redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+# redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
 #                             token = aim1quant_consenting_token) 
 # 
 # ### Import the REDCap dataset ###
@@ -100,7 +100,7 @@ data_aim1quant_data_dir <- file.path(ipmh_filepath, "/Data/4. Aim 1 quantitative
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = aim1quant_data_token)
 
 ### Import the REDCap dataset ###
@@ -120,7 +120,7 @@ write.csv(aim1quant_data, paste0(ipmh_filepath,"/Data/4. Aim 1 quantitative data
 # # Create a REDCap database connection ###
 # httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 # 
-# redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+# redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
 #                             token = aim1_facilitychecklist_token) 
 # 
 # ### Import the REDCap dataset ###
@@ -139,7 +139,7 @@ data_rct_hcw_dir <- file.path(ipmh_filepath, "/Data/5. RCT HCW data")
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = rct_hcw_token)
 
 ### Import the REDCap dataset ###
@@ -158,7 +158,7 @@ data_rct_hcw_consenting_dir <- file.path(ipmh_filepath, "/Data/2. Consenting dat
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = rct_hcw_consenting_token)
 
 ### Import the REDCap dataset ###
@@ -177,7 +177,7 @@ data_rct_ppw_dir <- file.path(ipmh_filepath, "/Data/6. RCT PPW data")
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = rct_ppw_token)
 
 ### Import the REDCap dataset ###
@@ -196,7 +196,7 @@ data_rct_ppw_consenting_dir <- file.path(ipmh_filepath, "/Data/2. Consenting dat
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = rct_ppw_consenting_token)
 
 ### Import the REDCap dataset ###
@@ -216,7 +216,7 @@ data_daily_closeout_dir <- file.path(ipmh_filepath, "/Data/7. RCT admin data")
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon <- redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon <- redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = daily_closeout_token)
 
 ### Import the REDCap dataset ###
@@ -236,7 +236,7 @@ write.csv(daily_closeout, paste0(ipmh_filepath,"/Data/7. RCT admin data/Daily_cl
 # # Create a REDCap database connection ###
 # httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 # 
-# redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+# redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
 #                             token = equip_hcw_token)
 # 
 # ### Import the REDCap dataset ###
@@ -255,7 +255,7 @@ write.csv(daily_closeout, paste0(ipmh_filepath,"/Data/7. RCT admin data/Daily_cl
 # # Create a REDCap database connection ###
 # httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 # 
-# redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+# redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
 #                             token = equip_ro_token)
 # 
 # ### Import the REDCap dataset ###
@@ -275,7 +275,7 @@ data_phq2_gad2_abstract_dir <- file.path(ipmh_filepath, "/Data/7. RCT admin data
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = phq2_gad2_abstract_token)
 
 ### Import the REDCap dataset ###
@@ -294,7 +294,7 @@ data_pm_dir <- file.path(ipmh_filepath, "/Data/7. RCT admin data")
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = pm_token)
 
 ### Import the REDCap dataset ###
@@ -314,7 +314,7 @@ data_telepsych_dir <- file.path(ipmh_filepath, "/Data/7. RCT admin data")
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = telepsych_token)
 
 ### Import the REDCap dataset ###
@@ -334,7 +334,7 @@ costing_dir <- file.path(ipmh_filepath, "/Data/9. Costing data")
 # Create a REDCap database connection ###
 httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when creating connection
 
-redcapcon<-redcapConnection(url='https://online.knh.or.ke:8446/redcap/api/',
+redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = costing_token)
 
 ### Import the REDCap dataset ###
