@@ -47,7 +47,8 @@ packages <- c("redcapAPI",
               "flextable",
               "googledrive", 
               "googlesheets4", 
-              "readxl")
+              "readxl",
+              "ggpubr")
 
 
 # Check for duplicates in list 
