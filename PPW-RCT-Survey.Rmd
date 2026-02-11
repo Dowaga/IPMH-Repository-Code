@@ -25,7 +25,7 @@ Altogether, we currently have data for `r ppw_rct_df$clt_ptid %>% unique() %>% l
 # check the IDs in the consenting database
 
 consent_df <- screening_consent_df %>% 
-    filter(ipmh_rct_enrollment_consent_v50_complete == "Complete")
+    filter(ipmh_rct_enrollment_consent_v50_complete == "Complete"|ipmh_rct_enrollment_consent_v60_complete == "Complete")
 
 consent_id <-consent_df %>% 
     select(partipant_id) %>% 
@@ -158,11 +158,10 @@ not_enrolled %>%
 ```
 
 \newpage
-
 ## Overall Retention Summary
 ```{r retention number source, echo=FALSE, message=FALSE, warning=FALSE}
 source("RCT Retention.R")
-ft_overall
+gt_overall
 ```
 
 ## Enrollment Per Facility
@@ -190,23 +189,11 @@ Enrollments <- screening_consent_df %>%
 Enrollments
 ```
 
+
 ```{r Weekly Enrollment Trends, message=FALSE, warning=FALSE, include=FALSE}
 
 #source("Enrollment Progress.R")
 #figure_1
-```
-
-## Follow-up Tracking Per Facility
-
-```{r Follow-up Tracking, echo=FALSE, message=FALSE, warning=FALSE}
-#source("PPW RCT follow up.R")
-#kable(combined_summary, 
-# HEAD
-     # caption = "Summary of Follow-up Tracking by Facility")
-
-    #  caption = "Summary of Follow-up Tracking by Facility")
-# 1dacc39f1c7b2e1bb3d9caa0c5f28432e9db8843
-
 ```
 
 \newpage
@@ -752,6 +739,13 @@ table6
 ```{r PM+ Participation, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```
+# Interim Analysis Person-Time Summary
+\newpage
+```{r Interim analysis person-Time}
+source("IPMH - Interim Analysis Person-Time Summary.R")
+summary
+```
+
 
 \newpage
 # Acceptability, appropriateness and Feasibility of IPMH
