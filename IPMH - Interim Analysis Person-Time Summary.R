@@ -24,14 +24,14 @@ ppw_rct_df <- ppw_rct_df %>%
         ))
 
 # ---- Estimating total expected person-time ----
-# Step 1: Calculate mean gestational age at enrollment among all participants
+ ## Enrollment GA dataset
 enrollment_GA <- ppw_rct_df%>% 
     filter(visit_type == "Enrollment") %>% 
     select(clt_ptid,med_pre_gestage_current) %>% 
     rename(enroll_gestage = med_pre_gestage_current)
 
 
-# Step 2: Calculate mean delivery gestational age at delivery among all delivered women
+## Delivery GA dataset
 baseline_lmp <- ppw_rct_df %>%
     select(clt_ptid, med_lmp) %>% 
     filter(!is.na(med_lmp))
@@ -92,12 +92,12 @@ today <- Sys.Date()
 # Step 1: Among those currently enrolled, calculate: today's_date - enrollment_date 
 
 #Step 2: Among those discharged, calculate: discharge_date - enrollment_date 
-# Enrollment dataset
+# Enrollment dates dataset
 enroll_date <- ppw_rct_df %>%
     filter(visit_type == "Enrollment") %>% 
     select(clt_ptid, clt_date)
 
-# Discharged dataset
+# Discharged dates dataset
 discharged <- ppw_rct_df %>% 
     filter(dis_today == "Yes") %>% 
     filter(str_detect(dis_reason, "Study End")) %>% 
@@ -120,20 +120,6 @@ merged_df <- enroll_date %>%
 current_total_person_time <- sum(merged_df$person_time, na.rm = TRUE)
 
 # ---- Compare current vs 50% expected ----
-cat("Mean enrollment GA (weeks):", round(mean_enrollment, 1), "\n")
-cat("Mean delivery GA (weeks):", round(mean_delivery, 1), "\n")
-cat("Estimated time from enrollment to delivery (weeks):", time_enroll_to_delivery, "\n")
-cat("Expected total time per participant (weeks):", time_enroll_to_pp14, "\n")
-cat("Total expected person-time (weeks):", round(total_expected_person_time), "\n")
-cat("50% expected person-time (weeks):", round(half_expected_person_time), "\n")
-cat("Current total person-time elapsed (weeks):", current_total_person_time, "\n")
-
-if(current_total_person_time >= half_expected_person_time){
-    cat("Interim analysis threshold reached.\n")
-} else {
-    cat("Interim analysis threshold not yet reached.\n")
-}
-
 
 # Build summary table
 summary_table <- tibble(
