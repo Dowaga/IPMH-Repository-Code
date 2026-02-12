@@ -147,7 +147,7 @@ summary_table <- tibble(
 )
 
 # Create gt table with heading
-gt_table <- summary_table %>%
+pertime_table <- summary_table %>%
     gt() %>%
     tab_header(
         title = "Interim Analysis Person-Time Summary"
@@ -155,6 +155,6 @@ gt_table <- summary_table %>%
     # Interpret markdown so bolding works
     fmt_markdown(columns = "Value")
 
-gt_table
+pertime_table
 
 
