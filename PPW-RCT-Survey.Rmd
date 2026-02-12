@@ -741,9 +741,9 @@ table7
 ```
 # Interim Analysis Person-Time Summary
 \newpage
-```{r Interim analysis person-Time}
+```{r Interim analysis person-Time, echo=FALSE, message=FALSE, warning=FALSE}
 source("IPMH - Interim Analysis Person-Time Summary.R")
-summary
+pertime_table
 ```
 
 
