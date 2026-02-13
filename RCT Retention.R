@@ -336,9 +336,9 @@ ft_overall <- flextable(overall_retention_tbl) %>%
         Percentage_attended = "Percentage Attended (%)"
     )
 
-# Filter enrollments since 2025-09-22
+# Filter enrollments since 2026-02-06
 enrollments_filtered <- ppw_rct_df %>%
-    filter(clt_date >= as.Date("2025-09-22")) %>% 
+    filter(clt_date >= as.Date("2026-02-06")) %>% 
     filter(clt_visit == "Enrollment")
 
 facility_list <- ppw_rct_df %>%
@@ -353,7 +353,7 @@ enrollment_counts <- enrollments_filtered %>%
 
 
 # Calculate days active (same for all facilities)
-days_active <- sum(!weekdays(seq.Date(as.Date("2025-09-22"), 
+days_active <- sum(!weekdays(seq.Date(as.Date("2026-01-06"), 
                                       Sys.Date(), by = "day")) %in% c("Saturday", "Sunday"))
 
 # Merge and compute expected + gap
@@ -532,11 +532,11 @@ window_clossing_week <- all_deliveries %>%
     mutate(`Total Visits` = `Week 6 Visits` + `Week 14 Visits` + `Month 6 Visits`) %>% 
     adorn_totals(name = "Total")
 
-# Follow-up due for a monyth and a week put together----
+# Follow-up due for a month and a week put together----
 # Define date windows
-today <- as.Date("2025-09-01")
-month_end <- as.Date("2025-09-30")
-week_end <- as.Date("2025-09-05") # N/B: Define the exact date the week ends
+today <- as.Date("2026-02-06")
+month_end <- as.Date("2025-02-28")
+week_end <- as.Date("2025-02-13") # N/B: Define the exact date the week ends
 
 # Monthly summary
 month_summary <- all_deliveries %>%
@@ -596,7 +596,7 @@ ppw_date_track <- ppw_rct_df %>%
     group_by(clt_study_site) %>%
     ungroup()
 
-# Enrollment per facility since 2025-09-22 (after hault)---
+# Enrollment per facility since 2026-01-06 (after hault)---
 Enrollments <- screening_consent_df %>%
     group_by(study_site) %>%
     reframe(Screened = n(),
