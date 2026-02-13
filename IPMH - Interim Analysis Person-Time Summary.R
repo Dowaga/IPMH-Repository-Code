@@ -119,9 +119,21 @@ merged_df <- enroll_date %>%
 
 current_total_person_time <- sum(merged_df$person_time, na.rm = TRUE)
 
-# ---- Compare current vs 50% expected ----
 
-# Build summary table
+# ---- New total expected person-time based on GA range ----
+# Max GA (42 weeks) - Min GA (20 weeks) = 22 weeks
+ga_range <- 42 - 20
+
+# Add 14 weeks postpartum
+ga_range_pp14 <- ga_range + 14
+
+# Multiply by total sample size
+ga_range_total_expected <- ga_range_pp14 * 2970
+
+# 50% threshold
+ga_range_half_expected <- 0.5 * ga_range_total_expected
+
+# ---- Extend summary table ----
 summary_table <- tibble(
     Metric = c(
         "Mean enrollment GA (weeks)",
@@ -131,7 +143,12 @@ summary_table <- tibble(
         "Total expected person-time (weeks)",
         "50% expected person-time (weeks)",
         "Current total person-time elapsed (weeks)",
-        "Interim analysis threshold status"
+        "Interim analysis threshold status",
+        "GA-range Expected time delivey (weeks)",
+        "GA-range Expected total time per participant (weeks)",
+        "GA-range total expected person-time (weeks)",
+        "50% GA-range expected person-time (weeks)",
+        "GA-range threshold status"
     ),
     Value = c(
         round(mean_enrollment, 1),
@@ -142,19 +159,37 @@ summary_table <- tibble(
         round(half_expected_person_time),
         round(current_total_person_time),
         ifelse(current_total_person_time >= half_expected_person_time,
-               "**Reached**", "**Not yet reached**") # bold status
+               "**Reached**", "**Not yet reached**"),
+        round(ga_range),
+        round(ga_range_pp14),
+        round(ga_range_total_expected),
+        round(ga_range_half_expected),
+        ifelse(current_total_person_time >= ga_range_half_expected,
+               "**Reached**", "**Not yet reached**")
     )
 )
 
-# Create gt table with heading
+# Create gt table with heading and footnote
 pertime_table <- summary_table %>%
     gt() %>%
     tab_header(
         title = "Interim Analysis Person-Time Summary"
     ) %>%
-    # Interpret markdown so bolding works
-    fmt_markdown(columns = "Value")
+    fmt_markdown(columns = "Value") %>%
+    tab_source_note(
+        source_note = "Notes: 
+        - Mean enrollment GA and mean delivery GA are calculated from study datasets.
+        - Expected time per participant = (mean delivery GA - mean enrollment GA) + 14 weeks postpartum.
+        - Total expected person-time = expected time × total sample size (2970).
+        - GA-range Expected total time per participant = (GA-range Expected time delivey + 14) 
+        - GA-range total expected person-time × total sample size (2970).
+        - 50% thresholds are half of the respective totals.
+        - Current total person-time is accrued from enrollment to discharge (or today if ongoing)."
+    )
+
+
 
 pertime_table
+
 
 
