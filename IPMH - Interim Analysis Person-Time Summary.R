@@ -180,7 +180,7 @@ pertime_table <- summary_table %>%
         source_note = "Notes: 
         - Mean enrollment GA and mean delivery GA are calculated from study datasets.
         - Expected time per participant = (mean delivery GA - mean enrollment GA) + 14 weeks postpartum.
-        - Total expected person-time = expected time × total sample size (2970).
+        - Total expected person-time = expected time * total sample size (2970).
         - GA-range Expected total time per participant = (GA-range Expected time delivey + 14) 
         - GA-range total expected person-time × total sample size (2970).
         - 50% thresholds are half of the respective totals.
