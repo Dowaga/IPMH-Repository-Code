@@ -739,8 +739,10 @@ table6
 ```{r PM+ Participation, echo=FALSE, message=FALSE, warning=FALSE}
 table7
 ```
-# Interim Analysis Person-Time Summary
+
+
 \newpage
+# Interim Analysis Person-Time Summary
 ```{r Interim analysis person-Time, echo=FALSE, message=FALSE, warning=FALSE}
 source("IPMH - Interim Analysis Person-Time Summary.R")
 pertime_table
