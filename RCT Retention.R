@@ -473,14 +473,16 @@ gt_enrollment <- enrollment_summary %>%
 # -----------------------------------------
 # Summary participants whose 6-weeks or 14-weeks window closes in a month
 # Define the date window
-today <- as.Date("2025-09-01")
-next_friday <- as.Date("2025-09-30")
+today <- Sys.Date()
+next_friday <- as.Date("2026-02-28")
 
 closing_soon <- all_deliveries %>%
     filter(
         (wk6_window_close >= today & wk6_window_close <= next_friday) |
-            (wk14_window_close >= today & wk14_window_close <= next_friday)
+            (wk14_window_close >= today & wk14_window_close <= next_friday) |
+            (mo6_window_close >= today & mo6_window_close <= next_friday) # example if you had a 6-week variable
     )
+
 
 
 # Summarise count of participants within range
