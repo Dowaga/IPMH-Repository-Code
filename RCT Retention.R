@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1lpTOe8F7k6sG1gWYseb8TXEQwRsuN_O2_2cNrC_4rnY/edit?gid=13261372#gid=13261372"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1EgOsc-8I_BbHXqM3IDpmnaGAp42TaAiY85FYDwYH6Qg/edit?gid=1908450610#gid=1908450610"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -117,10 +117,7 @@ all_deliveries <- imap_dfr(delivery_dfs, ~ .x %>%
 
 # Generate target dates and visit window
 all_deliveries <- all_deliveries %>% 
-   mutate(
-      attended_6wks = if_else(!is.na(actual_visit_6wks), 1, 0),
-      attended_14wks = if_else(!is.na(actual_visit_14wks), 1, 0)) %>% 
-   mutate(
+    mutate(
       # 6 Weeks PNC
       wk6_window_open  = delivery_date + weeks(6),
       wk6_window_close = delivery_date + weeks(10),
@@ -148,18 +145,18 @@ attendance_df <- visits %>%
     mutate(
         six_weeks_flag = if_else(grepl("^6 weeks", clt_visit), 1, 0),
         fourteen_weeks_flag = if_else(grepl("^14 weeks", clt_visit), 1, 0),
+        six_months_flag = if_else(grepl("^6 months post", clt_visit), 1, 0),
         six_weeks_missed = if_else(grepl("^6 weeks", mv_visit), 1, 0),
         fourteen_weeks_missed = if_else(grepl("^14 weeks post", mv_visit), 1, 0),
-        six_months_flag = if_else(grepl("^6 months post", clt_visit), 1, 0),
         six_months_missed = if_else(grepl("^6 months post", mv_visit), 1, 0),
         ) %>%
     group_by(record_id) %>%
     summarise(
         six_weeks_flag = max(six_weeks_flag, na.rm = TRUE),
         fourteen_weeks_flag = max(fourteen_weeks_flag, na.rm = TRUE),
+        six_months_flag = max(six_months_flag, na.rm = TRUE),
         six_weeks_missed = max(six_weeks_missed, na.rm = TRUE),
         fourteen_weeks_missed = max(fourteen_weeks_missed, na.rm = TRUE),
-        six_months_flag = max(six_months_flag, na.rm = TRUE),
         six_months_missed = max(six_months_missed, na.rm = TRUE),
         .groups = "drop"
     ) %>%
