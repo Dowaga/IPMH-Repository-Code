@@ -93,6 +93,7 @@ clean_sae_df <- clean_sae_df %>%
 deaths <- clean_sae_df %>% 
     filter(ae_type___1 == "Checked"|ae_type___2 == "Checked") %>% 
     select(record_id, Event, death_type, ae_narrative) 
+
 # Convert to flextable
 death_tbl <- flextable(deaths)
 
@@ -200,6 +201,48 @@ sae_summary <- sae_wide %>%
 
 sae_summary  
 
+# Step 4: Summarize overall SAEs using tbl_summary----
+sae_overall <- sae_wide %>% 
+    tbl_summary(
+        include = c(
+            "Death (Infant or Maternal) ",
+            "death_type",
+            "infant_cause_category",
+            "maternal_cause_category",
+            "Miscarriage or stillbirth (loss of pregnancy) ",
+            "New/prolonged hospitalization " ),
+        type = all_continuous() ~ "continuous",
+        statistic = all_continuous() ~ "{sum}",
+        percent = "cell",
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ),
+        label = list(
+            death_type = "Death Classification",
+            infant_cause_category = "Infants Death Cause",
+            maternal_cause_category = "Maternal Death Cause"),
+        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+    ) %>%
+    bold_labels() %>%
+    #add_p() %>% 
+    add_overall() %>% 
+    add_n() %>% 
+    # convert from gtsummary object to gt object
+    as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Overall Serious Adverse Events") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
+
+
+sae_overall  
+
+
 # Summary of Adverse events-----------------------------------------------------
 # Select age and site from main df
 ae_ages <- ppw_rct_df %>% 
@@ -241,7 +284,8 @@ ae_summary <- ae_summary %>%
     gt()
 
 
-# Adverse Events summary by Arm
+
+# Adverse Events summary by Arm----
 arm_ae <- ae_df %>% 
     mutate(
         dummy_arm = case_when(
