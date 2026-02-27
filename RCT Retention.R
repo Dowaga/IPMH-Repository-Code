@@ -513,7 +513,7 @@ start_date <- as.Date("2025-09-01")
 end_date <- as.Date("2025-09-05")
 
 pending_followups <- all_deliveries %>%
-    filter(attended_6wks == 0) %>%
+    filter(six_weeks_flag == 0) %>%
     filter(
         between(wk6_window_close, start_date, end_date) |
             between(wk14_window_close, start_date, end_date)
