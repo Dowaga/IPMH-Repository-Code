@@ -8,7 +8,7 @@ output:
    #html_document
 ---
 
-```{r setup, echo = F, include = F}
+```{r setup, echo = F, include = F, warning = F}
 rm(list = ls())
 
 # read data
@@ -84,7 +84,7 @@ first_enrollment
 
 ## Consort Diagram
 
-```{r The Consort,echo=FALSE, fig.height=12, fig.width=15, message=FALSE, warning=FALSE}
+```{r The Consort,echo=FALSE, fig.height=15, fig.width=15, message=FALSE, warning=FALSE}
 source("Consort.R")
 #consort_diagram for weekly reports
 consort_per
@@ -158,7 +158,9 @@ not_enrolled %>%
 ```
 
 \newpage
+
 ## Overall Retention Summary
+
 ```{r retention number source, echo=FALSE, message=FALSE, warning=FALSE}
 source("RCT Retention.R")
 gt_overall
@@ -208,6 +210,7 @@ basic_demo
 ```
 
 \newpage
+
 ## PPW Medical and Obstretric History
 
 ```{r Medical and Obstetric History, echo=FALSE, message=FALSE, warning=FALSE}
