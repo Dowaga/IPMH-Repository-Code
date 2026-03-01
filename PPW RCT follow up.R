@@ -929,7 +929,7 @@ ipv <- ppw_rct_df %>%
         .fns = ~ case_when(
             . == "Never (Hakuna) [onge]" ~ 0,
             . == "Rarely (Vigumu) [matin]" ~ 1,
-            . == "Sometimes (Mara nyingine) [kadichiel]" ~ 2,
+            . == "Sometimes  (Mara nyingine) [kadichiel]" ~ 2,
             . == "Fairly Often (Karibu mara mingi) [thothne]" ~ 3,
             . == "Frequently (Mara mingi) [mang'eny]" ~ 4,
             TRUE ~ NA_real_
