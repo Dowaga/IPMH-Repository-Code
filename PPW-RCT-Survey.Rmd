@@ -8,7 +8,7 @@ output:
    #html_document
 ---
 
-```{r setup, echo = F, include = F}
+```{r setup, echo = F, include = F, warning = F}
 rm(list = ls())
 
 # read data
@@ -84,7 +84,7 @@ first_enrollment
 
 ## Consort Diagram
 
-```{r The Consort,echo=FALSE, fig.height=12, fig.width=15, message=FALSE, warning=FALSE}
+```{r The Consort,echo=FALSE, fig.height=15, fig.width=15, message=FALSE, warning=FALSE}
 source("Consort.R")
 #consort_diagram for weekly reports
 consort_per
@@ -158,7 +158,9 @@ not_enrolled %>%
 ```
 
 \newpage
+
 ## Overall Retention Summary
+
 ```{r retention number source, echo=FALSE, message=FALSE, warning=FALSE}
 source("RCT Retention.R")
 gt_overall
@@ -208,6 +210,7 @@ basic_demo
 ```
 
 \newpage
+
 ## PPW Medical and Obstretric History
 
 ```{r Medical and Obstetric History, echo=FALSE, message=FALSE, warning=FALSE}
@@ -306,7 +309,7 @@ pm_telep_df <- pm_telep_df %>%
             max_score >= 15 ~ "Telepsychiatry",
             TRUE ~ "Not Eligible"),
         referred_to = case_when(abs_phq_ref_pm == "Yes"|abs_gad7_ref_pm == "Yes" ~ "PM+",
-                                abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
+                                abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telepsychiatry",
                                 TRUE ~ NA_character_))
 
 # Not Referred Correctly
@@ -371,7 +374,10 @@ setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id)
 
 
 wrong_pm_survey <- pm_survey_df %>% 
-    filter(pm_ptid%in% c(21177049, 21031052, 21010085, 21094053, 21073077, 21229516, 21198004, 21041517, 21229608))
+    filter(pm_ptid%in% c(21177049, 21031052, 21010085, 21094053, 21073077, 21198004, 21041517, 21073019, 21073097, 21073139, 21177113, 21229642, 21229646))
+
+#21073097 endorsed the item but evaluated as low risk ??? referred to PM+ (resolved)
+
 ```
 
 
