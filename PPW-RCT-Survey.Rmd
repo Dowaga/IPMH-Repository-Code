@@ -350,7 +350,10 @@ setdiff(pm_survey_df$pm_ptid, eligible_pm$record_id)
 
 
 wrong_pm_survey <- pm_survey_df %>% 
-    filter(pm_ptid%in% c(21177049, 21031052, 21010085, 21094053, 21073077, 21229516, 21198004, 21041517, 21229608))
+    filter(pm_ptid%in% c(21177049, 21031052, 21010085, 21094053, 21073077, 21198004, 21041517, 21073019, 21073097, 21073139, 21177113, 21229642, 21229646))
+
+#21073097 endorsed the item but evaluated as low risk ??? referred to PM+ (resolved)
+
 ```
 
 
