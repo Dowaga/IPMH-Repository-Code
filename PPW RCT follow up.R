@@ -734,6 +734,8 @@ rct_ppw_baseline %>%
     ) %>%
     filter(ga_at_enrollment < 20)
 
+rct_ppw_baseline$med_pre_gestage_current %>% table()
+
 ### preterm birth ========
 pregnancy_combined <- pregnancy_combined %>%
     mutate(
