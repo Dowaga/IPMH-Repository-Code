@@ -335,7 +335,7 @@ ft_overall <- flextable(overall_retention_tbl) %>%
 
 # Filter enrollments since 2026-02-06
 enrollments_filtered <- ppw_rct_df %>%
-    filter(clt_date >= as.Date("2026-02-06")) %>% 
+    filter(clt_date >= as.Date("2026-01-06")) %>% 
     filter(clt_visit == "Enrollment")
 
 facility_list <- ppw_rct_df %>%
