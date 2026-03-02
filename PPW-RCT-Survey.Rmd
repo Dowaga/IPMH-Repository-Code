@@ -44,7 +44,7 @@ setdiff(consent_id$partipant_id, survey_id$clt_ptid)
 setdiff(survey_id$clt_ptid, consent_id$partipant_id) 
 
 # Split data into Enrollment and 6 Weeks groups
-enrolled <- ppw_rct_df %>% 
+enrolled <- ppw_rct_df%>% 
     filter(clt_visit == "Enrollment") %>% 
     select(clt_ptid)
 
@@ -267,6 +267,30 @@ pm_telep_df <- pm_telep_df %>%
                                         abs_gad7_worry, abs_gad7_relax, 
                                         abs_gad7_restless, abs_gad7_annoyed,
                                         abs_gad7_afraid), na.rm = TRUE))
+
+# Qualified for PM+ between 2025-10-16 to 2026-01-16----
+# Define start and end dates
+start_date <- as.Date("2025-10-16")
+end_date   <- as.Date("2026-01-16")
+
+# Sequence of all days between start and end
+all_days <- seq.Date(start_date, end_date, by = "day")
+
+# Count only weekdays (exclude Saturday and Sunday)
+days_active <- sum(!weekdays(all_days) %in% c("Saturday", "Sunday"))
+
+days_active
+
+# PM+ qualifiers counts between start and end dates
+enrollment <- pm_telep_df %>% 
+    filter(clt_date >= start_date & clt_date <= end_date
+  ) %>% 
+    filter((phq9_scores >= 10 & phq9_scores <= 14) | (gad7_scores >= 10 & gad7_scores <= 14))
+
+# Total enrolled in this window
+total_enrolled <- nrow(enrollment)
+total_enrolled
+
 
 # Endorsed PHQ9 Question 9
 self_harm <- pm_telep_df %>% 
@@ -634,7 +658,7 @@ attendance_table %>%
 
 # Severe Adverse Events (SAEs)
 
-```{r SAES, echo=FALSE, message=FALSE, warning=FALSE}
+```{r SAEs to ERC, message=FALSE, warning=FALSE, include=FALSE}
 sae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_")) %>% 
     filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
@@ -660,6 +684,12 @@ sae_report <- sae_df %>%
         table.font.size = px(12))
 
 sae_report
+```
+
+
+```{r r sae_summary, echo=FALSE, message=FALSE, warning=FALSE}
+source("SAEs Lists.R")
+sae_overall
 ```
 
 
@@ -755,4 +785,6 @@ pertime_table
 source("IPMH - PPW Acceptability and Feasibility.R")
 summary
 ```
+
+
 
