@@ -63,7 +63,7 @@ pregnancy_outcomes_6week <- rct_ppw_followup %>%
     filter(!is.na(clt_ptid))
 
 
-# Still birth or Miscourages
+# Still birth or Miscarriages
 still_misc <- ppw_sae_df %>%
     select(record_id,starts_with("ae_"))%>% 
     filter(ae_yn == "Yes") %>%
@@ -117,6 +117,14 @@ pregnancy_outcomes_6week <- pregnancy_outcomes_6week %>%
         )
     )
 
+# data quality check for gestational age
+pregnancy_outcomes_6week %>%
+         filter(gestage_calculated < 0) %>%
+         select(clt_ptid, med_lmp, tpnc_date, gestage_calculated)
+
+pregnancy_outcomes_6week %>%
+         filter(gestage_calculated > 50) %>%
+         select(clt_ptid, med_lmp, tpnc_date, gestage_calculated)
 
 #table(pregnancy_outcomes_6week$gestage, useNA = "ifany")            
 
@@ -700,6 +708,31 @@ pregnancy_combined <- pregnancy_outcomes_clean %>%
         stillbirth_final     = stillbirth_flag | stillbirth,
         late_stillbirth_final = late_stillbirth_flag & (stillbirth_flag | stillbirth)
     )
+
+# sanity check for 0 miscarriage
+
+rct_ppw_baseline %>%
+    select(clt_ptid, med_lmp, clt_date) %>%
+    mutate(
+        med_lmp = as.Date(med_lmp),
+        clt_date = as.Date(clt_date),
+        ga_at_enrollment = as.numeric(clt_date - med_lmp) / 7
+    ) %>%
+    summarise(
+        mean_ga = mean(ga_at_enrollment, na.rm = TRUE),
+        median_ga = median(ga_at_enrollment, na.rm = TRUE),
+        min_ga = min(ga_at_enrollment, na.rm = TRUE),
+        max_ga = max(ga_at_enrollment, na.rm = TRUE),
+        pct_over_20wks = mean(ga_at_enrollment > 20, na.rm = TRUE) * 100
+    )
+rct_ppw_baseline %>%
+    select(clt_ptid, med_lmp, clt_date) %>%
+    mutate(
+        med_lmp = as.Date(med_lmp),
+        clt_date = as.Date(clt_date),
+        ga_at_enrollment = as.numeric(clt_date - med_lmp) / 7
+    ) %>%
+    filter(ga_at_enrollment < 20)
 
 ### preterm birth ========
 pregnancy_combined <- pregnancy_combined %>%
