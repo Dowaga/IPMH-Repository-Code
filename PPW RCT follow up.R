@@ -52,6 +52,19 @@ ppw_rct_df <- ppw_rct_df %>%
 rct_ppw_followup <- ppw_rct_df %>%
     filter(visit_type %in% c("6 Weeks", "14 Weeks", "6 Months"))
 
+## Code new diagnosis to positive
+new_diag <-ppw_rct_df %>% 
+    filter(med_pastdiag___2 == "Unchecked" & hivct_newdiag == "Yes")
+
+ppw_rct_df <- ppw_rct_df %>%
+    mutate(
+        med_pastdiag___2 = case_when(
+            med_pastdiag___2 == "Checked" ~ "Checked",
+            hivct_newdiag == "Yes" ~ "Checked",
+            TRUE ~ med_pastdiag___2
+        )
+    )
+
 rct_ppw_baseline <- ppw_rct_df %>%
     filter(visit_type == "Enrollment")
 
