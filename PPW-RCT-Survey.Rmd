@@ -285,7 +285,7 @@ pm_telep_df <- pm_telep_df %>%
             max_score >= 15 ~ "Telepsychiatry",
             TRUE ~ "Not Eligible"),
         referred_to = case_when(abs_phq_ref_pm == "Yes"|abs_gad7_ref_pm == "Yes" ~ "PM+",
-                                abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
+                                abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telepsychiatry",
                                 TRUE ~ NA_character_))
 
 # Not Referred Correctly
