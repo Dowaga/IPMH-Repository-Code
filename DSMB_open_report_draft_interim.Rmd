@@ -1,7 +1,7 @@
 ---
 title: 'IPMH: Integration of stepped care for perinatal mood and anxiety disorders
   among women attending MCH clinics'
-subtitle: 'Data and Safety Monitoring Board (DSMB): Interim Open Report '
+subtitle: 'Data and Safety Monitoring Board (DSMB): Interim Analysis'
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
     word_document
