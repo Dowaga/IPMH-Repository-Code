@@ -975,16 +975,24 @@ ipv <- ppw_rct_df %>%
     mutate(across(
         .cols = c(starts_with("hit_")),
         .fns = ~ case_when(
-            . == "Never (Hakuna) [onge]" ~ 0,
-            . == "Rarely (Vigumu) [matin]" ~ 1,
-            . == "Sometimes  (Mara nyingine) [kadichiel]" ~ 2,
-            . == "Fairly Often (Karibu mara mingi) [thothne]" ~ 3,
-            . == "Frequently (Mara mingi) [mang'eny]" ~ 4,
+            . == "Never (Hakuna) [onge]" ~ 1,
+            . == "Rarely (Vigumu) [matin]" ~ 2,
+            . == "Sometimes  (Mara nyingine) [kadichiel]" ~ 3,
+            . == "Fairly Often (Karibu mara mingi) [thothne]" ~ 4,
+            . == "Frequently (Mara mingi) [mang'eny]" ~ 5,
             TRUE ~ NA_real_
         ),
         .names = "{.col}_number"
     )) %>%
-    mutate(hit_total = rowSums(select(., starts_with("hit_") & ends_with("_number")), na.rm = TRUE)) %>% 
+    rowwise() %>%
+    mutate(
+        hit_total = if (all(is.na(c_across(starts_with("hit_") & ends_with("_number"))))) {
+            NA_real_
+        } else {
+            sum(c_across(starts_with("hit_") & ends_with("_number")), na.rm = TRUE)
+        }
+    ) %>%
+    ungroup() %>%
     mutate(hit_high = ifelse(hit_total >= 10, "Yes", "No"))
 
 #4. Social suppot (baseline & 14w)
