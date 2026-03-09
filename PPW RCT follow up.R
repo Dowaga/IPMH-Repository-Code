@@ -654,9 +654,10 @@ table3
 pregnancy_outcomes_6week$tpnc_lb %>% 
     table(useNA = "ifany")
 
-adverse_outcomes <- ppw_sae_df %>%
-    select(visit_type, record_id, arm, ae_yn, ae_cat, ae_preglosssp, ae_type___1, ae_type___2,
-           ae_type___3, ae_type___4, ae_type___5, ae_dateonset, ae_ideath_date) %>% 
+adverse_outcomes_summary <- ppw_sae_df %>%
+    select(visit_type, record_id, arm, ae_yn, ae_cat, ae_preglosssp,
+           ae_type___1, ae_type___2, ae_type___3, ae_type___4, ae_type___5,
+           ae_dateonset, ae_ideath_date) %>%
     rename(
         maternal_death = ae_type___1,
         infant_death = ae_type___2,
@@ -671,7 +672,18 @@ adverse_outcomes <- ppw_sae_df %>%
         infant_death = if_else(infant_death == "Checked", TRUE, FALSE),
         maternal_hospitalization = if_else(maternal_hospitalization == "Checked", TRUE, FALSE),
         infant_hospitalization = if_else(infant_hospitalization == "Checked", TRUE, FALSE)
+    ) %>%
+    group_by(record_id, arm) %>%
+    summarise(
+        stillbirth = any(stillbirth, na.rm = TRUE),
+        miscarriage = any(miscarriage, na.rm = TRUE),
+        maternal_death = any(maternal_death, na.rm = TRUE),
+        infant_death = any(infant_death, na.rm = TRUE),
+        maternal_hospitalization = any(maternal_hospitalization, na.rm = TRUE),
+        infant_hospitalization = any(infant_hospitalization, na.rm = TRUE),
+        .groups = "drop"
     )
+
 
 # Codes for cross-checking
 
@@ -738,6 +750,7 @@ rct_ppw_baseline %>%
         max_ga = max(ga_at_enrollment, na.rm = TRUE),
         pct_over_20wks = mean(ga_at_enrollment > 20, na.rm = TRUE) * 100
     )
+
 rct_ppw_baseline %>%
     select(clt_ptid, med_lmp, clt_date) %>%
     mutate(
@@ -754,6 +767,7 @@ pregnancy_combined <- pregnancy_combined %>%
     mutate(
         preterm_birth = if_else(gestage < 37 & tpnc_lb == "Yes", TRUE, FALSE, missing = NA)
     )
+ 
 
 ### low birth weight ========
 pregnancy_combined <- pregnancy_combined %>%
@@ -795,7 +809,10 @@ pregnancy_combined <- pregnancy_combined %>%
 
 ### neonatal death ============
 pregnancy_combined <- pregnancy_combined %>%
-    left_join(adverse_outcomes %>% select(record_id, infant_death), by = c("clt_ptid" = "record_id"))
+    left_join(adverse_outcomes_summary %>% select(record_id, infant_death), by = c("clt_ptid" = "record_id"))
+
+pregnancy_combined %>% 
+    tabyl("infant_death")
 
 pregnancy_combined <- pregnancy_combined %>%
     mutate(
