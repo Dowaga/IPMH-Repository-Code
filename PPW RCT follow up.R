@@ -53,17 +53,18 @@ rct_ppw_followup <- ppw_rct_df %>%
     filter(visit_type %in% c("6 Weeks", "14 Weeks", "6 Months"))
 
 ## Code new diagnosis to positive
-new_diag <-ppw_rct_df %>% 
+new_diag <- ppw_rct_df %>% 
     filter(med_pastdiag___2 == "Unchecked" & hivct_newdiag == "Yes")
 
 ppw_rct_df <- ppw_rct_df %>%
+    group_by(clt_ptid) %>%
     mutate(
         med_pastdiag___2 = case_when(
-            med_pastdiag___2 == "Checked" ~ "Checked",
-            hivct_newdiag == "Yes" ~ "Checked",
+            med_pastdiag___2 == "Checked" | any(hivct_newdiag == "Yes", na.rm = TRUE) ~ "Checked",
             TRUE ~ med_pastdiag___2
         )
-    )
+    ) %>%
+    ungroup()
 
 rct_ppw_baseline <- ppw_rct_df %>%
     filter(visit_type == "Enrollment")
@@ -168,7 +169,7 @@ table1 <- pregnancy_outcomes_6week %>%
     ) %>%
     add_n() %>%
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header(
         title = "Pregnancy Outcome",
@@ -211,6 +212,7 @@ prophylaxis <- infant_outcomes %>%
     filter(med_pastdiag___2 == "Unchecked") %>% 
     filter(!is.na(io_ihiv)) %>% 
     filter(visit_type == "6 Weeks")
+
 
 table2a <- infant_outcomes %>%
     mutate(med_pastdiag___2 = recode(med_pastdiag___2,
@@ -262,7 +264,7 @@ table2a <- infant_outcomes %>%
     bold_labels() %>% 
     italicize_levels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header(
         title = "Infant Outcome",
@@ -271,6 +273,7 @@ table2a <- infant_outcomes %>%
         table.font.size = "medium",
         data_row.padding = gt::px(1))
 table2a
+
 
 # 14 Weeks Outcome----
 # Infants HIV status sort for PPWNLHIV
@@ -321,7 +324,7 @@ table2b <- infant_outcomes %>%
     bold_labels() %>% 
     italicize_levels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header(
         title = "Infant Outcome",
@@ -331,6 +334,7 @@ table2b <- infant_outcomes %>%
         data_row.padding = gt::px(1))
     
 table2b
+
 
 # Six Months Outcome----
 table2c <- infant_outcomes %>%
@@ -367,7 +371,7 @@ table2c <- infant_outcomes %>%
     bold_labels() %>% 
     italicize_levels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header(
         title = "Infant Outcome",
@@ -631,7 +635,7 @@ table3 <- outcomes %>%
     bold_labels() %>% 
     italicize_levels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header(
         title = "Clinical Outcome",
@@ -884,7 +888,7 @@ table4 <- pregnancy_combined_dedup %>%
     bold_labels() %>% 
     italicize_levels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header(
         title = "Clinical Outcome",
@@ -1109,7 +1113,7 @@ table5 <- psychosocial_data %>%
     modify_header(label = "**Psychosocial Correlates**") %>%
     modify_caption("**Table 5. Psychosocial Correlates Across Visits**") %>%
     bold_labels()%>%
-    as_gt()
+    gtsummary::as_gt()
 
 # Mental Health Service Utilization========
 su <- ppw_rct_df %>% 
@@ -1174,7 +1178,7 @@ table6 <- su %>%
     modify_spanning_header(c("stat_1", "stat_2", "stat_3", "stat_4") ~ "**Visit Type**") %>%
     modify_caption("**Screening and Service Utilization by Visit Type**") %>%
     bold_labels() %>%
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     tab_options(
         table.font.size = 12)
 
@@ -1209,7 +1213,7 @@ table7 <- su %>%
     modify_spanning_header(c("stat_1", "stat_2", "stat_3") ~ "**Visit Type**") %>%
     modify_caption("**PM+ Program Participation Status (Reported During Post-Enrollment Visits)**") %>%
     bold_labels()%>%
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     tab_options(
         table.font.size = 12)
 
