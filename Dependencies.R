@@ -39,7 +39,7 @@ packages <- c("redcapAPI",
               "gtExtras",
               "gtsummary",
               "gsDesign",
-              "effectsize"
+              "effectsize",
               "writexl",
               "tidyr",
               "tibble",
