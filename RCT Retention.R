@@ -456,16 +456,12 @@ gt_enrollment <- enrollment_summary %>%
         style = cell_text(weight = "bold"),
         locations = cells_body(rows = Facility == "Total")
     ) %>% 
-    # Global font size
-    tab_style(
-        style = cell_text(size = px(11)),
-        locations = cells_body()
-    ) %>% 
-    tab_style(
-        style = cell_text(size = px(11)),
-        locations = cells_column_labels()
-    )
-
+    %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(12))
 
 # -----------------------------------------
 # Summary participants whose 6-weeks or 14-weeks window closes in a month
