@@ -124,7 +124,7 @@ ineligible_df %>%
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
         ) %>% 
     bold_labels() %>%
-    as_gt() %>%
+    gtsummary::as_gt() %>%
   # modify with gt functions
     gt::tab_header("Summary of Ineligible Participants and Reasons") %>%
     gt::tab_options(
@@ -147,7 +147,7 @@ not_enrolled %>%
             all_categorical() ~ c(0, 1) # categorical  0 decimals for n, 1 d.p. for %
         )) %>% 
     bold_labels() %>%
-    as_gt() %>%
+    gtsummary::as_gt() %>%
   # modify with gt functions
   gt::tab_header("Summary Reasons for Declining Enrollment") %>% 
   gt::tab_options(
@@ -169,25 +169,7 @@ gt_overall
 ## Enrollment Per Facility
 
 ```{r Summary of Study Enrollment by Facility, echo=FALSE, message=FALSE, warning=FALSE}
-Enrollments <- screening_consent_df %>%
-    group_by(study_site) %>%
-    reframe(Screened = n(),
-            `Eligible` = sum(rct_eligible == 1),
-            `Enrolled` = sum(rct_enrolling == "Yes", na.rm = "TRUE"),
-            `% Enrolled (of Eligible)` = round((Enrolled / Eligible) * 100)) %>%
-    # Remove the facility code
-    mutate(study_site = gsub("^[0-9]+,\\s*", "", study_site)) %>% 
-    rename(`Facility` = study_site)  %>%
-    bind_rows(summarise(.,Facility = "Overall",
-                        Screened = sum(Screened),
-                        Eligible = sum(Eligible),Enrolled = sum(Enrolled),
-                        `% Enrolled (of Eligible)` = ifelse(sum(Eligible) > 0, round((sum(Enrolled) / sum(Eligible)) * 100, 1), NA)))  %>%
-    arrange(desc(`Enrolled`))%>%
-    gt() %>%
-    tab_header(title = "Summary of Study Enrollment by Facility",subtitle = "Showing Participants enrollments") %>%
-    tab_style(style = cell_text(weight = "bold"),locations = cells_body(rows = Facility == "Overall")) %>%
-    tab_options(table.font.size = px(12))
-
+source("Enrollment Progress.R")
 Enrollments
 ```
 
@@ -440,7 +422,7 @@ pm_session_wide %>%
             all_categorical() ~ c(0, 1) # categorical  0 decimals for n, 1 d.p. for %
         )
         )%>% 
-  as_gt() %>%
+  gtsummary::as_gt() %>%
     gt::tab_header(
       title = "Study Participants Who Received PM+",
       subtitle = "Showing Study Participants Who Received PM+") %>%
@@ -545,7 +527,7 @@ session_wide %>%
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
         )%>% 
   # convert from gtsummary object to gt object
-  as_gt() %>%
+  gtsummary::as_gt() %>%
   # modify with gt functions
     gt::tab_header(
       title = "None study Participants Who Received PM+",
@@ -572,7 +554,7 @@ telepsych_referrals %>%
             all_continuous() ~ 1,       # continuous variables 1 d.p.
             all_categorical() ~ c(0, 1) # categorical  0 decimals for n, 1 d.p. for %
         ))%>% 
-    as_gt %>% 
+    gtsummary::as_gt() %>% 
       # modify with gt functions
     gt::tab_header(
       title = "Participants Referred to Telepsychiatry",
