@@ -99,9 +99,11 @@ death_tbl <- flextable(deaths)
 
 # --- IMPORTANT FIXES FOR LONG TEXT ----
 # Wrap text
-death_tbl <- valign(death_tbl, j = everything(), valign = "top")
-death_tbl <- align(death_tbl, j = everything(), align = "left")
-death_tbl <- height_all(death_tbl, height = NA)
+# Apply to all columns by names
+
+death_tbl <- valign(death_tbl, j = seq_along(death_tbl$col_keys), valign = "top")
+death_tbl <- align(death_tbl, j = seq_along(death_tbl$col_keys), align = "left")
+death_tbl <- height_all(death_tbl, height = 1)
 death_tbl <- autofit(death_tbl)
 
 # Set specific max widths (A4 width after margins is approx 6.5 inches)
@@ -110,8 +112,6 @@ death_tbl <- width(death_tbl, j = "Event", width = 1.5)
 death_tbl <- width(death_tbl, j = "death_type", width = 1.3)
 death_tbl <- width(death_tbl, j = "ae_narrative", width = 4.5)  # main text column
 
-# Allow word wrapping
-death_tbl <- wordwrap(death_tbl)
 
 # Create Word document
 doc <- read_docx()
@@ -189,7 +189,7 @@ sae_summary <- sae_wide %>%
     add_overall() %>% 
     add_n() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of Serious Adverse Events by Study Arm") %>% 
     gt::tab_options(
@@ -206,11 +206,11 @@ sae_overall <- sae_wide %>%
     tbl_summary(
         include = c(
             "Death (Infant or Maternal) ",
+            "Miscarriage or stillbirth (loss of pregnancy) ",
+            "New/prolonged hospitalization ",
             "death_type",
             "infant_cause_category",
-            "maternal_cause_category",
-            "Miscarriage or stillbirth (loss of pregnancy) ",
-            "New/prolonged hospitalization " ),
+            "maternal_cause_category"),
         type = all_continuous() ~ "continuous",
         statistic = all_continuous() ~ "{sum}",
         percent = "cell",
@@ -226,13 +226,11 @@ sae_overall <- sae_wide %>%
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
     ) %>%
     bold_labels() %>%
-    #add_p() %>% 
-    add_overall() %>% 
     add_n() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
-    gt::tab_header("Summary of Overall Serious Adverse Events") %>% 
+    gt::tab_header("Summary of Reported Serious Adverse Events") %>% 
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>%
@@ -326,7 +324,7 @@ ae_tbl <- ae_bin %>%
     #add_p() %>% 
     add_overall() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of Adverse Events by Arm") %>% 
     gt::tab_source_note(gt::md("A single participant may experience multiple AEs")) %>% 
@@ -394,7 +392,7 @@ total_aes <- ae_long %>%
     bold_labels() %>% 
     italicize_levels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of Adverse Events") %>% 
     gt::tab_options(
@@ -419,7 +417,7 @@ overal_aes <- ae_long %>%
     bold_labels() %>% 
     italicize_levels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of Adverse Events by Arm") %>% 
     gt::tab_options(

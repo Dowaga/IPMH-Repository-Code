@@ -17,6 +17,7 @@ rm(list = setdiff(ls(), c("costing")))
 visit_na <- costing %>% 
     filter(is.na(study_visit))
 
+
 # screening & enrollment------------
 
 ## Intervention sites -----------
@@ -214,7 +215,7 @@ screening_int_table <- screening_int_costing %>%
     tbl_summary(
         by = study_site,
         statistic = list(
-            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
@@ -277,7 +278,7 @@ screening_int_table <- screening_int_costing %>%
     add_overall() %>% 
     bold_labels()%>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites)") %>% 
     gt::tab_options(
@@ -309,7 +310,7 @@ screening_int_table_by_refer <- screening_int_costing %>%
     tbl_summary(
         by = refer_service,
         statistic = list(
-            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
@@ -367,7 +368,7 @@ screening_int_table_by_refer <- screening_int_costing %>%
     add_n() %>% add_overall() %>% add_p() %>% 
     bold_labels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of Time Used for Initial Screening and Enrollment (Intervention Sites) By Referral Services") %>% 
     gt::tab_options(
@@ -423,7 +424,7 @@ screening_ctrl_table <- screening_ctrl_costing %>%
     tbl_summary(
         by= study_site,
         statistic = list(
-            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
@@ -469,7 +470,7 @@ screening_ctrl_table <- screening_ctrl_costing %>%
 
 table_screening_ctrl <- screening_ctrl_table %>%
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of Time Used for Initial Screening and Enrollment (Control Sites)") %>% 
     gt::tab_options(
@@ -533,7 +534,7 @@ comparison_table <- combined_data %>%
     tbl_summary(
         by = arm,
         statistic = list(
-            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         label = list(
@@ -574,7 +575,7 @@ comparison_table <- combined_data %>%
     add_p() %>%
     bold_labels() %>%
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Comparison of Screening & Enrollment by Study Site (All Arms)") %>% 
     gt::tab_options(
@@ -710,7 +711,7 @@ pm_summary_table <- pm_plus_costing %>%
     tbl_summary(
         by = study_site,
         statistic = list(
-            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list( 
@@ -760,7 +761,7 @@ pm_summary_table <- pm_plus_costing %>%
     add_overall() %>%
     bold_labels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of PM+ Sessions (Intervention Sites)") %>% 
     gt::tab_options(
@@ -806,7 +807,7 @@ pm_duration_table <- pm_ave_time %>%
     ) %>%
     add_n() %>%
     bold_labels() %>% 
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Observed Session Durations Across PM+ Participants") %>% 
     gt::tab_options(
@@ -885,7 +886,7 @@ telepsychiatry_table <- telepsychiatry_costing %>%
 
 
 table_telepsychiatry_costing <- telepsychiatry_table %>%
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of Telepsychiatry Sessions (Intervention Sites)") %>% 
     gt::tab_options(
@@ -948,6 +949,7 @@ audit_feedback_costing <- audit_feedback_costing %>%
             af_map_duration, af_map2_duration, 
             af_implement_duration
         )), na.rm = TRUE),
+        af_session_duration = na_if(af_session_duration, 0), 
         af_total_duration = rowSums(across(c(
             af_analysis_duration, af_develop_duration, 
             af_schedule_duration, af_hurdle_duration, 
@@ -955,12 +957,13 @@ audit_feedback_costing <- audit_feedback_costing %>%
             af_map_duration, af_map2_duration, 
             af_implement_duration, af_feedback_duration
         )), na.rm = TRUE),
+        af_total_duration = na_if(af_session_duration, 0),
         health_talk_duration = difftime(flipbook_time_out, flipbook_time_in, units = "mins") %>% as.numeric()
     )
 
 # Negative time duration
 negive <- audit_feedback_costing %>% 
-    filter(af_total_duration < 0)
+    filter(af_session_duration < 0|af_total_duration < 0)
 
 # Summarize designation choices per facility for selected activities
 wrong_designation <- audit_feedback_costing %>% 
@@ -1005,7 +1008,7 @@ audit_feedback_table <- audit_feedback_costing %>%
     tbl_summary(
         by = arm,
         statistic = list(
-            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_continuous() ~ "{mean} ({sd})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         type = list(
@@ -1058,7 +1061,7 @@ audit_feedback_table <- audit_feedback_costing %>%
     add_p() %>%
     bold_labels() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Comparison of Audit and Feedback Time between arms") %>% 
     gt::tab_options(
