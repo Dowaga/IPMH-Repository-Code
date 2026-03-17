@@ -74,7 +74,7 @@ basic_demo <- demographics_df %>%
     add_n() %>% 
     #add_p() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     fmt_number(
         columns = where(is.numeric),
         sep_mark = ""      # removes commas
@@ -127,7 +127,7 @@ wlwh_demo <- demographics_df %>%
     add_n() %>% 
     #add_p() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("WLWH Demographic Summary") %>% 
     gt::tab_options(
@@ -183,7 +183,7 @@ arm_demo <- demographics_df %>%
     #add_n() %>% 
     add_overall() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Basic Demographic Summary") %>% 
     gt::tab_options(
@@ -235,7 +235,7 @@ arm_wlwh_demo <- demographics_df %>%
     #add_p() %>% 
     add_overall() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("WLWH Demographic Summary") %>% 
     gt::tab_options(
