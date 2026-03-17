@@ -123,8 +123,8 @@ tbl_summary(sort = list(all_categorical() ~ "frequency"),  # Sort categorical le
     modify_header(label = "**Variable**") %>%
     bold_labels() %>% 
     italicize_levels() %>% 
-    add_n()%>% 
-    as_gt() %>%
+    add_n()%>%
+    gtsummary::as_gt() %>%
     gt::tab_header(
         title = "Medical and Obstretric History",
         subtitle = "Baseline Clinical and Obstetric Characteristics of Enrolled Participant") %>%
