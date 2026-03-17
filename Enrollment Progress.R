@@ -79,7 +79,6 @@ Enrollment_wide <- weekly_enrollment %>%
     adorn_totals(where = c("row","col")) %>% 
     arrange(desc(Total))
 
-pacman::p_load(dplyr, tidyr, janitor, flextable)
 
 # Convert to flextable and format totals
 Enrollment_wide_ft <- Enrollment_wide %>%
@@ -103,6 +102,93 @@ target_reached <- total_enrollment %>%
     filter(cumulative_enrollment >= 743) %>%
     slice(1) %>%
     pull(week) 
+
+# Enrollments ----
+## Summary of Study Enrollment by Facility----
+Enrollments <- screening_consent_df %>%
+    group_by(study_site) %>%
+    reframe(Screened = n(),
+            `Eligible` = sum(rct_eligible == 1),
+            `Enrolled` = sum(rct_enrolling == "Yes", na.rm = "TRUE"),
+            `% Enrolled (of Eligible)` = round((Enrolled / Eligible) * 100)) %>%
+    # Remove the facility code
+    mutate(study_site = gsub("^[0-9]+,\\s*", "", study_site)) %>% 
+    rename(`Facility` = study_site)  %>%
+    bind_rows(summarise(.,Facility = "Overall",
+                        Screened = sum(Screened),
+                        Eligible = sum(Eligible),Enrolled = sum(Enrolled),
+                        `% Enrolled (of Eligible)` = ifelse(sum(Eligible) > 0, round((sum(Enrolled) / sum(Eligible)) * 100, 1), NA)))  %>%
+    arrange(desc(`Enrolled`))%>%
+    gt() %>%
+    tab_header(title = "Summary of Study Enrollment by Facility",subtitle = "Showing Participants enrollments") %>%
+    tab_style(style = cell_text(weight = "bold"),locations = cells_body(rows = Facility == "Overall")) %>%
+    tab_options(table.font.size = px(12))
+
+## Enrollment and HIV Summary by Facility----
+Enrollment_summary <- ppw_rct_df %>%
+    group_by(clt_ptid) %>%
+    summarise(
+        study_site = first(clt_study_site),
+        
+        # Total enrolled (everyone in dataset)
+        enrolled = 1,
+        
+        # HIV at baseline (adjust variable if needed)
+        hiv_positive = any(med_pastdiag___2 == "Checked", na.rm = TRUE),
+        
+        # Zero conversion at any visit
+        zero_converted = any(hivct_newdiag == "Yes", na.rm = TRUE)
+    ) %>%
+    ungroup()%>%
+    # Remove the facility code
+    mutate(study_site = gsub("^[0-9]+,\\s*", "", study_site))
+
+facility_summary <- Enrollment_summary %>%
+    group_by(study_site) %>%
+    summarise(
+        `Total Enrolled` = n(),
+        `Enrolled with HIV` = sum(hiv_positive, na.rm = TRUE),
+        `Zero-converted` = sum(zero_converted, na.rm = TRUE)
+    ) %>%
+    ungroup() %>% 
+    arrange(desc(`Total Enrolled`)) %>% 
+    adorn_totals() %>%
+    gt() %>%
+    tab_header(
+        title = "Enrollment and HIV Summary by Facility",
+        subtitle = "Includes Sero Conversion Across All Visits"
+    ) %>%
+    cols_label(
+        study_site = "Facility"
+    ) %>%
+    fmt_number(
+        columns = -study_site,
+        decimals = 0
+    ) %>%
+    tab_options(
+        table.font.size = gt::px(12),
+        data_row.padding = gt::px(2)
+    )
+
+
+
+# HIV status data quality check----
+check_df <- ppw_rct_df %>%
+    group_by(clt_ptid) %>%
+    summarise(
+        study_site = first(clt_study_site),
+        
+        # HIV positive at baseline
+        hiv_positive_baseline = any(med_pastdiag___2 == "Checked" & clt_visit == "Enrollment", na.rm = TRUE),
+        
+        # Sero-converted at any visit
+        sero_converted_any = any(hivct_newdiag == "Yes", na.rm = TRUE)
+    ) %>%
+    ungroup()
+
+inconsistent_cases <- check_df %>%
+    filter(hiv_positive_baseline & sero_converted_any)
+
 
 
 
