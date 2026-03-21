@@ -4,13 +4,13 @@ title: 'IPMH: Integration of stepped care for perinatal mood and anxiety disorde
 subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report'
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
-    word_document
+  word_document: default
   pdf_document:
     latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, options(scipen = 0))
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, options(scipen = 99))
 
 library(stringr)
 library(lubridate)
@@ -54,7 +54,6 @@ ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_",
 data_freeze <- file_date
 
 data_freeze <- format(data_freeze, format="%d %B %Y")
-options(scipen = 0)
 ```
 
 
@@ -64,15 +63,13 @@ knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 
 ```
 
-\newpage
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital \\[12pt]
 
-John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
+Keshet Ronen, PhD, MPH, University of Washington \\[12pt]
 
-Keshet Ronen, PhD, MPH, University of Washington
+Amritha Bhat, MBBS, MD, MPH, University of Washington \\[12pt]
 
-Amritha Bhat, MBBS, MD, MPH, University of Washington
-
-Report prepared by: David Owaga
+Report prepared by: David Owaga & Yuwei Wang \\[12pt]
 
 Date of data freeze: `r data_freeze`
 
@@ -99,7 +96,7 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
            "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
            "2970, including 405 women living with HIV (WLWH)", 
            "[place holder]",
-           "0",
+           "[place holder]",
            "Follow-up through 6 months postpartum", 
            "September 19, 2023", 
            "February 17, 2025",
@@ -130,7 +127,8 @@ study_summary
 -   Oct 23, 2024: Facility randomization
 -   Nov 06, 2024: Facility staff training initiation
 -   Feb 17, 2025: Perinatal women recruitment initiation
--   [Place holder, we are not about 22%]: 25% of planned enrollment
+-   : 25% of planned enrollment
+
 
 ## 1.2 Key Changes to Study Protocol
 We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on May 12, 2025 to include women from >=20 weeks gestation because most of the participants enrolled from >=28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study. 
@@ -138,6 +136,7 @@ We requested for a modification from the Kenyatta National Hospital Ethical Rese
 # 2. Study Progress
 
 ## 2.1 Recruitment Timeline
+
 ```{r source_consort, echo=FALSE, warning=FALSE}
 source("Consort.R")
 n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
@@ -189,13 +188,13 @@ consort_single
 \newpage
 
 ### 3.1.2 Enrollment Progress - Overall
+
 ```{r enrollment_numsource, message=FALSE, warning=FALSE, include=FALSE}
 source("Enrollment Progress.R")
 ```
 
 On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on
 `r target_reached`.
-
 
 ```{r enrollment_sub, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
@@ -290,10 +289,10 @@ p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment,
 p1
 ```
 
-
 \newpage
 
 ### 3.1.3 Enrollment Progress - Per Facility
+
 ```{r Facility target reached}
 source("Enrollment Progress.R")
 reached_25per_target <- weekly_enrollment %>%
@@ -376,8 +375,6 @@ source("Consort_WLWH.R")
 ```
 
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
-
-
 
 ```{r consort_mortality, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
 source("Consort_WLWH.R")
@@ -488,6 +485,7 @@ wlwh_demo
 \newpage
 
 # 6. Study Terminations
+
 ```{r Ealiest Expected termination, echo=FALSE, message=FALSE, warning=FALSE}
 first_6ths <- ppw_rct_df %>%
     # Filter to "6 months" and grab the first per participant
@@ -516,9 +514,7 @@ completed_follow_up <- total_exits %>%
 
 ```
 
-
 To date, no early terminations have been recorded. However, `r completed_follow_up` participants have completed the study and exited at the scheduled end of follow-up. The first study exit occurred on `r earliest_due`
-
 
 # 7. Referrals
 
@@ -535,9 +531,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 
 ```
 
-
 During enrollment and follow up study visits,  participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
-
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
 ## generate report using data from psychosocial referrals form in REDCap  
@@ -545,7 +539,6 @@ source("PPW RCT Referrals.R")
 
 referral_summary
 ```
-
 
 ## 7.2 Treatment Referrals
 
@@ -555,7 +548,6 @@ source("Telepsychiatry Sessions.R")
 fidelity_summary
 
 ```
-
 
 # 8 Study endpoints  
 
@@ -581,8 +573,8 @@ source("SAEs Lists.R")
 total_aes
 ```
 
-
 ## 9.2 SAEs Summary
+
 ```{r SAEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 total_SAEs <- clean_sae_df %>% 
@@ -602,7 +594,6 @@ total_hosp <- clean_sae_df %>%
 ```
 
 As of `r format(Sys.Date(), "%b %d, %Y")`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
-
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
