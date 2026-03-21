@@ -91,7 +91,7 @@ Keshet Ronen, PhD, MPH, University of Washington
 
 Amritha Bhat, MBBS, MD, MPH, University of Washington
 
-Report prepared by: David Owaga
+Report prepared by: David Owaga & Yuwei Wang
 
 Date of data freeze: `r data_freeze`
 
