@@ -581,7 +581,7 @@ ineligibility_summary <- consort_data %>%
             all_continuous() ~ 1,       # continuous variables  1 d.p.
             all_categorical() ~ c(0, 1) # categorical 0 decimals for n, 1 d.p. for %
         )) %>%
-    as_gt() %>% 
+    gtsummary::as_gt() %>% 
     # modify with gt functions
     gt::tab_header("Summary of Reasons for Study Ineligibility") %>% 
     gt::tab_options(
@@ -604,7 +604,7 @@ arm_ineligibility_summary <- consort_data %>%
     #add_p() %>% 
     add_overall() %>% 
     # convert from gtsummary object to gt object
-    as_gt() %>%
+    gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header("Summary of Study Ineligibility by Arm") %>% 
     gt::tab_options(
