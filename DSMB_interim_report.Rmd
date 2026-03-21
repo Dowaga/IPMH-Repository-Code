@@ -10,7 +10,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, options(scipen = 0))
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, options(scipen = 99))
 
 library(lme4)
 library(mice)
@@ -37,8 +37,6 @@ ppw_rct_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_",
 data_freeze <- file_date
 
 data_freeze <- format(data_freeze, format="%d %B %Y")
-
-options(scipen = 0)
 ```
 
 ```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
@@ -46,18 +44,21 @@ options(scipen = 0)
 knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 
 ```
+\vspace{24pt}
 
-\newpage
+\begin{center}
 
-John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital \\[12pt]
 
-Keshet Ronen, PhD, MPH, University of Washington
+Keshet Ronen, PhD, MPH, University of Washington \\[12pt]
 
-Amritha Bhat, MBBS, MD, MPH, University of Washington
+Amritha Bhat, MBBS, MD, MPH, University of Washington \\[12pt]
 
-Report prepared by: Yuwei Wang
+Report prepared by: Yuwei Wang \\[12pt]
 
 Date of data freeze: `r data_freeze`
+
+\end{center}
 
 \newpage
 
@@ -130,7 +131,7 @@ total_expected_pt       <- time_enroll_to_pp14 * 2970
 half_expected_pt        <- 0.5 * total_expected_pt
 ```
 
-Total expected person-time was estimated as the mean time from enrollment to delivery (calculated as mean gestational age at delivery minus mean gestational age at enrollment), plus 14 weeks postpartum, multiplied by the total expected sample size of 2,970 participants, yielding a total expected person-time of `r total_expected_pt` weeks. 50% of the expected person-time is `r half_expected_pt` weeks.
+Total expected person-time was estimated as the mean time from enrollment to delivery (calculated as mean gestational age at delivery minus mean gestational age at enrollment), plus 14 weeks postpartum, multiplied by the total expected sample size of 2,970 participants, yielding a total expected person-time of `r round(total_expected_pt,2)` weeks. 50% of the expected person-time is `r round(half_expected_pt,2)` weeks.
 
 ### Current total person-time elapsed to date calculation
 
@@ -239,20 +240,20 @@ analysis_df <- analysis_df %>%
 ######### Note for Wenwen: We generated this random arm assignment so we are blind to the real data. You should use arm to replace arm_random in the model below when you run the analysis on the real data. We will keep arm_random in the dataset for you to check that the randomization worked as expected, but please do not use it in the model.
 ```
 
-### PHQ-9 
+### PHQ-9
 
-```{r phq9 results, echo=TRUE, message=FALSE, warning=FALSE}
+```{r phq9 results, echo=TRUE, eval=T, message=FALSE, warning=FALSE}
 phq_model <- lmer(phq9_score ~ arm_random * time + (1 | clt_study_site), data = analysis_df)
 
-parameters::parameters(phq_model, effects = "fixed", exponentiate = FALSE) %>%
-  filter(Parameter %in% c("arm_randomIntervention", "time", "arm_randomIntervention:time"))
+summary(phq_model)
 ```
+
+\newpage
 
 ### GAD-7
 
-```{r gad7 results, echo=TRUE, message=FALSE, warning=FALSE}
+```{r gad7 results, echo=TRUE, eval=T, message=FALSE, warning=FALSE}
 gad_model <- lmer(gad7_score ~ arm_random * time + (1 | clt_study_site), data = analysis_df)
 
-parameters::parameters(gad_model, effects = "fixed", exponentiate = FALSE) %>%
-  filter(Parameter %in% c("arm_randomIntervention", "time", "arm_randomIntervention:time"))
+summary(gad_model)
 ```
