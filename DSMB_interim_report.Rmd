@@ -1,0 +1,258 @@
+---
+title: 'IPMH: Integration of stepped care for perinatal mood and anxiety disorders
+  among women attending MCH clinics'
+subtitle: 'Data and Safety Monitoring Board (DSMB): Interim Analysis'
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, options(scipen = 0))
+
+library(lme4)
+library(mice)
+library(gtsummary)
+
+## WORKING DIRECTORY
+# Setup ------------------------------------------------------------------------
+rm(list = ls())             
+
+# Reference source codes & other dependencies:
+source("DataTeam_ipmh.R")
+source("Dependencies.R")
+
+# Set file paths: Use this section to set input and output filepaths
+file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
+file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
+file_date <- gsub("^.*?_2","2",file_date)
+file_date <- str_remove(file_date,".csv")
+file_date <- format(file_date, format="%d %B %Y")
+ppw_rct_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
+                              file_date, ".csv", sep="")) %>% 
+    filter(is.na(redcap_repeat_instance)) #PPW data
+
+data_freeze <- file_date
+
+data_freeze <- format(data_freeze, format="%d %B %Y")
+
+options(scipen = 0)
+```
+
+```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
+
+knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
+
+```
+
+\newpage
+
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
+
+Keshet Ronen, PhD, MPH, University of Washington
+
+Amritha Bhat, MBBS, MD, MPH, University of Washington
+
+Report prepared by: Yuwei Wang
+
+Date of data freeze: `r data_freeze`
+
+\newpage
+
+## Person-time calculations
+
+### 50% expected person-time calculation
+
+```{r expected person-time calculations, echo=FALSE}
+ppw_rct_df <- ppw_rct_df %>% 
+    mutate(
+        visit_type = case_when(
+            grepl("Enrollment", redcap_event_name) ~ "Enrollment",
+            grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
+            grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
+            grepl("6 Months", redcap_event_name) ~ "6 Months",
+            TRUE ~ NA_character_
+        ))
+
+# ---- Step 1: Mean gestational age at enrollment ----
+enrollment_GA <- ppw_rct_df %>%
+  filter(visit_type == "Enrollment") %>%
+  select(clt_ptid, med_pre_gestage_current) %>%
+  rename(enroll_gestage = med_pre_gestage_current) #range: 20-48
+
+mean_enrollment_ga <- enrollment_GA %>%
+  summarise(mean_ga = mean(enroll_gestage, na.rm = TRUE)) %>%
+  pull(mean_ga)
+
+# ---- Step 2: Gestational age at delivery ----
+baseline_lmp <- ppw_rct_df %>%
+  filter(visit_type == "Enrollment") %>%
+  select(clt_ptid, med_lmp) %>%
+  filter(!is.na(med_lmp))
+
+delivery_GA <- ppw_rct_df %>%
+  filter(visit_type == "6 Weeks") %>%
+  select(clt_ptid, tpnc_date, tpnc_gestfill) %>%
+  left_join(baseline_lmp, by = "clt_ptid") %>%
+  mutate(
+    tpnc_date = as.Date(tpnc_date),
+    med_lmp   = as.Date(med_lmp),
+    ga_calculated = case_when(
+      !is.na(tpnc_date) & !is.na(med_lmp) ~
+        as.numeric(tpnc_date - med_lmp) / 7,
+      TRUE ~ NA_real_
+    ),
+    tpnc_gestfill = as.numeric(tpnc_gestfill),
+    deliv_gestage = case_when(
+      !is.na(ga_calculated) ~ ga_calculated,
+      !is.na(tpnc_gestfill) ~ tpnc_gestfill,
+      TRUE ~ NA_real_
+    )
+  ) %>%
+  filter(!is.na(deliv_gestage)) #range: 22-59.14
+
+# there might still be data error here: I don't think 59 is valid. 
+# checking gestational age at delivery distribution to see if there are outliers that might be data errors.
+# summary(delivery_GA$ga_calculated) #26-59
+# summary(delivery_GA$tpnc_gestfill) #22-77
+# summary(delivery_GA$deliv_gestage) #22-59
+
+mean_delivery_ga <- delivery_GA %>%
+  summarise(mean_ga = mean(deliv_gestage, na.rm = TRUE)) %>%
+  pull(mean_ga)
+
+# ---- Steps 3-5: Total expected person-time ----
+time_enroll_to_delivery <- mean_delivery_ga - mean_enrollment_ga
+time_enroll_to_pp14     <- time_enroll_to_delivery + 14
+total_expected_pt       <- time_enroll_to_pp14 * 2970
+half_expected_pt        <- 0.5 * total_expected_pt
+```
+
+Total expected person-time was estimated as the mean time from enrollment to delivery (calculated as mean gestational age at delivery minus mean gestational age at enrollment), plus 14 weeks postpartum, multiplied by the total expected sample size of 2,970 participants, yielding a total expected person-time of `r total_expected_pt` weeks. 50% of the expected person-time is `r half_expected_pt` weeks.
+
+### Current total person-time elapsed to date calculation
+
+```{r current person-time calculations, echo=FALSE}
+# ---- Current total person-time elapsed ----
+
+enroll_dates <- ppw_rct_df %>%
+  filter(visit_type == "Enrollment") %>%
+  select(clt_ptid, clt_date) %>%
+  mutate(clt_date = as.Date(clt_date))
+
+discharged <- ppw_rct_df %>%
+  filter(dis_today == "Yes") %>%
+  select(clt_ptid, dis_date) %>%
+  mutate(dis_date = as.Date(dis_date))
+
+current_pt <- enroll_dates %>%
+  left_join(discharged, by = "clt_ptid") %>%
+  mutate(
+    end_date    = if_else(is.na(dis_date), as.Date(data_freeze), dis_date),
+    person_time = as.numeric(end_date - clt_date) / 7
+  )
+
+total_person_time <- sum(current_pt$person_time, na.rm = TRUE)
+```
+
+As of the data freeze date of `r data_freeze`, the total person-time elapsed among enrolled participants is `r round(total_person_time, 2)` weeks. This represents `r round((total_person_time / total_expected_pt) * 100, 2)`% of the expected person-time. Because the current person-time elapsed is more than 50% of the expected person-time, we proceed with the interim analysis as planned.
+
+\newpage
+
+## Interim analysis results
+
+Generalized linear mixed models (GLMM) with a Gaussian family and identity link were used to compare change in PHQ-9 and GAD-7 scores from enrollment to 14 weeks postpartum between arms. Models included fixed effects for treatment arm, time since enrollment, and their interaction, and a random effect for facility.
+
+```{r data cleaning, echo=FALSE}
+ppw_rct_df <- ppw_rct_df %>%
+  mutate(
+    arm = case_when(
+      grepl("Arm 1", redcap_event_name) ~ "Intervention",
+      grepl("Arm 2", redcap_event_name) ~ "Control",
+      TRUE ~ NA_character_
+    )
+  )
+
+phq_recode <- c(
+  "not at all"             = 0,
+  "several days"           = 1,
+  "more than half the days" = 2,
+  "nearly every day"       = 3
+)
+
+gad_recode <- c(
+  "Not at all"          = 0,
+  "Several days"        = 1,
+  "Over half the days"  = 2,
+  "Nearly every day"    = 3
+)
+
+ppw_rct_df <- ppw_rct_df %>%
+  mutate(
+    across(c(phq_interest, phq_down, phq_sleep, phq_tired,
+             phq_appetite, phq_bad, phq_concentrate, phq_slow, phq_dead),
+           ~ phq_recode[.x]),
+    across(c(gad7_nerve, gad7_uncontrol, gad7_worry, gad7_relax,
+             gad7_restless, gad7_annoyed, gad7_afraid),
+           ~ gad_recode[.x]),
+    phq9_score = rowSums(across(c(phq_interest, phq_down, phq_sleep, phq_tired,
+                                   phq_appetite, phq_bad, phq_concentrate,
+                                   phq_slow, phq_dead)), na.rm = FALSE),
+    gad7_score = rowSums(across(c(gad7_nerve, gad7_uncontrol, gad7_worry,
+                                   gad7_relax, gad7_restless, gad7_annoyed,
+                                   gad7_afraid)), na.rm = FALSE)
+  )
+
+# Get enrollment date
+enroll_date <- ppw_rct_df %>%
+  filter(visit_type == "Enrollment") %>%
+  select(clt_ptid, enroll_date = clt_date)
+```
+
+```{r analysis dataset, echo=FALSE}
+analysis_df <- ppw_rct_df %>%
+  filter(visit_type %in% c("Enrollment", "14 Weeks")) %>%
+  select(arm, clt_ptid, clt_study_site, visit_type, clt_date, phq9_score, gad7_score) %>%
+  left_join(enroll_date, by = "clt_ptid") %>%
+  mutate(
+    clt_date     = as.Date(clt_date),
+    enroll_date  = as.Date(enroll_date),
+    time         = as.numeric(clt_date - enroll_date) / 7
+  )
+
+# ---- Random arm assignment at facility level ----
+set.seed(12345)
+
+facility_arms <- analysis_df %>%
+  distinct(clt_study_site) %>%
+  mutate(
+    arm_random = sample(rep(c("Intervention", "Control"), each = n() / 2))
+  )
+
+analysis_df <- analysis_df %>%
+  left_join(facility_arms, by = "clt_study_site") %>%
+  mutate(
+    arm_random = factor(arm_random, levels = c("Control", "Intervention"))
+  )
+######### Note for Wenwen: We generated this random arm assignment so we are blind to the real data. You should use arm to replace arm_random in the model below when you run the analysis on the real data. We will keep arm_random in the dataset for you to check that the randomization worked as expected, but please do not use it in the model.
+```
+
+### PHQ-9 
+
+```{r phq9 results, echo=TRUE, message=FALSE, warning=FALSE}
+phq_model <- lmer(phq9_score ~ arm_random * time + (1 | clt_study_site), data = analysis_df)
+
+parameters::parameters(phq_model, effects = "fixed", exponentiate = FALSE) %>%
+  filter(Parameter %in% c("arm_randomIntervention", "time", "arm_randomIntervention:time"))
+```
+
+### GAD-7
+
+```{r gad7 results, echo=TRUE, message=FALSE, warning=FALSE}
+gad_model <- lmer(gad7_score ~ arm_random * time + (1 | clt_study_site), data = analysis_df)
+
+parameters::parameters(gad_model, effects = "fixed", exponentiate = FALSE) %>%
+  filter(Parameter %in% c("arm_randomIntervention", "time", "arm_randomIntervention:time"))
+```
