@@ -5,8 +5,8 @@ subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report'
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
   word_document: default
-  pdf_document:
-    latex_engine: xelatex
+  #pdf_document:
+    #latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
@@ -63,13 +63,15 @@ knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 
 ```
 
-John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital \\[12pt]
+\newpage 
 
-Keshet Ronen, PhD, MPH, University of Washington \\[12pt]
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital 
 
-Amritha Bhat, MBBS, MD, MPH, University of Washington \\[12pt]
+Keshet Ronen, PhD, MPH, University of Washington 
 
-Report prepared by: David Owaga & Yuwei Wang \\[12pt]
+Amritha Bhat, MBBS, MD, MPH, University of Washington 
+
+Report prepared by: David Owaga & Yuwei Wang 
 
 Date of data freeze: `r data_freeze`
 
