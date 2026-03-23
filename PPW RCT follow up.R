@@ -275,6 +275,7 @@ table2a <- infant_outcomes %>%
 table2a
 
 
+
 # 14 Weeks Outcome----
 # Infants HIV status sort for PPWNLHIV
 HIV_status_14 <- infant_outcomes %>% 
@@ -1494,6 +1495,22 @@ arm_outcome_summary <- arm_joined %>%
     modify_caption("**Primary and Secondary Outcomes Summary by Arm**")
 
 arm_outcome_summary
+
+## Endorsed Suicidal thought
+suicidality <- ppw_rct_df %>% 
+    filter(phq_dead %in% c("several days","more than half the days",
+                           "nearly every day")) %>% 
+    select(clt_ptid, clt_study_site, phq_dead,risk_date,
+           risk_shphq9, risk_thoughts, referral_type___2) %>% 
+    rename(PTID = clt_ptid,
+           Facility = clt_study_site,
+           `Narrative Description` = risk_thoughts)
+
+# Save to Excel in a different directory
+write_xlsx(
+    suicidality,
+    path = "C:/Users/hp/OneDrive/Desktop/IPMH/Suicidality/Suicidality_Output.xlsx"
+)
 
 
     
