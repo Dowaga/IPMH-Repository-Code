@@ -113,3 +113,16 @@ table_audit_feedback_summary
 ```{r audit-feedback2, echo=FALSE, warning = FALSE, message=FALSE}
 table_audit_feedback_costing
 ```
+
+\pagebreak
+
+```{r}
+source("Out of Pocket Costing.R")
+patient_cost
+```
+
+
+```{r}
+source("Out of Pocket Costing.R")
+productivity_loses_summary
+```
