@@ -56,22 +56,21 @@ data_freeze <- file_date
 data_freeze <- format(data_freeze, format="%d %B %Y")
 ```
 
-
 ```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
 
 knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
 
 ```
 
-\newpage 
+\newpage
 
-John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital 
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
 
-Keshet Ronen, PhD, MPH, University of Washington 
+Keshet Ronen, PhD, MPH, University of Washington
 
-Amritha Bhat, MBBS, MD, MPH, University of Washington 
+Amritha Bhat, MBBS, MD, MPH, University of Washington
 
-Report prepared by: David Owaga & Yuwei Wang 
+Report prepared by: David Owaga & Yuwei Wang
 
 Date of data freeze: `r data_freeze`
 
@@ -121,19 +120,25 @@ study_summary
 \newpage
 
 ## 1.1 Study Timeline Since Initiation:
+
 -   May 12, 2023: Initial IRB approval
 -   Jun 05, 2023: Initial ERC approval
--   Sep 19, 2023: RO1 Start date
+-   Sept 19, 2023: RO1 Start date
 -   Oct 04, 2024: Research assistant (RA) training initiation
 -   Oct 11, 2024: 1st DSMB meeting
 -   Oct 23, 2024: Facility randomization
 -   Nov 06, 2024: Facility staff training initiation
 -   Feb 17, 2025: Perinatal women recruitment initiation
--   : 25% of planned enrollment
-
+-   May 19, 2025: 25% of planned enrollment achieved
+-   August 1, 2025: Enrollment halted due to end of grant period
+-   Sept 22, 2025: Enrollment resumed after receiving NOA
+-   Nov 21, 2025: 2nd DSMB meeting
+-   Nov 24, 2025: 50% of planned enrollment achieved
+-   
 
 ## 1.2 Key Changes to Study Protocol
-We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on May 12, 2025 to include women from >=20 weeks gestation because most of the participants enrolled from >=28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study. 
+
+We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on May 12, 2025 to include women from \>=20 weeks gestation because most of the participants enrolled from \>=28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study.
 
 # 2. Study Progress
 
@@ -165,22 +170,21 @@ We began recruiting pregnant women into the study on February 17, 2025. `r n_enr
 
 Of the enrolled participants, `r n_second` (`r round(n_second / n_enrol * 100, 1)`%) have completed their 6 weeks, `r n_third` (`r round(n_third / n_enrol * 100, 1)`%) have completed 14 weeks and `r n_fourth` (`r round(n_fourth / n_enrol * 100, 1)`%) have completed 6 months postpartum follow-up visits.
 
-In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily;  however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts. 
+In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily; however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts.
 
-We halted enrollment of new participants on August 1, 2025 after the grant period ended on July 31, 2025, pending approval of the Notice of Award from the National Institute of Health. We received the Notice of Award on September 8, 2025, and enrollments resumed on September 22, 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued. 
+We halted enrollment of new participants on August 1, 2025 after the grant period ended on July 31, 2025, pending approval of the Notice of Award from the National Institute of Health. We received the Notice of Award on September 8, 2025, and enrollments resumed on September 22, 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued.
 
-In Siaya County, there is an ongoing nurses strike which begun on September 18, 2025. The strike has affected participant enrollment in 5 intervention and 4 control sites, where we have not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility has hired a locum nurse for the maternal child health clinic, and enrollment has been ongoing for the past 2 weeks. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists has been ongoing. 
+In Siaya County, there is an ongoing nurses strike which begun on September 18, 2025. The strike has affected participant enrollment in 5 intervention and 4 control sites, where we have not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility has hired a locum nurse for the maternal child health clinic, and enrollment has been ongoing for the past 2 weeks. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists has been ongoing.
 
 \newpage
 
-# 3. Study Enrollment 
+# 3. Study Enrollment
 
 ## 3.1 Overall Cohort
 
 ### 3.1.1 Current subject status
 
 So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6-weeks postpartum visit.
-
 
 ```{r consort, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
 source("Consort.R")
@@ -195,8 +199,7 @@ consort_single
 source("Enrollment Progress.R")
 ```
 
-On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on
-`r target_reached`.
+On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on `r target_reached_25`. We hit our 50% enrollment target on `r target_reached_50`.
 
 ```{r enrollment_sub, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
@@ -232,6 +235,12 @@ target_25_line <- data.frame(
   study_site = "25% Target"
 )
 
+target_50_line <- data.frame(
+  week = unique(weekly_enrollment$week),
+  cumulative_enrollment = 1485,
+  study_site = "50% Target"
+)
+
 total_enrollment <- weekly_enrollment %>%
     group_by(week) %>%
     summarise(enrollment_count = sum(enrollment_count)) %>%
@@ -242,14 +251,20 @@ total_enrollment <- weekly_enrollment %>%
 combined_enrollment <- bind_rows(
   weekly_enrollment,
   total_enrollment,
-  target_25_line
+  target_25_line,
+  target_50_line
 )
 
 target_value <- 743
+target_value_2 <- 1485
 
 # Find the first date when cumulative enrollment reached or exceeded 25%
 target_reached <- total_enrollment %>%
   filter(cumulative_enrollment >= target_value) %>%
+  slice_min(week, n = 1)
+
+target_reached_50 <- total_enrollment %>%
+  filter(cumulative_enrollment >= target_value_2) %>%
   slice_min(week, n = 1)
 
 p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
@@ -270,6 +285,18 @@ p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment,
     vjust = -1, size = 3.5, color = "black", fontface = "bold"
   ) +
 
+   geom_point(data = target_reached_50, aes(x = week, y = cumulative_enrollment),
+             color = "black", size = 3, shape = 21, fill = "orange") +
+  geom_text(
+    data = target_reached_50,
+    aes(
+      x = week,
+      y = cumulative_enrollment,
+      label = paste0("50% target reached\n", format(week, "%b %d, %Y"))
+    ),
+    vjust = -1, size = 3.5, color = "black", fontface = "bold"
+  ) +
+    
   labs(title = "Enrollment Trends",
        x = "Date",
        y = "Cumulative Enrollment",
@@ -297,6 +324,7 @@ p1
 
 ```{r Facility target reached}
 source("Enrollment Progress.R")
+
 reached_25per_target <- weekly_enrollment %>%
   group_by(study_site) %>%
   summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
@@ -393,7 +421,7 @@ add_box(txt = txt_enrolled) |>
 
 ### 3.2.2 Enrollment Progress - Overall
 
-Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, three facilities have achieved 50% of the target (10 participants each), while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site. 
+Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, three facilities have achieved 50% of the target (10 participants each), while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site.
 
 ```{r enrollment_mor, echo=FALSE, fig.height=5, fig.width=8, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
@@ -457,7 +485,7 @@ ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
 
 # 4. Ineligibility
 
-Women were ineligible if their gestational age at eligibility assessment was <20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
+Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort.R")
@@ -533,7 +561,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 
 ```
 
-During enrollment and follow up study visits,  participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
+During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
 ## generate report using data from psychosocial referrals form in REDCap  
@@ -551,9 +579,10 @@ fidelity_summary
 
 ```
 
-# 8 Study endpoints  
+# 8 Study endpoints
 
 ## 8.1 Primary and secondary study endpoints at 14 weeks postpartum (descriptive analysis)
+
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
 outcome_summary
@@ -562,6 +591,7 @@ outcome_summary
 # 9 AEs and SAEs
 
 ## 9.1 AEs Summary
+
 ```{r AEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 total_AEs <- ae_long %>% 
@@ -601,4 +631,3 @@ As of `r format(Sys.Date(), "%b %d, %Y")`, `r total_SAEs` serious adverse events
 source("SAEs Lists.R")
 sae_report
 ```
-
