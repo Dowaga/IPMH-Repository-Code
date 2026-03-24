@@ -40,7 +40,7 @@ weekly_count <- enrollment_progress %>%
     summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
 
 # Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
-dateSeq_df <- data.frame(week = seq(as.Date("2025-02-16"), as.Date("2025-11-15"), by = "week"))
+dateSeq_df <- data.frame(week = seq(as.Date("2025-02-16"), as.Date("2026-05-31"), by = "week"))
 
 
 weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
@@ -97,11 +97,23 @@ total_enrollment <- weekly_enrollment %>%
     mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
     mutate(study_site = "Total")
 
-target_reached <- total_enrollment %>%
+target_reached_25 <- total_enrollment %>%
     mutate(week = format(as.Date(week), "%b %d, %Y"))%>% 
     filter(cumulative_enrollment >= 743) %>%
     slice(1) %>%
     pull(week) 
+
+target_reached_50 <- total_enrollment %>%
+    mutate(week = format(as.Date(week), "%b %d, %Y"))%>% 
+    filter(cumulative_enrollment >= 1486) %>%
+    slice(1) %>%
+    pull(week)
+
+target_reached_75 <- total_enrollment %>%
+    mutate(week = format(as.Date(week), "%b %d, %Y"))%>% 
+    filter(cumulative_enrollment >= 2229) %>%
+    slice(1) %>%
+    pull(week)
 
 # Enrollments ----
 ## Summary of Study Enrollment by Facility----
