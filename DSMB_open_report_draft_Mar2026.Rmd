@@ -174,7 +174,9 @@ In general, the enrollment had a good start and has progressed well despite chal
 
 We halted enrollment of new participants on August 1, 2025 after the grant period ended on July 31, 2025, pending approval of the Notice of Award from the National Institute of Health. We received the Notice of Award on September 8, 2025, and enrollments resumed on September 22, 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued.
 
-In Siaya County, there is an ongoing nurses strike which begun on September 18, 2025. The strike has affected participant enrollment in 5 intervention and 4 control sites, where we have not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility has hired a locum nurse for the maternal child health clinic, and enrollment has been ongoing for the past 2 weeks. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists has been ongoing.
+In Siaya County, there is an ongoing nurses strike which begun on September 18, 2025. The strike has affected participant enrollment in 5 intervention and 4 control sites, where we have not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility has hired a locum nurse for the maternal child health clinic, and enrollment has been ongoing for the past 2 weeks. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists has been ongoing. 
+
+[need to update]
 
 \newpage
 
@@ -332,9 +334,17 @@ reached_25per_target <- weekly_enrollment %>%
   summarise(n = n()) %>%
   pull(n)
 
+reached_50per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 74) %>%
+  summarise(n = n()) %>%
+  pull(n)
 ```
 
 All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 37 participants. Notable, the first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2025.
+
+`r reached_50per_target` facility clusters have reached the 50% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 74 participants. Notably, the first cluster to achieve this benchmark was [] , which reached 50% enrollment in [].
 
 ```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
@@ -367,9 +377,12 @@ weekly_enrollment <- weekly_enrollment %>%
 p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
                                     color = study_site, group = study_site)) +
     geom_line(linewidth = 1) +  
-    geom_hline(yintercept = 37, linetype = "dashed", color = "blue", linewidth = 1.5) +
+    geom_hline(yintercept = 37, linetype = "dashed", color = "red", linewidth = 1.5) +
     annotate("text", x = min(weekly_enrollment$week), y = 37.125, 
              label = "25% Target", vjust = -1, hjust = 0, size = 3) +
+    geom_hline(yintercept = 74, linetype = "dashed", color = "orange", linewidth = 1.5) +
+    annotate("text", x = min(weekly_enrollment$week), y = 74.125, 
+             label = "50% Target", vjust = -1, hjust = 0, size = 3) +
     labs(title = "Enrollment Trends by Study Site",
          x = "Date",
          y = "Number of Enrollments",
@@ -389,7 +402,6 @@ p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment,
   ) +
   guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
-
 
 p2
 ```
@@ -421,7 +433,7 @@ add_box(txt = txt_enrolled) |>
 
 ### 3.2.2 Enrollment Progress - Overall
 
-Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. Out of the total enrollment target of 20 WLWH per facility, three facilities have achieved 50% of the target (10 participants each), while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site.
+Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. [Out of the total enrollment target of 20 WLWH per facility, three facilities have achieved 50% of the target (10 participants each), while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site.] (need to update here)
 
 ```{r enrollment_mor, echo=FALSE, fig.height=5, fig.width=8, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
@@ -453,10 +465,10 @@ weekly_enrollment <- weekly_enrollment %>%
 ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
                                     color = study_site, group = study_site)) +
     geom_line(linewidth = 1) +  
-    geom_hline(yintercept = 5, linetype = "dashed", color = "blue", linewidth = 1.5) +
+    geom_hline(yintercept = 5, linetype = "dashed", color = "red", linewidth = 1.5) +
     annotate("text", x = min(weekly_enrollment$week), y = 5, 
              label = "25% Target", vjust = -1, hjust = 0, size = 3) +
-    geom_hline(yintercept = 10, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+    geom_hline(yintercept = 10, linetype = "dashed", color = "orange", linewidth = 1.5) +
     annotate("text", x = min(weekly_enrollment$week), y = 10, 
              label = "50% Target", vjust = -1, hjust = 0, size = 3) +
     labs(title = "WLWH Enrollment Trends by Study Site",
@@ -508,8 +520,8 @@ basic_demo
 
 ```{r WLWH_demo, echo=FALSE}
 source("PPW RCT Basic Demographics.R")
-wlwh_demo
 
+wlwh_demo
 ```
 
 \newpage
@@ -574,9 +586,8 @@ referral_summary
 
 ```{r, message=FALSE, warning=FALSE}
 source("Telepsychiatry Sessions.R")
-#Generate a table/figure depicting stepped care intervention steps ???Screening,  PM+,  telepsychiatry tracking (kind of ???fidelity??? to intervention model) 
-fidelity_summary
 
+fidelity_summary
 ```
 
 # 8 Study endpoints
@@ -585,6 +596,7 @@ fidelity_summary
 
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
+
 outcome_summary
 ```
 
@@ -594,14 +606,16 @@ outcome_summary
 
 ```{r AEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
+
 total_AEs <- ae_long %>% 
     nrow()
 ```
 
-As of `r format(Sys.Date(), "%b %d, %Y")`, `r total_AEs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
+As of `r data_freeze`, `r total_AEs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
 
 ```{r AEs report, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
+
 total_aes
 ```
 
@@ -609,6 +623,7 @@ total_aes
 
 ```{r SAEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
+
 total_SAEs <- clean_sae_df %>% 
     nrow()
 
@@ -625,9 +640,10 @@ total_hosp <- clean_sae_df %>%
     nrow()
 ```
 
-As of `r format(Sys.Date(), "%b %d, %Y")`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
+As of `r data_freeze`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
+
 sae_report
 ```
