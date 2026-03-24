@@ -41,8 +41,8 @@ weekly_count <- enrollment_progress %>%
 
 # Define the sequence of weekly dates from enrollment start to system date
 date_seq <- seq(
-    from = as.Date("2025-02-16"),
-    to = Sys.Date(),
+    from = as.Date("2025-03-17"),
+    to = as.Date("2026-05-31"),
     by = "week"
 )
 
@@ -50,18 +50,28 @@ date_seq <- seq(
 # Convert to a dataframe
 dateSeq_df <- data.frame(week = date_seq)
 
-weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
-    arrange(week) %>%  # Ensure weeks are in order
-    mutate(enrollment_count = ifelse(is.na(enrollment_count), 
-                                     0, enrollment_count)) %>%   # Fill missing counts with 0
-    filter(!is.na(study_site))
+# weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
+#     arrange(week) %>%  
+#     mutate(enrollment_count = ifelse(is.na(enrollment_count), 
+#                                      0, enrollment_count)) %>%   
+#     filter(!is.na(study_site))
+# 
+# # Compute cumulative enrollment per site
+# weekly_enrollment <- weekly_enrollment %>%
+#     group_by(study_site) %>%
+#     mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+#     ungroup()
 
-# Compute cumulative enrollment per site
-weekly_enrollment <- weekly_enrollment %>%
+all_sites <- unique(weekly_count$study_site)
+
+weekly_enrollment <- dateSeq_df %>%
+    crossing(study_site = all_sites) %>%
+    left_join(weekly_count, by = c("study_site", "week")) %>%
+    mutate(enrollment_count = ifelse(is.na(enrollment_count), 0, enrollment_count)) %>%
+    arrange(study_site, week) %>%
     group_by(study_site) %>%
     mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
     ungroup()
-
 
 figure_1 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, color = study_site, group = study_site)) +
     geom_line(linewidth = 1) +  # Line plot for trends
