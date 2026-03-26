@@ -174,9 +174,9 @@ In general, the enrollment had a good start and has progressed well despite chal
 
 We halted enrollment of new participants on August 1, 2025 after the grant period ended on July 31, 2025, pending approval of the Notice of Award from the National Institute of Health. We received the Notice of Award on September 8, 2025, and enrollments resumed on September 22, 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued.
 
-In Siaya County, there is an ongoing nurses strike which begun on September 18, 2025. The strike has affected participant enrollment in 5 intervention and 4 control sites, where we have not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility has hired a locum nurse for the maternal child health clinic, and enrollment has been ongoing for the past 2 weeks. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists has been ongoing. 
+In Siaya County, there was a nurses strike which begun on September 18, 2025. The strike affected participant enrollment in 5 intervention and 4 control sites, where we had not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility had hired a locum nurse for the maternal child health clinic, and enrollment was not affected. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists were not affected. The strike was officially called off on November 17, 2025. We resumed participant enrollment in the affected sites right after the strike.
 
-[need to update]
+Data collection was temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
 
 \newpage
 
