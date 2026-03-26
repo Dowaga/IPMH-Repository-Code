@@ -121,8 +121,14 @@ source("Out of Pocket Costing.R")
 patient_cost
 ```
 
-
+\pagebreak
 ```{r}
 source("Out of Pocket Costing.R")
 productivity_loses_summary
+```
+
+\pagebreak
+```{r}
+source("Out of Pocket Costing.R")
+child_care_summary
 ```
