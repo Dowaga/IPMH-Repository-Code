@@ -259,6 +259,8 @@ gad_model <- lmer(gad7_score ~ arm_random * time + (1 | clt_study_site), data = 
 summary(gad_model)
 ```
 
+\newpage
+
 ### O'Brien-Fleming boundary
 
 ```{r OBF boundary, echo=FALSE}
@@ -283,69 +285,69 @@ gad7_est  <- gad7_coef["arm_randomIntervention:time", "Estimate"]
 gad7_se   <- gad7_coef["arm_randomIntervention:time", "Std. Error"]
 gad7_z    <- gad7_coef["arm_randomIntervention:time", "t value"]
 
-# ---- Option 1: Standard 95% CI with OBF z-statistic comparison ----
-results_option1 %>%
+```
+
+The O'Brien-Fleming boundary at the interim analysis (50% information time) is `r round(obf_boundary, 3)`. The boundary is crossed if the absolute value of the Z-statistic exceeds this value.
+
+```{r results table, echo=FALSE}
+results_option1 <- tibble(
+  Outcome          = c("PHQ-9", "GAD-7"),
+  Estimate         = c(phq9_est, gad7_est),
+  SE               = c(phq9_se, gad7_se),
+  CI_lo_95         = c(phq9_est - 1.96 * phq9_se, gad7_est - 1.96 * gad7_se),
+  CI_hi_95         = c(phq9_est + 1.96 * phq9_se, gad7_est + 1.96 * gad7_se),
+  Z_statistic      = c(phq9_z, gad7_z),
+  OBF_boundary     = obf_boundary,
+  Boundary_crossed = ifelse(abs(c(phq9_z, gad7_z)) > obf_boundary, "YES", "NO")
+)
+
+results_option2 <- tibble(
+  Outcome          = c("PHQ-9", "GAD-7"),
+  Estimate         = c(phq9_est, gad7_est),
+  SE               = c(phq9_se, gad7_se),
+  CI_lo_adjusted   = c(phq9_est - obf_boundary * phq9_se, gad7_est - obf_boundary * gad7_se),
+  CI_hi_adjusted   = c(phq9_est + obf_boundary * phq9_se, gad7_est + obf_boundary * gad7_se),
+  Z_statistic      = c(phq9_z, gad7_z),
+  OBF_boundary     = obf_boundary,
+  Boundary_crossed = ifelse(abs(c(phq9_z, gad7_z)) > obf_boundary, "YES", "NO")
+)
+
+results_combined <- bind_rows(
+  results_option1 %>%
+    mutate(CI_type = "Standard 95% CI") %>%
+    rename(CI_lower = CI_lo_95, CI_upper = CI_hi_95),
+  results_option2 %>%
+    mutate(CI_type = "OBF-Adjusted 99.46% CI") %>%
+    rename(CI_lower = CI_lo_adjusted, CI_upper = CI_hi_adjusted)
+) %>%
   mutate(
     Estimate    = round(Estimate, 3),
-    SE          = round(SE, 3),
-    CI_lo_95    = round(CI_lo_95, 3),
-    CI_hi_95    = round(CI_hi_95, 3),
-    Z_statistic = round(Z_statistic, 3),
-    OBF_boundary = round(OBF_boundary, 3)
+    CI          = sprintf("(%.3f, %.3f)", round(CI_lower, 3), round(CI_upper, 3)),
+    Z_statistic = round(Z_statistic, 3)
   ) %>%
+  select(Outcome, CI_type, Estimate, CI, Z_statistic, Boundary_crossed) %>%
   rename(
+    `CI Type`          = CI_type,
     `Estimate`         = Estimate,
-    `SE`               = SE,
-    `95% CI (Lower)`   = CI_lo_95,
-    `95% CI (Upper)`   = CI_hi_95,
+    `CI`               = CI,
     `Z-statistic`      = Z_statistic,
-    `OBF Boundary`     = OBF_boundary,
     `Boundary Crossed` = Boundary_crossed
-  ) %>%
+  )
+
+results_combined %>%
   kable(
-    caption = "Primary Outcomes: GLMM Results with O'Brien-Fleming Boundary Comparison",
+    caption  = "Primary Outcomes: GLMM Results",
     booktabs = TRUE,
-    align = "lcccccc"
+    align    = "llcccc"
   ) %>%
   kable_styling(
     latex_options = c("striped", "hold_position"),
-    full_width = FALSE
+    full_width    = FALSE
   ) %>%
-  column_spec(7, bold = TRUE,
-              color = ifelse(results_option1$Boundary_crossed == "YES", "red", "black"))
-
-# ---- Option 2: OBF-adjusted CI ----
-
-results_option2 %>%
-  mutate(
-    Estimate         = round(Estimate, 3),
-    SE               = round(SE, 3),
-    CI_lo_adjusted   = round(CI_lo_adjusted, 3),
-    CI_hi_adjusted   = round(CI_hi_adjusted, 3),
-    Z_statistic      = round(Z_statistic, 3),
-    OBF_boundary     = round(OBF_boundary, 3)
-  ) %>%
-  rename(
-    `Estimate`           = Estimate,
-    `SE`                 = SE,
-    `99.46% CI (Lower)`  = CI_lo_adjusted,
-    `99.46% CI (Upper)`  = CI_hi_adjusted,
-    `Z-statistic`        = Z_statistic,
-    `OBF Boundary`       = OBF_boundary,
-    `Boundary Crossed`   = Boundary_crossed
-  ) %>%
-  kable(
-    caption = "Primary Outcomes: GLMM Results with OBF-Adjusted CI (99.46%)",
-    booktabs = TRUE,
-    align = "lcccccc"
-  ) %>%
-  kable_styling(
-    latex_options = c("striped", "hold_position"),
-    full_width = FALSE
-  ) %>%
-  column_spec(7, bold = TRUE,
-              color = ifelse(results_option2$Boundary_crossed == "YES", "red", "black"))
-
+  collapse_rows(columns = 1, valign = "middle") %>%
+  column_spec(6, bold = TRUE,
+              color = ifelse(results_combined$`Boundary Crossed` == "YES",
+                             "red", "black")) 
 # ---- OBF boundary plot ----
 info_frac <- c(0.5, 1.0)  # interim at 50%, final at 100%
 
