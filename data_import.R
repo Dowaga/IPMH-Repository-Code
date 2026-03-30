@@ -10,12 +10,15 @@ source("Dependencies.R")
 source("REDCap_datapull.R")
 
 if (exists("data_freeze")) {
-    file_date <- format(as.Date(data_freeze), "%d %B %Y")  
+    latest <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
+    latest <- rownames(latest$info[which.max(latest$info$mtime),])
+    latest <- as.Date(gsub(".*RCT_PPW_(.+)\\.csv", "\\1", latest))  # extracts YYYY-MM-DD
+    
+    file_date <- format(min(as.Date(data_freeze), latest), "%Y-%m-%d")  # keep YYYY-MM-DD
 } else {
-    file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
-    file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
-    file_date <- gsub("^.*?_2","2",file_date)
-    file_date <- str_remove(file_date,".csv")
+    latest <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
+    latest <- rownames(latest$info[which.max(latest$info$mtime),])
+    file_date <- gsub(".*RCT_PPW_(.+)\\.csv", "\\1", latest)  # YYYY-MM-DD string
 }
 
 ppw_rct_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
