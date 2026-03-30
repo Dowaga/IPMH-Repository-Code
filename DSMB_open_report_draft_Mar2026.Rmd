@@ -51,9 +51,11 @@ ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_",
                                              file_date, ".csv", sep="")) %>% 
     filter(redcap_repeat_instrument == "ADMIN: Adverse Experience")
 
-data_freeze <- file_date
+data_freeze <- Sys.time() 
 
-data_freeze <- format(data_freeze, format="%d %B %Y")
+#data_freeze <- "2026-05-11"
+
+##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. #####
 ```
 
 ```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
@@ -134,7 +136,8 @@ study_summary
 -   Sept 22, 2025: Enrollment resumed after receiving NOA
 -   Nov 21, 2025: 2nd DSMB meeting
 -   Nov 24, 2025: 50% of planned enrollment achieved
--   
+-   Jan 8, 2026: Data collection temporarily halted due to REDCap server upgrade
+-   Jan 22, 2026: Data collection resumed after REDCap server upgrade
 
 ## 1.2 Key Changes to Study Protocol
 
@@ -146,6 +149,7 @@ We requested for a modification from the Kenyatta National Hospital Ethical Rese
 
 ```{r source_consort, echo=FALSE, warning=FALSE}
 source("Consort.R")
+
 n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
 n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
 n_eligible <- consort_data %>% filter(rct_eligible == 1) %>% nrow()
@@ -154,6 +158,7 @@ n_enrol <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
 n_enrol_per <- round(n_enrol/n_eligible *100, 1)
 n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
 n_second_per <- round(n_second/n_enrol * 100, 1)
+
 # 14 Weeks Visit
 n_third <- consort_data %>% filter(!is.na(thirdvisit)) %>% nrow()
 n_third_per <- round(n_third/n_enrol * 100, 1)
@@ -201,7 +206,9 @@ consort_single
 source("Enrollment Progress.R")
 ```
 
-On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on `r target_reached_25`. We hit our 50% enrollment target on `r target_reached_50`.
+On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on `r target_reached_25`. We hit our 50% enrollment target on `r target_reached_50`. 
+
+[Double check if we hit 75% target by May 11.]
 
 ```{r enrollment_sub, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
@@ -269,11 +276,23 @@ target_reached_50 <- total_enrollment %>%
   filter(cumulative_enrollment >= target_value_2) %>%
   slice_min(week, n = 1)
 
+target_lines <- bind_rows(target_25_line, target_50_line)
+
+main_enrollment <- combined_enrollment %>% 
+  filter(!study_site %in% c("25% Target", "50% Target"))
+
+
 p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
                                 color = study_site, group = study_site)) +
   geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +
   scale_linewidth_identity() +
-  
+    
+    # Target lines outside the color aesthetic ??? hardcoded colors
+  geom_line(data = target_25_line, aes(x = week, y = cumulative_enrollment),
+            color = "red", linewidth = 1, inherit.aes = FALSE) +
+  geom_line(data = target_50_line, aes(x = week, y = cumulative_enrollment),
+            color = "orange", linewidth = 1, inherit.aes = FALSE) +
+
   # Add the point and text annotation
   geom_point(data = target_reached, aes(x = week, y = cumulative_enrollment),
              color = "black", size = 3, shape = 21, fill = "red") +
@@ -340,11 +359,21 @@ reached_50per_target <- weekly_enrollment %>%
   filter(latest_enrollment >= 74) %>%
   summarise(n = n()) %>%
   pull(n)
+
+reached_75per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 111) %>%
+  summarise(n = n()) %>%
+  pull(n)
+
 ```
 
-All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 37 participants. Notable, the first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2025.
+All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 37 participants. Notable, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 25% enrollment in mid April, 2025.
 
-`r reached_50per_target` facility clusters have reached the 50% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 74 participants. Notably, the first cluster to achieve this benchmark was [] , which reached 50% enrollment in [].
+All `r reached_50per_target` facility clusters have reached the 50% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 74 participants. Notably, the first two clusters to achieve this benchmark were Nyalenda and Airport Health Centres, both of which reached 50% enrollment in early October, 2025.
+
+`r reached_75per_target` facility clusters have reached the 75% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 111 participants. Notably, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 75% enrollment in late November, 2025.
 
 ```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
@@ -374,35 +403,42 @@ weekly_enrollment <- weekly_enrollment %>%
     "22, Ndiru Level 4 Hospital" = "22, Ndiru"
   ))
 
-p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+p2 <- p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
                                     color = study_site, group = study_site)) +
     geom_line(linewidth = 1) +  
     geom_hline(yintercept = 37, linetype = "dashed", color = "red", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 37.125, 
-             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
     geom_hline(yintercept = 74, linetype = "dashed", color = "orange", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 74.125, 
-             label = "50% Target", vjust = -1, hjust = 0, size = 3) +
+    geom_hline(yintercept = 111, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+    annotate("label",                                      # "label" adds a box background
+             x = as.Date("2025-03-15"),                    # fixed early date, adjust as needed
+             y = 47, label = "25% target \n reached",
+             color = "red", fontface = "bold", size = 3, fill = "white") +
+    annotate("label", 
+             x = as.Date("2025-03-15"), 
+             y = 84, label = "50% target \n reached",
+             color = "orange", fontface = "bold", size = 3, fill = "white") +
+    annotate("label", 
+             x = as.Date("2025-03-15"), 
+             y = 121, label = "75% target \n reached",
+             color = "darkgreen", fontface = "bold", size = 3, fill = "white") +
     labs(title = "Enrollment Trends by Study Site",
          x = "Date",
-         y = "Number of Enrollments",
+         y = "Cumulative Enrollments",
          color = "Study Site") +
-# Apply your professional theme
-  theme_minimal(base_size = 12) +
-  theme(
-    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
-    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    legend.position = "right",
-    legend.box = "vertical",
-    legend.title = element_text(face = "bold", size = 10),
-    legend.text = element_text(size = 9),
-    legend.key.height = unit(0.5, "cm"),
-    legend.key.width = unit(0.5, "cm"),
-    plot.margin = margin(10, 20, 10, 10)
-  ) +
-  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
-
+    theme_minimal(base_size = 12) +
+    theme(
+        plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(face = "bold", size = 10),
+        legend.text = element_text(size = 9),
+        legend.key.height = unit(0.5, "cm"),
+        legend.key.width = unit(0.5, "cm"),
+        plot.margin = margin(10, 20, 10, 10)
+    ) +
+    guides(color = guide_legend(ncol = 2)) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
 p2
 ```
 
@@ -437,6 +473,7 @@ Recruitment of women living with HIV (WLWH) into the cohort has been slower than
 
 ```{r enrollment_mor, echo=FALSE, fig.height=5, fig.width=8, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
+
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
   mutate(study_site = recode(study_site,
