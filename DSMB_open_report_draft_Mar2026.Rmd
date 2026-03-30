@@ -467,9 +467,30 @@ add_box(txt = txt_enrolled) |>
 
 \newpage
 
-### 3.2.2 Enrollment Progress - Overall
+### 3.2.2 Enrollment Progress
 
-Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. [Out of the total enrollment target of 20 WLWH per facility, three facilities have achieved 50% of the target (10 participants each), while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site.] (need to update here)
+```{r enrollment_hiv, echo=FALSE}
+source("Enrollment_WLWH.R")
+
+wlwh_target <- 20
+
+wlwh_milestones <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  slice_max(week, n = 1) %>%  # most recent cumulative count per site
+  ungroup() %>%
+  summarise(
+    reached_25  = sum(cumulative_enrollment >= wlwh_target * 0.25),
+    reached_50  = sum(cumulative_enrollment >= wlwh_target * 0.50),
+    reached_75  = sum(cumulative_enrollment >= wlwh_target * 0.75),
+    reached_100 = sum(cumulative_enrollment >= wlwh_target)
+  )
+```
+
+Recruitment of women living with HIV (WLWH) into the cohort continues to show steady improvement. Out of the total enrollment target of `r wlwh_target` WLWH per facility, 
+`r wlwh_milestones$reached_100` facilities have achieved 100% of their target, 
+`r wlwh_milestones$reached_75` have achieved 75% (`r wlwh_target * 0.75` participants), 
+`r wlwh_milestones$reached_50` have achieved 50% (`r wlwh_target * 0.50` participants), 
+and all `r wlwh_milestones$reached_25` have achieved at least 25% (`r wlwh_target * 0.25` participants).
 
 ```{r enrollment_mor, echo=FALSE, fig.height=5, fig.width=8, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
@@ -499,35 +520,45 @@ weekly_enrollment <- weekly_enrollment %>%
     "22, Ndiru Level 4 Hospital" = "22, Ndiru"
   ))
 
-ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+p3 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
                                     color = study_site, group = study_site)) +
     geom_line(linewidth = 1) +  
     geom_hline(yintercept = 5, linetype = "dashed", color = "red", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 5, 
-             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
+    annotate("label", x = min(weekly_enrollment$week), y = 5, 
+             label = "25% target reached", vjust = -0.5, hjust = 0, size = 3,
+             color = "red", fontface = "bold", fill = "white") +
     geom_hline(yintercept = 10, linetype = "dashed", color = "orange", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 10, 
-             label = "50% Target", vjust = -1, hjust = 0, size = 3) +
+    annotate("label", x = min(weekly_enrollment$week), y = 10, 
+             label = "50% target reached", vjust = -0.5, hjust = 0, size = 3,
+             color = "orange", fontface = "bold", fill = "white") +
+    geom_hline(yintercept = 15, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+    annotate("label", x = min(weekly_enrollment$week), y = 15, 
+             label = "75% target reached", vjust = -0.5, hjust = 0, size = 3,
+             color = "darkgreen", fontface = "bold", fill = "white") +
+    geom_hline(yintercept = 20, linetype = "dashed", color = "blue", linewidth = 1.5) +
+    annotate("label", x = min(weekly_enrollment$week), y = 20, 
+             label = "100% target reached", vjust = -0.5, hjust = 0, size = 3,
+             color = "blue", fontface = "bold", fill = "white") +
     labs(title = "WLWH Enrollment Trends by Study Site",
          x = "Date",
-         y = "Cummulative WLWH Enrolled",
+         y = "Cumulative WLWH Enrolled",
          color = "Study Site") +
-# Apply your professional theme
-  theme_minimal(base_size = 12) +
-  theme(
-    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
-    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    legend.position = "right",
-    legend.box = "vertical",
-    legend.title = element_text(face = "bold", size = 10),
-    legend.text = element_text(size = 9),
-    legend.key.height = unit(0.5, "cm"),
-    legend.key.width = unit(0.5, "cm"),
-    plot.margin = margin(10, 20, 10, 10)
-  ) +
-  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+    theme_minimal(base_size = 12) +
+    theme(
+        plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(face = "bold", size = 10),
+        legend.text = element_text(size = 9),
+        legend.key.height = unit(0.5, "cm"),
+        legend.key.width = unit(0.5, "cm"),
+        plot.margin = margin(10, 20, 10, 10)
+    ) +
+    guides(color = guide_legend(ncol = 2)) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
 
+p3
 ```
 
 \newpage
@@ -538,6 +569,7 @@ Women were ineligible if their gestational age at eligibility assessment was \<2
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort.R")
+
 ineligibility_summary
 ```
 
