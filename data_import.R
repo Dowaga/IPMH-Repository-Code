@@ -10,7 +10,7 @@ source("Dependencies.R")
 source("REDCap_datapull.R")
 
 if (exists("data_freeze")) {
-    file_date <- format(data_freeze, "%d %B %Y")
+    file_date <- format(as.Date(data_freeze), "%d %B %Y")  
 } else {
     file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
     file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
