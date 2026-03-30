@@ -852,8 +852,9 @@ pregnancy_combined_dedup <- pregnancy_combined %>%
 
 
 table4 <- pregnancy_combined_dedup %>%
-    select(miscarriage_final, stillbirth_final, late_stillbirth_final,
-           preterm_birth, low_birthweight, sga, infant_death, any_adverse_outcome) %>%
+    select(stillbirth_final, late_stillbirth_final,
+           preterm_birth, low_birthweight, sga, 
+           infant_death, any_adverse_outcome) %>%
     tbl_summary(
         #type = list(
             #miscarriage_final ~ "categorical",
@@ -866,7 +867,6 @@ table4 <- pregnancy_combined_dedup %>%
             #any_adverse_outcome ~ "categorical"
         #),
         label = list(
-            miscarriage_final ~ "Miscarriage",
             stillbirth_final ~ "Stillbirth",
             late_stillbirth_final ~ "Late Stillbirth (>=28 weeks)",
             preterm_birth ~ "Preterm Birth (<37 weeks)",
@@ -896,7 +896,12 @@ table4 <- pregnancy_combined_dedup %>%
         subtitle = "Table 4. Clinical Adverse Outcomes") %>%
     gt::tab_options(
         table.font.size = "medium",
-        data_row.padding = gt::px(1))
+        data_row.padding = gt::px(1)) %>% 
+    gt::tab_footnote(
+        footnote = "Miscarriage is not presented because the study population includes only pregnancies with gestational age ???20 weeks.",
+        locations = gt::cells_title(groups = "title")
+    )
+
 
 table4
 
