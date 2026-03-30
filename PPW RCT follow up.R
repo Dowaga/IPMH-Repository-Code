@@ -1500,7 +1500,7 @@ arm_outcome_summary
 suicidality <- ppw_rct_df %>% 
     filter(phq_dead %in% c("several days","more than half the days",
                            "nearly every day")) %>% 
-    select(clt_ptid, clt_study_site, phq_dead,risk_date,
+    select(clt_ptid, clt_study_site, visit_type, phq_dead,risk_date,
            risk_shphq9, risk_thoughts, referral_type___2) %>% 
     rename(PTID = clt_ptid,
            Facility = clt_study_site,
