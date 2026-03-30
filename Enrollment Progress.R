@@ -40,7 +40,7 @@ weekly_count <- enrollment_progress %>%
     summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
 
 # Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
-dateSeq_df <- data.frame(week = seq(as.Date("2025-02-16"), as.Date("2026-05-31"), by = "week"))
+dateSeq_df <- data.frame(week = seq(as.Date("2025-02-16"), as.Date("2026-05-11"), by = "week"))
 
 
 weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
