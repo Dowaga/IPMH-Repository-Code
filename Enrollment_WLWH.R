@@ -27,6 +27,12 @@ screening_consent_df <- screening_consent_df %>%
 ## Figure 1: Enrollment progress since the beginning of the study to today
 enrollment_progress <- screening_consent_df %>% 
     filter(rct_enrolling == "Yes" & WLWH == "Yes") %>% 
+    select(study_site, consent_date_auto, consent_date_auto_v2)
+
+enrollment_progress <- enrollment_progress %>%
+    mutate(
+        consent_date_auto = coalesce(consent_date_auto, consent_date_auto_v2)
+    ) %>%
     select(study_site, consent_date_auto)
 
 ## Convert consent_date_auto column to date format
@@ -41,8 +47,8 @@ weekly_count <- enrollment_progress %>%
 
 # Define the sequence of weekly dates from enrollment start to system date
 date_seq <- seq(
-    from = as.Date("2025-03-17"),
-    to = as.Date("2026-05-31"),
+    from = as.Date("2025-02-16"),
+    to = as.Date("2026-05-11"),
     by = "week"
 )
 
