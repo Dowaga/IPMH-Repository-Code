@@ -50,25 +50,14 @@ date_seq <- seq(
 # Convert to a dataframe
 dateSeq_df <- data.frame(week = date_seq)
 
-# weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
-#     arrange(week) %>%  
-#     mutate(enrollment_count = ifelse(is.na(enrollment_count), 
-#                                      0, enrollment_count)) %>%   
-#     filter(!is.na(study_site))
-# 
-# # Compute cumulative enrollment per site
-# weekly_enrollment <- weekly_enrollment %>%
-#     group_by(study_site) %>%
-#     mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
-#     ungroup()
+weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
+    arrange(week) %>%
+    mutate(enrollment_count = ifelse(is.na(enrollment_count),
+                                     0, enrollment_count)) %>%
+    filter(!is.na(study_site))
 
-all_sites <- unique(weekly_count$study_site)
-
-weekly_enrollment <- dateSeq_df %>%
-    crossing(study_site = all_sites) %>%
-    left_join(weekly_count, by = c("study_site", "week")) %>%
-    mutate(enrollment_count = ifelse(is.na(enrollment_count), 0, enrollment_count)) %>%
-    arrange(study_site, week) %>%
+# Compute cumulative enrollment per site
+weekly_enrollment <- weekly_enrollment %>%
     group_by(study_site) %>%
     mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
     ungroup()
