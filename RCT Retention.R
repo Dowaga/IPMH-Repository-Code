@@ -455,8 +455,7 @@ gt_enrollment <- enrollment_summary %>%
     tab_style(
         style = cell_text(weight = "bold"),
         locations = cells_body(rows = Facility == "Total")
-    ) %>% 
-    %>% 
+    ) %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>%
