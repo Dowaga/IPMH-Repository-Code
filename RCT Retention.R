@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1EgOsc-8I_BbHXqM3IDpmnaGAp42TaAiY85FYDwYH6Qg/edit?gid=1908450610#gid=1908450610"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1uYywr5RH84pG16fCYnMXSUpBlzWaVB8-0nEsJ3JaV2Q/edit?gid=351061477#gid=351061477"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -454,8 +454,7 @@ gt_enrollment <- enrollment_summary %>%
     # Bold total row
     tab_style(
         style = cell_text(weight = "bold"),
-        locations = cells_body(rows = Facility == "Total")
-    ) %>%
+        locations = cells_body(rows = Facility == "Total")) %>% 
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>%

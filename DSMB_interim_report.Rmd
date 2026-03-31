@@ -15,6 +15,7 @@ knitr::opts_chunk$set(message = FALSE, warning = FALSE, options(scipen = 99))
 library(lme4)
 library(mice)
 library(gtsummary)
+library(gsDesign)
 
 ## WORKING DIRECTORY
 # Setup ------------------------------------------------------------------------
@@ -34,7 +35,7 @@ ppw_rct_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_",
                               file_date, ".csv", sep="")) %>% 
     filter(is.na(redcap_repeat_instance)) #PPW data
 
-data_freeze <- file_date
+data_freeze <- "2026-05-11"
 
 data_freeze <- format(data_freeze, format="%d %B %Y")
 ```
@@ -256,4 +257,123 @@ summary(phq_model)
 gad_model <- lmer(gad7_score ~ arm_random * time + (1 | clt_study_site), data = analysis_df)
 
 summary(gad_model)
+```
+
+\newpage
+
+### O'Brien-Fleming boundary
+
+```{r OBF boundary, echo=FALSE}
+# ---- OBF design ----
+gs <- gsDesign(
+  k         = 2,
+  test.type = 2,
+  alpha     = 0.05,
+  beta      = 0.20,
+  sfu       = "OF"
+)
+
+obf_boundary <- gs$upper$bound[1]
+
+phq9_coef <- summary(phq_model)$coefficients
+phq9_est  <- phq9_coef["arm_randomIntervention:time", "Estimate"]
+phq9_se   <- phq9_coef["arm_randomIntervention:time", "Std. Error"]
+phq9_z    <- phq9_coef["arm_randomIntervention:time", "t value"]
+
+gad7_coef <- summary(gad_model)$coefficients
+gad7_est  <- gad7_coef["arm_randomIntervention:time", "Estimate"]
+gad7_se   <- gad7_coef["arm_randomIntervention:time", "Std. Error"]
+gad7_z    <- gad7_coef["arm_randomIntervention:time", "t value"]
+
+```
+
+The O'Brien-Fleming boundary at the interim analysis (50% information time) is `r round(obf_boundary, 3)`. The boundary is crossed if the absolute value of the Z-statistic exceeds this value.
+
+```{r results table, echo=FALSE}
+results_option1 <- tibble(
+  Outcome          = c("PHQ-9", "GAD-7"),
+  Estimate         = c(phq9_est, gad7_est),
+  SE               = c(phq9_se, gad7_se),
+  CI_lo_95         = c(phq9_est - 1.96 * phq9_se, gad7_est - 1.96 * gad7_se),
+  CI_hi_95         = c(phq9_est + 1.96 * phq9_se, gad7_est + 1.96 * gad7_se),
+  Z_statistic      = c(phq9_z, gad7_z),
+  OBF_boundary     = obf_boundary,
+  Boundary_crossed = ifelse(abs(c(phq9_z, gad7_z)) > obf_boundary, "YES", "NO")
+)
+
+results_option2 <- tibble(
+  Outcome          = c("PHQ-9", "GAD-7"),
+  Estimate         = c(phq9_est, gad7_est),
+  SE               = c(phq9_se, gad7_se),
+  CI_lo_adjusted   = c(phq9_est - obf_boundary * phq9_se, gad7_est - obf_boundary * gad7_se),
+  CI_hi_adjusted   = c(phq9_est + obf_boundary * phq9_se, gad7_est + obf_boundary * gad7_se),
+  Z_statistic      = c(phq9_z, gad7_z),
+  OBF_boundary     = obf_boundary,
+  Boundary_crossed = ifelse(abs(c(phq9_z, gad7_z)) > obf_boundary, "YES", "NO")
+)
+
+results_combined <- bind_rows(
+  results_option1 %>%
+    mutate(CI_type = "Standard 95% CI") %>%
+    rename(CI_lower = CI_lo_95, CI_upper = CI_hi_95),
+  results_option2 %>%
+    mutate(CI_type = "OBF-Adjusted 99.46% CI") %>%
+    rename(CI_lower = CI_lo_adjusted, CI_upper = CI_hi_adjusted)
+) %>%
+  mutate(
+    Estimate    = round(Estimate, 3),
+    CI          = sprintf("(%.3f, %.3f)", round(CI_lower, 3), round(CI_upper, 3)),
+    Z_statistic = round(Z_statistic, 3)
+  ) %>%
+  select(Outcome, CI_type, Estimate, CI, Z_statistic, Boundary_crossed) %>%
+  rename(
+    `CI Type`          = CI_type,
+    `Estimate`         = Estimate,
+    `CI`               = CI,
+    `Z-statistic`      = Z_statistic,
+    `Boundary Crossed` = Boundary_crossed
+  )
+
+results_combined %>%
+  kable(
+    caption  = "Primary Outcomes: GLMM Results",
+    booktabs = TRUE,
+    align    = "llcccc"
+  ) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"),
+    full_width    = FALSE
+  ) %>%
+  collapse_rows(columns = 1, valign = "middle") %>%
+  column_spec(6, bold = TRUE,
+              color = ifelse(results_combined$`Boundary Crossed` == "YES",
+                             "red", "black")) 
+# ---- OBF boundary plot ----
+info_frac <- c(0.5, 1.0)  # interim at 50%, final at 100%
+
+boundary_df <- tibble(
+  information_fraction = info_frac,
+  upper_boundary       = gs$upper$bound,
+  lower_boundary       = -gs$upper$bound
+)
+
+ggplot(boundary_df, aes(x = information_fraction)) +
+  geom_line(aes(y = upper_boundary), color = "red", linewidth = 1) +
+  geom_line(aes(y = lower_boundary), color = "blue", linewidth = 1) +
+  geom_point(aes(y = upper_boundary), color = "red", size = 3) +
+  geom_point(aes(y = lower_boundary), color = "blue", size = 3) +
+  geom_hline(yintercept = c(-1.96, 1.96), linetype = "dashed", color = "grey50") +
+  geom_point(aes(x = 0.5, y = phq9_z), color = "darkgreen", size = 4, shape = 17) +
+  geom_point(aes(x = 0.5, y = gad7_z), color = "purple", size = 4, shape = 17) +
+  scale_x_continuous(breaks = c(0.5, 1.0),
+                     labels = c("Interim (50%)", "Final (100%)")) +
+  labs(
+    title    = "O'Brien-Fleming Boundaries for Interim Monitoring",
+    x        = "Information Fraction",
+    y        = "Standardized Z-value",
+    caption  = "Red = upper boundary, Blue = lower boundary,
+                Dashed = standard 1.96 threshold,
+                Triangle = observed z-statistic (green = PHQ-9, purple = GAD-7)"
+  ) +
+  theme_bw()
 ```
