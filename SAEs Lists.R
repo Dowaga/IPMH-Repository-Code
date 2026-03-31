@@ -5,36 +5,40 @@
 # AEs Lists
 
 # Setup ------------------------------------------------------------------------
- rm(list = ls())
+#rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
-ae_df <- ppw_sae_df%>% 
+ae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), 
            redcap_event_name) %>% 
     filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
-
-
 
 sae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>% 
     filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
 
 # SAEs Report-------------------------------------------------------------------
-clean_sae_df <- sae_df %>% 
-    group_by(ae_cat) %>% 
-    mutate(ae_cat = if_else(record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)",
-                            "Death (Infant or Maternal) (SAE)",
-                            ae_cat)) %>% 
-    rename(Event = ae_cat)%>%
+clean_sae_df <- sae_df %>%
+    mutate(ae_cat = case_when(
+        record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)" ~ "Infant Death (SAE)",
+        ae_cat == "Miscarriage or stillbirth (loss of pregnancy) (SAE)" ~ "Stillbirth (SAE)",
+        ae_type___1 == "Checked" ~ "Maternal Death (SAE)",
+        ae_type___2 == "Checked" ~ "Infant Death (SAE)",
+        TRUE ~ ae_cat
+    )) %>%
+    group_by(ae_cat) %>%
+    rename(Event = ae_cat) %>%
     mutate(Event = str_remove(Event, fixed("(SAE)")))
 
-sae_summary <- clean_sae_df %>% 
-    summarise(`Number of Events` = n(),
-              `SAE Reported` = n(),
-              `% Reported` = ifelse(`Number of Events` > 0, round((`Number of Events` / `SAE Reported`)) * 100, 1))
+sae_summary <- clean_sae_df %>%
+    summarise(
+        `Number of Events` = n(),
+        `SAE Reported` = n(),
+        `% Reported` = ifelse(`Number of Events` > 0, round((`Number of Events` / `SAE Reported`) * 100, 1), 0)
+    )
 
 sae_total <- sae_summary %>%
     summarise(
@@ -45,29 +49,90 @@ sae_total <- sae_summary %>%
     )
 
 sae_report <- bind_rows(sae_summary, sae_total) %>%
-    gt()%>%
+    gt() %>%
     tab_style(
         style = cell_text(weight = "bold"),
-        locations = cells_body(
-            rows = Event == "Total"
-        )
+        locations = cells_body(rows = Event == "Total")
     )
-
 
 sae_report
 
 # AE Report---------------------------------------------------------------------
-ae_report <- ae_df %>% 
-    filter(redcap_repeat_instance == 2|!str_detect(redcap_event_name, "Enrollment")) %>% 
-    group_by(ae_cat) %>% 
-    mutate(ae_cat = if_else(record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)",
-                            "Death (Infant or Maternal) (SAE)",ae_cat)) %>% 
-    rename(Event = ae_cat) %>% 
-    summarise(`Number of Events` = n()) %>% 
-    gt()
+# Suicidality from AE form
+suicide_ae <- ae_df %>%
+    filter(ae_define___4 == "Checked") %>%
+    mutate(Event = "Self-harm/Suicidal Behavior (AE Form)",
+           source = "AE Form") 
+
+#none found. We will only use PHQ9 in the report.
+
+# Suicidality from PHQ-9
+suicide_phq <- ppw_rct_df %>%
+    filter(phq_dead %in% c("several days", "more than half the days", "nearly every day")) %>%
+    mutate(Event = "Suicidal Ideation (PHQ-9)",
+           source = "PHQ-9")
+
+suicide_phq_summary <- suicide_phq %>%
+    group_by(Event) %>%
+    summarise(`Number of Events` = n())
+
+ae_define_map <- c(
+    ae_define___1  = "Kicked out of home",
+    ae_define___2  = "Experienced violence or abuse",
+    ae_define___3  = "Breach of Confidentiality",
+    ae_define___4  = "Self-harm/Suicidal behavior (AE Form)",
+    ae_define___5  = "Persistent or significant psychosocial distress",
+    ae_define___6  = "Infant harm/behavior",
+    ae_define___99 = "Other"
+)
+
+ae_social_summary <- ae_df %>%
+    filter(ae_cat == "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)") %>%
+    filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
+    select(record_id, names(ae_define_map)) %>%
+    pivot_longer(
+        cols = names(ae_define_map),
+        names_to = "variable",
+        values_to = "checked"
+    ) %>%
+    filter(checked == "Checked") %>%
+    mutate(Event = ae_define_map[variable]) %>%
+    group_by(Event) %>%
+    summarise(`Number of Events` = n())
+
+ae_injury_summary <- ae_df %>%
+    filter(ae_cat == "Injury") %>%
+    filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
+    group_by(Event = ae_cat) %>%
+    summarise(`Number of Events` = n())
+
+ae_report_df <- bind_rows(ae_injury_summary, ae_social_summary, suicide_phq_summary)
+
+total_events <- sum(ae_report_df$`Number of Events`)
+
+ae_report <- ae_report_df %>%
+    mutate(Summary = paste0(`Number of Events`, " (", round(`Number of Events` / total_events * 100, 1), "%)")) %>%
+    select(Characteristic = Event, Summary) %>%
+    bind_rows(
+        tibble(Characteristic = "Total", Summary = as.character(total_events))
+    ) %>%
+    gt() %>%
+    tab_header(title = "Table: Summary of Adverse Events") %>%
+    cols_label(
+        Characteristic = "Characteristic",
+        Summary = paste0("N = ", total_events)
+    ) %>%
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_body(rows = Characteristic == "Total")
+    ) %>%
+    tab_style(
+        style = cell_text(weight = "bold"),
+        locations = cells_column_labels()
+    ) %>%
+    tab_footnote(footnote = "n (%)")
 
 ae_report
-
 
 #### SAEs by ARM
 clean_sae_df <- clean_sae_df %>%
