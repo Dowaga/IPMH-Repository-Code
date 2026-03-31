@@ -21,9 +21,10 @@ demographics_df <- ppw_rct_df %>%
         floor(time_length(interval(dem_dob, clt_date), "years")),
         dem_age
     ),
-    dem_current_partner = recode(dem_current_partner,
-                                 "Yes" = 1,
-                                 "No" = 0),
+    # dem_current_partner = recode(dem_current_partner,
+    #                              "Yes" = 1,
+    #                              "No" = 0,
+    #                              ),
     dem_maritalstat = ifelse(dem_maritalstat == "Currently married", 1, 0),
     dem_marriage = ifelse(dem_marriage == "Monogamous", 1, 
                           ifelse(is.na(dem_marriage), NA, 0)),
@@ -41,13 +42,13 @@ demographics_df <- ppw_rct_df %>%
 # basic demo table
 basic_demo <- demographics_df %>%
     tbl_summary(
-    sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+    sort = list(all_categorical() ~ "frequency"),  
     include=c(dem_age, dem_current_partner, dem_maritalstat,
               dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
               dem_employment, dem_household_num, dem_housesleep, 
               dem_houserooms,dem_traveltime_min, med_pre_preg),
     label = list(dem_age ~ "Age (Years)",
-                 dem_current_partner ~ "Do you currently have a partner (Yes)",
+                 dem_current_partner ~ "Do you currently have a partner",
                  dem_employment ~ "Do you have regular employment (Yes)",
                  dem_maritalstat ~ "Currently Married (Yes)",
                  dem_pc_residence ~ "Shares residence with partner",
@@ -61,8 +62,8 @@ basic_demo <- demographics_df %>%
                  med_pre_preg ~ "Have you been pregnant before (Yes)"),
     missing = "no",
     digits = list(
-        all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-        all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        all_continuous() ~ 1,       
+        all_categorical() ~ c(0, 1) 
     ), 
     type = list(dem_age ~ "continuous", 
                 dem_household_num ~ "continuous",
@@ -100,7 +101,7 @@ wlwh_demo <- demographics_df %>%
                   dem_employment, dem_household_num, dem_housesleep, 
                   dem_houserooms,dem_traveltime_min, med_pre_preg),
         label = list(dem_age ~ "Age (Years)",
-                     dem_current_partner ~ "Do you currently have a partner (Yes)",
+                     dem_current_partner ~ "Do you currently have a partner",
                      dem_employment ~ "Do you have regular employment (Yes)",
                      dem_maritalstat ~ "Currently Married (Yes)",
                      dem_pc_residence ~ "Shares residence with partner (Yes)",
@@ -110,7 +111,7 @@ wlwh_demo <- demographics_df %>%
                      dem_household_num ~ "Number of people in Household",
                      dem_housesleep ~ "Number of people sleep in same house",
                      dem_houserooms ~ "Rooms in the house most often sleep in",
-                     dem_traveltime_min ~ "Time to the Clinic (Minutes",
+                     dem_traveltime_min ~ "Time to the Clinic (Minutes)",
                      med_pre_preg ~ "Have you been pregnant before (Yes)"),
         missing = "no",
         digits = list(
@@ -156,7 +157,7 @@ arm_demo <- demographics_df %>%
                   dem_employment, dem_household_num, dem_housesleep, 
                   dem_houserooms,dem_traveltime_min, med_pre_preg),
         label = list(dem_age ~ "Age (Years)",
-                     dem_current_partner ~ "Do you currently have a partner (Yes)",
+                     dem_current_partner ~ "Do you currently have a partner",
                      dem_employment ~ "Do you have regular employment (Yes)",
                      dem_maritalstat ~ "Currently Married (Yes)",
                      dem_pc_residence ~ "Shares residence with partner (Yes)",
@@ -166,7 +167,7 @@ arm_demo <- demographics_df %>%
                      dem_household_num ~ "Number of people in Household",
                      dem_housesleep ~ "Number of people sleep in same house",
                      dem_houserooms ~ "Rooms in the house most often sleep in",
-                     dem_traveltime_min ~ "Time to the Clinic (Minutes",
+                     dem_traveltime_min ~ "Time to the Clinic (Minutes)",
                      med_pre_preg ~ "Have you been pregnant before (Yes)"),
         missing = "no",
         digits = list(
