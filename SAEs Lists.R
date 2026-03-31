@@ -20,7 +20,8 @@ sae_df <- ppw_sae_df %>%
     select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>% 
     filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
 
-# SAEs Report-------------------------------------------------------------------
+# OPEN report -----------
+## SAEs Report-------------------------------------------------------------------
 clean_sae_df <- sae_df %>%
     mutate(ae_cat = case_when(
         record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)" ~ "Infant Death (SAE)",
@@ -57,7 +58,7 @@ sae_report <- bind_rows(sae_summary, sae_total) %>%
 
 sae_report
 
-# AE Report---------------------------------------------------------------------
+## AE Report---------------------------------------------------------------------
 # Suicidality from AE form
 suicide_ae <- ae_df %>%
     filter(ae_define___4 == "Checked") %>%
@@ -134,7 +135,8 @@ ae_report <- ae_report_df %>%
 
 ae_report
 
-#### SAEs by ARM
+# CLOSED report -------------
+#### SAEs by ARM 
 clean_sae_df <- clean_sae_df %>%
     mutate(Arm = case_when(
         grepl("Arm 2: Control", redcap_event_name) ~ "Control",
@@ -152,8 +154,6 @@ clean_sae_df <- clean_sae_df %>%
             TRUE ~ NA_character_
         )
     )
-
-
 
 deaths <- clean_sae_df %>% 
     filter(ae_type___1 == "Checked"|ae_type___2 == "Checked") %>% 
@@ -213,7 +213,6 @@ clean_sae_df <- clean_sae_df %>%
 
 
 # Step 2: Create a binary variable for each Event category
-
 sae_wide <- clean_sae_df %>%
     mutate(event_flag = 1) %>%  # to allow counting
     select(record_id, death_type, Arm, Event, event_flag, infant_cause_category,
@@ -222,19 +221,20 @@ sae_wide <- clean_sae_df %>%
     select(-record_id)
 
 sae_wide <- sae_wide %>%
-    relocate(death_type, .after = "Death (Infant or Maternal) ")
-
+    relocate(death_type, .after = "Infant Death ")
 
 # Step 3: Summarize using tbl_summary by arm
 sae_summary <- sae_wide %>% 
     tbl_summary(by = Arm,
-        include = c(
-            "Death (Infant or Maternal) ",
-            "death_type",
-            "infant_cause_category",
-            "maternal_cause_category",
-            "Miscarriage or stillbirth (loss of pregnancy) ",
-            "New/prolonged hospitalization " ),
+                include = c(
+                    "Maternal Death ",
+                    "Infant Death ",
+                    "death_type",
+                    "infant_cause_category",
+                    "maternal_cause_category",
+                    "Stillbirth ",
+                    "New/prolonged hospitalization "
+                ),
     type = all_continuous() ~ "continuous",
     statistic = all_continuous() ~ "{sum}",
     percent = "cell",
@@ -263,19 +263,20 @@ sae_summary <- sae_wide %>%
     tab_options(
         table.font.size = px(14))
 
-
 sae_summary  
 
 # Step 4: Summarize overall SAEs using tbl_summary----
 sae_overall <- sae_wide %>% 
     tbl_summary(
         include = c(
-            "Death (Infant or Maternal) ",
-            "Miscarriage or stillbirth (loss of pregnancy) ",
-            "New/prolonged hospitalization ",
+            "Maternal Death ",
+            "Infant Death ",
             "death_type",
             "infant_cause_category",
-            "maternal_cause_category"),
+            "maternal_cause_category",
+            "Stillbirth ",
+            "New/prolonged hospitalization "
+        ),
         type = all_continuous() ~ "continuous",
         statistic = all_continuous() ~ "{sum}",
         percent = "cell",
@@ -304,7 +305,6 @@ sae_overall <- sae_wide %>%
 
 
 sae_overall  
-
 
 # Summary of Adverse events-----------------------------------------------------
 # Select age and site from main df
@@ -346,8 +346,6 @@ ae_summary <- ae_df %>%
 ae_summary <- ae_summary %>% 
     gt()
 
-
-
 # Adverse Events summary by Arm----
 arm_ae <- ae_df %>% 
     mutate(
@@ -361,6 +359,31 @@ arm_ae <- ae_df %>%
                            dummy_arm=="Arm Y" ~ "Intervention",
                            TRUE ~ NA))
 
+# PHQ-9 suicidality - formatted to match ae_long structure
+suicide_phq_long <- ppw_rct_df %>%
+    filter(phq_dead %in% c("several days", "more than half the days", "nearly every day")) %>%
+    mutate(
+        dem_age = if_else(
+            dem_dob_uk == "Yes",
+            floor(time_length(interval(dem_dob, clt_date), "years")),
+            dem_age
+        ),
+        Arm = case_when(
+            grepl("Control", redcap_event_name, ignore.case = TRUE) ~ "Control",
+            grepl("Intervention", redcap_event_name, ignore.case = TRUE) ~ "Intervention",
+            TRUE ~ NA_character_
+        ),
+        ae_type = "Suicidal Ideation (PHQ-9)",
+        ae_dateonset = as.Date(clt_date),
+        ae_datereport = as.Date(risk_date),
+        days_to_report = as.integer(ae_datereport - ae_dateonset),
+        ae_relation = NA_character_,
+        ae_narrative = risk_thoughts,
+        clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)
+    ) %>%
+    select(record_id = clt_ptid, dem_age, Arm, ae_type, ae_dateonset,
+           ae_datereport, days_to_report, ae_relation, ae_narrative)
+
 ae_bin <- arm_ae %>% 
     mutate(
         across(
@@ -373,51 +396,51 @@ ae_bin <- arm_ae %>%
 ae_tbl <- ae_bin %>% 
     tbl_summary(
         by = Arm,
-        include = c(ae_define___1_bin, ae_define___2_bin, ae_define___5_bin),
+        include = c(ae_define___1_bin, ae_define___2_bin, ae_define___3_bin,
+                    ae_define___4_bin, ae_define___5_bin, ae_define___6_bin,
+                    ae_define___99_bin),
         label = list(
-            ae_define___1_bin ~ "Kicked out of home", 
-            ae_define___2_bin ~ "Experienced violence or abuse", 
-            ae_define___5_bin ~ "Persistent or significant psychosocial distress"
+            ae_define___1_bin  ~ "Kicked out of home", 
+            ae_define___2_bin  ~ "Experienced violence or abuse",
+            ae_define___3_bin  ~ "Breach of Confidentiality",
+            ae_define___4_bin  ~ "Self-harm/Suicidal behavior (AE Form)",
+            ae_define___5_bin  ~ "Persistent or significant psychosocial distress",
+            ae_define___6_bin  ~ "Infant harm/behavior",
+            ae_define___99_bin ~ "Other"
         ),
         percent = "cell",
         digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
         )
     ) %>% 
     bold_labels() %>%
-    #add_p() %>% 
     add_overall() %>% 
-    # convert from gtsummary object to gt object
     gtsummary::as_gt() %>%
-    # modify with gt functions
     gt::tab_header("Summary of Adverse Events by Arm") %>% 
     gt::tab_source_note(gt::md("A single participant may experience multiple AEs")) %>% 
-    gt::tab_options(
-        table.font.size = "medium",
-        data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(14))
+    gt::tab_options(table.font.size = "medium", data_row.padding = gt::px(1)) %>%
+    tab_options(table.font.size = px(14))
 
 # List of AEs
 ae_list <- arm_ae %>%
     select(
         record_id, dem_age, Arm,
-        ae_cat,ae_define___1, ae_define___2,
-        ae_define___3, ae_define___4, ae_define___5,
-        ae_define___6, ae_relation, ae_narrative,
-        ae_dateonset,ae_datereport
+        ae_cat, ae_define___1, ae_define___2, ae_define___3,
+        ae_define___4, ae_define___5, ae_define___6, ae_define___99,
+        ae_relation, ae_narrative, ae_dateonset, ae_datereport
     )
 
 # Define AE labels
 ae_labels <- tibble(
-    ae_code = paste0("ae_define___", 1:6),
+    ae_code = c(paste0("ae_define___", 1:6), "ae_define___99"),
     ae_type = c(
         "Kicked out of home",
         "Experienced violence or abuse",
-        "Lost job or income",
-        "Relationship breakdown",
-        "Psychosocial distress",
+        "Breach of Confidentiality",
+        "Self-harm/Suicidal behavior (AE Form)",
+        "Persistent or significant psychosocial distress",
+        "Infant harm/behavior",
         "Other"
     )
 )
@@ -432,108 +455,94 @@ ae_long <- ae_list %>%
     filter(ae_flag == "Checked") %>%
     left_join(ae_labels, by = "ae_code") %>%
     mutate(
-        ae_dateonset = as_date(ae_dateonset),
+        ae_dateonset  = as_date(ae_dateonset),
         ae_datereport = as_date(ae_datereport),
         days_to_report = as.integer(ae_datereport - ae_dateonset)
     ) %>%
-    select(
-        record_id, dem_age, Arm,
-        ae_type, ae_dateonset, ae_datereport,
-        days_to_report, ae_relation, ae_narrative
-    ) %>%
-    arrange(Arm, record_id, ae_dateonset)
+    select(record_id, dem_age, Arm, ae_type, ae_dateonset,
+           ae_datereport, days_to_report, ae_relation, ae_narrative) %>%
+    arrange(Arm, record_id, ae_dateonset) %>%
+    # Add PHQ-9 suicidality rows
+    bind_rows(suicide_phq_long)
+
 
 # Overall AEs summary
 total_aes <- ae_long %>% 
     tbl_summary(
         include = c(ae_type),
-                label = list(ae_type ~ "AE Type"),
+        label = list(ae_type ~ "AE Type"),
         digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
         )
     ) %>%
     add_n() %>%
     bold_labels() %>% 
     italicize_levels() %>% 
-    # convert from gtsummary object to gt object
     gtsummary::as_gt() %>%
-    # modify with gt functions
     gt::tab_header("Summary of Adverse Events") %>% 
-    gt::tab_options(
-        table.font.size = "medium",
-        data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(14))%>%
+    gt::tab_options(table.font.size = "medium", data_row.padding = gt::px(1)) %>%
+    tab_options(table.font.size = px(14)) %>%
     opt_table_lines()
 
 total_aes
 
 overal_aes <- ae_long %>% 
-    tbl_summary(Arm,
+    tbl_summary(
+        by = Arm,
         include = c(ae_type),
         label = list(ae_type ~ "AE Type"),
         digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
         )
     ) %>%
     add_n() %>%
     bold_labels() %>% 
     italicize_levels() %>% 
-    # convert from gtsummary object to gt object
     gtsummary::as_gt() %>%
-    # modify with gt functions
     gt::tab_header("Summary of Adverse Events by Arm") %>% 
-    gt::tab_options(
-        table.font.size = "medium",
-        data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(14))%>%
+    gt::tab_options(table.font.size = "medium", data_row.padding = gt::px(1)) %>%
+    tab_options(table.font.size = px(14)) %>%
     opt_table_lines()
 
 overal_aes
 
-# Arm X AE list
+# Arm X (Control) AE list
 armx_aes <- ae_long %>% 
     filter(Arm == "Control") %>% 
     select(-c(Arm, ae_narrative, ae_datereport)) %>% 
     rename(
-        Record_ID             = record_id,
-        `AE Type`         = ae_type,
-        `Date Onset`          = ae_dateonset,
+        Record_ID              = record_id,
+        `AE Type`              = ae_type,
+        `Date Onset`           = ae_dateonset,
         `Days since Enrollment` = days_to_report,
-        Age                   = dem_age,
+        Age                    = dem_age,
         `Relatedness to study` = ae_relation
     )
 
-
-# Create gt table with heading
 armx_aes_gt <- armx_aes %>%
     gt() %>%
-    tab_header(
-        title = "Summary of Adverse Events for Control Arm"
-    )
+    tab_header(title = "Summary of Adverse Events for Control Arm")
 
-# Arm Y AE list
+# Arm Y (Intervention) AE list
 army_aes <- ae_long %>% 
     filter(Arm == "Intervention") %>% 
     select(-c(Arm, ae_narrative, ae_datereport)) %>% 
     rename(
-        Record_ID             = record_id,
-        `AE Type`         = ae_type,
-        `Date Onset`          = ae_dateonset,
+        Record_ID              = record_id,
+        `AE Type`              = ae_type,
+        `Date Onset`           = ae_dateonset,
         `Days since Enrollment` = days_to_report,
-        Age                   = dem_age,
+        Age                    = dem_age,
         `Relatedness to study` = ae_relation
     )
 
-
-# Create gt table with heading
 army_aes_gt <- army_aes %>%
     gt() %>%
-    tab_header(
-        title = "Summary of Adverse Events for Intervention Arm"
-    )
+    tab_header(title = "Summary of Adverse Events for Intervention Arm")
 
-
+## Leaving for now: need to fix several things
+#1) do we only include suicide ideation during follow-up visits or all visits?
+#2) currently, for some with suicidality, their age is NA, and their date onset/days since enrollment need to be double checked.
+#3) for those, they don't have a direct relatedness to the study. need to see how to address this.
