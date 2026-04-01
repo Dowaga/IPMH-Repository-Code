@@ -5,7 +5,7 @@
 # AEs Lists
 
 # Setup ------------------------------------------------------------------------
-#rm(list = ls())
+rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
@@ -18,7 +18,21 @@ ae_df <- ppw_sae_df %>%
 
 # Filter those who endorsed self harm to check AEs
 
-self_harm <- ppw_rct_df %>% 
+self_harm <- ppw_rct_df %>%
+    mutate(
+        visit_type = case_when(
+            grepl("Enrollment", redcap_event_name) ~ "Enrollment",
+            grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
+            grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
+            grepl("6 Months", redcap_event_name) ~ "6 Months",
+            TRUE ~ NA_character_
+        ),
+        arm = case_when(
+            grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
+            grepl("Arm 2: Control", redcap_event_name) ~ "Control",
+            TRUE ~ "Unknown"
+        )
+    ) %>% 
     filter(phq_dead %in% c("several days","more than half the days",
                            "nearly every day")) %>% 
     select(clt_ptid, clt_study_site, visit_type, phq_dead,risk_date,
@@ -331,6 +345,11 @@ ae_ages <- ppw_rct_df %>%
     )) %>% 
     select(record_id, clt_study_site,redcap_event_name, dem_age, clt_date)
 
+# Extract baseline age at enrollment for each participant
+baseline_age <- ae_ages %>%
+    filter(grepl("^Enrollment", redcap_event_name)) %>%
+    select(record_id, baseline_age = dem_age)
+
 # left joing with aes df
 ae_df <- ae_df %>% 
     mutate(
@@ -360,6 +379,8 @@ ae_summary <- ae_df %>%
 
 ae_summary <- ae_summary %>% 
     gt()
+
+ae_summary
 
 # Adverse Events summary by Arm----
 arm_ae <- ae_df %>% 
@@ -399,6 +420,14 @@ suicide_phq_long <- ppw_rct_df %>%
     select(record_id = clt_ptid, dem_age, Arm, ae_type, ae_dateonset,
            ae_datereport, days_to_report, ae_relation, ae_narrative)
 
+
+suicide_phq_long <- suicide_phq_long %>%
+    right_join(baseline_age, by = "record_id") %>%
+    mutate(dem_age = coalesce(dem_age, baseline_age),
+           ae_dateonset  = as_date(ae_dateonset),
+           ae_datereport = as_date(ae_datereport)
+           )
+
 ae_bin <- arm_ae %>% 
     mutate(
         across(
@@ -424,6 +453,7 @@ ae_tbl <- ae_bin %>%
             ae_define___99_bin ~ "Other"
         ),
         percent = "cell",
+        missing = "no",
         digits = list(
             all_continuous() ~ 1,
             all_categorical() ~ c(0, 1)
@@ -478,7 +508,8 @@ ae_long <- ae_list %>%
            ae_datereport, days_to_report, ae_relation, ae_narrative) %>%
     arrange(Arm, record_id, ae_dateonset) %>%
     # Add PHQ-9 suicidality rows
-    bind_rows(suicide_phq_long)
+    bind_rows(suicide_phq_long) %>% 
+    filter(!is.na(ae_type))
 
 
 # Overall AEs summary
@@ -486,6 +517,7 @@ total_aes <- ae_long %>%
     tbl_summary(
         include = c(ae_type),
         label = list(ae_type ~ "AE Type"),
+        missing = "no",
         digits = list(
             all_continuous() ~ 1,
             all_categorical() ~ c(0, 1)
@@ -507,6 +539,7 @@ overal_aes <- ae_long %>%
         by = Arm,
         include = c(ae_type),
         label = list(ae_type ~ "AE Type"),
+        missing = "no",
         digits = list(
             all_continuous() ~ 1,
             all_categorical() ~ c(0, 1)
@@ -526,7 +559,7 @@ overal_aes
 # Arm X (Control) AE list
 armx_aes <- ae_long %>% 
     filter(Arm == "Control") %>% 
-    select(-c(Arm, ae_narrative, ae_datereport)) %>% 
+    select(-c(Arm, ae_narrative, ae_datereport, baseline_age)) %>% 
     rename(
         Record_ID              = record_id,
         `AE Type`              = ae_type,
@@ -543,7 +576,7 @@ armx_aes_gt <- armx_aes %>%
 # Arm Y (Intervention) AE list
 army_aes <- ae_long %>% 
     filter(Arm == "Intervention") %>% 
-    select(-c(Arm, ae_narrative, ae_datereport)) %>% 
+    select(-c(Arm, ae_narrative, ae_datereport, baseline_age)) %>% 
     rename(
         Record_ID              = record_id,
         `AE Type`              = ae_type,
