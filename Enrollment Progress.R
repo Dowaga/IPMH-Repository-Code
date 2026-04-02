@@ -40,7 +40,7 @@ weekly_count <- enrollment_progress %>%
     summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
 
 # Define the sequence of weekly dates (assuming enrollment started on 2025-02-17)
-dateSeq_df <- data.frame(week = seq(as.Date("2025-02-16"), as.Date("2026-05-31"), by = "week"))
+dateSeq_df <- data.frame(week = seq(as.Date("2025-02-16"), as.Date("2026-05-11"), by = "week"))
 
 
 weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
@@ -148,8 +148,8 @@ Enrollment_summary <- ppw_rct_df %>%
         # HIV at baseline (adjust variable if needed)
         hiv_positive = any(med_pastdiag___2 == "Checked", na.rm = TRUE),
         
-        # Zero conversion at any visit
-        zero_converted = any(hivct_newdiag == "Yes", na.rm = TRUE)
+        # Sero conversion at any visit
+        sero_converted = any(hivct_newdiag == "Yes", na.rm = TRUE)
     ) %>%
     ungroup()%>%
     # Remove the facility code
@@ -160,7 +160,7 @@ facility_summary <- Enrollment_summary %>%
     summarise(
         `Total Enrolled` = n(),
         `Enrolled with HIV` = sum(hiv_positive, na.rm = TRUE),
-        `Zero-converted` = sum(zero_converted, na.rm = TRUE)
+        `Sero-converted` = sum(sero_converted, na.rm = TRUE)
     ) %>%
     ungroup() %>% 
     arrange(desc(`Total Enrolled`)) %>% 
