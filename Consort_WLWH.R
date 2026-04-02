@@ -9,7 +9,7 @@
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 # source("Dependencies.R")
-# source("data_import.R")
+source("data_import.R")
 
 #data prep ----------------
 # Summarise ANC attendees and extract the sum as a numeric value
