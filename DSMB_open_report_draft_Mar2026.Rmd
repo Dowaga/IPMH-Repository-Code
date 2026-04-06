@@ -4,14 +4,17 @@ title: 'IPMH: Integration of stepped care for perinatal mood and anxiety disorde
 subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report'
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
-word_document: default
-#pdf_document:
-#latex_engine: xelatex
+    word_document: default
+    #pdf_document:
+    #latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, options(scipen = 99))
-
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
 library(stringr)
 library(lubridate)
 library(patchwork)
@@ -51,7 +54,7 @@ ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_",
                                             file_date, ".csv", sep="")) %>% 
    filter(redcap_repeat_instrument == "ADMIN: Adverse Experience")
 
-data_freeze <- Sys.time() 
+data_freeze <- Sys.Date() 
 
 #data_freeze <- "2026-05-11"
 
@@ -213,8 +216,6 @@ On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 2
 [Double check if we hit 75% target by May 11.]
 
 ```{r enrollment_sub, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
-source("Enrollment Progress.R")
-
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
  mutate(study_site = recode(study_site,
