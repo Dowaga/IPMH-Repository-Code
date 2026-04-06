@@ -83,29 +83,11 @@ sae_report <- bind_rows(sae_summary, sae_total) %>%
 sae_report
 
 ## AE Report---------------------------------------------------------------------
-# Suicidality from AE form
-suicide_ae <- ae_df %>%
-    filter(ae_define___4 == "Checked") %>%
-    mutate(Event = "Self-harm/Suicidal Behavior (AE Form)",
-           source = "AE Form") 
-
-#none found. We will only use PHQ9 in the report.
-
-# Suicidality from PHQ-9
-suicide_phq <- ppw_rct_df %>%
-    filter(phq_dead %in% c("several days", "more than half the days", "nearly every day")) %>%
-    mutate(Event = "Suicidal Ideation (PHQ-9)",
-           source = "PHQ-9")
-
-suicide_phq_summary <- suicide_phq %>%
-    group_by(Event) %>%
-    summarise(`Number of Events` = n())
-
 ae_define_map <- c(
     ae_define___1  = "Kicked out of home",
     ae_define___2  = "Experienced violence or abuse",
     ae_define___3  = "Breach of Confidentiality",
-    ae_define___4  = "Self-harm/Suicidal behavior (AE Form)",
+    ae_define___4  = "Self-harm/Suicidal behavior",
     ae_define___5  = "Persistent or significant psychosocial distress",
     ae_define___6  = "Infant harm/behavior",
     ae_define___99 = "Other"
@@ -131,7 +113,7 @@ ae_injury_summary <- ae_df %>%
     group_by(Event = ae_cat) %>%
     summarise(`Number of Events` = n())
 
-ae_report_df <- bind_rows(ae_injury_summary, ae_social_summary, suicide_phq_summary)
+ae_report_df <- bind_rows(ae_injury_summary, ae_social_summary)
 
 total_events <- sum(ae_report_df$`Number of Events`)
 
