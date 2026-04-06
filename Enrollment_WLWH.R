@@ -27,6 +27,12 @@ screening_consent_df <- screening_consent_df %>%
 ## Figure 1: Enrollment progress since the beginning of the study to today
 enrollment_progress <- screening_consent_df %>% 
     filter(rct_enrolling == "Yes" & WLWH == "Yes") %>% 
+    select(study_site, consent_date_auto, consent_date_auto_v2)
+
+enrollment_progress <- enrollment_progress %>%
+    mutate(
+        consent_date_auto = coalesce(consent_date_auto, consent_date_auto_v2)
+    ) %>%
     select(study_site, consent_date_auto)
 
 ## Convert consent_date_auto column to date format
@@ -43,6 +49,8 @@ weekly_count <- enrollment_progress %>%
 date_seq <- seq(
     from = as.Date("2025-03-17"),
     to = as.Date("2026-05-31"),
+    from = as.Date("2025-02-16"),
+    to = as.Date("2026-05-11"),
     by = "week"
 )
 
@@ -50,25 +58,14 @@ date_seq <- seq(
 # Convert to a dataframe
 dateSeq_df <- data.frame(week = date_seq)
 
-# weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
-#     arrange(week) %>%  
-#     mutate(enrollment_count = ifelse(is.na(enrollment_count), 
-#                                      0, enrollment_count)) %>%   
-#     filter(!is.na(study_site))
-# 
-# # Compute cumulative enrollment per site
-# weekly_enrollment <- weekly_enrollment %>%
-#     group_by(study_site) %>%
-#     mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
-#     ungroup()
+weekly_enrollment <- full_join(weekly_count, dateSeq_df, by = "week") %>%
+    arrange(week) %>%
+    mutate(enrollment_count = ifelse(is.na(enrollment_count),
+                                     0, enrollment_count)) %>%
+    filter(!is.na(study_site))
 
-all_sites <- unique(weekly_count$study_site)
-
-weekly_enrollment <- dateSeq_df %>%
-    crossing(study_site = all_sites) %>%
-    left_join(weekly_count, by = c("study_site", "week")) %>%
-    mutate(enrollment_count = ifelse(is.na(enrollment_count), 0, enrollment_count)) %>%
-    arrange(study_site, week) %>%
+# Compute cumulative enrollment per site
+weekly_enrollment <- weekly_enrollment %>%
     group_by(study_site) %>%
     mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
     ungroup()
@@ -106,4 +103,3 @@ Enrollment_wide_ft <- Enrollment_wide %>%
     autofit()  # Adjust table to fit content
 
 Enrollment_wide_ft
-
