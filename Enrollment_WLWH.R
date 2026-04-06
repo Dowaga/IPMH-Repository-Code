@@ -47,8 +47,6 @@ weekly_count <- enrollment_progress %>%
 
 # Define the sequence of weekly dates from enrollment start to system date
 date_seq <- seq(
-    from = as.Date("2025-03-17"),
-    to = as.Date("2026-05-31"),
     from = as.Date("2025-02-16"),
     to = as.Date("2026-05-11"),
     by = "week"
