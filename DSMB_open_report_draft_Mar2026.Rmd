@@ -184,7 +184,7 @@ We halted enrollment of new participants on August 1, 2025 after the grant perio
 
 In Siaya County, there was a nurses strike which begun on September 18, 2025. The strike affected participant enrollment in 5 intervention and 4 control sites, where we had not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility had hired a locum nurse for the maternal child health clinic, and enrollment was not affected. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists were not affected. The strike was officially called off on November 17, 2025. We resumed participant enrollment in the affected sites right after the strike.
 
-Data collection was temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
+Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
 
 \newpage
 
@@ -197,7 +197,6 @@ Data collection was temporarily halted from Jan 8 to Jan 20, 2026 following the 
 So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6-weeks postpartum visit.
 
 ```{r consort, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
-source("Consort.R")
 consort_single
 ```
 
@@ -347,8 +346,6 @@ p1
 ### 3.1.3 Enrollment Progress - Per Facility
 
 ```{r Facility target reached}
-source("Enrollment Progress.R")
-
 reached_25per_target <- weekly_enrollment %>%
  group_by(study_site) %>%
  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
@@ -379,8 +376,6 @@ All `r reached_50per_target` facility clusters have reached the 50% enrollment m
 `r reached_75per_target` facility clusters have reached the 75% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 111 participants. Notably, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 75% enrollment in late November, 2025.
 
 ```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
-source("Enrollment Progress.R")
-
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
  mutate(study_site = recode(study_site,
@@ -458,8 +453,6 @@ source("Consort_WLWH.R")
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
 
 ```{r consort_mortality, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
-source("Consort_WLWH.R")
-
 add_box(txt = txt_enrolled) |>
    add_box(txt = txt_hiv) |>
    add_side_box(txt = txt_pm_tele) |>
@@ -473,8 +466,6 @@ add_box(txt = txt_enrolled) |>
 ### 3.2.2 Enrollment Progress
 
 ```{r enrollment_hiv, echo=FALSE}
-source("Enrollment_WLWH.R")
-
 wlwh_target <- 20
 
 wlwh_milestones <- weekly_enrollment %>%
@@ -511,7 +502,6 @@ wlwh_50 <- milestone_wlwh(wlwh_timeline, 0.50, total_wlwh_target)
 wlwh_75 <- milestone_wlwh(wlwh_timeline, 0.75, total_wlwh_target)
 ```
 
-Recruitment of women living with HIV (WLWH) into the cohort continues to show steady improvement. Out of the total enrollment target of `r wlwh_target` WLWH per facility, 
 Recruitment of women living with HIV (WLWH) into the cohort continues to show steady improvement. We reached the 25% enrollment milestone for WLWH on May 27, 2025, the 50% enrollment milestone on Dec 03, 2026, and the 75% enrollment milestone on Mar 30, 2026. Out of the total enrollment target of about `r wlwh_target` WLWH per facility, 
 `r wlwh_milestones$reached_100` facilities have achieved 100% of their target, 
 `r wlwh_milestones$reached_75` have achieved 75% (`r wlwh_target * 0.75` participants), 
@@ -594,8 +584,6 @@ p3
 Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
-source("Consort.R")
-
 ineligibility_summary
 ```
 
@@ -616,8 +604,6 @@ basic_demo
 ## 5.2 WLWH Cohort Baseline Demographics
 
 ```{r WLWH_demo, echo=FALSE}
-source("PPW RCT Basic Demographics.R")
-
 wlwh_demo
 ```
 
@@ -653,14 +639,11 @@ completed_follow_up <- total_exits %>%
 
 ```
 
-To date, no early terminations have been recorded. However, `r completed_follow_up` participants have completed the study and exited at the scheduled end of follow-up. The first study exit occurred on `r earliest_due`
 To date, no early terminations have been recorded aside from maternal death (see the adverse event section). However, `r completed_follow_up` participants have completed the study and exited at the scheduled end of follow-up. The first study exit occurred on `r earliest_due`.
 
 \newpage
 
-# 7. Referrals
-
-## 7.1 Psychosocial Referrals
+# 7. Psychosocial Referrals
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 source("PPW RCT Referrals.R")
@@ -673,28 +656,15 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 
 ```
 
-During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
 During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Participants at control sites are referred to routine care, while those at intervention sites are referred to telepsychiatry or PM+ based on clinical assessment of depression and/or anxiety. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
-## generate report using data from psychosocial referrals form in REDCap  
-source("PPW RCT Referrals.R")
-
 referral_summary
 ```
 
-## 7.2 Treatment Referrals
+# 8. Study endpoints
 
-```{r, message=FALSE, warning=FALSE}
-```{r, message=FALSE, warning=FALSE, include=F}
-source("Telepsychiatry Sessions.R")
-
-fidelity_summary
-```
-
-# 8 Study endpoints
-
-## 8.1 Primary and secondary study endpoints at 14 weeks postpartum (descriptive analysis)
+## 8.1 Primary and secondary study endpoints at 14 weeks postpartum
 
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
@@ -711,28 +681,21 @@ outcome_summary
 ```{r AEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 
-total_AEs <- ae_long %>% 
-   nrow()
+total_AEs <- ae_df %>% nrow()
 ```
 
 As of `r data_freeze`, `r total_AEs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
 
-```{r AEs report, echo=FALSE, message=FALSE, warning=FALSE}
-source("SAEs Lists.R")
-
-total_aes
+```{r AEs Report, echo=FALSE, message=FALSE, warning=FALSE}
+ae_report
 ```
 
 ## 9.2 SAEs Summary
 
 ```{r SAEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
-source("SAEs Lists.R")
-
 total_SAEs <- clean_sae_df %>% 
    nrow()
 
-total_deaths <- clean_sae_df %>% 
-    filter(Event == "Death (Infant or Maternal) ") %>% 
 total_deaths_mat <- clean_sae_df %>% 
     filter(Event == "Maternal Death ") %>% 
     nrow()
@@ -742,7 +705,6 @@ total_deaths_infant <- clean_sae_df %>%
    nrow()
 
 pregnancy_loss <- clean_sae_df %>% 
-    filter(Event == "Miscarriage or stillbirth (loss of pregnancy) ") %>% 
     filter(Event == "Stillbirth ") %>% 
    nrow()
 
@@ -751,11 +713,8 @@ total_hosp <- clean_sae_df %>%
    nrow()
 ```
 
-As of `r data_freeze`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
 As of `r data_freeze`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` was a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
-source("SAEs Lists.R")
-
 sae_report
 ```
