@@ -1328,194 +1328,194 @@ combined_summary <- final_summary %>%
 
 combined_summary
 
-#----
-## LHIV and VL and VL date not collected
-hiv_enrolled <- ppw_rct_df %>% 
-    filter(med_pastdiag___2 == "Checked") %>% 
-    select(clt_ptid, med_pastdiag___2)
-
-hiv_care <- ppw_rct_df %>% 
-    select(clt_ptid, clt_visit,hivct_status, hivct_newdiag, 
-           hivct_vl, hivct_date_vl)
-
-# Keep all enrolled with HIV
-hiv_care <- hiv_enrolled %>%
-    left_join(hiv_care, by = "clt_ptid")
-
-# Filter those who sero-converted
-seroconverts <- hiv_care %>%
-    filter(!(clt_ptid %in% hiv_enrolled$clt_ptid),
-           hivct_status == "Living with HIV",
-           clt_visit %in% c("6 weeks post-partum", "14 weeks post-partum", "6 months post-partum"))
-
-lhiv_df <- bind_rows(hiv_care, seroconverts)
-
-# Viral Load not captured
-vl_gap_summary <- lhiv_df %>%
-    filter(!clt_visit %in% ("PM+ Session 5 Abstraction")) %>% 
-    group_by(clt_visit) %>%
-    summarise(
-        total = n(),
-        n_missing_VL = sum(is.na(hivct_vl)),
-        percent_missing = round(100 * n_missing_VL / total, 1)
-    ) %>% 
-    arrange(desc(by = n_missing_VL)) %>% 
-    rename(`Total Seen` = total,
-           `VL Not Captured` = n_missing_VL,
-           `% Not Captured` = percent_missing,
-           Visit = clt_visit)
-
-# Convert to flextable
-ft <- flextable(vl_gap_summary)
-ft <- theme_vanilla(ft)
-ft <- autofit(ft)
-
-# Create Word document
-doc <- read_docx() %>%
-    body_add_par("Summary of Viral Load Results Not Captured by Visit", style = "heading 1") %>% 
-    body_add_flextable(ft)
-
-# Save document
-today <- Sys.Date()
-
-file_name <- paste0("Viral Load Results Gap ",today,".docx")
-
-
-print(doc, target = file_name)
-
-
-
-
-# Filter dataset for relevant timepoint (e.g., 6 weeks postpartum)
-end_points <- outcomes %>%
-    filter(visit_type == "14 Weeks") %>% 
-    select(clt_ptid, phq9_total, gad7_total, qol_overall_scaled)
-
-# Reducing Tension Checklist totals
-end_rtc <- psychosocial_data %>%
-    filter(visit_type == "14 Weeks") %>%
-    select(clt_ptid, visit_type, rtc_total)
-
-# Any adverse outcome
-adverse_end <- pregnancy_combined_dedup %>% 
-    select(clt_ptid, any_adverse_outcome)
-
-end_joined <- end_points %>%
-    inner_join(end_rtc, by = "clt_ptid") %>% 
-    inner_join(adverse_end, by = "clt_ptid") %>% 
-    mutate(any_adverse_outcome = as.factor(any_adverse_outcome))
-
-# Create summary table
-outcome_summary <- end_joined %>%
-    tbl_summary(
-        include = c(phq9_total, gad7_total, qol_overall_scaled, 
-                    any_adverse_outcome, rtc_total),
-        type = list(
-            all_continuous() ~ "continuous",
-            all_categorical() ~ "categorical",
-            phq9_total ~ "continuous", 
-            gad7_total ~ "continuous", 
-            qol_overall_scaled ~ "continuous", 
-            rtc_total ~ "continuous",
-            any_adverse_outcome ~ "categorical"),
-        statistic = list(
-            all_continuous() ~ "{median} ({p25}, {p75})",
-            all_categorical() ~ "{n} ({p}%)"
-        ),
-        missing = "no",
-        digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
-        ),
-        label = list(
-            phq9_total ~ "Patient Health Questionnaire-9 score",
-            gad7_total ~ "Generalized Anxiety Disorder-7 score",
-            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
-            any_adverse_outcome ~ "Any adverse pregnancy outcome",
-            rtc_total ~ "Reducing Tensions Checklist score"
-        )
-    )  %>% 
-    modify_table_body(
-        ~ .x %>%
-            filter(!(variable == "any_adverse_outcome" & label == "No"))
-    ) %>%
-    add_n() %>%
-    modify_header(label ~ "**Characteristic**") %>%
-    modify_caption("**Primary and Secondary Outcomes Summary**")
-
-outcome_summary
-
-## Oucome summary by arm
-arm_ids <- ppw_rct_df %>%
-    filter(visit_type == "14 Weeks") %>% 
-    select(clt_ptid, arm) %>% 
-    mutate(dummy_arm = recode(arm,
-                              "Control" = "Arm X",
-                              "Intervention" = "Arm Y")) %>%
-    distinct(clt_ptid, .keep_all = TRUE)
-
-
-
-arm_joined <- arm_ids %>%
-    inner_join(end_joined, by = "clt_ptid")
-
-
-# Create summary table
-arm_outcome_summary <- arm_joined %>%
-    tbl_summary(
-        by = arm, 
-        include = c(phq9_total, gad7_total, qol_overall_scaled, 
-                    any_adverse_outcome, rtc_total),
-        type = list(
-            all_continuous() ~ "continuous",
-            all_categorical() ~ "categorical",
-            phq9_total ~ "continuous", 
-            gad7_total ~ "continuous", 
-            qol_overall_scaled ~ "continuous", 
-            rtc_total ~ "continuous",
-            any_adverse_outcome ~ "categorical"),
-        statistic = list(
-            all_continuous() ~ "{median} ({p25}, {p75})",
-            all_categorical() ~ "{n} ({p}%)"
-        ),
-        missing = "no",
-        digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
-        ),
-        label = list(
-            phq9_total ~ "Patient Health Questionnaire-9 score",
-            gad7_total ~ "Generalized Anxiety Disorder-7 score",
-            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
-            any_adverse_outcome ~ "Any adverse pregnancy outcome",
-            rtc_total ~ "Reducing Tensions Checklist score"
-        )
-    )  %>% 
-    modify_table_body(
-        ~ .x %>%
-            filter(!(variable == "any_adverse_outcome" & label == "No"))
-    ) %>%
-    add_n() %>%
-    modify_header(label ~ "**Characteristic**") %>%
-    modify_caption("**Primary and Secondary Outcomes Summary by Arm**")
-
-arm_outcome_summary
-
-## Endorsed Suicidal thought
-suicidality <- ppw_rct_df %>% 
-    filter(phq_dead %in% c("several days","more than half the days",
-                           "nearly every day")) %>% 
-    select(clt_ptid, clt_study_site, visit_type, phq_dead,risk_date,
-           risk_shphq9, risk_thoughts, referral_type___2) %>% 
-    rename(PTID = clt_ptid,
-           Facility = clt_study_site,
-           `Narrative Description` = risk_thoughts)
-
-# Save to Excel in a different directory
-write_xlsx(
-    suicidality,
-    path = "C:/Users/hp/OneDrive/Desktop/IPMH/Suicidality/Suicidality_Output.xlsx"
-)
-
-
-    
+# #----
+# ## LHIV and VL and VL date not collected
+# hiv_enrolled <- ppw_rct_df %>% 
+#     filter(med_pastdiag___2 == "Checked") %>% 
+#     select(clt_ptid, med_pastdiag___2)
+# 
+# hiv_care <- ppw_rct_df %>% 
+#     select(clt_ptid, clt_visit,hivct_status, hivct_newdiag, 
+#            hivct_vl, hivct_date_vl)
+# 
+# # Keep all enrolled with HIV
+# hiv_care <- hiv_enrolled %>%
+#     left_join(hiv_care, by = "clt_ptid")
+# 
+# # Filter those who sero-converted
+# seroconverts <- hiv_care %>%
+#     filter(!(clt_ptid %in% hiv_enrolled$clt_ptid),
+#            hivct_status == "Living with HIV",
+#            clt_visit %in% c("6 weeks post-partum", "14 weeks post-partum", "6 months post-partum"))
+# 
+# lhiv_df <- bind_rows(hiv_care, seroconverts)
+# 
+# # Viral Load not captured
+# vl_gap_summary <- lhiv_df %>%
+#     filter(!clt_visit %in% ("PM+ Session 5 Abstraction")) %>% 
+#     group_by(clt_visit) %>%
+#     summarise(
+#         total = n(),
+#         n_missing_VL = sum(is.na(hivct_vl)),
+#         percent_missing = round(100 * n_missing_VL / total, 1)
+#     ) %>% 
+#     arrange(desc(by = n_missing_VL)) %>% 
+#     rename(`Total Seen` = total,
+#            `VL Not Captured` = n_missing_VL,
+#            `% Not Captured` = percent_missing,
+#            Visit = clt_visit)
+# 
+# # Convert to flextable
+# ft <- flextable(vl_gap_summary)
+# ft <- theme_vanilla(ft)
+# ft <- autofit(ft)
+# 
+# # Create Word document
+# doc <- read_docx() %>%
+#     body_add_par("Summary of Viral Load Results Not Captured by Visit", style = "heading 1") %>% 
+#     body_add_flextable(ft)
+# 
+# # Save document
+# today <- Sys.Date()
+# 
+# file_name <- paste0("Viral Load Results Gap ",today,".docx")
+# 
+# 
+# print(doc, target = file_name)
+# 
+# 
+# 
+# 
+# # Filter dataset for relevant timepoint (e.g., 6 weeks postpartum)
+# end_points <- outcomes %>%
+#     filter(visit_type == "14 Weeks") %>% 
+#     select(clt_ptid, phq9_total, gad7_total, qol_overall_scaled)
+# 
+# # Reducing Tension Checklist totals
+# end_rtc <- psychosocial_data %>%
+#     filter(visit_type == "14 Weeks") %>%
+#     select(clt_ptid, visit_type, rtc_total)
+# 
+# # Any adverse outcome
+# adverse_end <- pregnancy_combined_dedup %>% 
+#     select(clt_ptid, any_adverse_outcome)
+# 
+# end_joined <- end_points %>%
+#     inner_join(end_rtc, by = "clt_ptid") %>% 
+#     inner_join(adverse_end, by = "clt_ptid") %>% 
+#     mutate(any_adverse_outcome = as.factor(any_adverse_outcome))
+# 
+# # Create summary table
+# outcome_summary <- end_joined %>%
+#     tbl_summary(
+#         include = c(phq9_total, gad7_total, qol_overall_scaled, 
+#                     any_adverse_outcome, rtc_total),
+#         type = list(
+#             all_continuous() ~ "continuous",
+#             all_categorical() ~ "categorical",
+#             phq9_total ~ "continuous", 
+#             gad7_total ~ "continuous", 
+#             qol_overall_scaled ~ "continuous", 
+#             rtc_total ~ "continuous",
+#             any_adverse_outcome ~ "categorical"),
+#         statistic = list(
+#             all_continuous() ~ "{median} ({p25}, {p75})",
+#             all_categorical() ~ "{n} ({p}%)"
+#         ),
+#         missing = "no",
+#         digits = list(
+#             all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+#             all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+#         ),
+#         label = list(
+#             phq9_total ~ "Patient Health Questionnaire-9 score",
+#             gad7_total ~ "Generalized Anxiety Disorder-7 score",
+#             qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+#             any_adverse_outcome ~ "Any adverse pregnancy outcome",
+#             rtc_total ~ "Reducing Tensions Checklist score"
+#         )
+#     )  %>% 
+#     modify_table_body(
+#         ~ .x %>%
+#             filter(!(variable == "any_adverse_outcome" & label == "No"))
+#     ) %>%
+#     add_n() %>%
+#     modify_header(label ~ "**Characteristic**") %>%
+#     modify_caption("**Primary and Secondary Outcomes Summary**")
+# 
+# outcome_summary
+# 
+# ## Oucome summary by arm
+# arm_ids <- ppw_rct_df %>%
+#     filter(visit_type == "14 Weeks") %>% 
+#     select(clt_ptid, arm) %>% 
+#     mutate(dummy_arm = recode(arm,
+#                               "Control" = "Arm X",
+#                               "Intervention" = "Arm Y")) %>%
+#     distinct(clt_ptid, .keep_all = TRUE)
+# 
+# 
+# 
+# arm_joined <- arm_ids %>%
+#     inner_join(end_joined, by = "clt_ptid")
+# 
+# 
+# # Create summary table
+# arm_outcome_summary <- arm_joined %>%
+#     tbl_summary(
+#         by = arm, 
+#         include = c(phq9_total, gad7_total, qol_overall_scaled, 
+#                     any_adverse_outcome, rtc_total),
+#         type = list(
+#             all_continuous() ~ "continuous",
+#             all_categorical() ~ "categorical",
+#             phq9_total ~ "continuous", 
+#             gad7_total ~ "continuous", 
+#             qol_overall_scaled ~ "continuous", 
+#             rtc_total ~ "continuous",
+#             any_adverse_outcome ~ "categorical"),
+#         statistic = list(
+#             all_continuous() ~ "{median} ({p25}, {p75})",
+#             all_categorical() ~ "{n} ({p}%)"
+#         ),
+#         missing = "no",
+#         digits = list(
+#             all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+#             all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+#         ),
+#         label = list(
+#             phq9_total ~ "Patient Health Questionnaire-9 score",
+#             gad7_total ~ "Generalized Anxiety Disorder-7 score",
+#             qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+#             any_adverse_outcome ~ "Any adverse pregnancy outcome",
+#             rtc_total ~ "Reducing Tensions Checklist score"
+#         )
+#     )  %>% 
+#     modify_table_body(
+#         ~ .x %>%
+#             filter(!(variable == "any_adverse_outcome" & label == "No"))
+#     ) %>%
+#     add_n() %>%
+#     modify_header(label ~ "**Characteristic**") %>%
+#     modify_caption("**Primary and Secondary Outcomes Summary by Arm**")
+# 
+# arm_outcome_summary
+# 
+# ## Endorsed Suicidal thought
+# suicidality <- ppw_rct_df %>% 
+#     filter(phq_dead %in% c("several days","more than half the days",
+#                            "nearly every day")) %>% 
+#     select(clt_ptid, clt_study_site, visit_type, phq_dead,risk_date,
+#            risk_shphq9, risk_thoughts, referral_type___2) %>% 
+#     rename(PTID = clt_ptid,
+#            Facility = clt_study_site,
+#            `Narrative Description` = risk_thoughts)
+# 
+# # Save to Excel in a different directory
+# write_xlsx(
+#     suicidality,
+#     path = "C:/Users/hp/OneDrive/Desktop/IPMH/Suicidality/Suicidality_Output.xlsx"
+# )
+# 
+# 
+#     
