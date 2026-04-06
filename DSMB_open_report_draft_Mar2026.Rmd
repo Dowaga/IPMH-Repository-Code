@@ -4,9 +4,10 @@ title: 'IPMH: Integration of stepped care for perinatal mood and anxiety disorde
 subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report'
 date: "`r format(Sys.time(), '%d %B %Y')`"
 output:
+    pdf_document:
+        latex_engine: xelatex
+        extra_dependencies: ["float"]
     word_document: default
-    #pdf_document:
-    #latex_engine: xelatex
 ---
 
 ```{r setup, include=FALSE}
@@ -15,6 +16,8 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "")
+
 library(stringr)
 library(lubridate)
 library(patchwork)
@@ -64,7 +67,6 @@ data_freeze <- Sys.Date()
 ```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
 
 knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
-
 ```
 
 \newpage
@@ -77,7 +79,7 @@ Amritha Bhat, MBBS, MD, MPH, University of Washington
 
 Report prepared by: David Owaga & Yuwei Wang
 
-Date of data freeze: `r data_freeze`
+Date of data freeze: `r format(data_freeze, '%d %B %Y')`
 
 \newpage
 
@@ -149,6 +151,8 @@ study_summary
 
 We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on May 12, 2025 to include women from \>=20 weeks gestation because most of the participants enrolled from \>=28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study.
 
+\newpage 
+
 # 2. Study Progress
 
 ## 2.1 Recruitment Timeline
@@ -174,7 +178,6 @@ n_fourth <- consort_data %>%
    filter(rct_enrolling == "Yes", fourthvisit == "Yes") %>%nrow()
 
 n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
-
 ```
 
 We began recruiting pregnant women into the study on February 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round((n_enrol / 2970) * 100, 1)`% of our enrollment target.
@@ -185,7 +188,7 @@ In general, the enrollment had a good start and has progressed well despite chal
 
 We halted enrollment of new participants on August 1, 2025 after the grant period ended on July 31, 2025, pending approval of the Notice of Award from the National Institute of Health. We received the Notice of Award on September 8, 2025, and enrollments resumed on September 22, 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued.
 
-In Siaya County, there was a nurses strike which begun on September 18, 2025. The strike affected participant enrollment in 5 intervention and 4 control sites, where we had not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility had hired a locum nurse for the maternal child health clinic, and enrollment was not affected. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists were not affected. The strike was officially called off on November 17, 2025. We resumed participant enrollment in the affected sites right after the strike.
+In Siaya County, there was a nurse strike which began on September 18, 2025. The strike affected participant enrollment in 5 intervention and 4 control sites, where we had not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility had hired a locum nurse for the maternal child health clinic, and enrollment was not affected. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists were not affected. The strike was officially called off on November 17, 2025. We resumed participant enrollment in the affected sites right after the strike.
 
 Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
 
@@ -199,7 +202,7 @@ Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following
 
 So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6-weeks postpartum visit.
 
-```{r consort, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
+```{r consort, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
 consort_single
 ```
 
@@ -367,7 +370,6 @@ reached_75per_target <- weekly_enrollment %>%
  filter(latest_enrollment >= 111) %>%
  summarise(n = n()) %>%
  pull(n)
-
 ```
 
 All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 37 participants. Notable, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 25% enrollment in mid April, 2025.
@@ -453,7 +455,7 @@ source("Consort_WLWH.R")
 
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
 
-```{r consort_mortality, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
+```{r consort_mortality, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE}
 add_box(txt = txt_enrolled) |>
    add_box(txt = txt_hiv) |>
    add_side_box(txt = txt_pm_tele) |>
@@ -675,9 +677,9 @@ outcome_summary
 
 \newpage
 
-# 9 AEs and SAEs
+# 9. Adverse Events and Severe Adverse Events
 
-## 9.1 AEs Summary
+## 9.1 Adverse Event Summary
 
 ```{r AEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
@@ -685,13 +687,13 @@ source("SAEs Lists.R")
 total_AEs <- ae_df %>% nrow()
 ```
 
-As of `r data_freeze`, `r total_AEs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
+As of `r format(data_freeze, '%d %B %Y')`, `r total_AEs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
 
 ```{r AEs Report, echo=FALSE, message=FALSE, warning=FALSE}
 ae_report
 ```
 
-## 9.2 SAEs Summary
+## 9.2 Severe Adverse Event Summary
 
 ```{r SAEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 total_SAEs <- clean_sae_df %>% 
@@ -714,7 +716,7 @@ total_hosp <- clean_sae_df %>%
    nrow()
 ```
 
-As of `r data_freeze`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` was a prolonged hospitalization.
+As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` was a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
 sae_report
