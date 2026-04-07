@@ -27,7 +27,13 @@ rm(list = ls())
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 
+
+data_freeze <- Sys.time() 
+#May 11 2026. #####
+##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after 
 # Set file paths: Use this section to set input and output filepaths
+
+
 file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
 file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
 file_date <- gsub("^.*?_2","2",file_date)
@@ -51,9 +57,6 @@ ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_",
                                              file_date, ".csv", sep="")) %>% 
     filter(redcap_repeat_instrument == "ADMIN: Adverse Experience")
 
-data_freeze <- file_date
-
-data_freeze <- format(data_freeze, format="%d %B %Y")
 ```
 
 ```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
@@ -130,11 +133,15 @@ study_summary
 -   Nov 06, 2024: Facility staff training initiation
 -   Feb 17, 2025: Perinatal women recruitment initiation
 -   May 19, 2025: 25% of planned enrollment achieved
+-   May 27, 2025: 25% of planned women living with HIV (WLWH) enrollment achieved
 -   August 1, 2025: Enrollment halted due to end of grant period
 -   Sept 22, 2025: Enrollment resumed after receiving NOA
 -   Nov 21, 2025: 2nd DSMB meeting
 -   Nov 24, 2025: 50% of planned enrollment achieved
--   
+-   Dec 03, 2025: 50% of planned WLWH enrollment achieved
+-   Jan 8, 2026: Data collection temporarily halted due to REDCap server upgrade
+-   Jan 22, 2026: Data collection resumed after REDCap server upgrade
+-   Mar 30, 2026: 75% of planned WLWH enrollment achieved
 
 ## 1.2 Key Changes to Study Protocol
 
@@ -146,6 +153,7 @@ We requested for a modification from the Kenyatta National Hospital Ethical Rese
 
 ```{r source_consort, echo=FALSE, warning=FALSE}
 source("Consort.R")
+
 n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
 n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
 n_eligible <- consort_data %>% filter(rct_eligible == 1) %>% nrow()
@@ -154,6 +162,7 @@ n_enrol <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
 n_enrol_per <- round(n_enrol/n_eligible *100, 1)
 n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
 n_second_per <- round(n_second/n_enrol * 100, 1)
+
 # 14 Weeks Visit
 n_third <- consort_data %>% filter(!is.na(thirdvisit)) %>% nrow()
 n_third_per <- round(n_third/n_enrol * 100, 1)
@@ -201,7 +210,9 @@ consort_single
 source("Enrollment Progress.R")
 ```
 
-On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on `r target_reached_25`. We hit our 50% enrollment target on `r target_reached_50`.
+On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on `r target_reached_25`. We hit our 50% enrollment target on `r target_reached_50`. 
+
+[Double check if we hit 75% target by May 11.]
 
 ```{r enrollment_sub, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
@@ -269,11 +280,23 @@ target_reached_50 <- total_enrollment %>%
   filter(cumulative_enrollment >= target_value_2) %>%
   slice_min(week, n = 1)
 
+target_lines <- bind_rows(target_25_line, target_50_line)
+
+main_enrollment <- combined_enrollment %>% 
+  filter(!study_site %in% c("25% Target", "50% Target"))
+
+
 p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
                                 color = study_site, group = study_site)) +
   geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +
   scale_linewidth_identity() +
-  
+    
+    # Target lines outside the color aesthetic ??? hardcoded colors
+  geom_line(data = target_25_line, aes(x = week, y = cumulative_enrollment),
+            color = "red", linewidth = 1, inherit.aes = FALSE) +
+  geom_line(data = target_50_line, aes(x = week, y = cumulative_enrollment),
+            color = "orange", linewidth = 1, inherit.aes = FALSE) +
+
   # Add the point and text annotation
   geom_point(data = target_reached, aes(x = week, y = cumulative_enrollment),
              color = "black", size = 3, shape = 21, fill = "red") +
@@ -340,11 +363,21 @@ reached_50per_target <- weekly_enrollment %>%
   filter(latest_enrollment >= 74) %>%
   summarise(n = n()) %>%
   pull(n)
+
+reached_75per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 111) %>%
+  summarise(n = n()) %>%
+  pull(n)
+
 ```
 
-All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 37 participants. Notable, the first cluster to achieve this benchmark was Nyalenda, which reached 25% enrollment in mid-April 2025.
+All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 37 participants. Notable, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 25% enrollment in mid April, 2025.
 
-`r reached_50per_target` facility clusters have reached the 50% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 74 participants. Notably, the first cluster to achieve this benchmark was [] , which reached 50% enrollment in [].
+All `r reached_50per_target` facility clusters have reached the 50% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 74 participants. Notably, the first two clusters to achieve this benchmark were Nyalenda and Airport Health Centres, both of which reached 50% enrollment in early October, 2025.
+
+`r reached_75per_target` facility clusters have reached the 75% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 111 participants. Notably, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 75% enrollment in late November, 2025.
 
 ```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 source("Enrollment Progress.R")
@@ -374,35 +407,42 @@ weekly_enrollment <- weekly_enrollment %>%
     "22, Ndiru Level 4 Hospital" = "22, Ndiru"
   ))
 
-p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+p2 <- p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
                                     color = study_site, group = study_site)) +
     geom_line(linewidth = 1) +  
     geom_hline(yintercept = 37, linetype = "dashed", color = "red", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 37.125, 
-             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
     geom_hline(yintercept = 74, linetype = "dashed", color = "orange", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 74.125, 
-             label = "50% Target", vjust = -1, hjust = 0, size = 3) +
+    geom_hline(yintercept = 111, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+    annotate("label",                                      # "label" adds a box background
+             x = as.Date("2025-03-15"),                    # fixed early date, adjust as needed
+             y = 47, label = "25% target \n reached",
+             color = "red", fontface = "bold", size = 3, fill = "white") +
+    annotate("label", 
+             x = as.Date("2025-03-15"), 
+             y = 84, label = "50% target \n reached",
+             color = "orange", fontface = "bold", size = 3, fill = "white") +
+    annotate("label", 
+             x = as.Date("2025-03-15"), 
+             y = 121, label = "75% target \n reached",
+             color = "darkgreen", fontface = "bold", size = 3, fill = "white") +
     labs(title = "Enrollment Trends by Study Site",
          x = "Date",
-         y = "Number of Enrollments",
+         y = "Cumulative Enrollments",
          color = "Study Site") +
-# Apply your professional theme
-  theme_minimal(base_size = 12) +
-  theme(
-    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
-    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    legend.position = "right",
-    legend.box = "vertical",
-    legend.title = element_text(face = "bold", size = 10),
-    legend.text = element_text(size = 9),
-    legend.key.height = unit(0.5, "cm"),
-    legend.key.width = unit(0.5, "cm"),
-    plot.margin = margin(10, 20, 10, 10)
-  ) +
-  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
-
+    theme_minimal(base_size = 12) +
+    theme(
+        plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(face = "bold", size = 10),
+        legend.text = element_text(size = 9),
+        legend.key.height = unit(0.5, "cm"),
+        legend.key.width = unit(0.5, "cm"),
+        plot.margin = margin(10, 20, 10, 10)
+    ) +
+    guides(color = guide_legend(ncol = 2)) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
 p2
 ```
 
@@ -431,12 +471,56 @@ add_box(txt = txt_enrolled) |>
 
 \newpage
 
-### 3.2.2 Enrollment Progress - Overall
+### 3.2.2 Enrollment Progress
 
-Recruitment of women living with HIV (WLWH) into the cohort has been slower than initially anticipated, but continues to show steady improvement. [Out of the total enrollment target of 20 WLWH per facility, three facilities have achieved 50% of the target (10 participants each), while six additional facilities have achieved at least 25% of their target, enrolling five WLWH per site.] (need to update here)
+```{r enrollment_hiv, echo=FALSE}
+source("Enrollment_WLWH.R")
+
+wlwh_target <- 20
+
+wlwh_milestones <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  slice_max(week, n = 1) %>%  # most recent cumulative count per site
+  ungroup() %>%
+  summarise(
+    reached_25  = sum(cumulative_enrollment >= wlwh_target * 0.25),
+    reached_50  = sum(cumulative_enrollment >= wlwh_target * 0.50),
+    reached_75  = sum(cumulative_enrollment >= wlwh_target * 0.75),
+    reached_100 = sum(cumulative_enrollment >= wlwh_target)
+  )
+
+total_wlwh_target <- 405
+
+wlwh_timeline <- ppw_rct_df %>%
+  filter(med_pastdiag___2 == "Checked") %>%        # WLWH only
+  distinct(clt_ptid, .keep_all = TRUE) %>%          # one row per participant
+  arrange(clt_date) %>%
+  mutate(
+    clt_date = as.Date(clt_date),
+    cumulative = row_number()
+  )
+
+milestone_wlwh <- function(data, threshold, total_target) {
+  data %>%
+    filter(cumulative >= round(total_target * threshold)) %>%
+    slice(1) %>%
+    select(clt_date, cumulative)
+}
+
+wlwh_25 <- milestone_wlwh(wlwh_timeline, 0.25, total_wlwh_target)
+wlwh_50 <- milestone_wlwh(wlwh_timeline, 0.50, total_wlwh_target)
+wlwh_75 <- milestone_wlwh(wlwh_timeline, 0.75, total_wlwh_target)
+```
+
+Recruitment of women living with HIV (WLWH) into the cohort continues to show steady improvement. We reached the 25% enrollment milestone for WLWH on May 27, 2025, the 50% enrollment milestone on Dec 03, 2026, and the 75% enrollment milestone on Mar 30, 2026. Out of the total enrollment target of about `r wlwh_target` WLWH per facility, 
+`r wlwh_milestones$reached_100` facilities have achieved 100% of their target, 
+`r wlwh_milestones$reached_75` have achieved 75% (`r wlwh_target * 0.75` participants), 
+`r wlwh_milestones$reached_50` have achieved 50% (`r wlwh_target * 0.50` participants), 
+and all `r wlwh_milestones$reached_25` have achieved at least 25% (`r wlwh_target * 0.25` participants).
 
 ```{r enrollment_mor, echo=FALSE, fig.height=5, fig.width=8, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
+
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
   mutate(study_site = recode(study_site,
@@ -462,35 +546,45 @@ weekly_enrollment <- weekly_enrollment %>%
     "22, Ndiru Level 4 Hospital" = "22, Ndiru"
   ))
 
-ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+p3 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
                                     color = study_site, group = study_site)) +
     geom_line(linewidth = 1) +  
     geom_hline(yintercept = 5, linetype = "dashed", color = "red", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 5, 
-             label = "25% Target", vjust = -1, hjust = 0, size = 3) +
+    annotate("label", x = min(weekly_enrollment$week), y = 5, 
+             label = "25% target reached", vjust = -0.5, hjust = 0, size = 3,
+             color = "red", fontface = "bold", fill = "white") +
     geom_hline(yintercept = 10, linetype = "dashed", color = "orange", linewidth = 1.5) +
-    annotate("text", x = min(weekly_enrollment$week), y = 10, 
-             label = "50% Target", vjust = -1, hjust = 0, size = 3) +
+    annotate("label", x = min(weekly_enrollment$week), y = 10, 
+             label = "50% target reached", vjust = -0.5, hjust = 0, size = 3,
+             color = "orange", fontface = "bold", fill = "white") +
+    geom_hline(yintercept = 15, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+    annotate("label", x = min(weekly_enrollment$week), y = 15, 
+             label = "75% target reached", vjust = -0.5, hjust = 0, size = 3,
+             color = "darkgreen", fontface = "bold", fill = "white") +
+    geom_hline(yintercept = 20, linetype = "dashed", color = "blue", linewidth = 1.5) +
+    annotate("label", x = min(weekly_enrollment$week), y = 20, 
+             label = "100% target reached", vjust = -0.5, hjust = 0, size = 3,
+             color = "blue", fontface = "bold", fill = "white") +
     labs(title = "WLWH Enrollment Trends by Study Site",
          x = "Date",
-         y = "Cummulative WLWH Enrolled",
+         y = "Cumulative WLWH Enrolled",
          color = "Study Site") +
-# Apply your professional theme
-  theme_minimal(base_size = 12) +
-  theme(
-    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
-    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-    legend.position = "right",
-    legend.box = "vertical",
-    legend.title = element_text(face = "bold", size = 10),
-    legend.text = element_text(size = 9),
-    legend.key.height = unit(0.5, "cm"),
-    legend.key.width = unit(0.5, "cm"),
-    plot.margin = margin(10, 20, 10, 10)
-  ) +
-  guides(color = guide_legend(ncol = 2)) +  # arrange legend in 2 columns +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+    theme_minimal(base_size = 12) +
+    theme(
+        plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        legend.position = "right",
+        legend.box = "vertical",
+        legend.title = element_text(face = "bold", size = 10),
+        legend.text = element_text(size = 9),
+        legend.key.height = unit(0.5, "cm"),
+        legend.key.width = unit(0.5, "cm"),
+        plot.margin = margin(10, 20, 10, 10)
+    ) +
+    guides(color = guide_legend(ncol = 2)) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
 
+p3
 ```
 
 \newpage
@@ -501,6 +595,7 @@ Women were ineligible if their gestational age at eligibility assessment was \<2
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
 source("Consort.R")
+
 ineligibility_summary
 ```
 
@@ -515,6 +610,8 @@ source("PPW RCT Basic Demographics.R")
 
 basic_demo
 ```
+
+\newpage 
 
 ## 5.2 WLWH Cohort Baseline Demographics
 
@@ -553,10 +650,11 @@ total_exits <- ppw_rct_df%>%
 completed_follow_up <- total_exits %>% 
     filter(clt_visit=="6 months post-partum") %>% 
     nrow()
-
 ```
 
-To date, no early terminations have been recorded. However, `r completed_follow_up` participants have completed the study and exited at the scheduled end of follow-up. The first study exit occurred on `r earliest_due`
+To date, no early terminations have been recorded aside from maternal death (see the adverse event section). However, `r completed_follow_up` participants have completed the study and exited at the scheduled end of follow-up. The first study exit occurred on `r earliest_due`.
+
+\newpage
 
 # 7. Referrals
 
@@ -573,7 +671,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 
 ```
 
-During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
+During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Participants at control sites are referred to routine care, while those at intervention sites are referred to telepsychiatry or PM+ based on clinical assessment of depression and/or anxiety. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
 ## generate report using data from psychosocial referrals form in REDCap  
@@ -582,9 +680,7 @@ source("PPW RCT Referrals.R")
 referral_summary
 ```
 
-## 7.2 Treatment Referrals
-
-```{r, message=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE, include=F}
 source("Telepsychiatry Sessions.R")
 
 fidelity_summary
@@ -599,6 +695,8 @@ source("PPW RCT follow up.R")
 
 outcome_summary
 ```
+
+\newpage
 
 # 9 AEs and SAEs
 
@@ -627,12 +725,16 @@ source("SAEs Lists.R")
 total_SAEs <- clean_sae_df %>% 
     nrow()
 
-total_deaths <- clean_sae_df %>% 
-    filter(Event == "Death (Infant or Maternal) ") %>% 
+total_deaths_mat <- clean_sae_df %>% 
+    filter(Event == "Maternal Death ") %>% 
+    nrow()
+
+total_deaths_infant <- clean_sae_df %>% 
+    filter(Event == "Infant Death ") %>% 
     nrow()
 
 pregnancy_loss <- clean_sae_df %>% 
-    filter(Event == "Miscarriage or stillbirth (loss of pregnancy) ") %>% 
+    filter(Event == "Stillbirth ") %>% 
     nrow()
 
 total_hosp <- clean_sae_df %>% 
@@ -640,10 +742,10 @@ total_hosp <- clean_sae_df %>%
     nrow()
 ```
 
-As of `r data_freeze`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths` were infant deaths, `r pregnancy_loss` were miscarriage or still births, and `r total_hosp` was a prolonged hospitalization.
+As of `r data_freeze`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` was a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 
-sae_report
+sae_overall
 ```
