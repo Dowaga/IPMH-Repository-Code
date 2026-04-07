@@ -32,14 +32,12 @@ library(officedown)
 library(officer)
 library(flextable)
 
-## WORKING DIRECTORY
-# Setup ------------------------------------------------------------------------
 rm(list = ls())
 
+# Set up data freeze time for this report
 data_freeze <- Sys.Date() 
 
 #data_freeze <- "2026-05-11"
-
 ##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. #####
 
 # Reference source codes & other dependencies:
@@ -387,7 +385,7 @@ weekly_enrollment <- weekly_enrollment %>%
    "22, Ndiru Level 4 Hospital" = "22, Ndiru"
  ))
 
-p2 <- p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
                                    color = study_site, group = study_site)) +
    geom_line(linewidth = 1) +  
    geom_hline(yintercept = 37, linetype = "dashed", color = "red", linewidth = 1.5) +
@@ -438,7 +436,7 @@ source("Consort_WLWH.R")
 
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
 
-```{r consort_mortality, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE}
+```{r consort_mortality, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
 add_box(txt = txt_enrolled) |>
    add_box(txt = txt_hiv) |>
    add_side_box(txt = txt_pm_tele) |>
@@ -570,7 +568,21 @@ p3
 Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
-ineligibility_summary
+ineligibility_summary <- consort_data %>% 
+  filter(!is.na(exclusion)) %>% 
+  tbl_summary(
+    sort = list(all_categorical() ~ "frequency"),
+    include = c(exclusion),
+    label = list(exclusion ~ "Reasons for Ineligibility"),
+    digits = list(
+      all_continuous() ~ 1,
+      all_categorical() ~ c(0, 1)
+    )) %>%
+  as_kable_extra(booktabs = TRUE)
+
+ineligibility_summary %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"))
 ```
 
 \newpage
@@ -582,7 +594,44 @@ ineligibility_summary
 ```{r demographics, warning=F}
 source("PPW RCT Basic Demographics.R")
 
-basic_demo
+basic_demo <- demographics_df %>%
+    tbl_summary(
+    sort = list(all_categorical() ~ "frequency"),  
+    include = c(dem_age, dem_current_partner, dem_maritalstat,
+                dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
+                dem_employment, dem_household_num, dem_housesleep, 
+                dem_houserooms, dem_traveltime_min, med_pre_preg),
+    label = list(dem_age ~ "Age (Years)",
+                 dem_current_partner ~ "Do you currently have a partner",
+                 dem_employment ~ "Do you have regular employment (Yes)",
+                 dem_maritalstat ~ "Currently Married (Yes)",
+                 dem_pc_residence ~ "Shares residence with partner",
+                 dem_marriage ~ "Marriage (Monogamous)",
+                 dem_current_school ~ "Currently in School",
+                 dem_school ~ "Completed years in School",
+                 dem_household_num ~ "Number of people in Household",
+                 dem_housesleep ~ "Number of people sleep in same house",
+                 dem_houserooms ~ "Rooms in the house most often sleep in",
+                 dem_traveltime_min ~ "Time to the Clinic (Minutes)",
+                 med_pre_preg ~ "Have you been pregnant before (Yes)"),
+    missing = "no",
+    digits = list(
+        all_continuous() ~ 1,       
+        all_categorical() ~ c(0, 1) 
+    ), 
+    type = list(dem_age ~ "continuous", 
+                dem_household_num ~ "continuous",
+                dem_housesleep ~ "continuous", 
+                dem_houserooms ~ "continuous", 
+                dem_traveltime_min ~ "continuous"),
+    statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+    bold_labels() %>%
+    add_n() %>%
+    as_kable_extra(booktabs = TRUE, caption = "Basic Demographic Summary")
+
+basic_demo %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down"))
 ```
 
 \newpage 
@@ -590,7 +639,46 @@ basic_demo
 ## 5.2 WLWH Cohort Baseline Demographics
 
 ```{r WLWH_demo, echo=FALSE}
-wlwh_demo
+wlwh_demo <- demographics_df %>%
+    filter(med_pastdiag___2 == "Checked") %>% 
+    tbl_summary(
+        sort = list(all_categorical() ~ "frequency"),
+        include = c(dem_age, dem_current_partner, dem_maritalstat,
+                    dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
+                    dem_employment, dem_household_num, dem_housesleep, 
+                    dem_houserooms, dem_traveltime_min, med_pre_preg),
+        label = list(dem_age ~ "Age (Years)",
+                     dem_current_partner ~ "Do you currently have a partner",
+                     dem_employment ~ "Do you have regular employment (Yes)",
+                     dem_maritalstat ~ "Currently Married (Yes)",
+                     dem_pc_residence ~ "Shares residence with partner (Yes)",
+                     dem_marriage ~ "Marriage (Monogamous)",
+                     dem_current_school ~ "Currently in School",
+                     dem_school ~ "Completed years in School",
+                     dem_household_num ~ "Number of people in Household",
+                     dem_housesleep ~ "Number of people sleep in same house",
+                     dem_houserooms ~ "Rooms in the house most often sleep in",
+                     dem_traveltime_min ~ "Time to the Clinic (Minutes)",
+                     med_pre_preg ~ "Have you been pregnant before (Yes)"),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
+        ), 
+        type = list(dem_age ~ "continuous", 
+                    dem_household_num ~ "continuous",
+                    dem_housesleep ~ "continuous", 
+                    dem_houserooms ~ "continuous", 
+                    dem_traveltime_min ~ "continuous"),
+        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+    bold_labels() %>%
+    add_n() %>%
+    as_kable_extra(booktabs = TRUE, caption = "WLWH Demographic Summary")
+
+wlwh_demo %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down")
+    )
 ```
 
 \newpage
@@ -622,7 +710,6 @@ total_exits <- ppw_rct_df%>%
 completed_follow_up <- total_exits %>% 
    filter(clt_visit=="6 months post-partum") %>% 
    nrow()
-
 ```
 
 To date, no early terminations have been recorded aside from maternal death (see the adverse event section). However, `r completed_follow_up` participants have completed the study and exited at the scheduled end of follow-up. The first study exit occurred on `r earliest_due`.
@@ -639,13 +726,29 @@ total_scr_num <- df_long %>% nrow()
 total_scr_per <- round(total_scr_num/total_visits *100, 1)
 total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
 total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
-
 ```
 
 During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Participants at control sites are referred to routine care, while those at intervention sites are referred to telepsychiatry or PM+ based on clinical assessment of depression and/or anxiety. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
-referral_summary
+referral_summary <- summary_tbl %>%
+  mutate(
+    screened = sprintf("%d (%.1f%%)", n, pct_screened),
+    accepted = sprintf("%d (%.1f%%)", n_accepted, pct_accepted)
+  ) %>%
+  select(Condition, screened, accepted) %>%
+  knitr::kable(
+    booktabs = TRUE,
+    caption = "Referral Summary",
+    col.names = c("Referral Condition", "Screened Positive N (%)", "Accepted Referral N (%)")
+  )
+
+referral_summary %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down"),
+        font_size = 11
+    ) %>%
+    kableExtra::row_spec(0, bold = TRUE)  # bold column headers
 ```
 
 # 8. Study endpoints
@@ -655,7 +758,50 @@ referral_summary
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
 
-outcome_summary
+outcome_summary <- end_joined %>%
+    tbl_summary(
+        include = c(phq9_total, gad7_total, qol_overall_scaled, 
+                    any_adverse_outcome, rtc_total),
+        type = list(
+            all_continuous() ~ "continuous",
+            all_categorical() ~ "categorical",
+            phq9_total ~ "continuous", 
+            gad7_total ~ "continuous", 
+            qol_overall_scaled ~ "continuous", 
+            rtc_total ~ "continuous",
+            any_adverse_outcome ~ "categorical"),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
+        ),
+        label = list(
+            phq9_total ~ "Patient Health Questionnaire-9 score",
+            gad7_total ~ "Generalized Anxiety Disorder-7 score",
+            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+            any_adverse_outcome ~ "Any adverse pregnancy outcome",
+            rtc_total ~ "Reducing Tensions Checklist score"
+        )
+    ) %>% 
+    modify_table_body(
+        ~ .x %>%
+            filter(!(variable == "any_adverse_outcome" & label == "No"))
+    ) %>%
+    add_n() %>%
+    modify_header(label ~ "**Characteristic**") %>%
+    as_kable_extra(
+        booktabs = TRUE,
+        caption = "Primary and Secondary Outcomes Summary"
+    )
+
+outcome_summary %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down")
+    )
 ```
 
 \newpage
@@ -673,7 +819,25 @@ total_AEs <- ae_df %>% nrow()
 As of `r format(data_freeze, '%d %B %Y')`, `r total_AEs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
 
 ```{r AEs Report, echo=FALSE, message=FALSE, warning=FALSE}
-ae_report
+ae_report <- ae_report_df %>%
+    mutate(Summary = paste0(`Number of Events`, " (", round(`Number of Events` / total_events * 100, 1), "%)")) %>%
+    select(Characteristic = Event, Summary) %>%
+    bind_rows(
+        tibble(Characteristic = "Total", Summary = as.character(total_events))
+    ) %>%
+    knitr::kable(
+        booktabs = TRUE,
+        caption = "Summary of Adverse Events",
+        col.names = c("Characteristic", paste0("N = ", total_events))
+    )
+
+ae_report %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down")
+    ) %>%
+    kableExtra::row_spec(0, bold = TRUE) %>%                          # bold header
+    kableExtra::row_spec(nrow(ae_report_df) + 1, bold = TRUE) %>%    # bold Total row
+    kableExtra::footnote(general = "n (%)")
 ```
 
 ## 9.2 Severe Adverse Event Summary
@@ -702,5 +866,16 @@ total_hosp <- clean_sae_df %>%
 As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` was a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
-sae_report
+sae_report <- bind_rows(sae_summary, sae_total) %>%
+    knitr::kable(
+        booktabs = TRUE,
+        caption = "Summary of Serious Adverse Events"
+    )
+
+sae_report %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down")
+    ) %>%
+    kableExtra::row_spec(0, bold = TRUE) %>%
+    kableExtra::row_spec(nrow(sae_summary) + 1, bold = TRUE)  # bold Total row
 ```
