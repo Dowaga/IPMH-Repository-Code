@@ -5,7 +5,6 @@
 # AEs Lists
 
 # Setup ------------------------------------------------------------------------
-rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
@@ -83,29 +82,11 @@ sae_report <- bind_rows(sae_summary, sae_total) %>%
 sae_report
 
 ## AE Report---------------------------------------------------------------------
-# Suicidality from AE form
-suicide_ae <- ae_df %>%
-    filter(ae_define___4 == "Checked") %>%
-    mutate(Event = "Self-harm/Suicidal Behavior (AE Form)",
-           source = "AE Form") 
-
-#none found. We will only use PHQ9 in the report.
-
-# Suicidality from PHQ-9
-suicide_phq <- ppw_rct_df %>%
-    filter(phq_dead %in% c("several days", "more than half the days", "nearly every day")) %>%
-    mutate(Event = "Suicidal Ideation (PHQ-9)",
-           source = "PHQ-9")
-
-suicide_phq_summary <- suicide_phq %>%
-    group_by(Event) %>%
-    summarise(`Number of Events` = n())
-
 ae_define_map <- c(
     ae_define___1  = "Kicked out of home",
     ae_define___2  = "Experienced violence or abuse",
     ae_define___3  = "Breach of Confidentiality",
-    ae_define___4  = "Self-harm/Suicidal behavior (AE Form)",
+    ae_define___4  = "Self-harm/Suicidal behavior",
     ae_define___5  = "Persistent or significant psychosocial distress",
     ae_define___6  = "Infant harm/behavior",
     ae_define___99 = "Other"
@@ -131,7 +112,7 @@ ae_injury_summary <- ae_df %>%
     group_by(Event = ae_cat) %>%
     summarise(`Number of Events` = n())
 
-ae_report_df <- bind_rows(ae_injury_summary, ae_social_summary, suicide_phq_summary)
+ae_report_df <- bind_rows(ae_injury_summary, ae_social_summary)
 
 total_events <- sum(ae_report_df$`Number of Events`)
 
@@ -225,6 +206,9 @@ clean_sae_df <- clean_sae_df %>%
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("fever|vomiting", ignore_case = TRUE)) ~ "Fever/Vomiting",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("congenital|malformation|birth defect|imperforate anus|hand anomaly", ignore_case = TRUE)) ~ "Congenital malformations / Birth defects",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("without signs of active movements| nor did she cry at birth|no movements|did not cry|apnea at birth|stillborn", ignore_case = TRUE)) ~ "Birth asphyxia / Intrapartum hypoxia",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("due to prolonged labour|well specialised care and admitted to the NBU", ignore_case = TRUE)) ~ "Birth asphyxia secondary to prolonged labor",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("low birth weight|had a pre term birth", ignore_case = TRUE)) ~ "Prematurity",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("gestation period of 39 weeks at 4.00am", ignore_case = TRUE)) ~ "Still birth",
             (death_type == "Infant Death") ~ "Other / Unknown",
             TRUE ~ NA_character_   # keep cause_of_death as NA if death_type is NA
         ),
@@ -234,12 +218,13 @@ clean_sae_df <- clean_sae_df %>%
             
             death_type == "Maternal Death" & 
                 str_detect(ae_narrative, regex("abdominal pain.*(emergency|urgent)|intraoperative|cesarean", ignore_case = TRUE)) ~ 
-                "Probable uterine rupture / obstetric emergency",
-            
+                "Intraoperative complication during CS",
             TRUE ~ NA_character_
         )
     )
 
+uknown_deaths <- clean_sae_df %>% 
+    filter(infant_cause_category == "Other / Unknown")
 
 # Step 2: Create a binary variable for each Event category
 sae_wide <- clean_sae_df %>%
@@ -293,6 +278,7 @@ sae_summary <- sae_wide %>%
         table.font.size = px(14))
 
 sae_summary  
+
 
 # Step 4: Summarize overall SAEs using tbl_summary----
 sae_overall <- sae_wide %>% 
