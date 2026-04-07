@@ -585,8 +585,6 @@ ineligibility_summary %>%
     latex_options = c("HOLD_position", "scale_down"))
 ```
 
-\newpage
-
 # 5. Baseline Demographics
 
 ## 5.1 Participant Baseline Demographics
@@ -681,8 +679,6 @@ wlwh_demo %>%
     )
 ```
 
-\newpage
-
 # 6. Study Terminations
 
 ```{r Ealiest Expected termination, echo=FALSE, message=FALSE, warning=FALSE}
@@ -713,8 +709,6 @@ completed_follow_up <- total_exits %>%
 ```
 
 To date, no early terminations have been recorded aside from maternal death (see the adverse event section). However, `r completed_follow_up` participants have completed the study and exited at the scheduled end of follow-up. The first study exit occurred on `r earliest_due`.
-
-\newpage
 
 # 7. Psychosocial Referrals
 
@@ -750,6 +744,8 @@ referral_summary %>%
     ) %>%
     kableExtra::row_spec(0, bold = TRUE)  # bold column headers
 ```
+
+\newpage
 
 # 8. Study endpoints
 
@@ -804,8 +800,6 @@ outcome_summary %>%
     )
 ```
 
-\newpage
-
 # 9. Adverse Events and Severe Adverse Events
 
 ## 9.1 Adverse Event Summary
@@ -837,7 +831,8 @@ ae_report %>%
     ) %>%
     kableExtra::row_spec(0, bold = TRUE) %>%                          # bold header
     kableExtra::row_spec(nrow(ae_report_df) + 1, bold = TRUE) %>%    # bold Total row
-    kableExtra::footnote(general = "n (%)")
+    kableExtra::footnote(general = "n (%)",
+                         footnote_as_chunk = T)
 ```
 
 ## 9.2 Severe Adverse Event Summary
