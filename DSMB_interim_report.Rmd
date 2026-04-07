@@ -21,23 +21,16 @@ library(gsDesign)
 # Setup ------------------------------------------------------------------------
 rm(list = ls())             
 
+# Set up data freeze time for this report
+data_freeze <- Sys.Date() 
+
+#data_freeze <- "2026-05-11"
+##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. #####
+
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
-
-# Set file paths: Use this section to set input and output filepaths
-file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
-file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
-file_date <- gsub("^.*?_2","2",file_date)
-file_date <- str_remove(file_date,".csv")
-file_date <- format(file_date, format="%d %B %Y")
-ppw_rct_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
-                              file_date, ".csv", sep="")) %>% 
-    filter(is.na(redcap_repeat_instance)) #PPW data
-
-data_freeze <- "2026-05-11"
-
-data_freeze <- format(data_freeze, format="%d %B %Y")
+source("data_import.R")
 ```
 
 ```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
@@ -57,7 +50,7 @@ Amritha Bhat, MBBS, MD, MPH, University of Washington \\[12pt]
 
 Report prepared by: Yuwei Wang \\[12pt]
 
-Date of data freeze: `r data_freeze`
+Date of data freeze: `r format(data_freeze, '%d %B %Y')`
 
 \end{center}
 
@@ -159,7 +152,7 @@ current_pt <- enroll_dates %>%
 total_person_time <- sum(current_pt$person_time, na.rm = TRUE)
 ```
 
-As of the data freeze date of `r data_freeze`, the total person-time elapsed among enrolled participants is `r round(total_person_time, 2)` weeks. This represents `r round((total_person_time / total_expected_pt) * 100, 2)`% of the expected person-time. Because the current person-time elapsed is more than 50% of the expected person-time, we proceed with the interim analysis as planned.
+As of the data freeze date of `r format(data_freeze, '%d %B %Y')`, the total person-time elapsed among enrolled participants is `r round(total_person_time, 2)` weeks. This represents `r round((total_person_time / total_expected_pt) * 100, 2)`% of the expected person-time. Because the current person-time elapsed is more than 50% of the expected person-time, we proceed with the interim analysis as planned.
 
 \newpage
 
