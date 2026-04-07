@@ -5,16 +5,16 @@
 # Baseline Demographics
 
 # Setup ------------------------------------------------------------------------
-# rm(list = ls())     
+rm(list = ls())     
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 # source("Dependencies.R")
-# source("data_import.R")
+source("data_import.R")
 
 # data prep --------------------------------------------------------------------
 referral_df <- ppw_rct_df %>% 
     #filter(clt_visit == "Enrollment") %>% 
-    select(record_id, clt_study_site, clt_date,starts_with("risk_"), 
+    select(record_id, clt_study_site, clt_visit, clt_date,starts_with("risk_"), 
            referral_inf, date_infharm,
            referral_depress, referral_anxiety, referral_ipv, referral_type___0,
            referral_type___1, referral_type___2, referral_type___3, 
@@ -50,18 +50,22 @@ referral_df <- ppw_rct_df %>%
 
 
 # Psychosocial Support Referrals QCs
-control_psy_qcs <- referral_df %>% 
+psychosocial_qcs <- referral_df %>% 
     filter(referral_anxiety >= 10 | referral_ipv >= 10 | referral_depress>=10) %>% 
-    select(record_id, clt_study_site, Arm, starts_with("screened_"), referred, 
+    select(record_id, clt_study_site, clt_visit, Arm, starts_with("screened_"), referred, 
            referral_accept) %>% 
     filter(referred == 0) %>% 
-    filter(Arm == "intervention") %>% 
-    select(-Arm)
+    filter(Arm == "intervention")
 
 # Select PHQ9 and GAD7 Scores
 phq9_gad7_scores <- ppw_rct_df %>% 
     select(record_id, starts_with("phq_"), starts_with("gad7_"))
 
+endorsed_suicidality <- ppw_rct_df %>% 
+    select(record_id, clt_study_site, phq_dead,  abs_phq_dead, ae_yn) %>% 
+    filter(!phq_dead %in% c("not at all")) %>% 
+    filter(!is.na(phq_dead))
+    
 # Join Qcs with PHQ9 and GAD7 Scores
 control_psy_qcs <- control_psy_qcs %>% 
     left_join(phq9_gad7_scores, by  = "record_id")
