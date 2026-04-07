@@ -10,12 +10,23 @@ source("Dependencies.R")
 source("REDCap_datapull.R")
 
 if (exists("data_freeze")) {
+<<<<<<< HEAD
+=======
+    file_date <- format(as.Date(data_freeze), "%d %B %Y")  
+>>>>>>> 58710109e0e2477075915ec8d0685d933d8a63a9
     latest <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
     latest <- rownames(latest$info[which.max(latest$info$mtime),])
     latest <- as.Date(gsub(".*RCT_PPW_(.+)\\.csv", "\\1", latest))  # extracts YYYY-MM-DD
     
     file_date <- format(min(as.Date(data_freeze), latest), "%Y-%m-%d")  # keep YYYY-MM-DD
 } else {
+<<<<<<< HEAD
+=======
+    file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
+    file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
+    file_date <- gsub("^.*?_2","2",file_date)
+    file_date <- str_remove(file_date,".csv")
+>>>>>>> 58710109e0e2477075915ec8d0685d933d8a63a9
     latest <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
     latest <- rownames(latest$info[which.max(latest$info$mtime),])
     file_date <- gsub(".*RCT_PPW_(.+)\\.csv", "\\1", latest)  # YYYY-MM-DD string
@@ -36,8 +47,7 @@ pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_",
                                 file_date, ".csv", sep="" ))
 
 ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
-                                             file_date, ".csv", sep="")) %>% 
+                              file_date, ".csv", sep="")) %>% 
     filter(redcap_repeat_instrument == "ADMIN: Adverse Experience")
-
 
 
