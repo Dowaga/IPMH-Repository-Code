@@ -10,7 +10,6 @@
 
 
 # Setup ------------------------------------------------------------------------
- rm(list = ls())
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
