@@ -747,9 +747,7 @@ referral_summary %>%
 
 \newpage
 
-# 8. Study endpoints
-
-## 8.1 Primary and secondary study endpoints at 14 weeks postpartum
+# 8. Primary and secondary study endpoints at 14 weeks postpartum
 
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
 source("PPW RCT follow up.R")
@@ -765,7 +763,9 @@ outcome_summary <- end_joined %>%
             gad7_total ~ "continuous", 
             qol_overall_scaled ~ "continuous", 
             rtc_total ~ "continuous",
-            any_adverse_outcome ~ "categorical"),
+            any_adverse_outcome ~ "dichotomous"      # changed
+        ),
+        value = list(any_adverse_outcome ~ "Yes"),   # added
         statistic = list(
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
@@ -782,10 +782,6 @@ outcome_summary <- end_joined %>%
             any_adverse_outcome ~ "Any adverse pregnancy outcome",
             rtc_total ~ "Reducing Tensions Checklist score"
         )
-    ) %>% 
-    modify_table_body(
-        ~ .x %>%
-            filter(!(variable == "any_adverse_outcome" & label == "No"))
     ) %>%
     add_n() %>%
     modify_header(label ~ "**Characteristic**") %>%
