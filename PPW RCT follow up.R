@@ -1416,15 +1416,17 @@ outcome_summary <- end_joined %>%
             gad7_total ~ "continuous", 
             qol_overall_scaled ~ "continuous", 
             rtc_total ~ "continuous",
-            any_adverse_outcome ~ "categorical"),
+            any_adverse_outcome ~ "dichotomous"      # changed
+        ),
+        value = list(any_adverse_outcome ~ "Yes"),   # added
         statistic = list(
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
         missing = "no",
         digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
         ),
         label = list(
             phq9_total ~ "Patient Health Questionnaire-9 score",
@@ -1433,10 +1435,6 @@ outcome_summary <- end_joined %>%
             any_adverse_outcome ~ "Any adverse pregnancy outcome",
             rtc_total ~ "Reducing Tensions Checklist score"
         )
-    )  %>% 
-    modify_table_body(
-        ~ .x %>%
-            filter(!(variable == "any_adverse_outcome" & label == "No"))
     ) %>%
     add_n() %>%
     modify_header(label ~ "**Characteristic**") %>%
