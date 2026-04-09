@@ -195,7 +195,7 @@ consort_single
 source("Enrollment Progress.R")
 ```
 
-On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on `r target_reached_25`. We hit our 50% enrollment target on `r target_reached_50`. 
+On Feb 17, 2025 we began recruiting participants in all facilities. The study achieved 25% of the target enrollment on `r target_reached_25`and subsequently achieved 50% of the target enrollment on `r target_reached_50`. 
 
 [Double check if we hit 75% target by May 11.]
 
@@ -353,11 +353,10 @@ reached_75per_target <- weekly_enrollment %>%
  pull(n)
 ```
 
-All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 37 participants. Notable, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 25% enrollment in mid April, 2025.
+All `r reached_25per_target` facility clusters have successfully reached both the 25% and 50% enrollment milestones. Each facility is expected to enroll 148 perinatal women, meaning every facility has now enrolled at least 74 participants. Nyalenda Health Centre was the first to achieve the 25% benchmark in mid-April 2025, while Nyalenda and Airport Health Centres were the first to reach 50% enrollment in early October 2025.
 
-All `r reached_50per_target` facility clusters have reached the 50% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 74 participants. Notably, the first two clusters to achieve this benchmark were Nyalenda and Airport Health Centres, both of which reached 50% enrollment in early October, 2025.
+Progress toward the 75% milestone is ongoing, with `r reached_75per_target` clusters having enrolled at least 111 participants. Notably, Nyalenda Health Centre was the first to reach 75% enrollment in late November 2025."
 
-`r reached_75per_target` facility clusters have reached the 75% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 111 participants. Notably, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 75% enrollment in late November, 2025.
 
 ```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 #shorten the names of the study sites
@@ -434,7 +433,7 @@ p2
 source("Consort_WLWH.R")
 ```
 
-Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
+Overall, `r n_enrolled` participants have been enrolled into the study, of whom `r n_hiv` women are living with HIV (WLHIV), accounting for `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Among these WLHIV participants, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6-week postpartum follow-up, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6-month postpartum follow-up visits.
 
 ```{r consort_mortality, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
 add_box(txt = txt_enrolled) |>
@@ -486,7 +485,9 @@ wlwh_50 <- milestone_wlwh(wlwh_timeline, 0.50, total_wlwh_target)
 wlwh_75 <- milestone_wlwh(wlwh_timeline, 0.75, total_wlwh_target)
 ```
 
-Recruitment of women living with HIV (WLWH) into the cohort continues to show steady improvement. We reached the 25% enrollment milestone for WLWH on May 27, 2025, the 50% enrollment milestone on Dec 03, 2026, and the 75% enrollment milestone on Mar 30, 2026. Out of the total enrollment target of about `r wlwh_target` WLWH per facility, 
+Recruitment of women living with HIV (WLWH) into the cohort continues to show steady improvement. We reached the 25% enrollment milestone on May 27, 2025, the 50% milestone on December 3, 2025, and the 75% milestone on March 30, 2026. As of now, [insert number] clusters have achieved the 75% benchmark, with Nyalenda Health Centre being the first to do so. 
+
+Out of the total enrollment target of about `r wlwh_target` WLWH per facility, 
 `r wlwh_milestones$reached_100` facilities have achieved 100% of their target, 
 `r wlwh_milestones$reached_75` have achieved 75% (`r wlwh_target * 0.75` participants), 
 `r wlwh_milestones$reached_50` have achieved 50% (`r wlwh_target * 0.50` participants), 
@@ -857,5 +858,16 @@ total_hosp <- clean_sae_df %>%
 As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` was a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
-sae_overall
+sae_report <- bind_rows(sae_summary, sae_total) %>%
+    knitr::kable(
+        booktabs = TRUE,
+        caption = "Summary of Serious Adverse Events"
+    )
+
+sae_report %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down")
+    ) %>%
+    kableExtra::row_spec(0, bold = TRUE) %>%
+    kableExtra::row_spec(nrow(sae_summary) + 1, bold = TRUE)  # bold Total row
 ```
