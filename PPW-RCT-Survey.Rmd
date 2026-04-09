@@ -676,6 +676,10 @@ sae_report
 
 
 ```{r r sae_summary, echo=FALSE, message=FALSE, warning=FALSE}
+```
+
+
+```{r r sae_summary, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 sae_overall
 ```
