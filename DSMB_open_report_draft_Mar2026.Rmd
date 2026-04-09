@@ -857,16 +857,5 @@ total_hosp <- clean_sae_df %>%
 As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` was a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
-sae_report <- bind_rows(sae_summary, sae_total) %>%
-    knitr::kable(
-        booktabs = TRUE,
-        caption = "Summary of Serious Adverse Events"
-    )
-
-sae_report %>%
-    kableExtra::kable_styling(
-        latex_options = c("HOLD_position", "scale_down")
-    ) %>%
-    kableExtra::row_spec(0, bold = TRUE) %>%
-    kableExtra::row_spec(nrow(sae_summary) + 1, bold = TRUE)  # bold Total row
+sae_overall
 ```
