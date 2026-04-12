@@ -38,19 +38,19 @@ rct_ppw <- rct_ppw %>%
 pm$pm_date <- as.Date(pm$pm_date)
 telepsych$telepsych_date <- as.Date(telepsych$tele_date)
 
-#time period for the data [2025-12-31, 2025-10-01]
+#time period for the data [2026-03-31, 2026-01-01]
 pm_all <- pm
 rct_ppw_all <- rct_ppw
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2025-12-31")
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date >= "2025-10-01")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2025-12-31")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date >= "2025-10-01")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2025-12-31")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp >= "2025-10-01")
-pm <- pm %>% filter(pm_date <= "2025-12-31")
-pm <- pm %>% filter(pm_date >= "2025-10-01")
-telepsych <- telepsych %>% filter(tele_date <= "2025-12-31")
-telepsych <- telepsych %>% filter(tele_date >= "2025-10-01")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2026-03-31")
+daily_closeout <- daily_closeout %>% filter(rct_dcr_date >= "2026-01-01")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2026-03-31")
+phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date >= "2026-01-01")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2026-03-31")
+rct_ppw <- rct_ppw %>% filter(clt_timestamp >= "2026-01-01")
+pm <- pm %>% filter(pm_date <= "2026-03-31")
+pm <- pm %>% filter(pm_date >= "2026-01-01")
+telepsych <- telepsych %>% filter(tele_date <= "2026-03-31")
+telepsych <- telepsych %>% filter(tele_date >= "2026-01-01")
 
 
 #uniform study site number for all datasets
@@ -290,7 +290,7 @@ pm_referral <- rct_ppw_int %>%
     filter(abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes") %>% 
     mutate(clt_date = ymd(clt_date)) %>%
     #filter referral based on audit period
-  filter(between(clt_date, ymd("2025-10-01"), ymd("2025-12-31")))
+  filter(between(clt_date, ymd("2026-01-01"), ymd("2026-03-31")))
 
 pm_referral <- pm_referral %>%
     mutate(day = floor_date(clt_timestamp, "day")) %>%
