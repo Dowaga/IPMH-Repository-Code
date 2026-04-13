@@ -674,14 +674,10 @@ sae_report <- sae_df %>%
 sae_report
 ```
 
-
-```{r r sae_summary, echo=FALSE, message=FALSE, warning=FALSE}
-```
-
-
+# Adverse Events(EAs)
 ```{r r sae_summary, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
-sae_overall
+total_aes
 ```
 
 
@@ -772,11 +768,25 @@ pertime_table
 
 
 \newpage
-# Acceptability, appropriateness and Feasibility of IPMH
+# Acceptability, appropriateness and Feasibility of IPMH Program
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 source("IPMH - PPW Acceptability and Feasibility.R")
 summary
+screen_summary
 ```
 
 
+\newpage
+# Acceptability, appropriateness and Feasibility of IPMH Screening
+```{r Screening Acceptability, echo=FALSE, message=FALSE, warning=FALSE}
+screen_summary
+```
+
+
+\newpage
+# Acceptability, appropriateness and Feasibility of IPMH Problem Management Plus
+```{r PM+ Acceptability, echo=FALSE, message=FALSE, warning=FALSE}
+pm_summary
+```
+    
 
