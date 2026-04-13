@@ -396,9 +396,11 @@ suicide_phq_long <- ppw_rct_df %>%
             TRUE ~ NA_character_
         ),
         ae_type = "Suicidal Ideation (PHQ-9)",
-        ae_dateonset = as.Date(clt_date),
-        ae_datereport = as.Date(risk_date),
+        clt_date = as.Date(clt_date),
+        ae_datereport = as.Date(ae_dateonset),
+        ae_dateonset = as.Date(ae_dateonset),
         days_to_report = as.integer(ae_datereport - ae_dateonset),
+        days_since_enrollment = as.numeric(ae_dateonset - clt_date),
         ae_relation = NA_character_,
         ae_narrative = risk_thoughts,
         clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)
@@ -459,7 +461,7 @@ ae_list <- arm_ae %>%
         record_id, dem_age, Arm,
         ae_cat, ae_define___1, ae_define___2, ae_define___3,
         ae_define___4, ae_define___5, ae_define___6, ae_define___99,
-        ae_relation, ae_narrative, ae_dateonset, ae_datereport
+        ae_relation, ae_narrative, ae_dateonset, ae_datereport, reported_days
     )
 
 # Define AE labels
@@ -491,18 +493,25 @@ ae_long <- ae_list %>%
         days_to_report = as.integer(ae_datereport - ae_dateonset)
     ) %>%
     select(record_id, dem_age, Arm, ae_type, ae_dateonset,
-           ae_datereport, days_to_report, ae_relation, ae_narrative) %>%
+           ae_datereport, reported_days, ae_relation, ae_narrative) %>%
     arrange(Arm, record_id, ae_dateonset) %>%
     # Add PHQ-9 suicidality rows
     bind_rows(suicide_phq_long) %>%
     filter(!is.na(ae_type))
 
+# Check iff same participants has Suicidal and reported on AEs
+subset_data <- ae_long[grepl("Self-harm|Suicidal", ae_long$ae_type, ignore.case = TRUE), ]
+
+# Step 2: View unique participants
+participants_with_events <- unique(subset_data$record_id)
+
 
 # Overall AEs summary
 total_aes <- ae_long %>%
     tbl_summary(
+        sort = list(all_categorical() ~ "frequency"),
         include = c(ae_type),
-        label = list(ae_type ~ "AE Type"),
+        label = list(ae_type ~ "Adverse Event Type"),
         missing = "no",
         digits = list(
             all_continuous() ~ 1,
@@ -516,12 +525,17 @@ total_aes <- ae_long %>%
     gt::tab_header("Summary of Adverse Events") %>%
     gt::tab_options(table.font.size = "medium", data_row.padding = gt::px(1)) %>%
     tab_options(table.font.size = px(14)) %>%
-    opt_table_lines()
+    opt_table_lines()%>%
+        gt::tab_source_note(
+        source_note = "Note: Pre-existing conditions are excluded at enrollment; Self-harm is only reported in follow-up, so counts are lower than suicidal ideation."
+    )
+
 
 total_aes
 
 overal_aes <- ae_long %>%
     tbl_summary(
+        sort = list(all_categorical() ~ "frequency"),
         by = Arm,
         include = c(ae_type),
         label = list(ae_type ~ "AE Type"),
