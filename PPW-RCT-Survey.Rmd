@@ -646,37 +646,14 @@ attendance_table %>%
 
 # Severe Adverse Events (SAEs)
 
-```{r SAEs to ERC, message=FALSE, warning=FALSE, include=FALSE}
-sae_df <- ppw_sae_df %>% 
-    select(record_id, redcap_repeat_instance, starts_with("ae_")) %>% 
-    filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
-
-sae_report <- sae_df %>% 
-    group_by(ae_cat) %>% 
-    mutate(ae_cat = if_else(record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)",
-                          "Death (Infant or Maternal) (SAE)",
-                          ae_cat)) %>% 
-    rename(Event = ae_cat) %>% 
-    summarise(`Number of Events` = n(),
-              `SAE Reported` = n(),
-              `% Reported` = ifelse(`Number of Events` > 0, round((`Number of Events` / `SAE Reported`)) * 100, 1)) %>% 
-    gt %>% 
-      # modify with gt functions
-    gt::tab_header(
-      title = "Severe Adverse Events (SAEs)",
-      subtitle = "Showing Percent of SAEs reported to ERC") %>%
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
-
-sae_report
+```{r SAEs to ERC, echo=FALSE, message=FALSE, warning=FALSE}
+source("SAEs Lists.R")
+sae_overall
 ```
 
 # Adverse Events(EAs)
 ```{r r sae_summary, echo=FALSE, message=FALSE, warning=FALSE}
-source("SAEs Lists.R")
+
 total_aes
 ```
 
