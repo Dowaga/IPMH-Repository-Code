@@ -47,7 +47,6 @@ pm <- pm %>%
     filter(pm_date >= as.Date("2026-01-01") & pm_date <= as.Date("2026-03-31"))
 telepsych <- telepsych %>% 
     filter(tele_date >= as.Date("2026-01-01") & tele_date <= as.Date("2026-03-31"))
-filter(tele_date <= "2026-04-01")
 
 #uniform study site number for all datasets
 phq2_gad2_abstract <- phq2_gad2_abstract %>%
@@ -195,6 +194,7 @@ n_part <- rct_ppw_int %>%
     filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     group_by(clt_study_site, clt_timestamp) %>%
     summarise(n_part = n(), .groups = "drop")
+
 
 # numerator is the number of new participants who have a PHQ9/GAD7 score
 phq9_screening <- rct_ppw_int %>%
