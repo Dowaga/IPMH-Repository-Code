@@ -29,29 +29,25 @@ source("REDCap_datapull.R")
 #Telepsychiatry session survey
 #PPW consenting databse (ANC number matching)
 
-#Ensure date columns are in proper format
-daily_closeout$rct_dcr_date <- as.Date(daily_closeout$rct_dcr_date)
-phq2_gad2_abstract$screening_date <- as.Date(phq2_gad2_abstract$screening_date) 
 
-rct_ppw <- rct_ppw %>%
-    mutate(clt_timestamp = as.Date(clt_timestamp, format = "%Y-%m-%d"))
-pm$pm_date <- as.Date(pm$pm_date)
-telepsych$telepsych_date <- as.Date(telepsych$tele_date)
 
 #time period for the data [2026-03-31, 2026-01-01]
 pm_all <- pm
 rct_ppw_all <- rct_ppw
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date < "2026-03-31")
-daily_closeout <- daily_closeout %>% filter(rct_dcr_date >= "2026-01-01")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date < "2026-03-31")
-phq2_gad2_abstract <- phq2_gad2_abstract %>% filter(screening_date >= "2026-01-01")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp <= "2026-03-31")
-rct_ppw <- rct_ppw %>% filter(clt_timestamp >= "2026-01-01")
-pm <- pm %>% filter(pm_date <= "2026-03-31")
-pm <- pm %>% filter(pm_date >= "2026-01-01")
-telepsych <- telepsych %>% filter(tele_date <= "2026-03-31")
-telepsych <- telepsych %>% filter(tele_date >= "2026-01-01")
-
+#time period for the data [2026-04-01, 2026-01-01]
+pm_all <- pm
+rct_ppw_all <- rct_ppw
+daily_closeout <- daily_closeout %>% 
+    filter(rct_dcr_date >= as.Date("2026-01-01") & rct_dcr_date <= as.Date("2026-03-31"))
+phq2_gad2_abstract <- phq2_gad2_abstract %>%
+    filter(screening_date >= as.Date("2026-01-01") & screening_date <= as.Date("2026-03-31"))
+rct_ppw <- rct_ppw %>% 
+    filter(clt_timestamp >= as.Date("2026-01-01") & clt_timestamp <= as.Date("2026-03-31"))
+pm <- pm %>% 
+    filter(pm_date >= as.Date("2026-01-01") & pm_date <= as.Date("2026-03-31"))
+telepsych <- telepsych %>% 
+    filter(tele_date >= as.Date("2026-01-01") & tele_date <= as.Date("2026-03-31"))
+filter(tele_date <= "2026-04-01")
 
 #uniform study site number for all datasets
 phq2_gad2_abstract <- phq2_gad2_abstract %>%
