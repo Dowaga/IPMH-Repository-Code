@@ -704,7 +704,7 @@ arm_ineligibility_summary <- consort_data %>%
         booktabs = TRUE
     ) %>%
     kable_styling(
-        font_size         = 14,
+        font_size         = 10,
         bootstrap_options = c("striped", "hover", "condensed"),
         full_width        = FALSE,
         position          = "center"
@@ -722,7 +722,96 @@ arm_ineligibility_summary
 Demographic characteristics were balanced across study arms, supporting baseline comparability.
 
 ```{r demographics prep, warning=F}
-source("PPW RCT Basic Demographics.R")
+# NOTE FOR WENWEN: Replace arm_random with arm_group throughout the demo chunks
+# below to switch from dummy to real arm assignment.
+
+demographics_df <- ppw_rct_df %>% 
+    filter(clt_visit == "Enrollment") %>% 
+    select(clt_study_site, clt_date,starts_with("dem_"), demographics_complete, med_pre_preg, 
+           med_pastdiag___2)%>% 
+    mutate(dem_age = if_else(
+        dem_dob_uk == "Yes",
+        floor(time_length(interval(dem_dob, clt_date), "years")),
+        dem_age
+    ),
+    # dem_current_partner = recode(dem_current_partner,
+    #                              "Yes" = 1,
+    #                              "No" = 0,
+    #                              ),
+    dem_maritalstat = ifelse(dem_maritalstat == "Currently married", 1, 0),
+    dem_marriage = ifelse(dem_marriage == "Monogamous", 1, 
+                          ifelse(is.na(dem_marriage), NA, 0)),
+    dem_employment = recode(dem_employment,
+                            `Prefer not to answer` = "Yes"),
+    dem_pc_residence = recode(dem_pc_residence,
+                              "Yes (Ndio) [Kamano]" = "Yes",
+                              "No (La) [Ooyo]" = "No",
+                              "Prefer not to answer (Singependa kujibu) [Ok daher mar duoko penjo ni]" = "Prefer not to answer")
+    )%>%
+    mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
+           arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
+                              "Control", "Intervention"))
+
+demographic_arms <- demographics_df %>%
+    filter(!is.na(clt_study_site)) %>%
+    distinct(clt_study_site) %>%
+    arrange(clt_study_site) %>%
+    mutate(
+        arm_random = sample(rep(c("Intervention - randomly generated",
+                                  "Control - randomly generated"), each = 10))
+    )
+
+demographics_df <- demographics_df %>%
+    left_join(demographic_arms, by = "clt_study_site") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Control - randomly generated",
+                                       "Intervention - randomly generated"))
+    )
+
+arm_demo <- demographics_df %>%
+    tbl_summary(by = arm_random, 
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include=c(dem_age, dem_current_partner, dem_maritalstat,
+                  dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
+                  dem_employment, dem_household_num, dem_housesleep, 
+                  dem_houserooms,dem_traveltime_min, med_pre_preg),
+        label = list(dem_age ~ "Age (Years)",
+                     dem_current_partner ~ "Do you currently have a partner",
+                     dem_employment ~ "Do you have regular employment (Yes)",
+                     dem_maritalstat ~ "Currently Married (Yes)",
+                     dem_pc_residence ~ "Shares residence with partner (Yes)",
+                     dem_marriage ~ "Marriage (Monogamous)",
+                     dem_current_school ~ "Currently in School",
+                     dem_school ~ "Completed years in School",
+                     dem_household_num ~ "Number of people in Household",
+                     dem_housesleep ~ "Number of people sleep in same house",
+                     dem_houserooms ~ "Rooms in the house most often sleep in",
+                     dem_traveltime_min ~ "Time to the Clinic (Minutes)",
+                     med_pre_preg ~ "Have you been pregnant before (Yes)"),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ), 
+        type = list(dem_age ~ "continuous", 
+                    dem_household_num ~ "continuous",
+                    dem_housesleep ~ "continuous", 
+                    dem_houserooms ~ "continuous", 
+                    dem_traveltime_min ~ "continuous"),
+        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+    bold_labels() %>%
+    #add_n() %>% 
+    add_overall(last = TRUE) %>% 
+    # convert from gtsummary object to gt object
+    gtsummary::as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Basic Demographic Summary") %>% 
+    gt::tab_options(
+    table.font.size = gt::px(10),  
+    data_row.padding = gt::px(2)
+  ) %>%
+  gt::opt_table_lines()
 
 arm_demo
 ```
@@ -735,8 +824,49 @@ Demographic characteristics were balanced across study arms, supporting baseline
 
 ```{r WLWH_demo, echo=FALSE}
 # source("PPW RCT Basic Demographics.R")
-arm_wlwh_demo
+arm_wlwh_demo <- demographics_df %>% 
+    filter(med_pastdiag___2 == "Checked") %>% 
+    tbl_summary(by = arm_random,
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include=c(dem_age, dem_current_partner, dem_maritalstat,
+                  dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
+                  dem_employment, dem_household_num, dem_housesleep, 
+                  dem_houserooms,dem_traveltime_min, med_pre_preg),
+        label = list(dem_age ~ "Age (Years)",
+                     dem_current_partner ~ "Do you currently have a partner (Yes)",
+                     dem_employment ~ "Do you have regular employment (Yes)",
+                     dem_maritalstat ~ "Currently Married (Yes)",
+                     dem_pc_residence ~ "Shares residence with partner (Yes)",
+                     dem_marriage ~ "Marriage (Monogamous)",
+                     dem_current_school ~ "Currently in School",
+                     dem_school ~ "Completed years in School",
+                     dem_household_num ~ "Number of people in Household",
+                     dem_housesleep ~ "Number of people sleep in same house",
+                     dem_houserooms ~ "Rooms in the house most often sleep in",
+                     dem_traveltime_min ~ "Time to the Clinic (Minutes)",
+                     med_pre_preg ~ "Have you been pregnant before (Yes)"),
+        missing = "no",
+        digits = list(all_continuous() ~ 1), 
+        type = list(dem_age ~ "continuous", 
+                    dem_household_num ~ "continuous",
+                    dem_housesleep ~ "continuous", 
+                    dem_houserooms ~ "continuous", 
+                    dem_traveltime_min ~ "continuous"),
+        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+    bold_labels() %>%
+    #add_p() %>% 
+    add_overall(last = TRUE) %>% 
+    # convert from gtsummary object to gt object
+    gtsummary::as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("WLWH Demographic Summary")  %>% 
+    gt::tab_options(
+    table.font.size = gt::px(10),  
+    data_row.padding = gt::px(2)
+  ) %>%
+  gt::opt_table_lines()
 
+arm_wlwh_demo
 ```
 
 \newpage
@@ -762,26 +892,41 @@ earliest_due <- first_6ths %>%
 
 total_exits <- ppw_rct_df%>%
     # Filter to "6 weeks" and grab the first per participant
-  filter(clt_visit == "6 months post-partum") %>% 
+  filter(clt_visit == "6 months post-partum") %>%
+    mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
+           arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
+                              "Control", "Intervention")) 
+
+# Random arm generation
+exits_arm <- total_exits %>%
+    filter(!is.na(clt_study_site)) %>%
+    distinct(clt_study_site) %>%
+    arrange(clt_study_site) %>%
     mutate(
-    dummy_arm = case_when(
-      grepl("Control", redcap_event_name) ~ "Arm X",
-      TRUE ~ "Arm Y"
+        arm_random = sample(rep(c("Intervention - randomly generated",
+                                  "Control - randomly generated"), each = 10))
     )
-  )
+# Assign exit_arm to total exits
+total_exits <- total_exits%>%
+    left_join(exits_arm, by = "clt_study_site") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Control - randomly generated",
+                                       "Intervention - randomly generated"))
+    )
 
 completed_follow_up <- total_exits %>% 
     filter(clt_visit=="6 months post-partum") %>% 
     nrow()
 
 completed_follow_upX <- total_exits %>% 
-    filter(dummy_arm == "Arm X") %>% 
+    filter(arm_random == "Control - randomly generated") %>% 
     select(clt_ptid, clt_visit) %>% 
-    filter(clt_visit=="6 months post-partum") %>% 
+    filter(clt_visit=="6 months post-partum") %>%
     nrow()
     
 completed_follow_upY <- total_exits %>% 
-    filter(dummy_arm == "Arm Y") %>% 
+    filter(arm_random == "Intervention - randomly generated") %>% 
     select(clt_ptid, clt_visit) %>% 
     filter(clt_visit=="6 months post-partum") %>% 
     nrow()
@@ -854,8 +999,164 @@ arm_outcome_summary
 ## 9.1 Serious Adverse Event Summary
 
 ```{r Summary of SAEs}
-source("SAEs Lists.R")
-sae_summary
+sae_df <- ppw_sae_df %>% 
+    select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>% 
+    
+    filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
+
+clean_sae_df <- sae_df %>%
+    mutate(ae_cat = case_when(
+        record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)" ~ "Infant Death (SAE)",
+        ae_cat == "Miscarriage or stillbirth (loss of pregnancy) (SAE)" ~ "Stillbirth (SAE)",
+        ae_type___1 == "Checked" ~ "Maternal Death (SAE)",
+        ae_type___2 == "Checked" ~ "Infant Death (SAE)",
+        TRUE ~ ae_cat
+    )) %>%
+    group_by(ae_cat) %>%
+    rename(Event = ae_cat) %>%
+    mutate(Event = str_remove(Event, fixed("(SAE)")))
+
+set.seed(12345)
+
+sae_arm <- clean_sae_df %>%
+  ungroup() %>% 
+  filter(!is.na(redcap_event_name)) %>%
+  distinct(redcap_event_name) %>%
+  arrange(redcap_event_name) %>%
+  mutate(
+    arm_random = sample(
+      c("Intervention - randomly generated",
+        "Control - randomly generated"),
+      size = n(),
+      replace = TRUE
+    )
+  )
+
+# Assign sae_arm to clean saes
+clean_sae_df <- clean_sae_df %>%
+    mutate(Arm = case_when(
+        grepl("Arm 2: Control",redcap_event_name) ~ "Control",
+        grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
+        TRUE ~ NA_character_
+    )) %>% 
+    left_join(sae_arm, by = "redcap_event_name") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Control - randomly generated",
+                                       "Intervention - randomly generated"))
+    ) %>% 
+    mutate(
+        death_type = case_when(
+            ae_type___1 == "Checked" ~ "Maternal Death",
+            ae_type___2 == "Checked" ~ "Infant Death",
+            TRUE ~ NA_character_
+        )
+    )
+
+deaths <- clean_sae_df %>%
+    filter(ae_type___1 == "Checked"|ae_type___2 == "Checked") %>%
+    select(record_id, Event, death_type, ae_narrative)
+
+# Convert to flextable
+death_tbl <- flextable(deaths)
+
+# --- IMPORTANT FIXES FOR LONG TEXT ----
+# Wrap text
+# Apply to all columns by names
+
+death_tbl <- valign(death_tbl, j = seq_along(death_tbl$col_keys), valign = "top")
+death_tbl <- align(death_tbl, j = seq_along(death_tbl$col_keys), align = "left")
+death_tbl <- height_all(death_tbl, height = 1)
+death_tbl <- autofit(death_tbl)
+
+# Set specific max widths (A4 width after margins is approx 6.5 inches)
+death_tbl <- width(death_tbl, j = "record_id", width = 1)
+death_tbl <- width(death_tbl, j = "Event", width = 1.5)
+death_tbl <- width(death_tbl, j = "death_type", width = 1.3)
+death_tbl <- width(death_tbl, j = "ae_narrative", width = 4.5)  # main text column
+
+# Coding the causes of deaths
+clean_sae_df <- clean_sae_df %>%
+    mutate(
+        infant_cause_category =  case_when(
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("milk.*nose|milk.*mouth|foam.*mouth|foam.*nose|frothing|choking|aspiration", ignore_case = TRUE)) ~ "Respiratory failure / Aspiration",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("vomiting blood|gastrointestinal bleeding|peptic ulcer", ignore_case = TRUE)) ~ "Gastrointestinal bleeding / Peptic ulcer complications",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("breathing|respiratory|asphyxia", ignore_case = TRUE)) ~ "Respiratory complications",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("infection|sepsis", ignore_case = TRUE)) ~ "Infection / Sepsis",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("hemorrhage|bleeding", ignore_case = TRUE)) ~ "Hemorrhage",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("fever|vomiting", ignore_case = TRUE)) ~ "Fever/Vomiting",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("congenital|malformation|birth defect|imperforate anus|hand anomaly", ignore_case = TRUE)) ~ "Congenital malformations / Birth defects",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("without signs of active movements| nor did she cry at birth|no movements|did not cry|apnea at birth|stillborn", ignore_case = TRUE)) ~ "Birth asphyxia / Intrapartum hypoxia",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("due to prolonged labour|well specialised care and admitted to the NBU", ignore_case = TRUE)) ~ "Birth asphyxia secondary to prolonged labor",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("low birth weight|had a pre term birth", ignore_case = TRUE)) ~ "Prematurity",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("gestation period of 39 weeks at 4.00am", ignore_case = TRUE)) ~ "Still birth",
+            (death_type == "Infant Death") ~ "Other / Unknown",
+            TRUE ~ NA_character_   # keep cause_of_death as NA if death_type is NA
+        ),
+        maternal_cause_category = case_when(
+            death_type == "Maternal Death" &
+                str_detect(ae_narrative, regex("peptic ulcer|peptic ulcers|peptic ulcer disease|gastrointestinal bleeding|GI bleed|hematemesis", ignore_case = TRUE)) ~ "Gastrointestinal bleeding",
+
+            death_type == "Maternal Death" &
+                str_detect(ae_narrative, regex("abdominal pain.*(emergency|urgent)|intraoperative|cesarean", ignore_case = TRUE)) ~
+                "Intraoperative complication during CS",
+            TRUE ~ NA_character_
+        )
+    )
+
+
+# Step 2: Create a binary variable for each Event category
+sae_wide <- clean_sae_df %>%
+    mutate(event_flag = 1) %>%  # to allow counting
+    select(record_id, death_type, arm_random, Arm, Event, event_flag, infant_cause_category,
+           maternal_cause_category) %>%
+    tidyr::pivot_wider(names_from = Event, values_from = event_flag, values_fill = 0) %>%
+    select(-record_id)
+
+sae_wide <- sae_wide %>%
+    relocate(death_type, .after = "Infant Death ")
+
+sae_summary_arm <- sae_wide %>%
+    tbl_summary(
+        by = arm_random,
+        include = c(
+            "Maternal Death ",
+            "Infant Death ",
+            "death_type",
+            "infant_cause_category",
+            "maternal_cause_category",
+            "Stillbirth ",
+            "New/prolonged hospitalization "
+        ),
+        type = all_continuous() ~ "continuous",
+        statistic = all_continuous() ~ "{sum}",
+        percent = "cell",
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ),
+        label = list(
+            death_type = "Death Classification",
+            infant_cause_category = "Infants Death Cause",
+            maternal_cause_category = "Maternal Death Cause"),
+        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+    ) %>%
+    bold_labels() %>%
+    add_n() %>%
+    add_overall(last = TRUE) %>% 
+    # convert from gtsummary object to gt object
+    gtsummary::as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Summary of Reported Serious Adverse Events by Arm")  %>% 
+    gt::tab_options(
+    table.font.size = gt::px(10),  
+    data_row.padding = gt::px(2)
+  ) %>%
+  gt::opt_table_lines()
+
+
+sae_summary_arm
 
 ```
 
@@ -863,7 +1164,7 @@ sae_summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
 source("SAEs Lists.R")
-overal_aes
+#overal_aes
 ```
 
 ### 9.2.1 List of Adverse Events: Control Arm
