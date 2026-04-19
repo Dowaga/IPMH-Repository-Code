@@ -1,6 +1,5 @@
 ---
 title: "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics"
-
 subtitle: 'Data and Safety Monitoring Board (DSMB): Closed Report '
 date: "`r format(Sys.time(), '%d %B %Y')`"
 header-includes:
@@ -13,9 +12,9 @@ header-includes:
  \usepackage{wrapfig}
  \floatplacement{figure}{H}
 output:
+    word_document: default
     pdf_document:
         latex_engine: xelatex
-    word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -208,6 +207,7 @@ consort_data <- screening_consent_df %>%
 consort_data <- bind_rows(anc_attendees_df, consort_data)
 ```
 
+
 ```{r generate dummy arm, echo=FALSE}
 # ---- Random arm assignment at facility level ----
 set.seed(12345)
@@ -218,7 +218,7 @@ facility_arms <- consort_data %>%
     arrange(facility) %>%
     mutate(
         arm_random = sample(rep(c("Intervention - randomly generated",
-                                  "Control - randomly generated"), each = 10))
+                                  "Control - randomly generated"), length.out = n()))
     )
 
 consort_data <- consort_data %>%
@@ -705,7 +705,7 @@ arm_ineligibility_summary <- consort_data %>%
     ) %>%
     kable_styling(
         font_size         = 10,
-        bootstrap_options = c("striped", "hover", "condensed"),
+        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
         full_width        = FALSE,
         position          = "center"
     )
@@ -767,7 +767,7 @@ demographics_df <- demographics_df %>%
         arm_random = factor(arm_random,
                             levels = c("Control - randomly generated",
                                        "Intervention - randomly generated"))
-    )
+    )# External analyst please switch to arm_group----
 
 arm_demo <- demographics_df %>%
     tbl_summary(by = arm_random, 
@@ -802,16 +802,18 @@ arm_demo <- demographics_df %>%
         statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
     bold_labels() %>%
     #add_n() %>% 
-    add_overall(last = TRUE) %>% 
-    # convert from gtsummary object to gt object
-    gtsummary::as_gt() %>%
-    # modify with gt functions
-    gt::tab_header("Basic Demographic Summary") %>% 
-    gt::tab_options(
-    table.font.size = gt::px(10),  
-    data_row.padding = gt::px(2)
-  ) %>%
-  gt::opt_table_lines()
+    add_overall(last = TRUE)%>% 
+    as_kable_extra(
+        caption  = "Basic Demographic Summary",
+        booktabs = TRUE)
+
+arm_demo %>% 
+    kable_styling(
+        font_size         = 10,
+        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+        full_width        = FALSE,
+        position          = "center"
+    )
 
 arm_demo
 ```
@@ -856,16 +858,20 @@ arm_wlwh_demo <- demographics_df %>%
     bold_labels() %>%
     #add_p() %>% 
     add_overall(last = TRUE) %>% 
-    # convert from gtsummary object to gt object
-    gtsummary::as_gt() %>%
-    # modify with gt functions
-    gt::tab_header("WLWH Demographic Summary")  %>% 
-    gt::tab_options(
-    table.font.size = gt::px(10),  
-    data_row.padding = gt::px(2)
-  ) %>%
-  gt::opt_table_lines()
+    bold_labels() %>%
+    add_n() %>%
+    add_overall(last = TRUE) %>% 
+    as_kable_extra(
+        caption  = "WLWH Demographic Summary",
+        booktabs = TRUE)
 
+arm_wlwh_demo %>% 
+    kable_styling(
+        font_size         = 10,
+        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+        full_width        = FALSE,
+        position          = "center"
+    )
 arm_wlwh_demo
 ```
 
@@ -1001,8 +1007,7 @@ arm_outcome_summary
 ```{r Summary of SAEs}
 sae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>% 
-    
-    filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
+        filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
 
 clean_sae_df <- sae_df %>%
     mutate(ae_cat = case_when(
@@ -1145,40 +1150,260 @@ sae_summary_arm <- sae_wide %>%
     bold_labels() %>%
     add_n() %>%
     add_overall(last = TRUE) %>% 
-    # convert from gtsummary object to gt object
-    gtsummary::as_gt() %>%
-    # modify with gt functions
-    gt::tab_header("Summary of Reported Serious Adverse Events by Arm")  %>% 
-    gt::tab_options(
-    table.font.size = gt::px(10),  
-    data_row.padding = gt::px(2)
-  ) %>%
-  gt::opt_table_lines()
+    as_kable_extra(
+        caption  = "Summary of Reported Serious Adverse Events by Arm",
+        booktabs = TRUE)
 
+sae_summary_arm %>% 
+    kable_styling(
+        font_size         = 10,
+        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+        full_width        = FALSE,
+        position          = "center"
+    )
 
 sae_summary_arm
-
 ```
 
 ## 9.2 Adverse Event Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
-source("SAEs Lists.R")
-#overal_aes
+ae_df <- ppw_rct_df %>% 
+    select(record_id, redcap_repeat_instance, starts_with("ae_"), 
+           redcap_event_name) %>% 
+    filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
+
+#Assign Arm and Random Arm
+ae_arm <- ae_df %>%
+  ungroup() %>% 
+  filter(!is.na(redcap_event_name)) %>%
+  distinct(redcap_event_name) %>%
+  arrange(redcap_event_name) %>%
+  mutate(
+    arm_random = sample(
+      c("Intervention - randomly generated",
+        "Control - randomly generated"),
+      size = n(),
+      replace = TRUE
+    )
+  )
+
+# Assign ae_arm
+ae_df <- ae_df %>%
+    mutate(
+    Arm = str_extract(redcap_event_name, "(?<=Arm \\d: ).*"))%>% 
+    left_join(ae_arm, by = "redcap_event_name")%>% 
+    mutate(
+    ae_cat = fct_recode(ae_cat,
+      "Social harm" = "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)"
+    )
+  )
+
+ae_bin <- ae_df %>%
+    mutate(
+        across(
+            .cols = starts_with("ae_define"),     # <-- choose the columns to convert
+            .fns  = ~ if_else(.x == "Checked", 1, 0),
+            .names = "{.col}_bin"           # optional: saves new columns instead of overwriting
+        ))
+
+# AEs summary
+ae_summary <- ae_bin %>%
+    tbl_summary(
+        by = arm_random,# Replace with Arm for real data----
+        include = c(ae_cat, ae_define___1_bin,
+                    ae_define___2_bin,  
+                    ae_define___4_bin, 
+                    ae_define___5_bin,
+                    # ae_define___6_bin, 
+                    #ae_define___99_bin,
+                    # ae_define___3_bin
+                    ),
+        label = list(
+            ae_define___1_bin  ~ "Kicked out of home",
+            ae_define___2_bin  ~ "Experienced violence or abuse",
+            #ae_define___3_bin  ~ "Breach of Confidentiality",
+            ae_define___4_bin  ~ "Self-harm/Suicidal behavior (AE Form)",
+            ae_define___5_bin  ~ "Persistent or significant psychosocial distress",
+            #ae_define___6_bin  ~ "Infant harm/behavior",
+            #ae_define___99_bin ~ "Other",
+            ae_cat ~ "AEs Category"),
+        sort = list(all_categorical() ~ "frequency"),
+    statistic = all_categorical() ~ "{n} ({p}%)",
+    percent = "cell",
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
+        )) %>%
+    bold_labels() %>% 
+    italicize_levels() %>% 
+    modify_header(label ~ "Characteristics") %>%
+    bold_labels() %>%
+    add_overall() %>%
+    italicize_levels() %>% 
+  modify_header(label ~ "Characteristics") %>%
+  modify_footnote(
+    all_stat_cols() ~ "A single participant may experience multiple AEs"
+  ) %>%
+ as_kable_extra(
+        caption  = "Summary of Adverse Events by Arm",
+        booktabs = TRUE
+    ) 
+
+ae_summary <- ae_summary %>%
+    kable_styling(
+        font_size         = 10,
+        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+        full_width        = FALSE,
+        position          = "center"
+    )
+
+ae_summary
 ```
 
 ### 9.2.1 List of Adverse Events: Control Arm
 
-```{r ArmX_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
-# source("SAEs Lists.R")
-armx_aes_gt
+```{r Intervention_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+ae_df <- ppw_rct_df %>% 
+    select(record_id, redcap_repeat_instance, starts_with("ae_"), 
+           redcap_event_name) %>% 
+    filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
+
+
+ae_labels <- c(
+  ae_define___1  = "Kicked out of home",
+  ae_define___2  = "Experienced violence or abuse",
+  ae_define___3  = "Breach of Confidentiality",
+  ae_define___4  = "Self-harm/Suicidal behavior",
+  ae_define___5  = "Persistent or significant psychosocial distress",
+  ae_define___6  = "Infant harm/behavior",
+  ae_define___99 = "Other"
+)
+
+self_harm_df <- ae_df %>%
+  filter(grepl("Social harm event", ae_cat, ignore.case = TRUE)) %>%
+  pivot_longer(
+    cols = starts_with("ae_define___"),
+    names_to = "ae_type",
+    values_to = "Checked"
+  ) %>%
+  filter(Checked == "Checked") %>%
+  mutate(
+    ae_label = recode(ae_type, !!!ae_labels)
+  )
+    
+other_ae <- ae_df %>%
+  filter(!grepl("Social harm event", ae_cat, ignore.case = TRUE)) %>%
+  mutate(ae_label = ae_cat)
+
+final_ae <- bind_rows(self_harm_df, other_ae)
+
+ae_arm <- final_ae %>%
+  ungroup() %>% 
+  filter(!is.na(redcap_event_name)) %>%
+  distinct(redcap_event_name) %>%
+  arrange(redcap_event_name) %>%
+  mutate(
+    arm_random = sample(
+      c("Intervention - randomly generated",
+        "Control - randomly generated"),
+      size = n(),
+      replace = TRUE
+    )
+  )
+
+# Assign ae_arm to final_ae
+final_ae <- final_ae %>%
+    mutate(
+    Arm = str_extract(redcap_event_name, "(?<=Arm \\d: ).*"))%>% 
+    left_join(ae_arm, by = "redcap_event_name")%>% 
+    mutate(
+    ae_cat = fct_recode(ae_cat,
+      "Social harm" = "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)"
+    )
+  )
+
+ae_ages <- ppw_rct_df %>%
+    mutate(dem_age = if_else(
+        dem_dob_uk == "Yes",
+        floor(time_length(interval(dem_dob, clt_date), "years")),
+        dem_age
+    )) %>%
+    select(record_id, clt_study_site,redcap_event_name, dem_age, clt_date)
+
+# Extract baseline age at enrollment for each participant
+baseline_age <- ae_ages %>%
+    filter(grepl("^Enrollment", redcap_event_name)) %>%
+    select(record_id, baseline_age = dem_age)
+
+# left joing with aes df
+final_ae <- final_ae %>%
+    select(-redcap_event_name) %>%
+    left_join(ae_ages, by = "record_id") %>%
+    filter(!is.na(dem_age)) %>%
+    mutate(ae_datereport = as.Date(ae_datereport),
+           clt_date = as.Date(clt_date),
+           reported_days = as.numeric(ae_datereport - clt_date))
+
+int_ae_summary <- final_ae %>%
+    filter(arm_random == "Intervention - randomly generated")%>% 
+    select(record_id, clt_study_site, dem_age,ae_datereport,ae_cat,ae_dateonset, reported_days) %>%
+    # Remove the facility code
+    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
+    rename(PTID = record_id,
+           `Study Site` = "clt_study_site",
+           `Date Averse Event was reported` = ae_datereport,
+           `Adverse Event reported` = ae_cat,
+           `Start date of adverse event` = ae_dateonset,
+           `Age of participant` = dem_age,
+           `Reported since enrollment` = reported_days)
+
+
+int_ae_summary %>%
+  kable(
+    caption = "List of Study Adverse Events for Intervention",
+    booktabs = TRUE
+  ) %>%
+  kable_styling(
+    font_size = 10,
+    latex_options = c("striped", "hold_position", "scale_down"),
+    full_width = FALSE,
+    position = "center"
+  )
 ```
 
 ### 9.2.2 List of Adverse Events: Intervention Arm
 
-```{r ArmY_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
-# source("SAEs Lists.R")
-army_aes_gt
+```{r Control_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+cont_ae_summary <- final_ae %>%
+    filter(arm_random == "Control - randomly generated")%>% 
+    select(record_id, clt_study_site, dem_age,ae_datereport,ae_cat,ae_dateonset, reported_days) %>%
+    # Remove the facility code
+    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
+    rename(PTID = record_id,
+           `Study Site` = "clt_study_site",
+           `Date Averse Event was reported` = ae_datereport,
+           `Adverse Event reported` = ae_cat,
+           `Start date of adverse event` = ae_dateonset,
+           `Age of participant` = dem_age,
+           `Reported since enrollment` = reported_days)
+
+
+cont_ae_summary <- cont_ae_summary %>%
+  kable(
+    caption = "List of Study Adverse Events for Control",
+    booktabs = TRUE
+  ) %>%
+  kable_styling(
+    font_size = 10,
+    latex_options = c("striped", "hold_position", "scale_down"),
+    full_width = FALSE,
+    position = "center"
+  )
+
+cont_ae_summary
+
 ```
 
 
