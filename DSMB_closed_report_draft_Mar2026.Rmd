@@ -1330,7 +1330,9 @@ ae_ages <- ppw_rct_df %>%
         floor(time_length(interval(dem_dob, clt_date), "years")),
         dem_age
     )) %>%
-    select(record_id, clt_study_site,redcap_event_name, dem_age, clt_date)
+    select(record_id, clt_study_site,redcap_event_name,
+           dem_age, clt_date) %>% 
+    filter(grepl("^Enrollment", redcap_event_name) & !is.na(clt_date))
 
 # Extract baseline age at enrollment for each participant
 baseline_age <- ae_ages %>%
@@ -1344,20 +1346,23 @@ final_ae <- final_ae %>%
     filter(!is.na(dem_age)) %>%
     mutate(ae_datereport = as.Date(ae_datereport),
            clt_date = as.Date(clt_date),
-           reported_days = as.numeric(ae_datereport - clt_date))
+           ae_dateonset = as.Date(ae_dateonset),
+           reported_days = as.numeric(ae_datereport - ae_dateonset))
 
 int_ae_summary <- final_ae %>%
     filter(arm_random == "Intervention - randomly generated")%>% 
-    select(record_id, clt_study_site, dem_age,ae_datereport,ae_cat,ae_dateonset, reported_days) %>%
+    select(record_id, clt_study_site, 
+           ae_label, dem_age, ae_dateonset,
+           ae_datereport, reported_days) %>%
     # Remove the facility code
     mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
     rename(PTID = record_id,
            `Study Site` = "clt_study_site",
            `Date Averse Event was reported` = ae_datereport,
-           `Adverse Event reported` = ae_cat,
+           `Adverse Event reported` = ae_label,
            `Start date of adverse event` = ae_dateonset,
            `Age of participant` = dem_age,
-           `Reported since enrollment` = reported_days)
+           `Days from Onset to Report` = reported_days)
 
 
 int_ae_summary %>%
@@ -1369,7 +1374,7 @@ int_ae_summary %>%
     font_size = 10,
     latex_options = c("striped", "hold_position", "scale_down"),
     full_width = FALSE,
-    position = "center"
+    position = "left"
   )
 ```
 
@@ -1378,16 +1383,19 @@ int_ae_summary %>%
 ```{r Control_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 cont_ae_summary <- final_ae %>%
     filter(arm_random == "Control - randomly generated")%>% 
-    select(record_id, clt_study_site, dem_age,ae_datereport,ae_cat,ae_dateonset, reported_days) %>%
+    select(record_id, clt_study_site, ae_label,
+           dem_age, ae_dateonset, ae_datereport,
+           reported_days) %>%
     # Remove the facility code
     mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
     rename(PTID = record_id,
            `Study Site` = "clt_study_site",
            `Date Averse Event was reported` = ae_datereport,
-           `Adverse Event reported` = ae_cat,
+           `Adverse Event reported` = ae_label,
            `Start date of adverse event` = ae_dateonset,
            `Age of participant` = dem_age,
-           `Reported since enrollment` = reported_days)
+           `Days from Onset to Report` = reported_days)
+
 
 
 cont_ae_summary <- cont_ae_summary %>%
