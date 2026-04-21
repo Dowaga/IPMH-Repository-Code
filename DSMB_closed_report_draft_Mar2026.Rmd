@@ -770,7 +770,7 @@ demographics_df <- demographics_df %>%
     )# External analyst please switch to arm_group----
 
 arm_demo <- demographics_df %>%
-    tbl_summary(by = arm_random, 
+    tbl_summary(by = arm_random, # External analyst please switch to arm_group for real data----
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner, dem_maritalstat,
                   dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
@@ -815,7 +815,6 @@ arm_demo %>%
         position          = "center"
     )
 
-arm_demo
 ```
 
 \newpage
@@ -825,10 +824,9 @@ arm_demo
 Demographic characteristics were balanced across study arms, supporting baseline comparability.
 
 ```{r WLWH_demo, echo=FALSE}
-# source("PPW RCT Basic Demographics.R")
 arm_wlwh_demo <- demographics_df %>% 
     filter(med_pastdiag___2 == "Checked") %>% 
-    tbl_summary(by = arm_random,
+    tbl_summary(by = arm_random,# External analyst please switch to arm_group for real data----
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner, dem_maritalstat,
                   dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
@@ -856,11 +854,9 @@ arm_wlwh_demo <- demographics_df %>%
                     dem_traveltime_min ~ "continuous"),
         statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
     bold_labels() %>%
-    #add_p() %>% 
     add_overall(last = TRUE) %>% 
     bold_labels() %>%
     add_n() %>%
-    add_overall(last = TRUE) %>% 
     as_kable_extra(
         caption  = "WLWH Demographic Summary",
         booktabs = TRUE)
@@ -872,7 +868,7 @@ arm_wlwh_demo %>%
         full_width        = FALSE,
         position          = "center"
     )
-arm_wlwh_demo
+
 ```
 
 \newpage
@@ -948,8 +944,89 @@ To date, we have not recorded any early terminations. However, `r completed_foll
 
 ## 7.1 Psychosocial Referrals
 
-```{r message=FALSE, warning=FALSE, include=FALSE}
-source("PPW RCT Referrals.R")
+```{r referrl dataset, message=FALSE, warning=FALSE, include=FALSE}
+analysis_mode <- "real"   # "blinded" OR "real"
+# -------------------------------
+referral_df <- ppw_rct_df %>%
+  select(
+    record_id, redcap_event_name, clt_study_site,
+    clt_visit, clt_date, starts_with("risk_"),
+    referral_depress, referral_anxiety, referral_ipv,
+    referral_type___1:referral_type___99,
+    referral_accept
+  ) %>%
+  mutate(
+    screened_selfharm   = as.integer(risk_selfharm == "Yes"),
+    screened_depression = as.integer(referral_depress >= 10),
+    screened_anxiety    = as.integer(referral_anxiety >= 10),
+    screened_IPV        = as.integer(referral_ipv >= 10),
+    referred = case_when(
+      referral_type___1 == "Checked" |
+      referral_type___2 == "Checked" |
+      referral_type___3 == "Checked" |
+      referral_type___4 == "Checked" |
+      referral_type___5 == "Checked" |
+      referral_type___99 == "Checked" |
+      risk_selfharm == "Yes" ~ 1,
+      TRUE ~ 0
+    )
+  ) %>%
+  filter(!clt_visit %in% "PM+ Session 5 Abstraction") %>%
+  filter(if_any(starts_with("screened_"), ~ .x == 1))
+
+# -------------------------------
+# Create REAL arm
+
+referral_df <- referral_df %>%
+  mutate(
+    Arm = case_when(
+      str_detect(redcap_event_name, "Arm 2: Control") ~ "control",
+      str_detect(redcap_event_name, "Arm 1: Intervention") ~ "intervention",
+      TRUE ~ NA_character_
+    )
+  )
+
+#--------------------------------------
+#Create RANDOM arm (participant level)
+set.seed(12345)
+
+referral_arm <- referral_df %>%
+  distinct(record_id) %>%
+  arrange(record_id) %>%
+  mutate(
+    arm_random = rep(c("control", "intervention"), length.out = n())
+  )
+
+
+referral_df <- referral_df %>%
+  left_join(referral_arm, by = "record_id")
+
+if (!"arm_random" %in% names(referral_df)) {
+  stop("arm_random missing after join")
+}
+
+
+referral_df <- referral_df %>%
+  mutate(
+    arm_use = case_when(
+      analysis_mode == "blinded" ~ arm_random,
+      analysis_mode == "real" ~ Arm,
+      TRUE ~ NA_character_
+    )
+  )
+
+df_long <- referral_df %>%
+  select(record_id, arm_use, starts_with("screened_"), referral_accept) %>%
+  pivot_longer(
+    cols = starts_with("screened_"),
+    names_to = "risk_col",
+    values_to = "screened_pos"
+  ) %>%
+  filter(screened_pos == 1) %>%
+  mutate(
+    accepted = if_else(referral_accept == "Yes", 1L, 0L)
+  )
+
 
 total_visits <- referral_df %>%nrow()
 total_scr_num <- df_long %>% nrow()
@@ -964,8 +1041,54 @@ During enrollment and follow-up visits participants are asked if they would like
 
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
-## generate report using data from psychosocial referrals form in REDCap  
-# source("PPW RCT Referrals.R")
+#  Summarise per condition 
+total_n <- nrow(referral_df)
+
+arm_summary_tbl <- df_long %>%
+  group_by(risk_col, arm_use) %>%
+  summarise(
+    n = n(),
+    n_accepted = sum(accepted),
+    .groups = "drop"
+  )
+
+arm_summary_wide <- arm_summary_tbl %>%
+  pivot_wider(
+    names_from = arm_use,
+    values_from = c(n, n_accepted),
+    names_glue = "{.value}_{arm_use}",
+    values_fill = 0
+  ) %>%
+  mutate(
+    n_total = n_control + n_intervention,
+    n_accepted_total = n_accepted_control + n_accepted_intervention,
+    uptake_control = if_else(n_control > 0, n_accepted_control / n_control * 100, 0),
+    uptake_intervention = if_else(n_intervention > 0, n_accepted_intervention / n_intervention * 100, 0),
+    uptake_total = if_else(n_total > 0, n_accepted_total / n_total * 100, 0)
+  )
+
+arm_referral_summary <- arm_summary_wide %>%
+  left_join(condition_labels, by = "risk_col") %>%
+  mutate(
+    accepted_control = sprintf("%d", n_accepted_control),
+    accepted_intervention = sprintf("%d", n_accepted_intervention),
+    accepted_total = sprintf("%d", n_accepted_total),
+    uptake_control_fmt = sprintf("%.1f%%", uptake_control),
+    uptake_intervention_fmt = sprintf("%.1f%%", uptake_intervention),
+    uptake_total_fmt = sprintf("%.1f%%", uptake_total)
+  ) %>%
+  select(
+    risk_col,
+    n_control, accepted_control, uptake_control_fmt,
+    n_intervention, accepted_intervention, uptake_intervention_fmt,
+    n_total, accepted_total, uptake_total_fmt
+  ) %>%
+  gt() %>%
+  tab_header(title = "Referral Summary by Arm") %>%
+  tab_spanner("Control", columns = c(n_control, accepted_control, uptake_control_fmt)) %>%
+  tab_spanner("Intervention", columns = c(n_intervention, accepted_intervention, uptake_intervention_fmt)) %>%
+  tab_spanner("Overall", columns = c(n_total, accepted_total, uptake_total_fmt)) %>%
+  tab_options(table.font.size = px(11))
 
 arm_referral_summary
 ```
@@ -1168,7 +1291,7 @@ sae_summary_arm
 ## 9.2 Adverse Event Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
-ae_df <- ppw_rct_df %>% 
+ae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), 
            redcap_event_name) %>% 
     filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
@@ -1210,7 +1333,7 @@ ae_bin <- ae_df %>%
 # AEs summary
 ae_summary <- ae_bin %>%
     tbl_summary(
-        by = arm_random,# Replace with Arm for real data----
+        by = Arm,# Replace with Arm for real data----
         include = c(ae_cat, ae_define___1_bin,
                     ae_define___2_bin,  
                     ae_define___4_bin, 
@@ -1265,7 +1388,7 @@ ae_summary
 ### 9.2.1 List of Adverse Events: Control Arm
 
 ```{r Intervention_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
-ae_df <- ppw_rct_df %>% 
+ae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), 
            redcap_event_name) %>% 
     filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
