@@ -1117,8 +1117,315 @@ fidelity_summary
 # 8. Primary and secondary study endpoints at 14 weeks postpartum
 
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
-arm_outcome_summary
+# Primary and secondary clinical outcomes across times--------------
+## PHQ9, GAD7, WHOQOL BREF score 
+outcomes <- ppw_rct_df %>%
+    select(visit_type, clt_ptid, all_of(starts_with("phq_")), 
+           all_of(starts_with("gad7_")), all_of(starts_with("qol_"))) %>% 
+    filter(!is.na(clt_ptid)) 
+
+## PHQ9 & GAD7 scores ------
+outcomes <- outcomes %>% 
+    mutate(across(c(starts_with("phq_")), 
+                  ~ case_when(
+                      . == "not at all" ~ 0,
+                      . == "several days" ~ 1,
+                      . == "more than half the days" ~ 2,
+                      . == "nearly every day" ~ 3,
+                      TRUE ~ NA_real_
+                  ), 
+                  .names = "{.col}_number")) %>% 
+    mutate(across(starts_with("gad7_"), 
+                  ~ case_when(
+                      . == "Not at all" ~ 0,
+                      . == "Several days" ~ 1,
+                      . == "Over half the days" ~ 2,
+                      . == "Nearly every day" ~ 3,
+                      TRUE ~ NA_real_
+                  ), 
+                  .names = "{.col}_number")) %>% 
+    mutate(phq9_total = rowSums(select(., starts_with("phq_")& ends_with("_number")), na.rm = TRUE),
+           gad7_total = rowSums(select(., starts_with("gad7_")& ends_with("_number")), na.rm = TRUE)) %>% 
+    mutate(phq9_high = ifelse(phq9_total >= 10, "Yes", "No"),
+           gad7_high = ifelse(gad7_total >= 10, "Yes", "No"))
+
+## WHOQOL BREF ======
+outcomes <- outcomes %>%
+    mutate(qol_rate_number = case_when(
+        qol_rate == "Very poor" ~ 1,
+        qol_rate == "Poor" ~ 2,
+        qol_rate == "Neither poor nor good" ~ 3,
+        qol_rate == "Good" ~ 4,
+        qol_rate == "Very good" ~ 5,
+        TRUE ~ NA_real_  )) %>% 
+    mutate(qol_sat_number = case_when(
+        qol_sat == "Very dissatisfied" ~ 1,
+        qol_sat == "Dissatisfied" ~ 2,
+        qol_sat == "Neither satisfied nor dissatisfied" ~ 3,
+        qol_sat == "Satisfied" ~ 4,
+        qol_sat == "Very satisfied" ~ 5,
+        TRUE ~ NA_real_  )) %>% 
+    mutate(across(
+        .cols = c(qol_enjoy, qol_mean),
+                  .fns = ~ case_when(
+                      . == "Not at all" ~ 1,
+                      . == "A little" ~ 2,
+                      . == "A moderate amount" ~ 3,
+                      . == "Very much" ~ 4,
+                      . == "An extreme amount" ~ 5,
+                      TRUE ~ NA_real_
+                  ),
+                  .names = "{.col}_number"
+    )) %>% 
+    mutate(across(
+        .cols = c(qol_medtreat, qol_pain),
+        .fns = ~ case_when(
+            . == "Not at all" ~ 5,
+            . == "A little" ~ 4,
+            . == "A moderate amount" ~ 3,
+            . == "Very much" ~ 2,
+            . == "An extreme amount" ~ 1,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>% 
+    mutate(across(
+        .cols = c(qol_conc, qol_safe, qol_env),
+        .fns = ~ case_when(
+            . == "Not at all" ~ 1,
+            . == "A little" ~ 2,
+            . == "A moderate amount" ~ 3,
+            . == "Very much" ~ 4,
+            . == "Extremely" ~ 5,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>% 
+    mutate(across(
+        .cols = c(qol_energy, qol_bod, qol_money, qol_info, qol_leis),
+        .fns = ~ case_when(
+            . == "Not at all" ~ 1,
+            . == "A little" ~ 2,
+            . == "Moderately" ~ 3,
+            . == "Mostly" ~ 4,
+            . == "Completely" ~ 5,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>% 
+    mutate(qol_get_number = case_when(
+        qol_get == "Very poor" ~ 1,
+        qol_get == "Poor" ~ 2,
+        qol_get == "Neither poor nor good" ~ 3,
+        qol_get == "Good" ~ 4,
+        qol_get == "Very good" ~ 5,
+        TRUE ~ NA_real_
+    )) %>% 
+    mutate(across(
+        .cols = c(qol_sleep, qol_perf, qol_cap, qol_self, qol_rel, qol_sex,
+                  qol_sup, qol_con, qol_serv, qol_trans),
+        .fns = ~ case_when(
+            . == "Very dissatisfied" ~ 1,
+            . == "Dissatisfied" ~ 2,
+            . == "Neither satisfied nor dissatisfied" ~ 3,
+            . == "Satisfied" ~ 4,
+            . == "Very satisfied" ~ 5,
+            TRUE ~ NA_real_
+        ),
+        .names = "{.col}_number"
+    )) %>% 
+        mutate(qol_blue_number = case_when(
+            qol_blue == "Never" ~ 5,
+            qol_blue == "Seldom" ~ 4,
+            qol_blue == "Quite often" ~ 3,
+            qol_blue == "Very often" ~ 2,
+            qol_blue == "Always" ~ 1,
+            TRUE ~ NA_real_
+        ))
+        
+# Calculate WHOQOL BREF scores
+outcomes <- outcomes %>% 
+    mutate(qol_overall = qol_rate_number + qol_sat_number,
+           qol_physical = qol_pain_number + qol_medtreat_number + qol_energy_number + qol_get_number +
+               qol_sleep_number + qol_perf_number + qol_cap_number,
+           qol_psycho = qol_enjoy_number + qol_mean_number + qol_conc_number + qol_bod_number +
+               qol_self_number + qol_blue_number,
+           qol_social = qol_rel_number + qol_sex_number + qol_sup_number,
+           qol_environ = qol_safe_number + qol_env_number + qol_money_number + qol_info_number +
+               qol_leis_number + qol_con_number + qol_trans_number + qol_serv_number
+    )
+
+#scoring instruction: https://depts.washington.edu/seaqol/docs/WHOQOL-BREF%20and%20Scoring%20Instructions.pdf
+
+# Define item vectors for each domain
+physical_items <- c("qol_pain_number", "qol_medtreat_number", "qol_energy_number",
+                    "qol_get_number", "qol_sleep_number", "qol_perf_number", "qol_cap_number")
+
+psych_items <- c("qol_enjoy_number", "qol_mean_number", "qol_conc_number",
+                 "qol_bod_number", "qol_self_number", "qol_blue_number")
+
+social_items <- c("qol_rel_number", "qol_sex_number", "qol_sup_number")
+
+env_items <- c("qol_safe_number", "qol_env_number", "qol_money_number",
+               "qol_info_number", "qol_leis_number", "qol_con_number",
+               "qol_trans_number", "qol_serv_number")
+
+# Impute physical domain
+outcomes <- outcomes %>%
+    rowwise() %>%
+    mutate(
+        physical_non_missing = sum(!is.na(c_across(all_of(physical_items)))),
+        qol_physical = ifelse(
+            physical_non_missing >= 6,
+            sum(replace_na(c_across(all_of(physical_items)),
+                           mean(c_across(all_of(physical_items)), na.rm = TRUE)), na.rm = TRUE),
+            NA_real_
+        )
+    ) %>%
+    ungroup()
+
+outcomes <- outcomes %>%
+    rowwise() %>%
+    mutate(
+        env_non_missing = sum(!is.na(c_across(all_of(env_items)))),
+        qol_environ = ifelse(
+            env_non_missing >= 7,
+            sum(replace_na(c_across(all_of(env_items)),
+                           mean(c_across(all_of(env_items)), na.rm = TRUE)), na.rm = TRUE),
+            NA_real_
+        )
+    ) %>%
+    ungroup()
+
+outcomes <- outcomes %>%
+    rowwise() %>%
+    mutate(
+        qol_psycho = ifelse(any(is.na(c_across(all_of(psych_items))), na.rm = TRUE), NA_real_,
+                            sum(c_across(all_of(psych_items)))),
+        qol_social = ifelse(any(is.na(c_across(all_of(social_items))), na.rm = TRUE), NA_real_,
+                            sum(c_across(all_of(social_items))))
+    ) %>%
+    ungroup()
+
+outcomes <- outcomes %>%
+    mutate(
+        qol_physical_scaled = ((qol_physical - 7) / 28) * 100,
+        qol_psycho_scaled   = ((qol_psycho - 6) / 24) * 100,
+        qol_social_scaled   = ((qol_social - 3) / 12) * 100,
+        qol_environ_scaled  = ((qol_environ - 8) / 32) * 100,
+        qol_overall_scaled = as.numeric(((qol_overall - 2) / 8) * 100)
+    )
+
+outcomes <- outcomes %>%
+    mutate(visit_type = factor(visit_type,
+                               levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months")))
+
+
+# Filter dataset for relevant timepoint (e.g., 6 weeks postpartum)
+end_points <- outcomes %>%
+    filter(visit_type == "14 Weeks") %>% 
+    select(clt_ptid, phq9_total, gad7_total, qol_overall_scaled)
+
+# Reducing Tension Checklist totals
+end_rtc <- psychosocial_data %>%
+    filter(visit_type == "14 Weeks") %>%
+    select(clt_ptid, visit_type, rtc_total)
+
+# Any adverse outcome
+adverse_end <- pregnancy_combined_dedup %>% 
+    select(clt_ptid, any_adverse_outcome)
+
+end_joined <- end_points %>%
+    inner_join(end_rtc, by = "clt_ptid") %>% 
+    inner_join(adverse_end, by = "clt_ptid") %>% 
+    mutate(any_adverse_outcome = as.factor(any_adverse_outcome))
+
+## Oucome summary by arm
+set.seed(12345)
+
+arm_ids <- ppw_rct_df %>%
+    filter(visit_type == "14 Weeks") %>% 
+    select(clt_ptid, clt_study_site, arm)
+
+outcome_arm <- arm_ids %>%
+  ungroup() %>% 
+  filter(!is.na(clt_study_site)) %>%
+  distinct(clt_study_site) %>%
+  arrange(clt_study_site) %>%
+  mutate(
+    arm_random = sample(
+      c("Intervention - randomly generated",
+        "Control - randomly generated"),
+      size = n(),
+      replace = TRUE
+    )
+  )
+
+# Assign sae_arm to clean saes
+arm_ids <- arm_ids %>% 
+    left_join(outcome_arm, by = "clt_study_site") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Control - randomly generated",
+                                       "Intervention - randomly generated"))
+    )%>% 
+    distinct(clt_ptid, .keep_all = TRUE) %>% 
+    select(-clt_study_site)
+
+
+
+arm_joined <- arm_ids %>%
+    inner_join(end_joined, by = "clt_ptid")
+
+
+# Create summary table
+arm_outcome_summary <- arm_joined %>%
+    tbl_summary(
+        by = arm_random, # External analyst please switch to arm for real data----
+        include = c(phq9_total, gad7_total, qol_overall_scaled, 
+                    any_adverse_outcome, rtc_total),
+        type = list(
+            all_continuous() ~ "continuous",
+            all_categorical() ~ "categorical",
+            phq9_total ~ "continuous", 
+            gad7_total ~ "continuous", 
+            qol_overall_scaled ~ "continuous", 
+            rtc_total ~ "continuous",
+            any_adverse_outcome ~ "categorical"),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ),
+        label = list(
+            phq9_total ~ "Patient Health Questionnaire-9 score",
+            gad7_total ~ "Generalized Anxiety Disorder-7 score",
+            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+            any_adverse_outcome ~ "Any adverse pregnancy outcome",
+            rtc_total ~ "Reducing Tensions Checklist score"
+        )
+    )  %>% 
+    modify_table_body(
+        ~ .x %>%
+            filter(!(variable == "any_adverse_outcome" & label == "No"))
+    ) %>%
+    add_n() %>%
+    as_kable_extra(
+        caption  = "**Primary and Secondary Outcomes Summary by Arm**",
+        booktabs = TRUE)
+
+arm_outcome_summary %>% 
+    kable_styling(
+        font_size         = 10,
+        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+        full_width        = FALSE,
+        position          = "center"
+    )
+
 ```
 
 
@@ -1333,7 +1640,7 @@ ae_bin <- ae_df %>%
 # AEs summary
 ae_summary <- ae_bin %>%
     tbl_summary(
-        by = Arm,# Replace with Arm for real data----
+        by = Arm, # External analyst please switch to arm_group----
         include = c(ae_cat, ae_define___1_bin,
                     ae_define___2_bin,  
                     ae_define___4_bin, 
