@@ -654,7 +654,7 @@ sae_overall
 # Adverse Events(EAs)
 ```{r r sae_summary, echo=FALSE, message=FALSE, warning=FALSE}
 
-total_aes
+ae_report
 ```
 
 
