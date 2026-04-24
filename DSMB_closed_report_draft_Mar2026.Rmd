@@ -1,5 +1,6 @@
 ---
 title: "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics"
+
 subtitle: 'Data and Safety Monitoring Board (DSMB): Closed Report '
 date: "`r format(Sys.time(), '%d %B %Y')`"
 header-includes:
@@ -11,10 +12,11 @@ header-includes:
  \usepackage[table]{xcolor}
  \usepackage{wrapfig}
  \floatplacement{figure}{H}
+ \usepackage[normalem]{ulem}
 output:
-    word_document: default
     pdf_document:
         latex_engine: xelatex
+    word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -27,7 +29,7 @@ knitr::opts_chunk$set(
 rm(list = ls())
 
 # Set up data freeze time for this report
-data_freeze <- Sys.Date() 
+data_freeze <- as.Date("2026-04-23") 
 
 #data_freeze <- "2026-05-11"
 ##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. #####
@@ -207,7 +209,6 @@ consort_data <- screening_consent_df %>%
 consort_data <- bind_rows(anc_attendees_df, consort_data)
 ```
 
-
 ```{r generate dummy arm, echo=FALSE}
 # ---- Random arm assignment at facility level ----
 set.seed(12345)
@@ -217,16 +218,16 @@ facility_arms <- consort_data %>%
     distinct(facility) %>%
     arrange(facility) %>%
     mutate(
-        arm_random = sample(rep(c("Intervention - randomly generated",
-                                  "Control - randomly generated"), length.out = n()))
+        arm_random = sample(rep(c("Intervention (Randomized)",
+                                  "Control (Randomized)"), each = 10))
     )
 
 consort_data <- consort_data %>%
     left_join(facility_arms, by = "facility") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control - randomly generated",
-                                       "Intervention - randomly generated"))
+                            levels = c("Control (Randomized)",
+                                       "Intervention (Randomized)"))
     )
 
 # NOTE FOR WENWEN: Replace all arm_random with arm in the consort diagram chunk below to switch from dummy to real arm assignment.
@@ -419,16 +420,16 @@ facility_arms <- weekly_enrollment %>%
     distinct(study_site) %>%
     arrange(study_site) %>%
     mutate(
-        arm_random = sample(rep(c("Intervention - randomly generated",
-                                  "Control - randomly generated"), each = 10))
+        arm_random = sample(rep(c("Intervention (Randomized)",
+                                  "Control (Randomized)"), each = 10))
     )
 
 weekly_enrollment <- weekly_enrollment %>%
     left_join(facility_arms, by = "study_site") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control - randomly generated",
-                                       "Intervention - randomly generated"))
+                            levels = c("Control (Randomized)",
+                                       "Intervention (Randomized)"))
     )
 
 # NOTE FOR WENWEN: Replace arm_random with arm_group throughout the plot chunk
@@ -705,7 +706,7 @@ arm_ineligibility_summary <- consort_data %>%
     ) %>%
     kable_styling(
         font_size         = 10,
-        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+        bootstrap_options = c("striped", "hover", "condensed"),
         full_width        = FALSE,
         position          = "center"
     )
@@ -757,20 +758,20 @@ demographic_arms <- demographics_df %>%
     distinct(clt_study_site) %>%
     arrange(clt_study_site) %>%
     mutate(
-        arm_random = sample(rep(c("Intervention - randomly generated",
-                                  "Control - randomly generated"), each = 10))
+        arm_random = sample(rep(c("Intervention (Randomized)",
+                                  "Control (Randomized)"), each = 10))
     )
 
 demographics_df <- demographics_df %>%
     left_join(demographic_arms, by = "clt_study_site") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control - randomly generated",
-                                       "Intervention - randomly generated"))
-    )# External analyst please switch to arm_group----
+                            levels = c("Control (Randomized)",
+                                       "Intervention (Randomized)"))
+    )
 
 arm_demo <- demographics_df %>%
-    tbl_summary(by = arm_random, # External analyst please switch to arm_group for real data----
+    tbl_summary(by = arm_random, 
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner, dem_maritalstat,
                   dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
@@ -801,10 +802,12 @@ arm_demo <- demographics_df %>%
                     dem_traveltime_min ~ "continuous"),
         statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
     bold_labels() %>%
-    #add_n() %>% 
-    add_overall(last = TRUE)%>% 
+    #add_p() %>% 
+    add_overall(last = TRUE) %>% 
+     bold_labels() %>%
+    add_n() %>%
     as_kable_extra(
-        caption  = "Basic Demographic Summary",
+    caption  = "Basic Demographic Summary",
         booktabs = TRUE)
 
 arm_demo %>% 
@@ -812,9 +815,8 @@ arm_demo %>%
         font_size         = 10,
         bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
         full_width        = FALSE,
-        position          = "center"
-    )
-
+        position          = "center")
+   
 ```
 
 \newpage
@@ -824,9 +826,10 @@ arm_demo %>%
 Demographic characteristics were balanced across study arms, supporting baseline comparability.
 
 ```{r WLWH_demo, echo=FALSE}
+# source("PPW RCT Basic Demographics.R")
 arm_wlwh_demo <- demographics_df %>% 
     filter(med_pastdiag___2 == "Checked") %>% 
-    tbl_summary(by = arm_random,# External analyst please switch to arm_group for real data----
+    tbl_summary(by = arm_random,
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner, dem_maritalstat,
                   dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
@@ -854,11 +857,12 @@ arm_wlwh_demo <- demographics_df %>%
                     dem_traveltime_min ~ "continuous"),
         statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
     bold_labels() %>%
+    #add_p() %>% 
     add_overall(last = TRUE) %>% 
-    bold_labels() %>%
+     bold_labels() %>%
     add_n() %>%
     as_kable_extra(
-        caption  = "WLWH Demographic Summary",
+    caption  = "WLWH Demographic Summary",
         booktabs = TRUE)
 
 arm_wlwh_demo %>% 
@@ -866,9 +870,7 @@ arm_wlwh_demo %>%
         font_size         = 10,
         bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
         full_width        = FALSE,
-        position          = "center"
-    )
-
+        position          = "center")
 ```
 
 \newpage
@@ -905,16 +907,16 @@ exits_arm <- total_exits %>%
     distinct(clt_study_site) %>%
     arrange(clt_study_site) %>%
     mutate(
-        arm_random = sample(rep(c("Intervention - randomly generated",
-                                  "Control - randomly generated"), each = 10))
+        arm_random = sample(rep(c("Intervention (Randomized)",
+                                  "Control (Randomized)"), each = 10))
     )
 # Assign exit_arm to total exits
 total_exits <- total_exits%>%
     left_join(exits_arm, by = "clt_study_site") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control - randomly generated",
-                                       "Intervention - randomly generated"))
+                            levels = c("Control (Randomized)",
+                                       "Intervention (Randomized)"))
     )
 
 completed_follow_up <- total_exits %>% 
@@ -922,13 +924,13 @@ completed_follow_up <- total_exits %>%
     nrow()
 
 completed_follow_upX <- total_exits %>% 
-    filter(arm_random == "Control - randomly generated") %>% 
+    filter(arm_random == "Control (Randomized)") %>% 
     select(clt_ptid, clt_visit) %>% 
     filter(clt_visit=="6 months post-partum") %>%
     nrow()
     
 completed_follow_upY <- total_exits %>% 
-    filter(arm_random == "Intervention - randomly generated") %>% 
+    filter(arm_random == "Intervention (Randomized)") %>% 
     select(clt_ptid, clt_visit) %>% 
     filter(clt_visit=="6 months post-partum") %>% 
     nrow()
@@ -944,89 +946,8 @@ To date, we have not recorded any early terminations. However, `r completed_foll
 
 ## 7.1 Psychosocial Referrals
 
-```{r referrl dataset, message=FALSE, warning=FALSE, include=FALSE}
-analysis_mode <- "real"   # "blinded" OR "real"
-# -------------------------------
-referral_df <- ppw_rct_df %>%
-  select(
-    record_id, redcap_event_name, clt_study_site,
-    clt_visit, clt_date, starts_with("risk_"),
-    referral_depress, referral_anxiety, referral_ipv,
-    referral_type___1:referral_type___99,
-    referral_accept
-  ) %>%
-  mutate(
-    screened_selfharm   = as.integer(risk_selfharm == "Yes"),
-    screened_depression = as.integer(referral_depress >= 10),
-    screened_anxiety    = as.integer(referral_anxiety >= 10),
-    screened_IPV        = as.integer(referral_ipv >= 10),
-    referred = case_when(
-      referral_type___1 == "Checked" |
-      referral_type___2 == "Checked" |
-      referral_type___3 == "Checked" |
-      referral_type___4 == "Checked" |
-      referral_type___5 == "Checked" |
-      referral_type___99 == "Checked" |
-      risk_selfharm == "Yes" ~ 1,
-      TRUE ~ 0
-    )
-  ) %>%
-  filter(!clt_visit %in% "PM+ Session 5 Abstraction") %>%
-  filter(if_any(starts_with("screened_"), ~ .x == 1))
-
-# -------------------------------
-# Create REAL arm
-
-referral_df <- referral_df %>%
-  mutate(
-    Arm = case_when(
-      str_detect(redcap_event_name, "Arm 2: Control") ~ "control",
-      str_detect(redcap_event_name, "Arm 1: Intervention") ~ "intervention",
-      TRUE ~ NA_character_
-    )
-  )
-
-#--------------------------------------
-#Create RANDOM arm (participant level)
-set.seed(12345)
-
-referral_arm <- referral_df %>%
-  distinct(record_id) %>%
-  arrange(record_id) %>%
-  mutate(
-    arm_random = rep(c("control", "intervention"), length.out = n())
-  )
-
-
-referral_df <- referral_df %>%
-  left_join(referral_arm, by = "record_id")
-
-if (!"arm_random" %in% names(referral_df)) {
-  stop("arm_random missing after join")
-}
-
-
-referral_df <- referral_df %>%
-  mutate(
-    arm_use = case_when(
-      analysis_mode == "blinded" ~ arm_random,
-      analysis_mode == "real" ~ Arm,
-      TRUE ~ NA_character_
-    )
-  )
-
-df_long <- referral_df %>%
-  select(record_id, arm_use, starts_with("screened_"), referral_accept) %>%
-  pivot_longer(
-    cols = starts_with("screened_"),
-    names_to = "risk_col",
-    values_to = "screened_pos"
-  ) %>%
-  filter(screened_pos == 1) %>%
-  mutate(
-    accepted = if_else(referral_accept == "Yes", 1L, 0L)
-  )
-
+```{r message=FALSE, warning=FALSE, include=FALSE}
+source("PPW RCT Referrals.R")
 
 total_visits <- referral_df %>%nrow()
 total_scr_num <- df_long %>% nrow()
@@ -1041,54 +962,8 @@ During enrollment and follow-up visits participants are asked if they would like
 
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
-#  Summarise per condition 
-total_n <- nrow(referral_df)
-
-arm_summary_tbl <- df_long %>%
-  group_by(risk_col, arm_use) %>%
-  summarise(
-    n = n(),
-    n_accepted = sum(accepted),
-    .groups = "drop"
-  )
-
-arm_summary_wide <- arm_summary_tbl %>%
-  pivot_wider(
-    names_from = arm_use,
-    values_from = c(n, n_accepted),
-    names_glue = "{.value}_{arm_use}",
-    values_fill = 0
-  ) %>%
-  mutate(
-    n_total = n_control + n_intervention,
-    n_accepted_total = n_accepted_control + n_accepted_intervention,
-    uptake_control = if_else(n_control > 0, n_accepted_control / n_control * 100, 0),
-    uptake_intervention = if_else(n_intervention > 0, n_accepted_intervention / n_intervention * 100, 0),
-    uptake_total = if_else(n_total > 0, n_accepted_total / n_total * 100, 0)
-  )
-
-arm_referral_summary <- arm_summary_wide %>%
-  left_join(condition_labels, by = "risk_col") %>%
-  mutate(
-    accepted_control = sprintf("%d", n_accepted_control),
-    accepted_intervention = sprintf("%d", n_accepted_intervention),
-    accepted_total = sprintf("%d", n_accepted_total),
-    uptake_control_fmt = sprintf("%.1f%%", uptake_control),
-    uptake_intervention_fmt = sprintf("%.1f%%", uptake_intervention),
-    uptake_total_fmt = sprintf("%.1f%%", uptake_total)
-  ) %>%
-  select(
-    risk_col,
-    n_control, accepted_control, uptake_control_fmt,
-    n_intervention, accepted_intervention, uptake_intervention_fmt,
-    n_total, accepted_total, uptake_total_fmt
-  ) %>%
-  gt() %>%
-  tab_header(title = "Referral Summary by Arm") %>%
-  tab_spanner("Control", columns = c(n_control, accepted_control, uptake_control_fmt)) %>%
-  tab_spanner("Intervention", columns = c(n_intervention, accepted_intervention, uptake_intervention_fmt)) %>%
-  tab_spanner("Overall", columns = c(n_total, accepted_total, uptake_total_fmt)) %>%
-  tab_options(table.font.size = px(11))
+## generate report using data from psychosocial referrals form in REDCap  
+# source("PPW RCT Referrals.R")
 
 arm_referral_summary
 ```
@@ -1117,147 +992,158 @@ fidelity_summary
 # 8. Primary and secondary study endpoints at 14 weeks postpartum
 
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
-# Primary and secondary clinical outcomes across times--------------
 ## PHQ9, GAD7, WHOQOL BREF score 
 outcomes <- ppw_rct_df %>%
-    select(visit_type, clt_ptid, all_of(starts_with("phq_")), 
-           all_of(starts_with("gad7_")), all_of(starts_with("qol_"))) %>% 
-    filter(!is.na(clt_ptid)) 
+    mutate(
+        visit_type = case_when(
+            grepl("Enrollment", redcap_event_name) ~ "Enrollment",
+            grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
+            grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
+            grepl("6 Months", redcap_event_name) ~ "6 Months",
+            TRUE ~ NA_character_
+        ),
+        arm = case_when(
+            grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
+            grepl("Arm 2: Control", redcap_event_name) ~ "Control",
+            TRUE ~ "Unknown"
+        )) %>% 
+  select(visit_type, clt_ptid, all_of(starts_with("phq_")),
+         all_of(starts_with("gad7_")), all_of(starts_with("qol_"))) %>%
+  filter(!is.na(clt_ptid))
 
-## PHQ9 & GAD7 scores ------
-outcomes <- outcomes %>% 
-    mutate(across(c(starts_with("phq_")), 
-                  ~ case_when(
-                      . == "not at all" ~ 0,
-                      . == "several days" ~ 1,
-                      . == "more than half the days" ~ 2,
-                      . == "nearly every day" ~ 3,
-                      TRUE ~ NA_real_
-                  ), 
-                  .names = "{.col}_number")) %>% 
-    mutate(across(starts_with("gad7_"), 
-                  ~ case_when(
-                      . == "Not at all" ~ 0,
-                      . == "Several days" ~ 1,
-                      . == "Over half the days" ~ 2,
-                      . == "Nearly every day" ~ 3,
-                      TRUE ~ NA_real_
-                  ), 
-                  .names = "{.col}_number")) %>% 
-    mutate(phq9_total = rowSums(select(., starts_with("phq_")& ends_with("_number")), na.rm = TRUE),
-           gad7_total = rowSums(select(., starts_with("gad7_")& ends_with("_number")), na.rm = TRUE)) %>% 
-    mutate(phq9_high = ifelse(phq9_total >= 10, "Yes", "No"),
-           gad7_high = ifelse(gad7_total >= 10, "Yes", "No"))
+## PHQ9 & GAD7 scores
 
-## WHOQOL BREF ======
 outcomes <- outcomes %>%
-    mutate(qol_rate_number = case_when(
-        qol_rate == "Very poor" ~ 1,
-        qol_rate == "Poor" ~ 2,
-        qol_rate == "Neither poor nor good" ~ 3,
-        qol_rate == "Good" ~ 4,
-        qol_rate == "Very good" ~ 5,
-        TRUE ~ NA_real_  )) %>% 
-    mutate(qol_sat_number = case_when(
-        qol_sat == "Very dissatisfied" ~ 1,
-        qol_sat == "Dissatisfied" ~ 2,
-        qol_sat == "Neither satisfied nor dissatisfied" ~ 3,
-        qol_sat == "Satisfied" ~ 4,
-        qol_sat == "Very satisfied" ~ 5,
-        TRUE ~ NA_real_  )) %>% 
-    mutate(across(
-        .cols = c(qol_enjoy, qol_mean),
-                  .fns = ~ case_when(
-                      . == "Not at all" ~ 1,
-                      . == "A little" ~ 2,
-                      . == "A moderate amount" ~ 3,
-                      . == "Very much" ~ 4,
-                      . == "An extreme amount" ~ 5,
-                      TRUE ~ NA_real_
-                  ),
-                  .names = "{.col}_number"
-    )) %>% 
-    mutate(across(
-        .cols = c(qol_medtreat, qol_pain),
-        .fns = ~ case_when(
-            . == "Not at all" ~ 5,
-            . == "A little" ~ 4,
-            . == "A moderate amount" ~ 3,
-            . == "Very much" ~ 2,
-            . == "An extreme amount" ~ 1,
-            TRUE ~ NA_real_
-        ),
-        .names = "{.col}_number"
-    )) %>% 
-    mutate(across(
-        .cols = c(qol_conc, qol_safe, qol_env),
-        .fns = ~ case_when(
-            . == "Not at all" ~ 1,
-            . == "A little" ~ 2,
-            . == "A moderate amount" ~ 3,
-            . == "Very much" ~ 4,
-            . == "Extremely" ~ 5,
-            TRUE ~ NA_real_
-        ),
-        .names = "{.col}_number"
-    )) %>% 
-    mutate(across(
-        .cols = c(qol_energy, qol_bod, qol_money, qol_info, qol_leis),
-        .fns = ~ case_when(
-            . == "Not at all" ~ 1,
-            . == "A little" ~ 2,
-            . == "Moderately" ~ 3,
-            . == "Mostly" ~ 4,
-            . == "Completely" ~ 5,
-            TRUE ~ NA_real_
-        ),
-        .names = "{.col}_number"
-    )) %>% 
-    mutate(qol_get_number = case_when(
-        qol_get == "Very poor" ~ 1,
-        qol_get == "Poor" ~ 2,
-        qol_get == "Neither poor nor good" ~ 3,
-        qol_get == "Good" ~ 4,
-        qol_get == "Very good" ~ 5,
-        TRUE ~ NA_real_
-    )) %>% 
-    mutate(across(
-        .cols = c(qol_sleep, qol_perf, qol_cap, qol_self, qol_rel, qol_sex,
+  mutate(across(c(starts_with("phq_")),
+                ~ case_when(
+                  . == "not at all" ~ 0,
+                  . == "several days" ~ 1,
+                  . == "more than half the days" ~ 2,
+                  . == "nearly every day" ~ 3,
+                  TRUE ~ NA_real_
+                ),
+                .names = "{.col}_number")) %>%
+  mutate(across(starts_with("gad7_"),
+                ~ case_when(
+                  . == "Not at all" ~ 0,
+                  . == "Several days" ~ 1,
+                  . == "Over half the days" ~ 2,
+                  . == "Nearly every day" ~ 3,
+                  TRUE ~ NA_real_
+                ),
+                .names = "{.col}_number")) %>%
+  mutate(
+    phq9_total = rowSums(select(., starts_with("phq_") & ends_with("_number")), na.rm = TRUE),
+    gad7_total = rowSums(select(., starts_with("gad7_") & ends_with("_number")), na.rm = TRUE)
+  ) %>%
+  mutate(
+    phq9_high = ifelse(phq9_total >= 10, "Yes", "No"),
+    gad7_high = ifelse(gad7_total >= 10, "Yes", "No")
+  )
+
+## WHOQOL BREF
+
+outcomes <- outcomes %>%
+  mutate(qol_rate_number = case_when(
+    qol_rate == "Very poor" ~ 1,
+    qol_rate == "Poor" ~ 2,
+    qol_rate == "Neither poor nor good" ~ 3,
+    qol_rate == "Good" ~ 4,
+    qol_rate == "Very good" ~ 5,
+    TRUE ~ NA_real_
+  )) %>%
+  mutate(qol_sat_number = case_when(
+    qol_sat == "Very dissatisfied" ~ 1,
+    qol_sat == "Dissatisfied" ~ 2,
+    qol_sat == "Neither satisfied nor dissatisfied" ~ 3,
+    qol_sat == "Satisfied" ~ 4,
+    qol_sat == "Very satisfied" ~ 5,
+    TRUE ~ NA_real_
+  )) %>%
+  mutate(across(c(qol_enjoy, qol_mean),
+                ~ case_when(
+                  . == "Not at all" ~ 1,
+                  . == "A little" ~ 2,
+                  . == "A moderate amount" ~ 3,
+                  . == "Very much" ~ 4,
+                  . == "An extreme amount" ~ 5,
+                  TRUE ~ NA_real_
+                ),
+                .names = "{.col}_number")) %>%
+  mutate(across(c(qol_medtreat, qol_pain),
+                ~ case_when(
+                  . == "Not at all" ~ 5,
+                  . == "A little" ~ 4,
+                  . == "A moderate amount" ~ 3,
+                  . == "Very much" ~ 2,
+                  . == "An extreme amount" ~ 1,
+                  TRUE ~ NA_real_
+                ),
+                .names = "{.col}_number")) %>%
+  mutate(across(c(qol_conc, qol_safe, qol_env),
+                ~ case_when(
+                  . == "Not at all" ~ 1,
+                  . == "A little" ~ 2,
+                  . == "A moderate amount" ~ 3,
+                  . == "Very much" ~ 4,
+                  . == "Extremely" ~ 5,
+                  TRUE ~ NA_real_
+                ),
+                .names = "{.col}_number")) %>%
+  mutate(across(c(qol_energy, qol_bod, qol_money, qol_info, qol_leis),
+                ~ case_when(
+                  . == "Not at all" ~ 1,
+                  . == "A little" ~ 2,
+                  . == "Moderately" ~ 3,
+                  . == "Mostly" ~ 4,
+                  . == "Completely" ~ 5,
+                  TRUE ~ NA_real_
+                ),
+                .names = "{.col}_number")) %>%
+  mutate(qol_get_number = case_when(
+    qol_get == "Very poor" ~ 1,
+    qol_get == "Poor" ~ 2,
+    qol_get == "Neither poor nor good" ~ 3,
+    qol_get == "Good" ~ 4,
+    qol_get == "Very good" ~ 5,
+    TRUE ~ NA_real_
+  )) %>%
+  mutate(across(c(qol_sleep, qol_perf, qol_cap, qol_self, qol_rel, qol_sex,
                   qol_sup, qol_con, qol_serv, qol_trans),
-        .fns = ~ case_when(
-            . == "Very dissatisfied" ~ 1,
-            . == "Dissatisfied" ~ 2,
-            . == "Neither satisfied nor dissatisfied" ~ 3,
-            . == "Satisfied" ~ 4,
-            . == "Very satisfied" ~ 5,
-            TRUE ~ NA_real_
-        ),
-        .names = "{.col}_number"
-    )) %>% 
-        mutate(qol_blue_number = case_when(
-            qol_blue == "Never" ~ 5,
-            qol_blue == "Seldom" ~ 4,
-            qol_blue == "Quite often" ~ 3,
-            qol_blue == "Very often" ~ 2,
-            qol_blue == "Always" ~ 1,
-            TRUE ~ NA_real_
-        ))
-        
+                ~ case_when(
+                  . == "Very dissatisfied" ~ 1,
+                  . == "Dissatisfied" ~ 2,
+                  . == "Neither satisfied nor dissatisfied" ~ 3,
+                  . == "Satisfied" ~ 4,
+                  . == "Very satisfied" ~ 5,
+                  TRUE ~ NA_real_
+                ),
+                .names = "{.col}_number")) %>%
+  mutate(qol_blue_number = case_when(
+    qol_blue == "Never" ~ 5,
+    qol_blue == "Seldom" ~ 4,
+    qol_blue == "Quite often" ~ 3,
+    qol_blue == "Very often" ~ 2,
+    qol_blue == "Always" ~ 1,
+    TRUE ~ NA_real_
+  ))
+
 # Calculate WHOQOL BREF scores
-outcomes <- outcomes %>% 
-    mutate(qol_overall = qol_rate_number + qol_sat_number,
-           qol_physical = qol_pain_number + qol_medtreat_number + qol_energy_number + qol_get_number +
-               qol_sleep_number + qol_perf_number + qol_cap_number,
-           qol_psycho = qol_enjoy_number + qol_mean_number + qol_conc_number + qol_bod_number +
-               qol_self_number + qol_blue_number,
-           qol_social = qol_rel_number + qol_sex_number + qol_sup_number,
-           qol_environ = qol_safe_number + qol_env_number + qol_money_number + qol_info_number +
-               qol_leis_number + qol_con_number + qol_trans_number + qol_serv_number
-    )
 
-#scoring instruction: https://depts.washington.edu/seaqol/docs/WHOQOL-BREF%20and%20Scoring%20Instructions.pdf
+outcomes <- outcomes %>%
+  mutate(
+    qol_overall = qol_rate_number + qol_sat_number,
+    qol_physical = qol_pain_number + qol_medtreat_number + qol_energy_number + qol_get_number +
+      qol_sleep_number + qol_perf_number + qol_cap_number,
+    qol_psycho = qol_enjoy_number + qol_mean_number + qol_conc_number + qol_bod_number +
+      qol_self_number + qol_blue_number,
+    qol_social = qol_rel_number + qol_sex_number + qol_sup_number,
+    qol_environ = qol_safe_number + qol_env_number + qol_money_number + qol_info_number +
+      qol_leis_number + qol_con_number + qol_trans_number + qol_serv_number
+  )
 
-# Define item vectors for each domain
+# Define item vectors
+
 physical_items <- c("qol_pain_number", "qol_medtreat_number", "qol_energy_number",
                     "qol_get_number", "qol_sleep_number", "qol_perf_number", "qol_cap_number")
 
@@ -1270,161 +1156,56 @@ env_items <- c("qol_safe_number", "qol_env_number", "qol_money_number",
                "qol_info_number", "qol_leis_number", "qol_con_number",
                "qol_trans_number", "qol_serv_number")
 
-# Impute physical domain
-outcomes <- outcomes %>%
-    rowwise() %>%
-    mutate(
-        physical_non_missing = sum(!is.na(c_across(all_of(physical_items)))),
-        qol_physical = ifelse(
-            physical_non_missing >= 6,
-            sum(replace_na(c_across(all_of(physical_items)),
-                           mean(c_across(all_of(physical_items)), na.rm = TRUE)), na.rm = TRUE),
-            NA_real_
-        )
-    ) %>%
-    ungroup()
+# Imputation
 
 outcomes <- outcomes %>%
-    rowwise() %>%
-    mutate(
-        env_non_missing = sum(!is.na(c_across(all_of(env_items)))),
-        qol_environ = ifelse(
-            env_non_missing >= 7,
-            sum(replace_na(c_across(all_of(env_items)),
-                           mean(c_across(all_of(env_items)), na.rm = TRUE)), na.rm = TRUE),
-            NA_real_
-        )
-    ) %>%
-    ungroup()
-
-outcomes <- outcomes %>%
-    rowwise() %>%
-    mutate(
-        qol_psycho = ifelse(any(is.na(c_across(all_of(psych_items))), na.rm = TRUE), NA_real_,
-                            sum(c_across(all_of(psych_items)))),
-        qol_social = ifelse(any(is.na(c_across(all_of(social_items))), na.rm = TRUE), NA_real_,
-                            sum(c_across(all_of(social_items))))
-    ) %>%
-    ungroup()
-
-outcomes <- outcomes %>%
-    mutate(
-        qol_physical_scaled = ((qol_physical - 7) / 28) * 100,
-        qol_psycho_scaled   = ((qol_psycho - 6) / 24) * 100,
-        qol_social_scaled   = ((qol_social - 3) / 12) * 100,
-        qol_environ_scaled  = ((qol_environ - 8) / 32) * 100,
-        qol_overall_scaled = as.numeric(((qol_overall - 2) / 8) * 100)
-    )
-
-outcomes <- outcomes %>%
-    mutate(visit_type = factor(visit_type,
-                               levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months")))
-
-
-# Filter dataset for relevant timepoint (e.g., 6 weeks postpartum)
-end_points <- outcomes %>%
-    filter(visit_type == "14 Weeks") %>% 
-    select(clt_ptid, phq9_total, gad7_total, qol_overall_scaled)
-
-# Reducing Tension Checklist totals
-end_rtc <- psychosocial_data %>%
-    filter(visit_type == "14 Weeks") %>%
-    select(clt_ptid, visit_type, rtc_total)
-
-# Any adverse outcome
-adverse_end <- pregnancy_combined_dedup %>% 
-    select(clt_ptid, any_adverse_outcome)
-
-end_joined <- end_points %>%
-    inner_join(end_rtc, by = "clt_ptid") %>% 
-    inner_join(adverse_end, by = "clt_ptid") %>% 
-    mutate(any_adverse_outcome = as.factor(any_adverse_outcome))
-
-## Oucome summary by arm
-set.seed(12345)
-
-arm_ids <- ppw_rct_df %>%
-    filter(visit_type == "14 Weeks") %>% 
-    select(clt_ptid, clt_study_site, arm)
-
-outcome_arm <- arm_ids %>%
-  ungroup() %>% 
-  filter(!is.na(clt_study_site)) %>%
-  distinct(clt_study_site) %>%
-  arrange(clt_study_site) %>%
+  rowwise() %>%
   mutate(
-    arm_random = sample(
-      c("Intervention - randomly generated",
-        "Control - randomly generated"),
-      size = n(),
-      replace = TRUE
+    physical_non_missing = sum(!is.na(c_across(all_of(physical_items)))),
+    qol_physical = ifelse(
+      physical_non_missing >= 6,
+      sum(replace_na(c_across(all_of(physical_items)),
+                     mean(c_across(all_of(physical_items)), na.rm = TRUE)), na.rm = TRUE),
+      NA_real_
     )
+  ) %>%
+  ungroup()
+
+outcomes <- outcomes %>%
+  rowwise() %>%
+  mutate(
+    env_non_missing = sum(!is.na(c_across(all_of(env_items)))),
+    qol_environ = ifelse(
+      env_non_missing >= 7,
+      sum(replace_na(c_across(all_of(env_items)),
+                     mean(c_across(all_of(env_items)), na.rm = TRUE)), na.rm = TRUE),
+      NA_real_
+    )
+  ) %>%
+  ungroup()
+
+outcomes <- outcomes %>%
+  rowwise() %>%
+  mutate(
+    qol_psycho = ifelse(any(is.na(c_across(all_of(psych_items)))), NA_real_,
+                        sum(c_across(all_of(psych_items)))),
+    qol_social = ifelse(any(is.na(c_across(all_of(social_items)))), NA_real_,
+                        sum(c_across(all_of(social_items))))
+  ) %>%
+  ungroup()
+
+outcomes <- outcomes %>%
+  mutate(
+    qol_physical_scaled = ((qol_physical - 7) / 28) * 100,
+    qol_psycho_scaled = ((qol_psycho - 6) / 24) * 100,
+    qol_social_scaled = ((qol_social - 3) / 12) * 100,
+    qol_environ_scaled = ((qol_environ - 8) / 32) * 100,
+    qol_overall_scaled = ((qol_overall - 2) / 8) * 100
   )
 
-# Assign sae_arm to clean saes
-arm_ids <- arm_ids %>% 
-    left_join(outcome_arm, by = "clt_study_site") %>%
-    mutate(
-        arm_random = factor(arm_random,
-                            levels = c("Control - randomly generated",
-                                       "Intervention - randomly generated"))
-    )%>% 
-    distinct(clt_ptid, .keep_all = TRUE) %>% 
-    select(-clt_study_site)
-
-
-
-arm_joined <- arm_ids %>%
-    inner_join(end_joined, by = "clt_ptid")
-
-
-# Create summary table
-arm_outcome_summary <- arm_joined %>%
-    tbl_summary(
-        by = arm_random, # External analyst please switch to arm for real data----
-        include = c(phq9_total, gad7_total, qol_overall_scaled, 
-                    any_adverse_outcome, rtc_total),
-        type = list(
-            all_continuous() ~ "continuous",
-            all_categorical() ~ "categorical",
-            phq9_total ~ "continuous", 
-            gad7_total ~ "continuous", 
-            qol_overall_scaled ~ "continuous", 
-            rtc_total ~ "continuous",
-            any_adverse_outcome ~ "categorical"),
-        statistic = list(
-            all_continuous() ~ "{median} ({p25}, {p75})",
-            all_categorical() ~ "{n} ({p}%)"
-        ),
-        missing = "no",
-        digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
-        ),
-        label = list(
-            phq9_total ~ "Patient Health Questionnaire-9 score",
-            gad7_total ~ "Generalized Anxiety Disorder-7 score",
-            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
-            any_adverse_outcome ~ "Any adverse pregnancy outcome",
-            rtc_total ~ "Reducing Tensions Checklist score"
-        )
-    )  %>% 
-    modify_table_body(
-        ~ .x %>%
-            filter(!(variable == "any_adverse_outcome" & label == "No"))
-    ) %>%
-    add_n() %>%
-    as_kable_extra(
-        caption  = "**Primary and Secondary Outcomes Summary by Arm**",
-        booktabs = TRUE)
-
-arm_outcome_summary %>% 
-    kable_styling(
-        font_size         = 10,
-        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
-        full_width        = FALSE,
-        position          = "center"
-    )
+outcomes <- outcomes %>%
+  mutate(visit_type = factor(visit_type,
+                             levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months")))
 
 ```
 
@@ -1437,7 +1218,8 @@ arm_outcome_summary %>%
 ```{r Summary of SAEs}
 sae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>% 
-        filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
+    
+    filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
 
 clean_sae_df <- sae_df %>%
     mutate(ae_cat = case_when(
@@ -1460,8 +1242,8 @@ sae_arm <- clean_sae_df %>%
   arrange(redcap_event_name) %>%
   mutate(
     arm_random = sample(
-      c("Intervention - randomly generated",
-        "Control - randomly generated"),
+      c("Intervention (Randomized)",
+        "Control (Randomized)"),
       size = n(),
       replace = TRUE
     )
@@ -1477,8 +1259,8 @@ clean_sae_df <- clean_sae_df %>%
     left_join(sae_arm, by = "redcap_event_name") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control - randomly generated",
-                                       "Intervention - randomly generated"))
+                            levels = c("Control (Randomized)",
+                                       "Intervention (Randomized)"))
     ) %>% 
     mutate(
         death_type = case_when(
@@ -1578,129 +1360,153 @@ sae_summary_arm <- sae_wide %>%
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
     ) %>%
     bold_labels() %>%
-    add_n() %>%
     add_overall(last = TRUE) %>% 
-    as_kable_extra(
-        caption  = "Summary of Reported Serious Adverse Events by Arm",
-        booktabs = TRUE)
+    as_kable_extra(caption  = "Summary of Reported Serious Adverse Events by Arm",
+                   booktabs = TRUE)
+
 
 sae_summary_arm %>% 
-    kable_styling(
-        font_size         = 10,
-        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
-        full_width        = FALSE,
-        position          = "center"
-    )
+    kable_styling(font_size         = 10,
+                  bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+                  full_width        = FALSE,
+                  position          = "center")
 
-sae_summary_arm
 ```
 
 ## 9.2 Adverse Event Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
-ae_df <- ppw_sae_df %>% 
-    select(record_id, redcap_repeat_instance, starts_with("ae_"), 
-           redcap_event_name) %>% 
-    filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
+ae_df <- ppw_sae_df %>%
+    mutate(
+        visit_type = case_when(
+            grepl("Enrollment", redcap_event_name) ~ "Enrollment",
+            grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
+            grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
+            grepl("6 Months", redcap_event_name) ~ "6 Months",
+            TRUE ~ NA_character_
+        ),
+        arm = case_when(
+            grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
+            grepl("Arm 2: Control", redcap_event_name) ~ "Control",
+            TRUE ~ "Unknown"
+        ))%>% 
+    filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))%>% 
+    select(record_id, redcap_repeat_instance, 
+           visit_type, redcap_event_name, 
+           starts_with("ae_"),arm ) 
 
-#Assign Arm and Random Arm
+ae_define_map <- c(
+    ae_define___1  = "Kicked out of home",
+    ae_define___2  = "Experienced violence or abuse",
+    ae_define___3  = "Breach of Confidentiality",
+    ae_define___4  = "Self-harm/Suicidal behavior",
+    ae_define___5  = "Persistent or significant psychosocial distress",
+    ae_define___6  = "Infant harm/behavior",
+    ae_define___99 = "Other"
+)
+
+set.seed(12345)
+
 ae_arm <- ae_df %>%
   ungroup() %>% 
-  filter(!is.na(redcap_event_name)) %>%
-  distinct(redcap_event_name) %>%
-  arrange(redcap_event_name) %>%
+  filter(!is.na(record_id)) %>%
+  distinct(record_id) %>%
+  arrange(record_id) %>%
   mutate(
     arm_random = sample(
-      c("Intervention - randomly generated",
-        "Control - randomly generated"),
+      c("Intervention (Randomized)",
+        "Control (Randomized)"),
       size = n(),
       replace = TRUE
     )
   )
 
-# Assign ae_arm
-ae_df <- ae_df %>%
+# Assign sae_arm to clean saes
+ae_df <- ae_df %>% 
+    left_join(ae_arm, by = "record_id") %>%
     mutate(
-    Arm = str_extract(redcap_event_name, "(?<=Arm \\d: ).*"))%>% 
-    left_join(ae_arm, by = "redcap_event_name")%>% 
-    mutate(
-    ae_cat = fct_recode(ae_cat,
-      "Social harm" = "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)"
+        arm_random = factor(arm_random,
+                            levels = c("Control (Randomized)",
+                                       "Intervention (Randomized)"))
     )
-  )
 
-ae_bin <- ae_df %>%
+# ---- Social harms ----
+ae_social_summary <- ae_df %>%
+    filter(ae_cat == "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)") %>%
+    filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
+    select(record_id, arm_random, names(ae_define_map)) %>%
+    # To external analyst: Replace with arm for real data----
+    pivot_longer(
+        cols = names(ae_define_map),
+        names_to = "variable",
+        values_to = "checked"
+    ) %>%
+    filter(checked == "Checked") %>%
+    mutate(Event = ae_define_map[variable]) %>%
+    group_by(arm_random, Event) %>% # To external analyst: Replace with arm for real data----
+    summarise(`Number of Events` = n(), .groups = "drop")
+
+# ---- Injury ----
+ae_injury_summary <- ae_df %>%
+    filter(ae_cat == "Injury") %>%
+    filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
+    group_by(arm_random, Event = ae_cat) %>% # To external analyst: Replace with arm for real data----
+    summarise(`Number of Events` = n(), .groups = "drop")
+
+# ---- Combine ----
+ae_report_df <- bind_rows(ae_injury_summary, ae_social_summary)
+
+# ---- Add percentages within arm ----
+ae_report_df <- ae_report_df %>%
+    group_by(arm_random) %>%
     mutate(
-        across(
-            .cols = starts_with("ae_define"),     # <-- choose the columns to convert
-            .fns  = ~ if_else(.x == "Checked", 1, 0),
-            .names = "{.col}_bin"           # optional: saves new columns instead of overwriting
-        ))
+        Summary = sprintf(
+            "%d (%.1f%%)",
+            `Number of Events`,
+            100 * `Number of Events` / sum(`Number of Events`)
+        )
+    ) %>%
+    ungroup()
 
-# AEs summary
-ae_summary <- ae_bin %>%
-    tbl_summary(
-        by = Arm, # External analyst please switch to arm_group----
-        include = c(ae_cat, ae_define___1_bin,
-                    ae_define___2_bin,  
-                    ae_define___4_bin, 
-                    ae_define___5_bin,
-                    # ae_define___6_bin, 
-                    #ae_define___99_bin,
-                    # ae_define___3_bin
-                    ),
-        label = list(
-            ae_define___1_bin  ~ "Kicked out of home",
-            ae_define___2_bin  ~ "Experienced violence or abuse",
-            #ae_define___3_bin  ~ "Breach of Confidentiality",
-            ae_define___4_bin  ~ "Self-harm/Suicidal behavior (AE Form)",
-            ae_define___5_bin  ~ "Persistent or significant psychosocial distress",
-            #ae_define___6_bin  ~ "Infant harm/behavior",
-            #ae_define___99_bin ~ "Other",
-            ae_cat ~ "AEs Category"),
-        sort = list(all_categorical() ~ "frequency"),
-    statistic = all_categorical() ~ "{n} ({p}%)",
-    percent = "cell",
-        missing = "no",
-        digits = list(
-            all_continuous() ~ 1,
-            all_categorical() ~ c(0, 1)
-        )) %>%
-    bold_labels() %>% 
-    italicize_levels() %>% 
-    modify_header(label ~ "Characteristics") %>%
-    bold_labels() %>%
-    add_overall() %>%
-    italicize_levels() %>% 
-  modify_header(label ~ "Characteristics") %>%
-  modify_footnote(
-    all_stat_cols() ~ "A single participant may experience multiple AEs"
-  ) %>%
- as_kable_extra(
-        caption  = "Summary of Adverse Events by Arm",
-        booktabs = TRUE
-    ) 
+# ---- Wide format (arms as columns) ----
+ae_report_wide <- ae_report_df %>%
+    select(Event, arm_random, Summary) %>% # To external analyst: Replace with arm for real data----
+    pivot_wider(names_from = arm_random, values_from = Summary)
 
-ae_summary <- ae_summary %>%
+# ---- Add totals per arm ----
+totals <- ae_report_df %>%
+    group_by(arm_random) %>% # To external analyst: Replace with arm for real data----
+    summarise(Summary = as.character(sum(`Number of Events`)), .groups = "drop") %>%
+    mutate(Event = "Total") %>%
+    pivot_wider(names_from = arm_random, values_from = Summary)
+
+# ---- Final table ----
+final_table <- bind_rows(ae_report_wide, totals)
+
+# ---- Print ----
+final_table %>%
+    kable(caption = "Table: Summary of Adverse Events by Arm") %>% 
     kable_styling(
-        font_size         = 10,
-        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
-        full_width        = FALSE,
-        position          = "center"
+        font_size = 10,
+        latex_options = c("striped", "hold_position", "scale_down"),
+        full_width = FALSE,
+        position = "left"
     )
-
-ae_summary
 ```
 
 ### 9.2.1 List of Adverse Events: Control Arm
 
-```{r Intervention_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+```{r ArmX_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+#--------------------------------------------
+# 1. Prepare AE dataset
+#--------------------------------------------
 ae_df <- ppw_sae_df %>% 
-    select(record_id, redcap_repeat_instance, starts_with("ae_"), 
-           redcap_event_name) %>% 
-    filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
+  select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>%
+  filter(ae_yn == "Yes", !str_detect(ae_cat, "SAE"))
 
-
+#--------------------------------------------
+# 2. Labels
+#--------------------------------------------
 ae_labels <- c(
   ae_define___1  = "Kicked out of home",
   ae_define___2  = "Experienced violence or abuse",
@@ -1711,90 +1517,113 @@ ae_labels <- c(
   ae_define___99 = "Other"
 )
 
+#--------------------------------------------
+# 3. Social harm AEs
+#--------------------------------------------
 self_harm_df <- ae_df %>%
-  filter(grepl("Social harm event", ae_cat, ignore.case = TRUE)) %>%
+  filter(str_detect(ae_cat, "Social harm event")) %>%
   pivot_longer(
     cols = starts_with("ae_define___"),
     names_to = "ae_type",
     values_to = "Checked"
   ) %>%
   filter(Checked == "Checked") %>%
-  mutate(
-    ae_label = recode(ae_type, !!!ae_labels)
-  )
-    
+  mutate(ae_label = recode(ae_type, !!!ae_labels))
+
+#--------------------------------------------
+# 4. Other AEs
+#--------------------------------------------
 other_ae <- ae_df %>%
-  filter(!grepl("Social harm event", ae_cat, ignore.case = TRUE)) %>%
+  filter(!str_detect(ae_cat, "Social harm event")) %>%
   mutate(ae_label = ae_cat)
 
+#--------------------------------------------
+# 5. Combine AEs
+#--------------------------------------------
 final_ae <- bind_rows(self_harm_df, other_ae)
 
+#--------------------------------------------
+# 6. Assign random arms (by event name)
+#--------------------------------------------
+set.seed(12345)
+
 ae_arm <- final_ae %>%
-  ungroup() %>% 
   filter(!is.na(redcap_event_name)) %>%
   distinct(redcap_event_name) %>%
   arrange(redcap_event_name) %>%
   mutate(
     arm_random = sample(
-      c("Intervention - randomly generated",
-        "Control - randomly generated"),
+      c("Intervention (Randomized)",
+        "Control (Randomized)"),
       size = n(),
       replace = TRUE
     )
   )
 
-# Assign ae_arm to final_ae
+#--------------------------------------------
+# 7. Attach arm + clean AE category
+#--------------------------------------------
 final_ae <- final_ae %>%
-    mutate(
-    Arm = str_extract(redcap_event_name, "(?<=Arm \\d: ).*"))%>% 
-    left_join(ae_arm, by = "redcap_event_name")%>% 
-    mutate(
-    ae_cat = fct_recode(ae_cat,
+  mutate(
+    Arm = str_extract(redcap_event_name, "(?<=Arm \\d: ).*")
+  ) %>%
+  left_join(ae_arm, by = "redcap_event_name") %>%
+  mutate(
+    ae_cat = forcats::fct_recode(
+      ae_cat,
       "Social harm" = "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)"
     )
   )
 
+#--------------------------------------------
+# 8. Age dataset
+#--------------------------------------------
 ae_ages <- ppw_rct_df %>%
-    mutate(dem_age = if_else(
-        dem_dob_uk == "Yes",
-        floor(time_length(interval(dem_dob, clt_date), "years")),
-        dem_age
-    )) %>%
-    select(record_id, clt_study_site,redcap_event_name,
-           dem_age, clt_date) %>% 
-    filter(grepl("^Enrollment", redcap_event_name) & !is.na(clt_date))
+  mutate(
+    dem_age = if_else(
+      dem_dob_uk == "Yes",
+      floor(lubridate::time_length(lubridate::interval(dem_dob, clt_date), "years")),
+      dem_age
+    )
+  ) %>%
+  select(record_id, clt_study_site, redcap_event_name, dem_age, clt_date) %>%
+  filter(str_detect(redcap_event_name, "^Enrollment"), !is.na(clt_date))
 
-# Extract baseline age at enrollment for each participant
-baseline_age <- ae_ages %>%
-    filter(grepl("^Enrollment", redcap_event_name)) %>%
-    select(record_id, baseline_age = dem_age)
-
-# left joing with aes df
+#--------------------------------------------
+# 9. Merge age + clean dates
+#--------------------------------------------
 final_ae <- final_ae %>%
-    select(-redcap_event_name) %>%
-    left_join(ae_ages, by = "record_id") %>%
-    filter(!is.na(dem_age)) %>%
-    mutate(ae_datereport = as.Date(ae_datereport),
-           clt_date = as.Date(clt_date),
-           ae_dateonset = as.Date(ae_dateonset),
-           reported_days = as.numeric(ae_datereport - ae_dateonset))
+  left_join(ae_ages, by = "record_id") %>%
+  filter(!is.na(dem_age)) %>%
+  mutate(
+    ae_datereport = as.Date(ae_datereport),
+    ae_dateonset  = as.Date(ae_dateonset),
+    clt_date      = as.Date(clt_date),
+    reported_days = as.numeric(ae_datereport - ae_dateonset)
+  )
 
+#--------------------------------------------
+# 10. Intervention AE summary
+#--------------------------------------------
 int_ae_summary <- final_ae %>%
-    filter(arm_random == "Intervention - randomly generated")%>% 
-    select(record_id, clt_study_site, 
-           ae_label, dem_age, ae_dateonset,
-           ae_datereport, reported_days) %>%
-    # Remove the facility code
-    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
-    rename(PTID = record_id,
-           `Study Site` = "clt_study_site",
-           `Date Averse Event was reported` = ae_datereport,
-           `Adverse Event reported` = ae_label,
-           `Start date of adverse event` = ae_dateonset,
-           `Age of participant` = dem_age,
-           `Days from Onset to Report` = reported_days)
+  filter(arm_random == "Intervention (Randomized)") %>%
+    # To external analyst: Replace with arm for real data----
+  select(record_id, clt_study_site, ae_label, dem_age,
+         ae_dateonset, ae_datereport, reported_days) %>%
+  mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
+  rename(
+    PTID = record_id,
+    `Study Site` = clt_study_site,
+    `Adverse Event reported` = ae_label,
+    `Start date of adverse event` = ae_dateonset,
+    `Date Adverse Event was reported` = ae_datereport,
+    `Age of participant` = dem_age,
+    `Days from Onset to Report` = reported_days
+  )
 
-
+#--------------------------------------------
+# 11. Table output
+#--------------------------------------------
 int_ae_summary %>%
   kable(
     caption = "List of Study Adverse Events for Intervention",
@@ -1810,25 +1639,26 @@ int_ae_summary %>%
 
 ### 9.2.2 List of Adverse Events: Intervention Arm
 
-```{r Control_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+```{r ArmY_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 cont_ae_summary <- final_ae %>%
-    filter(arm_random == "Control - randomly generated")%>% 
-    select(record_id, clt_study_site, ae_label,
-           dem_age, ae_dateonset, ae_datereport,
-           reported_days) %>%
-    # Remove the facility code
-    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
-    rename(PTID = record_id,
-           `Study Site` = "clt_study_site",
-           `Date Averse Event was reported` = ae_datereport,
-           `Adverse Event reported` = ae_label,
-           `Start date of adverse event` = ae_dateonset,
-           `Age of participant` = dem_age,
-           `Days from Onset to Report` = reported_days)
+  filter(arm_random == "Control (Randomized)") %>%
+    # To external analyst: Replace with arm for real data----
+  select(record_id, clt_study_site, ae_label,
+         dem_age, ae_dateonset, ae_datereport,
+         reported_days) %>%
+  mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
+  rename(
+    PTID = record_id,
+    `Study Site` = clt_study_site,
+    `Adverse Event reported` = ae_label,
+    `Start date of adverse event` = ae_dateonset,
+    `Date Adverse Event was reported` = ae_datereport,
+    `Age of participant` = dem_age,
+    `Days from Onset to Report` = reported_days
+  )
 
-
-
-cont_ae_summary <- cont_ae_summary %>%
+# Table output
+cont_ae_summary %>%
   kable(
     caption = "List of Study Adverse Events for Control",
     booktabs = TRUE
@@ -1839,9 +1669,6 @@ cont_ae_summary <- cont_ae_summary %>%
     full_width = FALSE,
     position = "center"
   )
-
-cont_ae_summary
-
 ```
 
 
