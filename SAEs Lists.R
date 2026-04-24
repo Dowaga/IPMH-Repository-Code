@@ -15,6 +15,17 @@ ae_df <- ppw_sae_df %>%
            redcap_event_name) %>% 
     filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
 
+psychosocial_support <- ppw_rct_df %>% 
+    select(clt_ptid, clt_visit, risk_selfharm, risk_date, risk_shphq9,
+           referral_inf, date_infharm, referral_depress,
+           referral_anxiety, referral_ipv, referral_type___0, 
+           referral_type___1, referral_type___2, referral_type___3, 
+           referral_type___4, referral_type___5, referral_type___99,
+           referral_notoffered, referral_accept) %>% 
+    filter(referral_type___1 == "Checked"|referral_type___2 == "Checked"|
+               referral_type___3 == "Checked"|referral_type___4 == "Checked"|
+               referral_type___5 == "Checked"|referral_type___99 == "Checked")
+
 # Filter those who endorsed self harm to check AEs
 
 self_harm <- ppw_rct_df %>%
@@ -114,30 +125,35 @@ ae_injury_summary <- ae_df %>%
 
 ae_report_df <- bind_rows(ae_injury_summary, ae_social_summary)
 
+ae_report_df <- ae_report_df %>%
+    arrange(desc(`Number of Events`))
+
 total_events <- sum(ae_report_df$`Number of Events`)
 
+
 ae_report <- ae_report_df %>%
-    mutate(Summary = paste0(`Number of Events`, " (", round(`Number of Events` / total_events * 100, 1), "%)")) %>%
+    arrange(desc(`Number of Events`)) %>%
+    mutate(
+        Summary = sprintf(
+            "%d (%.1f%%)",
+            `Number of Events`,
+            100 * `Number of Events` / sum(`Number of Events`)
+        )
+    ) %>%
     select(Characteristic = Event, Summary) %>%
     bind_rows(
-        tibble(Characteristic = "Total", Summary = as.character(total_events))
+        tibble(
+            Characteristic = "Total",
+            Summary = as.character(sum(ae_report_df$`Number of Events`))
+        )
     ) %>%
-    gt() %>%
-    tab_header(title = "Table: Summary of Adverse Events") %>%
-    cols_label(
-        Characteristic = "Characteristic",
-        Summary = paste0("N = ", total_events)
-    ) %>%
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_body(rows = Characteristic == "Total")
-    ) %>%
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_column_labels()
-    ) %>%
-    tab_footnote(footnote = "n (%)")
-
+    kable(caption = "Table: Summary of Adverse Events") %>% 
+    kable_styling(
+        font_size = 10,
+        latex_options = c("striped", "hold_position", "scale_down"),
+        full_width = FALSE,
+        position = "left"
+    )
 ae_report
 
 # # CLOSED report -------------
@@ -229,7 +245,7 @@ uknown_deaths <- clean_sae_df %>%
 # Step 2: Create a binary variable for each Event category
 sae_wide <- clean_sae_df %>%
     mutate(event_flag = 1) %>%  # to allow counting
-    select(record_id, death_type, Arm, Event, event_flag, infant_cause_category,
+    select(record_id, death_type, dummy_arm, Arm, Event, event_flag, infant_cause_category,
            maternal_cause_category) %>%
     tidyr::pivot_wider(names_from = Event, values_from = event_flag, values_fill = 0) %>%
     select(-record_id)
@@ -239,7 +255,7 @@ sae_wide <- sae_wide %>%
 
 # Step 3: Summarize using tbl_summary by arm
 sae_summary <- sae_wide %>%
-    tbl_summary(by = Arm,
+    tbl_summary(by = dummy_arm,
                 include = c(
                     "Maternal Death ",
                     "Infant Death ",
@@ -265,7 +281,7 @@ sae_summary <- sae_wide %>%
 ) %>%
     bold_labels() %>%
     #add_p() %>%
-    add_overall() %>%
+    add_overall(last = TRUE) %>%
     add_n() %>%
     # convert from gtsummary object to gt object
     gtsummary::as_gt() %>%
@@ -286,7 +302,7 @@ sae_overall <- sae_wide %>%
         include = c(
             "Maternal Death ",
             "Infant Death ",
-            "death_type",
+            #"death_type",
             "infant_cause_category",
             "maternal_cause_category",
             "Stillbirth ",
@@ -301,7 +317,7 @@ sae_overall <- sae_wide %>%
             all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
         ),
         label = list(
-            death_type = "Death Classification",
+            #death_type = "Death Classification",
             infant_cause_category = "Infants Death Cause",
             maternal_cause_category = "Maternal Death Cause"),
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
@@ -398,23 +414,23 @@ suicide_phq_long <- ppw_rct_df %>%
         ae_type = "Suicidal Ideation (PHQ-9)",
         clt_date = as.Date(clt_date),
         ae_datereport = as.Date(ae_dateonset),
-        ae_dateonset = as.Date(ae_dateonset),
-        days_to_report = as.integer(ae_datereport - ae_dateonset),
-        days_since_enrollment = as.numeric(ae_dateonset - clt_date),
+        risk_date = as.Date(risk_date),
+        days_since_enrollment = as.numeric(risk_date - clt_date),
         ae_relation = NA_character_,
         ae_narrative = risk_thoughts,
         clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)
     ) %>%
     select(record_id = clt_ptid, dem_age, Arm, ae_type, ae_dateonset,
-           ae_datereport, days_to_report, ae_relation, ae_narrative)
+           ae_dateonset, risk_date, days_since_enrollment, 
+           ae_relation, ae_narrative)
 
 
 suicide_phq_long <- suicide_phq_long %>%
     right_join(baseline_age, by = "record_id") %>%
     mutate(dem_age = coalesce(dem_age, baseline_age),
-           ae_dateonset  = as_date(ae_dateonset),
-           ae_datereport = as_date(ae_datereport)
-           )
+           ae_dateonset  = as_date(ae_dateonset)
+           ) %>% 
+    filter(!is.na(ae_type))
 
 ae_bin <- arm_ae %>%
     mutate(
@@ -490,14 +506,14 @@ ae_long <- ae_list %>%
     mutate(
         ae_dateonset  = as_date(ae_dateonset),
         ae_datereport = as_date(ae_datereport),
-        days_to_report = as.integer(ae_datereport - ae_dateonset)
+        reported_days = as.integer(ae_datereport - ae_dateonset)
     ) %>%
     select(record_id, dem_age, Arm, ae_type, ae_dateonset,
            ae_datereport, reported_days, ae_relation, ae_narrative) %>%
-    arrange(Arm, record_id, ae_dateonset) %>%
-    # Add PHQ-9 suicidality rows
     bind_rows(suicide_phq_long) %>%
-    filter(!is.na(ae_type))
+    filter(!is.na(ae_type)) %>%
+    select(-baseline_age) %>%
+    arrange(Arm, record_id, ae_dateonset)
 
 # Check iff same participants has Suicidal and reported on AEs
 subset_data <- ae_long[grepl("Self-harm|Suicidal", ae_long$ae_type, ignore.case = TRUE), ]
@@ -559,12 +575,12 @@ overal_aes
 # Arm X (Control) AE list
 armx_aes <- ae_long %>%
     filter(Arm == "Control") %>%
-    select(-c(Arm, ae_narrative, ae_datereport, baseline_age)) %>%
+    select(-c(Arm, ae_narrative, ae_datereport)) %>%
     rename(
         Record_ID              = record_id,
         `AE Type`              = ae_type,
         `Date Onset`           = ae_dateonset,
-        `Days since Enrollment` = days_to_report,
+        `Days since Enrollment` = reported_days,
         Age                    = dem_age,
         `Relatedness to study` = ae_relation
     )
@@ -576,12 +592,12 @@ armx_aes_gt <- armx_aes %>%
 # Arm Y (Intervention) AE list
 army_aes <- ae_long %>%
     filter(Arm == "Intervention") %>%
-    select(-c(Arm, ae_narrative, ae_datereport, baseline_age)) %>%
+    select(-c(Arm, ae_narrative, ae_datereport)) %>%
     rename(
         Record_ID              = record_id,
         `AE Type`              = ae_type,
         `Date Onset`           = ae_dateonset,
-        `Days since Enrollment` = days_to_report,
+        `Days since Enrollment` = reported_days,
         Age                    = dem_age,
         `Relatedness to study` = ae_relation
     )
