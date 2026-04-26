@@ -7,7 +7,8 @@
 # Setup ------------------------------------------------------------------------
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
-source("REDCap_datapull.R")
+#source("REDCap_datapull.R")
+data_freeze <- as.Date("2026-04-23") 
 
 if (exists("data_freeze")) {
     file_date <- format(as.Date(data_freeze), "%d %B %Y")  
@@ -25,6 +26,10 @@ if (exists("data_freeze")) {
     latest <- rownames(latest$info[which.max(latest$info$mtime),])
     file_date <- gsub(".*RCT_PPW_(.+)\\.csv", "\\1", latest)  # YYYY-MM-DD string
 }
+
+rct_ppw_consenting <- read.csv(paste0(ipmh_filepath, "/Data/2. Consenting database/RCT_PPW_consenting_", 
+                                      file_date, ".csv", sep="")) %>% 
+    filter(rct_enrolling == "Yes")
 
 ppw_rct_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_", 
                               file_date, ".csv", sep="")) %>% 
@@ -44,4 +49,8 @@ ppw_sae_df <- read.csv(paste0(ipmh_filepath, "/Data/6. RCT PPW data/RCT_PPW_",
                               file_date, ".csv", sep="")) %>% 
     filter(redcap_repeat_instrument == "ADMIN: Adverse Experience")
 
+telepsych <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/telepsych_", 
+                              file_date, ".csv", sep=""))
 
+pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_", 
+                               file_date, ".csv", sep=""))
