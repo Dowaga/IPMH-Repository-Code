@@ -39,11 +39,6 @@ source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
-# reading in additional needed dataframes
-telepsych <- read.csv(paste0(ipmh_filepath,"/Data/7. RCT admin data/Telepsych_", data_freeze,".csv"))
-rct_ppw_consenting <- read.csv(paste0(ipmh_filepath,"/Data/2. Consenting database/RCT_PPW_consenting_",
-                                      data_freeze,".csv"))
-
 ```
 
 
@@ -1116,7 +1111,7 @@ arm_referral_summary
 
 ```
 
-
+\newpage
 ## 7.2 Treatment Referrals
 
 ```{r treatment_referrals_numsource, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1212,30 +1207,38 @@ fidelity_table <- step_data %>%
     left_join(step_counts, by = "Step")
 
 fidelity_summary <- fidelity_table %>%
-    rename(
-        "Step" = Step,
-        "Intervention" = Intervention,
-        "Eligibility / Trigger" = Trigger,
-        "Delivered By" = Delivered.By,
-        "Duration/Frequency" = Duration,
-        "Participants (n)" = `N Participants`
-    ) %>%
-    kbl(
-        caption = "Stepped Care Intervention Table",
-        booktabs = TRUE,
-        align = "l")%>%
-  column_spec(1:6, width = "3cm")
+  rename(
+    "Step" = Step,
+    "Intervention" = Intervention,
+    "Eligibility / Trigger" = Trigger,
+    "Delivered By" = Delivered.By,
+    "Duration/Frequency" = Duration,
+    "Participants (n)" = `N Participants`
+  ) %>%
+  kbl(
+    caption = "Stepped Care Intervention Table",
+    booktabs = TRUE,
+    align = "l",
+    format = "latex"
+  ) %>%
+  column_spec(1, width = "2cm") %>%
+  column_spec(2:5, width = "2.5cm") %>%
+  column_spec(6, width = "2cm")
 
 
-fidelity_summary %>% kable_styling(
+fidelity_summary %>% 
+    kable_styling(
     font_size = 9,
     bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
     full_width = FALSE,
     position = "center"
-  )
+  )%>%
+  column_spec(1, width = "3cm")
 
 ```
 
+
+\newpage
 # 8. Primary and secondary study endpoints at 14 weeks postpartum
 
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1301,23 +1304,21 @@ arm_outcome_summary <- arm_joined %>%
       rtc_total ~ "Reducing Tensions Checklist score"
     )
   ) %>%
-
   add_n() %>%
   add_overall(last = TRUE) %>% 
   bold_labels() %>%
   as_kable_extra(
     caption = "Primary and Secondary Outcomes Summary by Arm",
     booktabs = TRUE
-  )%>%
-  column_spec(1:6, width = "3cm")
+  )
 
 arm_outcome_summary %>%
   kable_styling(
     font_size = 9,
-    bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
-    full_width = FALSE,
-    position = "center"
-  )
+    latex_options = c("hold_position", "scale_down"),
+    full_width = FALSE
+  ) %>%
+  column_spec(1, width = "6cm")
 ```
 
 
@@ -1450,7 +1451,7 @@ sae_summary_arm <- sae_wide %>%
         include = c(
             "Maternal Death ",
             "Infant Death ",
-            "death_type",
+            #"death_type",
             "infant_cause_category",
             "maternal_cause_category",
             "Stillbirth ",
@@ -1465,7 +1466,7 @@ sae_summary_arm <- sae_wide %>%
             all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
         ),
         label = list(
-            death_type = "Death Classification",
+            #death_type = "Death Classification",
             infant_cause_category = "Infants Death Cause",
             maternal_cause_category = "Maternal Death Cause"),
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
@@ -1485,6 +1486,7 @@ sae_summary_arm %>%
 
 ```
 
+\newpage
 ## 9.2 Adverse Event Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
@@ -1606,6 +1608,7 @@ final_table %>%
     )
 ```
 
+\newpage
 ### 9.2.1 List of Adverse Events: Control Arm
 
 ```{r ArmX_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
@@ -1746,10 +1749,11 @@ int_ae_summary %>%
     latex_options = c("striped", "hold_position", "scale_down"),
     full_width = FALSE,
     position = "left"
-  )%>%
-  column_spec(1:6, width = "3cm")
+  )
 ```
 
+
+\newpage
 ### 9.2.2 List of Adverse Events: Intervention Arm
 
 ```{r ArmY_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
@@ -1781,8 +1785,7 @@ cont_ae_summary %>%
     latex_options = c("striped", "hold_position", "scale_down"),
     full_width = FALSE,
     position = "center"
-  )%>%
-  column_spec(1:6, width = "3cm")
+  )
 ```
 
 
