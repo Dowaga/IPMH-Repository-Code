@@ -26,12 +26,12 @@ anc_number <- telepsych %>%
 #Total Telepsychiatry participants
 telep_ids <-  anc_number %>%
     #Offered telepyschaitry as treatment but not referred
-    filter(!tele_ancid == "2025-03-0092") %>%
+    filter(!tele_ancid == "07-2025-03-0092") %>%
    distinct(tele_ancid)
 
 total_telep <- anc_number %>%
     #Offered telepyschaitry as treatment but not referred
-    filter(!tele_ancid == "2025-03-0092") %>% 
+    filter(!tele_ancid == "07-2025-03-0092") %>% 
     summarise(total = n_distinct(tele_ancid)) %>%
     pull(total)
 
@@ -109,8 +109,11 @@ pm_telep_df <- pm_telep_df %>%
         )
 
 referral_QCs <- pm_telep_df %>% 
-    filter(eligible_for == "PM+" & referred_to == "Telepsychiatry")
-
+    filter(eligible_for == "Telepsychiatry" & referred_to == "PM+")
+#------
+# Two participants endorsed PHQ9 item9 though were not referred
+# to Telepsychiatry due to low Self harm Assessment Score
+#----
 # PM+ participants
 pm_plus_df <- pm_telep_df %>% 
     filter(max_score >= 10 & max_score < 15) %>%
@@ -306,32 +309,32 @@ step_data <- data.frame(
                  "As recommended")
 )
 
-#
+#---
 fidelity_table <- step_data %>%
     left_join(step_counts, by = "Step")
 
 fidelity_summary <- fidelity_table %>%
-    gt() %>%
-    tab_header(
-        title = "Stepped Care Intervention Table"
+    rename(
+        "Step" = Step,
+        "Intervention" = Intervention,
+        "Eligibility / Trigger" = Trigger,
+        "Delivered By" = Delivered.By,
+        "Duration/Frequency" = Duration,
+        "Participants (n)" = `N Participants`
     ) %>%
-    cols_label(
-        Step = "Step",
-        Intervention = "Intervention",
-        Trigger = "Eligibility / Trigger",
-        `Delivered.By` = "Delivered By",
-        Duration = "Duration/Frequency",
-        `N Participants` = "Participants (n)"
+    kbl(
+        caption = "Stepped Care Intervention Table",
+        booktabs = TRUE,
+        align = "l"
     ) %>%
-    tab_options(
-        row.striping.include_table_body = TRUE,
-        column_labels.font.weight = "bold",
-        heading.title.font.size = 16
-    )%>% 
-    opt_table_lines()
+    kable_styling(
+        font_size = 10,
+        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+        full_width = FALSE,
+        position = "center"
+    )
 
 fidelity_summary
-
 
 #----
 # Clean and prepare
