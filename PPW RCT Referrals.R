@@ -13,7 +13,7 @@ source("data_import.R")
 # data prep --------------------------------------------------------------------
 referral_df <- ppw_rct_df %>% 
     #filter(clt_visit == "Enrollment") %>% 
-    select(record_id, clt_study_site, clt_visit, clt_date,starts_with("risk_"), 
+    select(record_id, clt_study_site, redcap_event_name, clt_visit, clt_date,starts_with("risk_"), 
            referral_inf, date_infharm,
            referral_depress, referral_anxiety, referral_ipv, referral_type___0,
            referral_type___1, referral_type___2, referral_type___3, 
@@ -21,8 +21,8 @@ referral_df <- ppw_rct_df %>%
            referral_notoffered, referral_notofferedothsp, referral_accept, 
            referral_decline, referral_declineothsp, referral_priorsh, 
            referral_prioractsh___1, referral_prioractsh___2, 
-           referral_prioractsh___4, referral_prioractsh___4,
-           referral_prioractsh___99, referral_prioractshoth, 
+           referral_prioractsh___4, referral_prioractsh___99, 
+           referral_prioractshoth, 
            referral_priorinf, referral_prioractions___1, 
            referral_prioractions___2, referral_prioractions___3, 
            referral_prioractions___4, referral_prioractions___5,
@@ -31,21 +31,53 @@ referral_df <- ppw_rct_df %>%
            referral_experience, referral_notattend, referral_notattendoth,
            psychosocial_support_referrals_complete)  %>%
     mutate(
+        screened_selfharm = as.integer(risk_selfharm == "Yes"),
     screened_depression = as.integer(referral_depress >= 10),
     screened_anxiety = as.integer(referral_anxiety >= 10),
     screened_IPV = as.integer(referral_ipv >= 10),
     referred = case_when(
         referral_type___1 == "Checked" | referral_type___2 == "Checked" | 
-            referral_type___3 == "Checked"|referral_type___4 == "Checked" |
-            referral_type___5 == "Checked" |referral_type___99 == "Checked" ~ 1,
+            referral_type___3 == "Checked" | referral_type___4 == "Checked" |
+            referral_type___5 == "Checked" |referral_type___99 == "Checked" ~ 1|
+            risk_selfharm == "Yes",
         TRUE ~ 0)
     ) %>% 
     mutate(facility_code = as.integer(str_extract(clt_study_site, "^[0-9]{2}")),
         clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site),
         Arm = case_when(
-            facility_code %in% c(2,5,6,8,11,14,15,18,20,21) ~ "control",
-            facility_code %in% c(1,3,4,7,9,13,16,17,19,22) ~ "intervention"
-        ))
+                str_detect(redcap_event_name, "Arm 2: Control") ~ "control",
+                str_detect(redcap_event_name, "Arm 1: Intervention") ~ "intervention")) %>% 
+    filter(!clt_visit %in% c("PM+ Session 5 Abstraction")) %>% 
+    mutate(
+    clt_visit = factor(
+        clt_visit,
+        levels = c("Enrollment", "6 weeks post-partum", "14 weeks post-partum", "6 months post-partum")
+    )
+) %>%
+    filter(if_any(starts_with("screened_"), ~ .x == 1))
+
+
+referral_tbl <- referral_df %>%
+    filter(!is.na(Arm)) %>%
+    group_by(clt_visit) %>%
+    filter(n() > 0) %>%
+    ungroup() %>%
+            select(Arm, screened_depression, screened_anxiety, 
+                   screened_IPV, risk_selfharm) %>%
+            tbl_summary(
+                by = Arm,
+                label = list(
+                    screened_depression ~ "Screened Depression (???10)",
+                    screened_anxiety    ~ "Screened Anxiety (???10)",
+                    screened_IPV        ~ "Screened IPV (???10)",
+                    risk_selfharm       ~ "Self-harm/Suicidal behavior"
+                ),
+                statistic = all_categorical() ~ "{n} / {N} ({p}%)",
+                missing = "no"
+            ) %>%
+            bold_labels()
+
+referral_tbl
 
 
 # # Psychosocial Support Referrals QCs
@@ -80,7 +112,7 @@ referral_df <- ppw_rct_df %>%
 # 
 
 
-intervention_psy_qcs <- referral_df %>% 
+intervention_psy_qcs <- referral_df1 %>% 
     filter(referral_anxiety >= 10 | referral_ipv >= 10 | referral_depress>=10) %>% 
     select(record_id, clt_study_site, Arm, starts_with("screened_"), referred, 
            referral_accept) %>% 
@@ -94,7 +126,8 @@ condition_labels <- tribble(
     ~risk_col,               ~Condition,
     "screened_depression",   "Depression>=10",
     "screened_anxiety",      "Anxiety>=10",
-    "screened_IPV",          "IPV>=10"
+    "screened_IPV",          "IPV>=10",
+    "screened_selfharm",     "Self-harm"
 )
 
 # 2. Pivot longer & flag accepted
@@ -176,7 +209,6 @@ arm_summary_tbl <- df_long %>%
     ungroup() %>%
     left_join(condition_labels, by = "risk_col")
 
-
 arm_summary_wide <- arm_summary_tbl %>%
     pivot_wider(
         names_from = Arm,
@@ -186,45 +218,66 @@ arm_summary_wide <- arm_summary_tbl %>%
     mutate(
         n_total = coalesce(n_control, 0) + coalesce(n_intervention, 0),
         n_accepted_total = coalesce(n_accepted_control, 0) + coalesce(n_accepted_intervention, 0),
-        pct_accepted_total = n_accepted_total / n_total * 100,
-        pct_accepted_control = n_accepted_control / n_control * 100,
-        pct_accepted_intervention = n_accepted_intervention / n_intervention * 100
+        uptake_control = if_else(n_control > 0, n_accepted_control / n_control * 100, 0),
+        uptake_intervention = if_else(n_intervention > 0, n_accepted_intervention / n_intervention * 100, 0),
+        uptake_total = if_else(n_total > 0, n_accepted_total / n_total * 100, 0)
     )
 
 arm_referral_summary <- arm_summary_wide %>%
     select(-risk_col) %>%
     mutate(
-        accepted_control = sprintf("%d (%.1f%%)", n_accepted_control, pct_accepted_control),
-        accepted_intervention = sprintf("%d (%.1f%%)", n_accepted_intervention, pct_accepted_intervention),
-        accepted_total = sprintf("%d (%.1f%%)", n_accepted_total, pct_accepted_total)
+        accepted_control = sprintf("%d", n_accepted_control),
+        accepted_intervention = sprintf("%d", n_accepted_intervention),
+        accepted_total = sprintf("%d", n_accepted_total),
+        uptake_control_fmt = sprintf("%.1f%%", uptake_control),
+        uptake_intervention_fmt = sprintf("%.1f%%", uptake_intervention),
+        uptake_total_fmt = sprintf("%.1f%%", uptake_total)
     ) %>%
     select(
         Condition,
-        n_control, accepted_control,
-        n_intervention, accepted_intervention,
-        n_total, accepted_total
+        n_control, accepted_control, uptake_control_fmt,
+        n_intervention, accepted_intervention, uptake_intervention_fmt,
+        n_total, accepted_total, uptake_total_fmt
     ) %>%
     gt() %>%
     tab_header(title = "Referral Summary by Arm") %>%
     cols_label(
         Condition = "Referral Condition",
-        n_control = "Screened Positive (Control)",
-        accepted_control = "Accepted Referral (Control)",
-        n_intervention = "Screened Positive (Intervention)",
-        accepted_intervention = "Accepted Referral (Intervention)",
-        n_total = "Total Screened Positive",
-        accepted_total = "Total Accepted Referral") %>%
+        n_control = "Screened Positive",
+        accepted_control = "Accepted Referral",
+        uptake_control_fmt = "Uptake",
+        n_intervention = "Screened Positive",
+        accepted_intervention = "Accepted Referral",
+        uptake_intervention_fmt = "Uptake",
+        n_total = "Screened Positive",
+        accepted_total = "Accepted Referral",
+        uptake_total_fmt = "Uptake"
+    ) %>%
+    # Add spanners for grouped headers
+    tab_spanner(
+        label = "Control",
+        columns = c(n_control, accepted_control, uptake_control_fmt)
+    ) %>%
+    tab_spanner(
+        label = "Intervention",
+        columns = c(n_intervention, accepted_intervention, uptake_intervention_fmt)
+    ) %>%
+    tab_spanner(
+        label = "Overall Referral",
+        columns = c(n_total, accepted_total, uptake_total_fmt)
+    ) %>%
     fmt_number(columns = starts_with("n"), decimals = 0) %>%
     tab_options(
-        table.font.size = px(11),      # control font size inside the table
-        data_row.padding = px(3),      # padding inside cells
+        table.font.size = px(11),
+        data_row.padding = px(3),
         column_labels.font.size = px(12),
-        table.width = pct(95)          # ensure table fits the page
+        table.width = pct(95)
     ) %>%
     tab_style(
         style = cell_text(weight = "bold"),
         locations = cells_column_labels()
-    ) %>% 
+    ) %>%
     opt_table_lines()
 
 arm_referral_summary
+
