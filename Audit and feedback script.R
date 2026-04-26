@@ -209,12 +209,12 @@ phq9_screening <- full_join(phq9_screening, n_part, by = c("clt_study_site" = "c
 
 #weekly data
 phq9_screening_weekly <- phq9_screening %>%
-    mutate(week = floor_date(clt_timestamp, "week", week_start = 1)) %>%
+    mutate(week = as.Date(floor_date(clt_timestamp, "week", week_start = 1))) %>%
     group_by(clt_study_site, week) %>%
     summarise(
         `Weekly PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
         `Weekly study participants` = sum(n_part, na.rm = TRUE),
-        `PHQ9/GAD7 screening rate` = (`Weekly PHQ9/GAD7 screening`/ `Weekly study participants`) * 100,
+        `PHQ9/GAD7 screening rate` = (`Weekly PHQ9/GAD7 screening` / `Weekly study participants`) * 100,
         .groups = "drop"
     )
 
