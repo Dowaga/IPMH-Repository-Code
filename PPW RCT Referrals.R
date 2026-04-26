@@ -112,14 +112,6 @@ referral_tbl
 # 
 
 
-intervention_psy_qcs <- referral_df1 %>% 
-    filter(referral_anxiety >= 10 | referral_ipv >= 10 | referral_depress>=10) %>% 
-    select(record_id, clt_study_site, Arm, starts_with("screened_"), referred, 
-           referral_accept) %>% 
-    filter(referred == 0) %>% 
-    filter(Arm == "intervention")
-
-
 #-------------------------------------------------------------------------------
 # 1. Define a lookup for nicer labels 
 condition_labels <- tribble(
