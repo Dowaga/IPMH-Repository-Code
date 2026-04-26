@@ -2,10 +2,11 @@
 title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
-output:
-     word_document
-   # pdf_document
-   #html_document
+output: 
+  word_document:
+always_allow_html: true
+  #html_document: default
+  #pdf_document: default
 ---
 
 ```{r setup, echo = F, include = F, warning = F}
