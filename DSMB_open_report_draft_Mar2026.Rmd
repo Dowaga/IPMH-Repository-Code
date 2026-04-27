@@ -35,7 +35,10 @@ library(flextable)
 rm(list = ls())
 
 # Set up data freeze time for this report
-data_freeze <- Sys.Date() 
+data_freeze <- as.Date("2026-04-23") 
+
+#data_freeze <- "2026-05-11"
+##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. ##### 
 
 #data_freeze <- "2026-05-11"
 ##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. #####
@@ -195,9 +198,11 @@ consort_single
 source("Enrollment Progress.R")
 ```
 
-On Feb 17, 2025 we began recruiting participants in all facilities. We hit our 25% enrollment target on `r target_reached_25`. We hit our 50% enrollment target on `r target_reached_50`. 
+On Feb 17, 2025 we began recruiting participants in all facilities. 
+We hit our 25% enrollment target on `r target_reached_25`. 
+We hit our 50% enrollment target on `r target_reached_50`. 
+We hit our 75% enrollment target on `r target_reached_75`.
 
-[Double check if we hit 75% target by May 11.]
 
 ```{r enrollment_sub, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 #shorten the names of the study sites
@@ -237,6 +242,12 @@ target_50_line <- data.frame(
  study_site = "50% Target"
 )
 
+target_75_line <- data.frame(
+ week = unique(weekly_enrollment$week),
+ cumulative_enrollment = 2229,
+ study_site = "75% Target"
+)
+
 total_enrollment <- weekly_enrollment %>%
    group_by(week) %>%
    summarise(enrollment_count = sum(enrollment_count)) %>%
@@ -248,11 +259,13 @@ combined_enrollment <- bind_rows(
  weekly_enrollment,
  total_enrollment,
  target_25_line,
- target_50_line
+ target_50_line,
+ target_75_line
 )
 
 target_value <- 743
 target_value_2 <- 1485
+target_value_3 <- 2229
 
 # Find the first date when cumulative enrollment reached or exceeded 25%
 target_reached <- total_enrollment %>%
@@ -263,66 +276,131 @@ target_reached_50 <- total_enrollment %>%
  filter(cumulative_enrollment >= target_value_2) %>%
  slice_min(week, n = 1)
 
-target_lines <- bind_rows(target_25_line, target_50_line)
+target_reached_75 <- total_enrollment %>%
+ filter(cumulative_enrollment >= target_value_3) %>%
+ slice_min(week, n = 1)
+
+target_lines <- bind_rows(target_25_line, target_50_line, target_75_line)
 
 main_enrollment <- combined_enrollment %>% 
- filter(!study_site %in% c("25% Target", "50% Target"))
+ filter(!study_site %in% c("25% Target", "50% Target", "75% Target"))
 
 
-p1 <- ggplot(combined_enrollment, aes(x = week, y = cumulative_enrollment, 
-                               color = study_site, group = study_site)) +
- geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +
- scale_linewidth_identity() +
-   
-   # Target lines outside the color aesthetic ??? hardcoded colors
- geom_line(data = target_25_line, aes(x = week, y = cumulative_enrollment),
-           color = "red", linewidth = 1, inherit.aes = FALSE) +
- geom_line(data = target_50_line, aes(x = week, y = cumulative_enrollment),
-           color = "orange", linewidth = 1, inherit.aes = FALSE) +
-
- # Add the point and text annotation
- geom_point(data = target_reached, aes(x = week, y = cumulative_enrollment),
-            color = "black", size = 3, shape = 21, fill = "red") +
- geom_text(
-   data = target_reached,
-   aes(
-     x = week,
-     y = cumulative_enrollment,
-     label = paste0("25% target reached\n", format(week, "%b %d, %Y"))
-   ),
-   vjust = -1, size = 3.5, color = "black", fontface = "bold"
- ) +
-
-  geom_point(data = target_reached_50, aes(x = week, y = cumulative_enrollment),
-            color = "black", size = 3, shape = 21, fill = "orange") +
- geom_text(
-   data = target_reached_50,
-   aes(
-     x = week,
-     y = cumulative_enrollment,
-     label = paste0("50% target reached\n", format(week, "%b %d, %Y"))
-   ),
-   vjust = -1, size = 3.5, color = "black", fontface = "bold"
- ) +
-   
- labs(title = "Enrollment Trends",
-      x = "Date",
-      y = "Cumulative Enrollment",
-      color = "Study Site") +
- theme_minimal(base_size = 12) +
- theme(
-   plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
-   axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-   legend.position = "right",
-   legend.box = "vertical",
-   legend.title = element_text(face = "bold", size = 10),
-   legend.text = element_text(size = 9),
-   legend.key.height = unit(0.5, "cm"),
-   legend.key.width = unit(0.5, "cm"),
-   plot.margin = margin(10, 10, 20, 10)
- ) +
- guides(color = guide_legend(ncol = 2)) +
- scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+p1 <- ggplot(
+  combined_enrollment,
+  aes(
+    x = week,
+    y = cumulative_enrollment,
+    color = study_site,
+    group = study_site
+  )
+) +
+  # Main enrollment lines
+  geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +
+  scale_linewidth_identity() +
+  # TARGET LINES
+  geom_line(
+    data = target_25_line,
+    aes(x = week, y = cumulative_enrollment),
+    color = "red",
+    linewidth = 1,
+    inherit.aes = FALSE
+  ) +
+  geom_line(
+    data = target_50_line,
+    aes(x = week, y = cumulative_enrollment),
+    color = "orange",
+    linewidth = 1,
+    inherit.aes = FALSE
+  ) +
+    geom_line(
+    data = target_75_line,
+    aes(x = week, y = cumulative_enrollment),
+    color = "purple",
+    linewidth = 1,
+    inherit.aes = FALSE
+  ) +  # 25% TARGET POINT
+   geom_point(
+    data = target_reached,
+    aes(x = week, y = cumulative_enrollment),
+    color = "black",
+    size = 3,
+    shape = 21,
+    fill = "red"
+  ) +
+  geom_text(
+    data = target_reached,
+    aes(
+      x = week,
+      y = cumulative_enrollment,
+      label = paste0("25% target reached\n", format(week, "%b %d, %Y"))
+    ),
+    vjust = -1,
+    size = 3,
+    color = "black",
+    fontface = "bold"
+  ) +  # 50% TARGET POINT
+  geom_point(
+    data = target_reached_50,
+    aes(x = week, y = cumulative_enrollment),
+    color = "black",
+    size = 3,
+    shape = 21,
+    fill = "orange"
+  ) +
+  geom_text(
+    data = target_reached_50,
+    aes(
+      x = week,
+      y = cumulative_enrollment,
+      label = paste0("50% target reached\n", format(week, "%b %d, %Y"))
+    ),
+    vjust = -1,
+    size = 3.5,
+    color = "black",
+    fontface = "bold"
+  ) +  # 75% TARGET POINT
+    geom_point(
+    data = target_reached_75,
+    aes(x = week, y = cumulative_enrollment),
+    vjust = -1,
+    color = "black",
+    size = 3,
+    shape = 21,
+    fill = "purple"
+  ) +
+  geom_text(
+    data = target_reached_75,
+    aes(
+      x = week,
+      y = cumulative_enrollment,
+      label = paste0("75% target reached\n", format(week, "%b %d, %Y"))
+    ),
+    vjust = -1,
+    size = 3.5,
+    color = "black",
+    fontface = "bold"
+  ) +  # LABELS
+   labs(
+    title = "Enrollment Trends",
+    x = "Date",
+    y = "Cumulative Enrollment",
+    color = "Study Site"
+  ) +  # THEME
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    legend.position = "right",
+    legend.box = "vertical",
+    legend.title = element_text(face = "bold", size = 10),
+    legend.text = element_text(size = 9),
+    legend.key.height = unit(0.5, "cm"),
+    legend.key.width = unit(0.5, "cm"),
+    plot.margin = margin(10, 10, 20, 10)
+  ) +
+  guides(color = guide_legend(ncol = 2)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
 p1
 ```
 
@@ -353,11 +431,11 @@ reached_75per_target <- weekly_enrollment %>%
  pull(n)
 ```
 
-All `r reached_25per_target` facility clusters have reached the 25% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 37 participants. Notable, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 25% enrollment in mid April, 2025.
+All `r reached_25per_target` facility clusters have now reached the 25% enrollment milestone. Since each facility is expected to enroll a total of 148 perinatal women, this means every facility has enrolled at least 37 participants. Notably, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 25% enrollment in mid-April 2025.
 
-All `r reached_50per_target` facility clusters have reached the 50% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 74 participants. Notably, the first two clusters to achieve this benchmark were Nyalenda and Airport Health Centres, both of which reached 50% enrollment in early October, 2025.
+All `r reached_50per_target` facility clusters have reached the 50% enrollment milestone. At this stage, each facility has enrolled at least 74 participants. The first two clusters to achieve this benchmark were Nyalenda and Airport Health Centres, both of which reached 50% enrollment in early October 2025.
 
-`r reached_75per_target` facility clusters have reached the 75% enrollment milestone. Each facility is expected to enroll a total of 148 perinatal women, meaning that every facility has now enrolled at least 111 participants. Notably, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 75% enrollment in late November, 2025.
+All `r reached_75per_target` facility clusters have now reached the 75% enrollment milestone. This corresponds to at least 111 participants per facility. The first cluster to achieve this benchmark was again Nyalenda Health Centre, which reached 75% enrollment in late November 2025.
 
 ```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
 #shorten the names of the study sites
