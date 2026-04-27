@@ -423,8 +423,6 @@ decline_side_boxes <- consort_data %>%
 # Combine into character vector
 txt_decline <- unlist(decline_side_boxes)
 
-# 14d834c07edb977b556fed4c00a6c156b7d65458
-
 consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = txt_ass) |>
     add_split(txt = txt_arm) |>
@@ -438,7 +436,6 @@ consort_per <- add_box(txt = txt_anc) |>
     add_box(txt = counts_by_arm$txt_postpartum2)
 
 consort_per
-
 
 ## consort diagram without arm breaking--------
 # Total ANC attendees
