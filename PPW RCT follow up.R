@@ -422,7 +422,8 @@ outcomes <- outcomes %>%
     mutate(phq9_total = rowSums(select(., starts_with("phq_")& ends_with("_number")), na.rm = TRUE),
            gad7_total = rowSums(select(., starts_with("gad7_")& ends_with("_number")), na.rm = TRUE)) %>% 
     mutate(phq9_high = ifelse(phq9_total >= 10, "Yes", "No"),
-           gad7_high = ifelse(gad7_total >= 10, "Yes", "No"))
+           gad7_high = ifelse(gad7_total >= 10, "Yes", "No"),
+           phq9_item9 = ifelse(phq_dead_number > 0, "Yes", "No"))
 
 ## WHOQOL BREF ======
 outcomes <- outcomes %>%
@@ -596,7 +597,7 @@ outcomes <- outcomes %>%
                                levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months")))
 
 table3 <- outcomes %>%
-    select(visit_type, phq9_total, phq9_high, gad7_total, gad7_high,
+    select(visit_type, phq9_total, phq9_high, phq9_item9, gad7_total, gad7_high,
            qol_overall_scaled, qol_physical_scaled, qol_psycho_scaled,
            qol_social_scaled, qol_environ_scaled) %>%
     tbl_summary(
@@ -613,6 +614,7 @@ table3 <- outcomes %>%
         label = list(
             phq9_total ~ "PHQ-9 Total Score",
             phq9_high ~ "PHQ-9 High Score (>=10)",
+            phq9_item9 ~ "PHQ-9 item9 endorsement",
             gad7_total ~ "GAD-7 Total Score",
             gad7_high ~ "GAD-7 High Score (>=10)",
             qol_overall_scaled ~ "WHOQOL Overall Score (Scaled)",
@@ -642,7 +644,10 @@ table3 <- outcomes %>%
         subtitle = "Table 3. Mental Health & QOL Outcomes Across Visits") %>%
     gt::tab_options(
         table.font.size = "medium",
-        data_row.padding = gt::px(1))
+        data_row.padding = gt::px(1)) %>%
+    gt::tab_footnote(
+        footnote = "PHQ-9 item 9 endorsement at any visit prompts self-harm risk assessment and referral for psychosocial support. It is not classified as an adverse event at enrollment but is classified as an adverse event at follow-up visits.",
+        locations = gt::cells_title(groups = "title"))
 
 table3
 
