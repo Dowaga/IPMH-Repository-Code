@@ -806,12 +806,19 @@ arm_demo <- demographics_df %>%
 
 
 arm_demo %>% 
-    kable_styling(
-        font_size         = 10,
-        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
-        full_width        = FALSE,
-        position          = "center")%>%
-column_spec(1, width = "5cm")
+  kable_styling(
+    font_size         = 8,
+    bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+    full_width        = FALSE,
+    position          = "center",
+    latex_options     = "scale_down"
+  ) %>%
+  column_spec(1, width = "5cm") %>%
+  column_spec(2, width = "2.5cm") %>%
+  column_spec(3, width = "2.5cm") %>%
+  column_spec(4, width = "2.5cm") %>%
+  row_spec(0, bold = TRUE, font_size = 9)
+
    
 ```
 
@@ -861,13 +868,20 @@ arm_wlwh_demo <- demographics_df %>%
     caption  = "WLWH Demographic Summary",
         booktabs = TRUE)
 
-arm_wlwh_demo %>% 
-    kable_styling(
-        font_size         = 10,
-        bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
-        full_width        = FALSE,
-        position          = "center")%>%
-column_spec(1, width = "5cm")
+arm_wlwh_demo%>% 
+  kable_styling(
+    font_size         = 8,
+    bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+    full_width        = FALSE,
+    position          = "center",
+    latex_options     = "scale_down"
+  ) %>%
+  column_spec(1, width = "4.5cm") %>% 
+  column_spec(2, width = "1.2cm") %>% 
+  column_spec(3, width = "2.8cm") %>%
+  column_spec(4, width = "2.8cm") %>%
+  row_spec(0, bold = TRUE, font_size = 9)
+
 ```
 
 \newpage
@@ -1609,9 +1623,9 @@ final_table %>%
 ```
 
 \newpage
-### 9.2.1 List of Adverse Events: Control Arm
+### 9.2.1 List of Adverse Events: Intervention Arm
 
-```{r ArmX_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+```{r intervention_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 #--------------------------------------------
 # 1. Prepare AE dataset
 #--------------------------------------------
@@ -1722,16 +1736,14 @@ final_ae <- final_ae %>%
 #--------------------------------------------
 int_ae_summary <- final_ae %>%
   filter(arm_random == "Intervention (Randomized)") %>%
-    # To external analyst: Replace with arm for real data----
-  select(record_id, clt_study_site, ae_label, dem_age,
-         ae_dateonset, ae_datereport, reported_days) %>%
+    # To external analyst: Replace with Arm for real data----
+  select(record_id, clt_study_site, ae_label, 
+         dem_age, reported_days) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
   rename(
     PTID = record_id,
     `Study Site` = clt_study_site,
     `Adverse Event reported` = ae_label,
-    `Start date of adverse event` = ae_dateonset,
-    `Date Adverse Event was reported` = ae_datereport,
     `Age of participant` = dem_age,
     `Days from Onset to Report` = reported_days
   )
@@ -1745,31 +1757,37 @@ int_ae_summary %>%
     booktabs = TRUE
   ) %>% 
   kable_styling(
-    font_size = 9,
+    font_size = 8,
     latex_options = c("striped", "hold_position", "scale_down"),
     full_width = FALSE,
-    position = "left"
-  )
+    position = "center"
+  ) %>%
+  column_spec(1, width = "2cm") %>%
+  column_spec(2, width = "3cm") %>%
+  column_spec(3, width = "5cm") %>%
+  column_spec(4, width = "2cm") %>%
+  column_spec(5, width = "3cm") %>%
+  column_spec(6, width = "3cm") %>%
+  column_spec(7, width = "2.5cm") %>%
+  row_spec(0, bold = TRUE, font_size = 9)
+
 ```
 
 
 \newpage
-### 9.2.2 List of Adverse Events: Intervention Arm
+### 9.2.2 List of Adverse Events: Control Arm
 
-```{r ArmY_AEs, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 cont_ae_summary <- final_ae %>%
   filter(arm_random == "Control (Randomized)") %>%
     # To external analyst: Replace with arm for real data----
-  select(record_id, clt_study_site, ae_label,
-         dem_age, ae_dateonset, ae_datereport,
-         reported_days) %>%
+  select(record_id, clt_study_site, ae_label, 
+         dem_age, reported_days) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
   rename(
     PTID = record_id,
     `Study Site` = clt_study_site,
     `Adverse Event reported` = ae_label,
-    `Start date of adverse event` = ae_dateonset,
-    `Date Adverse Event was reported` = ae_datereport,
     `Age of participant` = dem_age,
     `Days from Onset to Report` = reported_days
   )
@@ -1779,13 +1797,20 @@ cont_ae_summary %>%
   kable(
     caption = "List of Study Adverse Events for Control",
     booktabs = TRUE
-  ) %>%
+  ) %>% 
   kable_styling(
-    font_size = 9,
+    font_size = 8,
     latex_options = c("striped", "hold_position", "scale_down"),
     full_width = FALSE,
     position = "center"
-  )
+  ) %>%
+  column_spec(1, width = "2cm") %>%
+  column_spec(2, width = "3cm") %>%
+  column_spec(3, width = "5cm") %>%
+  column_spec(4, width = "2cm") %>%
+  column_spec(5, width = "3cm") %>%
+  row_spec(0, bold = TRUE, font_size = 9)
+
 ```
 
 
