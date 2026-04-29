@@ -38,7 +38,6 @@ data_freeze <- as.Date("2026-04-23")
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
-
 ```
 
 
@@ -82,8 +81,8 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
           "Pregnant Kenyan women", 
           "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
           "2970, including 405 women living with HIV (WLWH)", 
-          "[place holder]",
-          "[place holder]",
+          "937",
+          "2272",
           "Follow-up through 6 months postpartum", 
           "September 19, 2023", 
           "February 17, 2025",
@@ -700,11 +699,12 @@ arm_ineligibility_summary <- consort_data %>%
         booktabs = TRUE
     ) %>%
     kable_styling(
-        font_size         = 10,
-        bootstrap_options = c("striped", "hover", "condensed"),
-        full_width        = FALSE,
-        position          = "center"
-    )
+    font_size = 10,
+    latex_options = c("striped", "scale_down", 
+                      "HOLD_position"),
+    full_width = FALSE,
+    position = "center"
+  )
 
 arm_ineligibility_summary
 ```
@@ -806,12 +806,12 @@ arm_demo <- demographics_df %>%
 
 
 arm_demo %>% 
-  kable_styling(
-    font_size         = 8,
-    bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
-    full_width        = FALSE,
-    position          = "center",
-    latex_options     = "scale_down"
+    kable_styling(
+    font_size = 8,
+    latex_options = c("striped", "scale_down", 
+                      "HOLD_position"),
+    full_width = FALSE,
+    position = "center"
   ) %>%
   column_spec(1, width = "5cm") %>%
   column_spec(2, width = "2.5cm") %>%
@@ -869,12 +869,12 @@ arm_wlwh_demo <- demographics_df %>%
         booktabs = TRUE)
 
 arm_wlwh_demo%>% 
-  kable_styling(
-    font_size         = 8,
-    bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
-    full_width        = FALSE,
-    position          = "center",
-    latex_options     = "scale_down"
+    kable_styling(
+    font_size = 8,
+    latex_options = c("striped", "scale_down", 
+                      "HOLD_position"),
+    full_width = FALSE,
+    position = "center"
   ) %>%
   column_spec(1, width = "4.5cm") %>% 
   column_spec(2, width = "1.2cm") %>% 
@@ -884,7 +884,6 @@ arm_wlwh_demo%>%
 
 ```
 
-\newpage
 
 # 6. Study Terminations
 
@@ -906,7 +905,7 @@ earliest_due <- first_6ths %>%
     pull(clt_date) 
 
 total_exits <- ppw_rct_df%>%
-    # Filter to "6 weeks" and grab the first per participant
+    # Filter to "6 months" and grab the first per participant
   filter(clt_visit == "6 months post-partum") %>%
     mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
            arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
@@ -950,13 +949,9 @@ completed_intervention <- total_exits %>%
 
 To date, no early terminations have been recorded aside from maternal death (see the adverse event section). However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`. Of which, `r completed_control` and `r completed_intervention` were from the control and intervention arm, respectively. 
 
-
 \newpage
-
 # 7. Referrals
-
 ## 7.1 Psychosocial Referrals
-
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 referral_df <- ppw_rct_df %>% 
     #filter(clt_visit == "Enrollment") %>% 
@@ -1048,9 +1043,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals.
 
 
-```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
-## generate report using data from psychosocial referrals form in REDCap  
-
+```{r referrals, results = 'asis', echo=FALSE, message=FALSE, warning=FALSE}
 # Referral by Arm
 group_var <- if (use_random) "arm_random" else "Arm"
 
@@ -1070,9 +1063,9 @@ arm_summary_tbl <- df_long %>%
 )
 
 
-
 control_label <- if (use_random) "Control (Randomized)" else "Control"
 intervention_label <- if (use_random) "Intervention (Randomized)" else "Intervention"
+
 
 arm_referral_summary <- arm_summary_tbl %>%
   mutate(
@@ -1098,6 +1091,7 @@ arm_referral_summary <- arm_summary_tbl %>%
     n_control = "Screened +",
     n_accepted_control = "Accepted",
     uptake_control = "Uptake (%)",
+
     n_intervention = "Screened +",
     n_accepted_intervention = "Accepted",
     uptake_intervention = "Uptake (%)"
@@ -1112,7 +1106,7 @@ arm_referral_summary <- arm_summary_tbl %>%
   ) %>%
   fmt_number(columns = starts_with("n_"), decimals = 0) %>%
   fmt_number(columns = starts_with("uptake"), decimals = 1) %>%
-  cols_align(align = "center", -Condition) %>%
+  cols_align(align = "center", columns = everything()) %>%
   tab_options(
     table.font.size = px(10),
     data_row.padding = px(2),
@@ -1120,12 +1114,11 @@ arm_referral_summary <- arm_summary_tbl %>%
   )
 
 arm_referral_summary
-
+    
 ```
 
 \newpage
 ## 7.2 Treatment Referrals
-
 ```{r treatment_referrals_numsource, echo=FALSE, message=FALSE, warning=FALSE}
 
 # Summarise ANC attendees and extract the sum as a numeric value
@@ -1370,13 +1363,13 @@ fidelity_summary <- fidelity_table %>%
   column_spec(6, width = "2cm")
 
 
-fidelity_summary %>% 
-    kable_styling(
+fidelity_summary %>% kable_styling(
     font_size = 9,
-    bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
+    latex_options = c("striped", "scale_down", 
+                      "HOLD_position"),
     full_width = FALSE,
     position = "center"
-  )%>%
+  ) %>%
   column_spec(1, width = "3cm")
 
 ```
@@ -1623,11 +1616,13 @@ sae_summary_arm <- sae_wide %>%
 
 
 sae_summary_arm %>% 
-    kable_styling(font_size         = 9,
-                  bootstrap_options = c("striped", "hover", "condensed", "scale_down"),
-                  full_width        = FALSE,
-                  position          = "center")
-
+    kable_styling(
+    font_size = 9,
+    latex_options = c("striped", "scale_down", 
+                      "HOLD_position"),
+    full_width = FALSE,
+    position = "center"
+  )
 ```
 
 \newpage
