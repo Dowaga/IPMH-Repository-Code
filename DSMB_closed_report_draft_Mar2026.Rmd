@@ -934,21 +934,21 @@ completed_follow_up <- total_exits %>%
     filter(clt_visit=="6 months post-partum") %>% 
     nrow()
 
-completed_follow_upX <- total_exits %>% 
+completed_control <- total_exits %>% 
     filter(arm_random == "Control (Randomized)") %>% 
     select(clt_ptid, clt_visit) %>% 
     filter(clt_visit=="6 months post-partum") %>%
     nrow()
     
-completed_follow_upY <- total_exits %>% 
-    filter(arm_random == "Intervention (Randomized)") %>% 
+completed_intervention <- total_exits %>% 
+    filter(arm_random == "Intervention (Randomized)") %>%
     select(clt_ptid, clt_visit) %>% 
     filter(clt_visit=="6 months post-partum") %>% 
     nrow()
 
 ```
 
-To date, we have not recorded any early terminations. However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`. Of which, `r completed_follow_upX` and `r completed_follow_upY` were from the control and intervention arm, respectively. 
+To date, no early terminations have been recorded aside from maternal death (see the adverse event section). However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`. Of which, `r completed_control` and `r completed_intervention` were from the control and intervention arm, respectively. 
 
 
 \newpage
@@ -958,23 +958,6 @@ To date, we have not recorded any early terminations. However, `r completed_foll
 ## 7.1 Psychosocial Referrals
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
-source("PPW RCT Referrals.R")
-
-total_visits <- referral_df %>%nrow()
-total_scr_num <- df_long %>% nrow()
-total_scr_per <- round(total_scr_num/total_visits *100, 1)
-total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
-total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
-
-```
-
-
-During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals.
-
-
-```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
-## generate report using data from psychosocial referrals form in REDCap  
-
 referral_df <- ppw_rct_df %>% 
     #filter(clt_visit == "Enrollment") %>% 
     select(record_id, clt_study_site, redcap_event_name, clt_visit, clt_date,starts_with("risk_"), 
@@ -1053,6 +1036,21 @@ df_long <- referral_df %>%
     mutate(accepted = if_else(referral_accept == "Yes", 1L, 0L))
 
 
+total_visits <- ppw_rct_df %>%nrow()
+total_scr_num <- df_long %>% nrow()
+total_scr_per <- round(total_scr_num/total_visits *100, 1)
+total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
+total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
+
+```
+
+
+During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals.
+
+
+```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
+## generate report using data from psychosocial referrals form in REDCap  
+
 # Referral by Arm
 group_var <- if (use_random) "arm_random" else "Arm"
 
@@ -1129,11 +1127,150 @@ arm_referral_summary
 ## 7.2 Treatment Referrals
 
 ```{r treatment_referrals_numsource, echo=FALSE, message=FALSE, warning=FALSE}
-source("Telepsychiatry Sessions.R")
+
 # Summarise ANC attendees and extract the sum as a numeric value
 Attendees <- daily_closeout_df %>%
     summarise(`anc attendees` = sum(rct_anc_number, na.rm = TRUE)) %>%
     pull(`anc attendees`)  # Extract the sum value as a number
+
+# PMAD Screening
+screened <- screening_consent_df %>% 
+    select(partipant_id, anc_num, study_site) %>% 
+    mutate(screened = "Yes")
+
+screened_pmad <- screened %>% 
+    nrow()
+
+# PM+ and Telepsychiatry Referrals
+pm_telep_df <- ppw_rct_df %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
+    select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
+    filter(!is.na(clt_date)) 
+
+# PM+ Session 5 abstractions
+pm_session5_df <- ppw_rct_df%>% 
+    filter(redcap_event_name == "PM+ Session 5 Abstraction (Arm 1: Intervention)") %>% 
+    select(record_id, clt_study_site, clt_date, starts_with("abs_"))
+
+
+# Define PHQ9 recoding
+phq9_labels <- c(
+    "not at all" = 0,
+    "several days" = 1,
+    "more than half the days" = 2,
+    "nearly every day" = 3
+)
+
+gad7_labels <-c(
+    "Not at all" = 0,
+    "Several days" = 1,
+    "Over half the days"= 2,
+    "Nearly every day" = 3)
+
+
+# Recode PHQ9 variables
+pm_telep_df <- pm_telep_df %>%
+    mutate(across(c(abs_phq_interest, abs_phq_down, abs_phq_sleep,
+                    abs_phq_tired, abs_phq_appetite, abs_phq_bad,
+                    abs_phq_concentrate, abs_phq_slow, abs_phq_dead), ~ recode(., !!!phq9_labels)),
+           across(c(abs_gad7_nerve, abs_gad7_uncontrol, 
+                    abs_gad7_worry, abs_gad7_relax, abs_gad7_restless,
+                    abs_gad7_annoyed, abs_gad7_afraid), ~ recode(., !!!gad7_labels)))
+
+
+
+pm_telep_df <- pm_telep_df %>% 
+    mutate(phq9_scores = rowSums(select(., abs_phq_interest, abs_phq_down,
+                                        abs_phq_sleep, abs_phq_tired, 
+                                        abs_phq_appetite, abs_phq_bad,
+                                        abs_phq_concentrate, abs_phq_slow, 
+                                        abs_phq_dead), na.rm = TRUE),
+           gad7_scores = rowSums(select(., abs_gad7_nerve, abs_gad7_uncontrol,
+                                        abs_gad7_worry, abs_gad7_relax, 
+                                        abs_gad7_restless, abs_gad7_annoyed,
+                                        abs_gad7_afraid), na.rm = TRUE))
+
+# Endorsed PHQ9 Question 9
+self_harm <- pm_telep_df %>% 
+    filter(abs_phq_dead > 0)
+
+pm_telep_df <- pm_telep_df %>% 
+    filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
+    mutate(
+        max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
+            eligible_for = case_when(
+                abs_phq_dead > 0 ~ "Telepsychiatry",
+                (max_score >= 10 & max_score < 15 &
+                     (max_score == phq9_scores | max_score == gad7_scores)) ~ "PM+",
+                max_score >= 15 ~ "Telepsychiatry",
+                TRUE ~ "Not Eligible"
+            ),
+            referred_to = case_when(
+                abs_gad7_ref_tele == "Yes" | abs_phq_ref_tele == "Yes" ~ "Telepsychiatry",
+                abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes" ~ "PM+",
+                TRUE ~ NA_character_
+            )
+        )
+# PM+ participants
+pm_plus_df <- pm_telep_df %>% 
+    filter(max_score >= 10 & max_score < 15) %>%
+    select(-max_score)  # Remove max_score if not needed
+
+pm_participants <- pm_plus_df %>% 
+    select(record_id, clt_study_site) %>% 
+    mutate(pm_plus = "Yes")
+
+PM_referrals <- pm_participants %>% 
+    nrow()
+
+#Telepsychiatry participants
+telepsych_dates <- telepsych %>%
+    mutate(tele_date = ymd(tele_date)) %>% 
+    select(tele_provider, tele_date, pt_attend, tele_ancid) %>% 
+    rename(Psychiatrist = tele_provider,
+           `Psychiatry Date` = tele_date,
+           `Participant Attened` = pt_attend)
+# ANC Check
+anc_number <- telepsych %>% 
+    select(record_id, tele_ancid)
+
+#Total Telepsychiatry participants
+telep_ids <-  anc_number %>%
+    #Offered telepyschaitry as treatment but not referred
+    filter(!tele_ancid == "07-2025-03-0092") %>%
+   distinct(tele_ancid)
+
+total_telep <- anc_number %>%
+    #Offered telepyschaitry as treatment but not referred
+    filter(!tele_ancid == "07-2025-03-0092") %>% 
+    summarise(total = n_distinct(tele_ancid)) %>%
+    pull(total)
+
+# Tele-psychiatry referrals
+telepsych_referrals <- pm_telep_df %>% 
+    filter((phq9_scores>=15)|(gad7_scores>=15)|(abs_phq_dead > 0 & abs_phq_ref_tele == "Yes"))
+
+tel_refer <- pm_telep_df %>% 
+    filter(abs_phq_ref_tele == "Yes" & referred_to == "PM+")
+
+telepsych_ids <- telepsych_referrals %>% 
+    select(clt_study_site, record_id) %>% 
+    mutate(tele = "Yes")
+
+consent_ids <- screening_consent_df %>% 
+    filter(rct_enrolling == "Yes") %>% 
+    select(anc_num, partipant_id)
+
+# Keep participants who were referred to telepsychiatry----
+telepsy_ancids <- right_join(
+    consent_ids,
+    telepsych_ids,
+    by = c("partipant_id" = "record_id")
+)
+
+telep_referrals <- telepsych_referrals %>% 
+    nrow()
+
 ```
 
 During this study period, `r Attendees` women attended MCH in the study clinics and were screened for PMAD symptoms, of whom `r screened_pmad` (`r round(screened_pmad / Attendees *100,1)`%) screened positive for PMAD. Among these, `r PM_referrals`(`r round (PM_referrals / screened_pmad *100,1)`%) had moderate symptoms in either PHQ9 or GAD7 and were referred to PM+, and `r telep_referrals` (`r round (telep_referrals / screened_pmad * 100,1)`%) had severe symptoms and were referred to a psychiatrist.
@@ -1146,13 +1283,6 @@ screened <- screening_consent_df %>%
     mutate(screened = "Yes")
 
 screened_pmad <- screened %>% 
-    nrow()
-
-pm_participants <- pm_plus_df %>% 
-    select(record_id, clt_study_site) %>% 
-    mutate(pm_plus = "Yes")
-
-PM_referrals <- pm_participants %>% 
     nrow()
 
 # Select distinct ptids in the PM+ Survey
@@ -1599,7 +1729,11 @@ ae_report_df <- ae_report_df %>%
 # ---- Wide format (arms as columns) ----
 ae_report_wide <- ae_report_df %>%
     select(Event, arm_random, Summary) %>% # To external analyst: Replace with arm for real data----
-    pivot_wider(names_from = arm_random, values_from = Summary)
+   pivot_wider(
+    names_from = arm_random,
+    values_from = Summary,
+    values_fill = "0 (0.0%)"
+  )
 
 # ---- Add totals per arm ----
 totals <- ae_report_df %>%
