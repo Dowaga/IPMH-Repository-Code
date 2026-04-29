@@ -12,6 +12,8 @@ always_allow_html: true
 ```{r setup, echo = F, include = F, warning = F}
 rm(list = ls())
 
+data_freeze <- as.Date("2026-04-23")
+
 # read data
 source("Datateam_ipmh.R")
 source("Dependencies.R")
@@ -654,8 +656,70 @@ sae_overall
 
 # Adverse Events(EAs)
 ```{r r sae_summary, echo=FALSE, message=FALSE, warning=FALSE}
+ae_df <- ppw_sae_df %>% 
+    select(record_id, redcap_repeat_instance, starts_with("ae_"), 
+           redcap_event_name) %>% 
+    filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))
 
-ae_report
+ae_define_map <- c(
+    ae_define___1  = "Kicked out of home",
+    ae_define___2  = "Experienced violence or abuse",
+    ae_define___3  = "Breach of Confidentiality",
+    ae_define___4  = "PHQ-9 item 9 endorsement",
+    ae_define___5  = "Persistent or significant psychosocial distress",
+    ae_define___6  = "Infant harm/behavior",
+    ae_define___99 = "Other"
+)
+
+# Social harm events (long format)
+ae_social_long <- ae_df %>%
+  filter(
+    ae_cat == "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)",
+    redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")
+  ) %>%
+  select(record_id, names(ae_define_map)) %>%
+  pivot_longer(
+    cols = names(ae_define_map),
+    names_to = "variable",
+    values_to = "checked"
+  ) %>%
+  filter(checked == "Checked") %>%
+  mutate(Event = ae_define_map[variable])
+
+# Injury events
+ae_injury_long <- ae_df %>%
+  filter(
+    ae_cat == "Injury",
+    redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")
+  ) %>%
+  mutate(Event = "Injury") %>%
+  select(record_id, Event)
+
+# Combine
+ae_long <- bind_rows(ae_social_long, ae_injury_long)
+
+ae_summary <- ae_long %>%
+  tbl_summary(
+    include = Event,
+    sort = list(all_categorical() ~ "frequency"), 
+    statistic = list(all_categorical() ~ "{n} ({p}%)"),
+    digits = list(all_categorical() ~ c(0, 1)),
+    label = list(Event ~ "Adverse Event Type"),
+    missing = "no"
+  ) %>%
+  add_n() %>%
+  modify_header(label ~ "**Adverse Event Type**") %>%
+  bold_labels() %>%
+  gtsummary::as_gt() %>%
+  gt::tab_source_note(
+    source_note = gt::md(
+      "*PHQ-9 item 9 endorsement at any visit prompts self-harm risk assessment and referral for psychosocial support. 
+      It is not classified as an adverse event at enrollment but is classified as an adverse event at follow-up visits 
+      (6 weeks, 14 weeks, and 6 months postpartum).*"
+    )
+  )
+
+ae_summary
 ```
 
 
