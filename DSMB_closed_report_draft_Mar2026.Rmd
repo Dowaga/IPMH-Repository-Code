@@ -13,6 +13,7 @@ header-includes:
  \usepackage{wrapfig}
  \floatplacement{figure}{H}
  \usepackage[normalem]{ulem}
+ \usepackage{float}
 output:
     pdf_document:
         latex_engine: xelatex
@@ -920,6 +921,7 @@ exits_arm <- total_exits %>%
         arm_random = sample(rep(c("Intervention (Randomized)",
                                   "Control (Randomized)"), each = 10))
     )
+
 # Assign exit_arm to total exits
 total_exits <- total_exits%>%
     left_join(exits_arm, by = "clt_study_site") %>%
@@ -934,13 +936,13 @@ completed_follow_up <- total_exits %>%
     nrow()
 
 completed_control <- total_exits %>% 
-    filter(arm_random == "Control (Randomized)") %>% 
+    filter(arm_group == "Control") %>% 
     select(clt_ptid, clt_visit) %>% 
     filter(clt_visit=="6 months post-partum") %>%
     nrow()
     
 completed_intervention <- total_exits %>% 
-    filter(arm_random == "Intervention (Randomized)") %>%
+    filter(arm_group == "Intervention") %>%
     select(clt_ptid, clt_visit) %>% 
     filter(clt_visit=="6 months post-partum") %>% 
     nrow()
@@ -949,7 +951,7 @@ completed_intervention <- total_exits %>%
 
 To date, no early terminations have been recorded aside from maternal death (see the adverse event section). However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`. Of which, `r completed_control` and `r completed_intervention` were from the control and intervention arm, respectively. 
 
-\newpage
+
 # 7. Referrals
 ## 7.1 Psychosocial Referrals
 ```{r message=FALSE, warning=FALSE, include=FALSE}
@@ -1031,7 +1033,11 @@ df_long <- referral_df %>%
     mutate(accepted = if_else(referral_accept == "Yes", 1L, 0L))
 
 
-total_visits <- ppw_rct_df %>%nrow()
+total_visits <- ppw_rct_df %>%
+  filter(!str_detect(redcap_event_name, "PM\\+ Session 5 Abstraction")) %>%
+  count() %>%
+  pull(n)
+
 total_scr_num <- df_long %>% nrow()
 total_scr_per <- round(total_scr_num/total_visits *100, 1)
 total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
@@ -1042,8 +1048,10 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 
 During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals.
 
+\newpage
+```{r referrals, Results = 'Asis', echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(fig.pos = "H")
 
-```{r referrals, results = 'asis', echo=FALSE, message=FALSE, warning=FALSE}
 # Referral by Arm
 group_var <- if (use_random) "arm_random" else "Arm"
 
