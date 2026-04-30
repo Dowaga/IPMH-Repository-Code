@@ -87,8 +87,8 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
           "Pregnant Kenyan women", 
           "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
           "2970, including 405 women living with HIV (WLWH)", 
-          "[place holder]",
-          "[place holder]",
+          "2272",
+          "937",
           "Follow-up through 6 months postpartum", 
           "September 19, 2023", 
           "February 17, 2025",
@@ -786,14 +786,19 @@ completed_follow_up <- total_exits %>%
    nrow()
 ```
 
-To date, no early terminations have been recorded aside from maternal death (see the adverse event section). However, `r completed_follow_up` participants have completed the study and exited at the scheduled end of follow-up. The first study exit occurred on `r earliest_due`.
+
+To date, no participants have been withdrawn early due to discharge decisions by either the participant or the PI. A total of `r completed_follow_up`937 participants have completed follow-up and exited the study at the scheduled endpoint. The first study exit occurred on `r earliest_due`. Two maternal deaths (N=2) were reported; details are provided in the adverse events section.
 
 # 7. Psychosocial Referrals
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 source("PPW RCT Referrals.R")
 
-total_visits <- referral_df %>%nrow()
+total_visits <- ppw_rct_df %>%
+  filter(!str_detect(redcap_event_name, "PM\\+ Session 5 Abstraction")) %>%
+  count() %>%
+  pull(n)
+
 total_scr_num <- df_long %>% nrow()
 total_scr_per <- round(total_scr_num/total_visits *100, 1)
 total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
@@ -932,7 +937,7 @@ total_hosp <- clean_sae_df %>%
    nrow()
 ```
 
-As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` was a prolonged hospitalization.
+As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` were a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
 sae_overall
