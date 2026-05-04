@@ -10,21 +10,42 @@ source("Dependencies.R")
 #source("REDCap_datapull.R")
 data_freeze <- as.Date("2026-04-30") 
 
+all_files <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))$info
+
+# Keep only relevant CSV files
+csv_files <- rownames(all_files)[
+    grepl("RCT_PPW_\\d{4}-\\d{2}-\\d{2}\\.csv$", rownames(all_files))
+]
+
+# Extract dates from filenames
+file_dates <- as.Date(
+    gsub(".*RCT_PPW_(\\d{4}-\\d{2}-\\d{2})\\.csv", "\\1", csv_files),
+    format = "%Y-%m-%d"
+)
+
+# Create a lookup table
+df <- data.frame(file = csv_files, date = file_dates)
+
 if (exists("data_freeze")) {
-    file_date <- format(as.Date(data_freeze), "%d %B %Y")  
-    latest <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
-    latest <- rownames(latest$info[which.max(latest$info$mtime),])
-    latest <- as.Date(gsub(".*RCT_PPW_(.+)\\.csv", "\\1", latest))  # extracts YYYY-MM-DD
     
-    file_date <- format(min(as.Date(data_freeze), latest), "%Y-%m-%d")  # keep YYYY-MM-DD
+    # Keep only files on/before freeze date
+    df <- df[df$date <= data_freeze, ]
+    
+    if (nrow(df) == 0) stop("No CSV files found on or before data_freeze")
+    
+    # Pick closest date to freeze
+    selected <- df[which.max(df$date), ]
+    
+    file_date <- format(selected$date, "%Y-%m-%d")
+    selected_file <- selected$file
+    
 } else {
-    file_date <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
-    file_date <- rownames(file_date$info[which.max(file_date$info$mtime),])
-    file_date <- gsub("^.*?_2","2",file_date)
-    file_date <- str_remove(file_date,".csv")
-    latest <- fileSnapshot(file.path(ipmh_filepath, "/Data/6. RCT PPW data/"))
-    latest <- rownames(latest$info[which.max(latest$info$mtime),])
-    file_date <- gsub(".*RCT_PPW_(.+)\\.csv", "\\1", latest)  # YYYY-MM-DD string
+    
+    # If no freeze, just pick latest by date (not mtime)
+    selected <- df[which.max(df$date), ]
+    
+    file_date <- format(selected$date, "%Y-%m-%d")
+    selected_file <- selected$file
 }
 
 rct_ppw_consenting <- read.csv(paste0(ipmh_filepath, "/Data/2. Consenting database/RCT_PPW_consenting_", 
@@ -54,3 +75,4 @@ telepsych <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/telepsych_"
 
 pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_", 
                                file_date, ".csv", sep=""))
+
