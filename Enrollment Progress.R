@@ -111,7 +111,7 @@ target_reached_50 <- total_enrollment %>%
 
 target_reached_75 <- total_enrollment %>%
     mutate(week = format(as.Date(week), "%b %d, %Y"))%>% 
-    filter(cumulative_enrollment >= 2229) %>%
+    filter(cumulative_enrollment >= 2228) %>%
     slice(1) %>%
     pull(week)
 
