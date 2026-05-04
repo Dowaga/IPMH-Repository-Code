@@ -47,16 +47,18 @@ mo_history <- mo_history %>%
                     med_dx_currentpreg___10, med_dx_currentpreg___2),
                   ~ recode(., !!!diagnosed_labels)))
 
+
 mo_history <- mo_history %>% 
     mutate(med_pastdiag_othrspec = case_when(
         str_detect(med_pastdiag_othrspec, "(?i)anemia|Anemia in pregnancy|Anaemia in pregnancy|
-                   Severe Anaemia|Savere Anaemia") ~ "Anaemia",
+                   Severe Anaemia|Savere Anaemia|Anaemia ") ~ "Anaemia",
         str_detect(med_pastdiag_othrspec, "(?i)asthmatic|Asthma|Pneumonia") ~ "Respiratory",
         str_detect(med_pastdiag_othrspec, "(?i)pneumonia and ulcers|Ulcers") ~ "Gastrointestinal",
         str_detect(med_pastdiag_othrspec, "(?i)Backache") ~ "Muskuloskeletal",
         str_detect(med_pastdiag_othrspec, "(?i)Bleeding during pregnancy") ~ "Obstetric",
         str_detect(med_pastdiag_othrspec, "(?i)Hepatitis|Hepatitis") ~ "Obstetric",
-        str_detect(med_pastdiag_othrspec, "(?i)UTI") ~ "Urinary Tract Infections",
+        str_detect(med_pastdiag_othrspec, "(?i)UTI|Urinary track infection") ~ "Urinary Tract Infections",
+        str_detect(med_pastdiag_othrspec, "Malaria") ~ "Malaria ",
         TRUE ~ med_pastdiag_othrspec  # Keep other values unchanged
     ),
     med_preg_multi = if_else(med_num_preg > 1, 1, 0),
@@ -73,7 +75,6 @@ mo_history <- mo_history %>%
         med_num_stillbirth %in% c(0, -2) ~ NA_real_,
         TRUE ~ med_num_stillbirth
     ))
-
 
 
 moh_summary <- mo_history %>% 
