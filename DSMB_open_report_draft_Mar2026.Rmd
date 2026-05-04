@@ -35,7 +35,7 @@ library(flextable)
 rm(list = ls())
 
 # Set up data freeze time for this report
-data_freeze <- as.Date("2026-04-23") 
+data_freeze <- as.Date("2026-04-30") 
 
 #data_freeze <- "2026-05-11"
 ##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. ##### 
@@ -87,7 +87,7 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
           "Pregnant Kenyan women", 
           "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
           "2970, including 405 women living with HIV (WLWH)", 
-          "2272",
+          "2319",
           "937",
           "Follow-up through 6 months postpartum", 
           "September 19, 2023", 
@@ -204,7 +204,7 @@ We hit our 50% enrollment target on `r target_reached_50`.
 We hit our 75% enrollment target on `r target_reached_75`.
 
 
-```{r enrollment_sub, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
+```{r enrollment_sub, fig.height=6, fig.width=13, message=FALSE, warning=FALSE, dpi=300}
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
  mutate(study_site = recode(study_site,
@@ -356,14 +356,13 @@ p1 <- ggplot(
       label = paste0("50% target reached\n", format(week, "%b %d, %Y"))
     ),
     vjust = -1,
-    size = 3.5,
+    size = 3,
     color = "black",
     fontface = "bold"
   ) +  # 75% TARGET POINT
     geom_point(
     data = target_reached_75,
     aes(x = week, y = cumulative_enrollment),
-    vjust = -1,
     color = "black",
     size = 3,
     shape = 21,
@@ -377,7 +376,7 @@ p1 <- ggplot(
       label = paste0("75% target reached\n", format(week, "%b %d, %Y"))
     ),
     vjust = -1,
-    size = 3.5,
+    size = 3,
     color = "black",
     fontface = "bold"
   ) +  # LABELS
@@ -401,6 +400,7 @@ p1 <- ggplot(
   ) +
   guides(color = guide_legend(ncol = 2)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+
 p1
 ```
 
@@ -437,7 +437,7 @@ All `r reached_50per_target` facility clusters have reached the 50% enrollment m
 
 All `r reached_75per_target` facility clusters have now reached the 75% enrollment milestone. This corresponds to at least 111 participants per facility. The first cluster to achieve this benchmark was again Nyalenda Health Centre, which reached 75% enrollment in late November 2025.
 
-```{r enrollment_sub_facility, echo=FALSE, fig.height=5, fig.width=8, message=FALSE, warning=FALSE, dpi=300}
+```{r enrollment_sub_facility, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, dpi=300}
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
  mutate(study_site = recode(study_site,
@@ -570,7 +570,7 @@ Recruitment of women living with HIV (WLWH) into the cohort continues to show st
 `r wlwh_milestones$reached_50` have achieved 50% (`r wlwh_target * 0.50` participants), 
 and all `r wlwh_milestones$reached_25` have achieved at least 25% (`r wlwh_target * 0.25` participants).
 
-```{r enrollment_mor, echo=FALSE, fig.height=5, fig.width=8, warning=FALSE, dpi=300}
+```{r enrollment_mor, echo=FALSE, fig.height=6, fig.width=10, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
 
 #shorten the names of the study sites
