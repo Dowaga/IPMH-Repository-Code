@@ -1,24 +1,26 @@
 ### Data Team Info ###
 
-da_users <- data.frame(Analyst = c("David Owaga", "Lincoln Pothan", "Yuwei Wang", "David OWaga", "Olivia Schultes"),
-                       github_user = c("Dowaga", "lpothan", "yuwei-eve", "Dowaga", "oschultes"),
+da_users <- data.frame(Analyst = c("David Owaga", "Lincoln Pothan", "Yuwei Wang", "David OWaga", "Olivia Schultes", "Wenwen Jiang"),
+                       github_user = c("Dowaga", "lpothan", "yuwei-eve", "Dowaga", "oschultes", "wwjiang209"),
                        git_filepath = c("C:/Program Files/Git/cmd/git.exe", 
                                         "/usr/local/bin/git", 
                                         "usr/local/bin/git", 
                                         "C:/Program Files/Git/cmd/git.exe",
-                                        "C:/Program Files/Git/cmd/git.exe"),
+                                        "C:/Program Files/Git/cmd/git.exe",
+                                        "usr/local/bin/git"),
                        ipmh_filepath = c("C:/Users/DAMARIS/UW/ngumbau - IPMH study", 
                                          "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/IPMH study",
                                          "/Users/yuweiwang_1997/Library/CloudStorage/OneDrive-UW/IPMH study",
                                          "C:/Users/hp/UW/ngumbau - IPMH study",
-                                         "C:/Users/Olivia Schultes/OneDrive - UW/ngumbau's files - IPMH study"),
-                       machinetype = c("PC", "Mac", "Mac", "PC", "PC"))
+                                         "C:/Users/Olivia Schultes/OneDrive - UW/ngumbau's files - IPMH study",
+                                         "/Users/Wenwenjiang/Library/CloudStorage/OneDrive-UW/IPMH study"),
+                       machinetype = c("PC", "Mac", "Mac", "PC", "PC", "Mac"))
 
 ### Defining OneDrive data filepath based on analyst ###
 current_wd <- getwd()
 
 if (grepl("DAMARIS", current_wd)) {
-  ipmh_filepath <- "C:/Users/hp/UW/ngumbau - IPMH study"
+    ipmh_filepath <- "C:/Users/hp/UW/ngumbau - IPMH study"
 } else if (grepl("Lincolnpothan", current_wd)) {
     ipmh_filepath <- "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/IPMH study"
 } else if (grepl("yuweiwang_1997", current_wd)) { 
@@ -27,14 +29,16 @@ if (grepl("DAMARIS", current_wd)) {
     ipmh_filepath <- "C:/Users/hp/UW/ngumbau - IPMH study"
 } else if (grepl("Olivia Schultes", current_wd)) {
     ipmh_filepath <- "C:/Users/Olivia Schultes/OneDrive - UW/ngumbau's files - IPMH study"
+} else if (grepl("Wenwen Jiang", current_wd)) {
+    ipmh_filepath <- "/Users/Wenwenjiang/Library/CloudStorage/OneDrive-UW/IPMH study"
 } else {
- print("No filepath")
+    print("No filepath")
 }
 
 ### Working Directory Check ###
 
 if(endsWith(current_wd, "IPMH-Repository-Code")) {ipmh_wd <- current_wd
 } else {
-  print("WARNING: Incorrect Working Directory")
+    print("WARNING: Incorrect Working Directory")
 } 
 
