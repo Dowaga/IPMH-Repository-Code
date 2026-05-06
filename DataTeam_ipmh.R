@@ -29,7 +29,7 @@ if (grepl("DAMARIS", current_wd)) {
     ipmh_filepath <- "C:/Users/hp/UW/ngumbau - IPMH study"
 } else if (grepl("Olivia Schultes", current_wd)) {
     ipmh_filepath <- "C:/Users/Olivia Schultes/OneDrive - UW/ngumbau's files - IPMH study"
-} else if (grepl("Wenwen Jiang", current_wd)) {
+} else if (grepl("Wenwenjiang", current_wd)) {
     ipmh_filepath <- "/Users/Wenwenjiang/Library/CloudStorage/OneDrive-UW/IPMH study"
 } else {
     print("No filepath")
