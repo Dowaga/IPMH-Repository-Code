@@ -221,8 +221,7 @@ clean_sae_df <- clean_sae_df %>%
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("hemorrhage|bleeding", ignore_case = TRUE)) ~ "Hemorrhage",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("fever|vomiting", ignore_case = TRUE)) ~ "Fever/Vomiting",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("congenital|malformation|birth defect|imperforate anus|hand anomaly", ignore_case = TRUE)) ~ "Congenital malformations / Birth defects",
-            (death_type == "Infant Death") & str_detect(ae_narrative, regex("without signs of active movements| nor did she cry at birth|no movements|did not cry|apnea at birth|stillborn", ignore_case = TRUE)) ~ "Birth asphyxia / Intrapartum hypoxia",
-            (death_type == "Infant Death") & str_detect(ae_narrative, regex("due to prolonged labour|well specialised care and admitted to the NBU", ignore_case = TRUE)) ~ "Birth asphyxia secondary to prolonged labor",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("no\\s*movement|did\\s*not\\s*cry|apnea at birth|stillborn|prolonged labour|NBU", ignore_case = TRUE)) ~ "Birth asphyxia / Intrapartum hypoxia",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("low birth weight|had a pre term birth", ignore_case = TRUE)) ~ "Prematurity",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("gestation period of 39 weeks at 4.00am", ignore_case = TRUE)) ~ "Still birth",
             (death_type == "Infant Death") ~ "Other / Unknown",
@@ -295,16 +294,15 @@ sae_summary <- sae_wide %>%
 
 sae_summary
 
-
 # Step 4: Summarize overall SAEs using tbl_summary----
 sae_overall <- sae_wide %>%
     tbl_summary(
         include = c(
             "Maternal Death ",
+            "maternal_cause_category",
             "Infant Death ",
             #"death_type",
             "infant_cause_category",
-            "maternal_cause_category",
             "Stillbirth ",
             "New/prolonged hospitalization "
         ),
@@ -323,6 +321,13 @@ sae_overall <- sae_wide %>%
         sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
     ) %>%
     bold_labels() %>%
+    # Indent Death Cause categories 
+    modify_table_styling(
+        columns = label,
+        rows = variable %in% c("maternal_cause_category", "infant_cause_category"),
+        indent = 2,
+        text_format = "italic"
+        ) %>% 
     add_n() %>%
     # convert from gtsummary object to gt object
     gtsummary::as_gt() %>%
@@ -333,7 +338,6 @@ sae_overall <- sae_wide %>%
         data_row.padding = gt::px(1)) %>%
     tab_options(
         table.font.size = px(14))
-
 
 sae_overall
 
