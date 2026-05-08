@@ -87,8 +87,8 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
           "Pregnant Kenyan women", 
           "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
           "2970, including 405 women living with HIV (WLWH)", 
-          "2319",
-          "937",
+          "2322",
+          "951",
           "Follow-up through 6 months postpartum", 
           "September 19, 2023", 
           "February 17, 2025",
@@ -204,7 +204,7 @@ We hit our 50% enrollment target on `r target_reached_50`.
 We hit our 75% enrollment target on `r target_reached_75`.
 
 
-```{r enrollment_sub, fig.height=6, fig.width=13, message=FALSE, warning=FALSE, dpi=300}
+```{r enrollment_sub, fig.height=6.5, fig.width=10.5, fig.align='center', message=FALSE, warning=FALSE, dpi=300}
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
  mutate(study_site = recode(study_site,
@@ -302,7 +302,7 @@ p1 <- ggplot(
   geom_line(
     data = target_25_line,
     aes(x = week, y = cumulative_enrollment),
-    color = "red",
+    color = "#0072B2",
     linewidth = 1,
     inherit.aes = FALSE
   ) +
@@ -326,7 +326,7 @@ p1 <- ggplot(
     color = "black",
     size = 3,
     shape = 21,
-    fill = "red"
+    fill = "#0072B2"
   ) +
   geom_text(
     data = target_reached,
@@ -381,27 +381,31 @@ p1 <- ggplot(
     fontface = "bold"
   ) +  # LABELS
    labs(
-    title = "Enrollment Trends",
-    x = "Date",
-    y = "Cumulative Enrollment",
-    color = "Study Site"
-  ) +  # THEME
-  theme_minimal(base_size = 12) +
+        title = "Cumulative Enrollment Over Time",
+        subtitle = "Progress toward enrollment targets",
+        x = "Date",
+        y = "Cumulative Enrollment",
+        color = "Study Site"
+    ) +  # THEME
+  theme_minimal(base_size = 14) +
   theme(
-    plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+    plot.title = element_text(face = "bold", size = 20, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
     axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
     legend.position = "right",
     legend.box = "vertical",
-    legend.title = element_text(face = "bold", size = 10),
-    legend.text = element_text(size = 9),
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 10),
     legend.key.height = unit(0.5, "cm"),
     legend.key.width = unit(0.5, "cm"),
-    plot.margin = margin(10, 10, 20, 10)
+    plot.margin = margin(20, 20, 20, 20)
   ) +
   guides(color = guide_legend(ncol = 2)) +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")+
+    coord_cartesian(clip = "off")
 
 p1
+
 ```
 
 \newpage
@@ -431,11 +435,8 @@ reached_75per_target <- weekly_enrollment %>%
  pull(n)
 ```
 
-All `r reached_25per_target` facility clusters have now reached the 25% enrollment milestone. Since each facility is expected to enroll a total of 148 perinatal women, this means every facility has enrolled at least 37 participants. Notably, the first cluster to achieve this benchmark was Nyalenda Health Centre, which reached 25% enrollment in mid-April 2025.
 
-All `r reached_50per_target` facility clusters have reached the 50% enrollment milestone. At this stage, each facility has enrolled at least 74 participants. The first two clusters to achieve this benchmark were Nyalenda and Airport Health Centres, both of which reached 50% enrollment in early October 2025.
-
-All `r reached_75per_target` facility clusters have now reached the 75% enrollment milestone. This corresponds to at least 111 participants per facility. The first cluster to achieve this benchmark was again Nyalenda Health Centre, which reached 75% enrollment in late November 2025.
+Enrollment progress across facility clusters has been steady and encouraging. As of May 8th 2025, `r reached_75per_target` facility clusters have successfully reached the 75% enrollment milestone, corresponding to at least 111 participants per facility out of the targeted 148 perinatal women. The first facility to achieve this benchmark was Nyalenda Health Centre, underscoring its consistent leadership in enrollment performance. This achievement reflects strong commitment across clusters and positions the study well toward full enrollment.
 
 ```{r enrollment_sub_facility, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, dpi=300}
 #shorten the names of the study sites
@@ -528,6 +529,7 @@ add_box(txt = txt_enrolled) |>
 ### 3.2.2 Enrollment Progress
 
 ```{r enrollment_hiv, echo=FALSE}
+source("Enrollment_WLWH.R")
 wlwh_target <- 20
 
 wlwh_milestones <- weekly_enrollment %>%
@@ -551,9 +553,9 @@ wlwh_timeline <- ppw_rct_df %>%
     clt_date = as.Date(clt_date),
     cumulative = row_number()
   )
-
 milestone_wlwh <- function(data, threshold, total_target) {
   data %>%
+    arrange(clt_date) %>%   # ensure ordering
     filter(cumulative >= round(total_target * threshold)) %>%
     slice(1) %>%
     select(clt_date, cumulative)
@@ -564,11 +566,9 @@ wlwh_50 <- milestone_wlwh(wlwh_timeline, 0.50, total_wlwh_target)
 wlwh_75 <- milestone_wlwh(wlwh_timeline, 0.75, total_wlwh_target)
 ```
 
-Recruitment of women living with HIV (WLWH) into the cohort continues to show steady improvement. We reached the 25% enrollment milestone for WLWH on May 27, 2025, the 50% enrollment milestone on Dec 03, 2026, and the 75% enrollment milestone on Mar 30, 2026. Out of the total enrollment target of about `r wlwh_target` WLWH per facility, 
-`r wlwh_milestones$reached_100` facilities have achieved 100% of their target, 
-`r wlwh_milestones$reached_75` have achieved 75% (`r wlwh_target * 0.75` participants), 
-`r wlwh_milestones$reached_50` have achieved 50% (`r wlwh_target * 0.50` participants), 
-and all `r wlwh_milestones$reached_25` have achieved at least 25% (`r wlwh_target * 0.25` participants).
+Recruitment of women living with HIV (WLWH) into the cohort continues to show steady improvement. We reached the 25% enrollment milestone for WLWH on May 27, 2025, the 50% enrollment milestone on Dec 03, 2025, and the 75% enrollment milestone on Mar 30, 2026. 
+Out of the total enrollment target of approximately `r wlwh_target` WLWH per facility, `r wlwh_milestones$reached_75` facilities have reached at least 75% of their target (`r wlwh_target * 0.75` participants), while `r wlwh_milestones$reached_100` facilities have fully achieved their target of `r wlwh_target` participants. This progress demonstrates strong momentum across clusters and positions the study well toward complete enrollment.
+
 
 ```{r enrollment_mor, echo=FALSE, fig.height=6, fig.width=10, warning=FALSE, dpi=300}
 source("Enrollment_WLWH.R")
@@ -673,15 +673,18 @@ source("PPW RCT Basic Demographics.R")
 basic_demo <- demographics_df %>%
     tbl_summary(
     sort = list(all_categorical() ~ "frequency"),  
-    include = c(dem_age, dem_current_partner, dem_maritalstat,
-                dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
-                dem_employment, dem_household_num, dem_housesleep, 
-                dem_houserooms, dem_traveltime_min, med_pre_preg),
+    include = c(dem_age, dem_current_partner_num, 
+                  dem_maritalstat_num, dem_marriage, 
+                  dem_pc_residence_num, dem_current_school, 
+                  dem_school, dem_employment, 
+                  dem_household_num, dem_housesleep, 
+                  dem_houserooms,dem_traveltime_min,
+                  med_pre_preg),
     label = list(dem_age ~ "Age (Years)",
-                 dem_current_partner ~ "Do you currently have a partner",
+                 dem_current_partner_num ~ "Do you currently have a partner",
                  dem_employment ~ "Do you have regular employment (Yes)",
-                 dem_maritalstat ~ "Currently Married (Yes)",
-                 dem_pc_residence ~ "Shares residence with partner",
+                 dem_maritalstat_num ~ "Currently Married (Yes)",
+                 dem_pc_residence_num ~ "Shares residence with partner",
                  dem_marriage ~ "Marriage (Monogamous)",
                  dem_current_school ~ "Currently in School",
                  dem_school ~ "Completed years in School",
@@ -787,7 +790,7 @@ completed_follow_up <- total_exits %>%
 ```
 
 
-To date, no participants have been withdrawn early due to discharge decisions by either the participant or the PI. A total of `r completed_follow_up`937 participants have completed follow-up and exited the study at the scheduled endpoint. The first study exit occurred on `r earliest_due`. Two maternal deaths (N=2) were reported; details are provided in the adverse events section.
+To date, no participants have been withdrawn early due to discharge decisions by either the participant or the PI. A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint. The first study exit occurred on `r earliest_due`. Two maternal deaths (N=2) were reported; details are provided in the adverse events section.
 
 # 7. Psychosocial Referrals
 
@@ -905,13 +908,17 @@ ae_report <- ae_report_df %>%
     )
 
 ae_report %>%
-    kableExtra::kable_styling(
-        latex_options = c("HOLD_position", "scale_down")
-    ) %>%
-    kableExtra::row_spec(0, bold = TRUE) %>%                          # bold header
-    kableExtra::row_spec(nrow(ae_report_df) + 1, bold = TRUE) %>%    # bold Total row
-    kableExtra::footnote(general = "n (%)",
-                         footnote_as_chunk = T)
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down")
+  ) %>%
+  kableExtra::row_spec(0, bold = TRUE) %>%                          # bold header
+  kableExtra::row_spec(nrow(ae_report_df) + 1, bold = TRUE) %>%    # bold Total row
+  kableExtra::footnote(
+    general = "n (%)",
+    symbol = "Persistent or significant psychosocial distress is defined as PHQ-9 score ???10 at any follow-up visit.",
+    footnote_as_chunk = TRUE
+  )
+
 ```
 
 ## 9.2 Severe Adverse Event Summary
