@@ -21,20 +21,23 @@ demographics_df <- ppw_rct_df %>%
         floor(time_length(interval(dem_dob, clt_date), "years")),
         dem_age
     ),
-    # dem_current_partner = recode(dem_current_partner,
-    #                              "Yes" = 1,
-    #                              "No" = 0,
-    #                              ),
-    dem_maritalstat = ifelse(dem_maritalstat == "Currently married", 1, 0),
-    dem_marriage = ifelse(dem_marriage == "Monogamous", 1, 
-                          ifelse(is.na(dem_marriage), NA, 0)),
+    dem_current_partner_num = ifelse(dem_current_partner == "Yes", 1, 0),
+    dem_maritalstat_num = dplyr::case_when(
+        dem_maritalstat == "Currently married"~ 1,
+        dem_maritalstat %in% c("Prefer not to answer", NA) ~ NA_real_,
+        TRUE ~ 0),
+    dem_marriage = dplyr::case_when(
+        dem_marriage == "Monogamous" ~ 1,
+        dem_marriage %in% c("Prefer not to answer", NA) ~ NA_real_,
+        TRUE ~ 0),
     dem_employment = recode(dem_employment,
                             `Prefer not to answer` = "Yes"),
-    dem_pc_residence = recode(dem_pc_residence,
-                              "Yes (Ndio) [Kamano]" = "Yes",
-                              "No (La) [Ooyo]" = "No",
-                              "Prefer not to answer (Singependa kujibu) [Ok daher mar duoko penjo ni]" = "Prefer not to answer")
-    )%>%
+    dem_pc_residence_num = dplyr::case_when(
+        dem_pc_residence == "Yes (Ndio) [Kamano]" ~ 1,
+        dem_pc_residence == "No (La) [Ooyo]" ~ 0,
+        dem_pc_residence == "Prefer not to answer (Singependa kujibu) [Ok daher mar duoko penjo ni]" ~ 0,
+        TRUE ~ NA_real_
+    ))%>%
     mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
            arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
                               "Control", "Intervention"))
@@ -43,15 +46,18 @@ demographics_df <- ppw_rct_df %>%
 basic_demo <- demographics_df %>%
     tbl_summary(
     sort = list(all_categorical() ~ "frequency"),  
-    include=c(dem_age, dem_current_partner, dem_maritalstat,
-              dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
-              dem_employment, dem_household_num, dem_housesleep, 
-              dem_houserooms,dem_traveltime_min, med_pre_preg),
+    include=c(dem_age, dem_current_partner_num, 
+              dem_maritalstat_num, dem_marriage, 
+              dem_pc_residence_num, dem_current_school, 
+              dem_school, dem_employment, 
+              dem_household_num, dem_housesleep, 
+              dem_houserooms,dem_traveltime_min,
+              med_pre_preg),
     label = list(dem_age ~ "Age (Years)",
-                 dem_current_partner ~ "Do you currently have a partner",
+                 dem_current_partner_num ~ "Do you currently have a partner",
                  dem_employment ~ "Do you have regular employment (Yes)",
-                 dem_maritalstat ~ "Currently Married (Yes)",
-                 dem_pc_residence ~ "Shares residence with partner",
+                 dem_maritalstat_num ~ "Currently Married (Yes)",
+                 dem_pc_residence_num ~ "Shares residence with partner",
                  dem_marriage ~ "Marriage (Monogamous)",
                  dem_current_school ~ "Currently in School",
                  dem_school ~ "Completed years in School",
