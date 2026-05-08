@@ -82,8 +82,8 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
           "Pregnant Kenyan women", 
           "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
           "2970, including 405 women living with HIV (WLWH)", 
-          "937",
-          "2272",
+          "2322",
+          "951",
           "Follow-up through 6 months postpartum", 
           "September 19, 2023", 
           "February 17, 2025",
@@ -213,16 +213,16 @@ facility_arms <- consort_data %>%
     distinct(facility) %>%
     arrange(facility) %>%
     mutate(
-        arm_random = sample(rep(c("Intervention (Randomized)",
-                                  "Control (Randomized)"), each = 10))
+        arm_random = sample(rep(c("Arm X",
+                                  "Arm Y"), each = 10))
     )
 
 consort_data <- consort_data %>%
     left_join(facility_arms, by = "facility") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control (Randomized)",
-                                       "Intervention (Randomized)"))
+                            levels = c("Arm Y",
+                                       "Arm X"))
     )
 
 # NOTE FOR WENWEN: Replace all arm_random with arm in the consort diagram chunk below to switch from dummy to real arm assignment.
@@ -415,16 +415,16 @@ facility_arms <- weekly_enrollment %>%
     distinct(study_site) %>%
     arrange(study_site) %>%
     mutate(
-        arm_random = sample(rep(c("Intervention (Randomized)",
-                                  "Control (Randomized)"), each = 10))
+        arm_random = sample(rep(c("Arm X",
+                                  "Arm Y"), each = 10))
     )
 
 weekly_enrollment <- weekly_enrollment %>%
     left_join(facility_arms, by = "study_site") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control (Randomized)",
-                                       "Intervention (Randomized)"))
+                            levels = c("Arm Y",
+                                       "Arm X"))
     )
 
 # NOTE FOR WENWEN: Replace arm_random with arm_group throughout the plot chunk
@@ -526,7 +526,7 @@ reached_75per_target <- weekly_enrollment %>%
   pull(n)
 ```
 
-All `r reached_25per_target` facilities have surpassed our first enrollment milestone, with more than 37 perinatal women enrolled per facility cluster - exceeding 25% of the overall target enrollment. All `r reached_50per_target` facilities have surpassed the 50% target of 74 enrollments, and `r reached_75per_target` facilities have surpassed the 75% target of 111 enrollments.
+All `r reached_50per_target` facilities have surpassed the 50% enrollment milestone, each enrolling at least 74 perinatal women. Progress has continued steadily, with `r reached_75per_target` facilities surpassing the 75% milestone (???111 enrollments), demonstrating strong momentum toward full recruitment.
 
 ```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
 # NOTE FOR WENWEN: Replace arm_random with arm_group in this plot chunk
@@ -694,7 +694,7 @@ arm_ineligibility_summary <- consort_data %>%
         label   = list(exclusion ~ "Reasons for Ineligibility")
     ) %>%
     bold_labels() %>%
-    add_overall() %>%
+    add_overall(last = TRUE) %>%
     as_kable_extra(
         caption  = "Summary of Study Ineligibility by Arm",
         booktabs = TRUE
@@ -729,22 +729,25 @@ demographics_df <- ppw_rct_df %>%
     mutate(dem_age = if_else(
         dem_dob_uk == "Yes",
         floor(time_length(interval(dem_dob, clt_date), "years")),
-        dem_age
-    ),
-    # dem_current_partner = recode(dem_current_partner,
-    #                              "Yes" = 1,
-    #                              "No" = 0,
-    #                              ),
-    dem_maritalstat = ifelse(dem_maritalstat == "Currently married", 1, 0),
-    dem_marriage = ifelse(dem_marriage == "Monogamous", 1, 
-                          ifelse(is.na(dem_marriage), NA, 0)),
+        dem_age),
+        dem_current_partner_num = ifelse(dem_current_partner == "Yes", 1, 0),
+    dem_maritalstat_num = dplyr::case_when(
+        dem_maritalstat == "Currently married"~ 1,
+        dem_maritalstat %in% c("Prefer not to answer", NA) ~ NA_real_,
+        TRUE ~ 0),
+    dem_marriage = dplyr::case_when(
+        dem_marriage == "Monogamous" ~ 1,
+        dem_marriage %in% c("Prefer not to answer", NA) ~ NA_real_,
+        TRUE ~ 0),
     dem_employment = recode(dem_employment,
                             `Prefer not to answer` = "Yes"),
-    dem_pc_residence = recode(dem_pc_residence,
-                              "Yes (Ndio) [Kamano]" = "Yes",
-                              "No (La) [Ooyo]" = "No",
-                              "Prefer not to answer (Singependa kujibu) [Ok daher mar duoko penjo ni]" = "Prefer not to answer")
-    )%>%
+    dem_pc_residence_num = dplyr::case_when(
+  dem_pc_residence == "Yes (Ndio) [Kamano]" ~ 1,
+  dem_pc_residence == "No (La) [Ooyo]" ~ 0,
+  dem_pc_residence == "Prefer not to answer (Singependa kujibu) [Ok daher mar duoko penjo ni]" ~ 0,
+  TRUE ~ NA_real_
+)
+)%>%
     mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
            arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
                               "Control", "Intervention"))
@@ -754,30 +757,33 @@ demographic_arms <- demographics_df %>%
     distinct(clt_study_site) %>%
     arrange(clt_study_site) %>%
     mutate(
-        arm_random = sample(rep(c("Intervention (Randomized)",
-                                  "Control (Randomized)"), each = 10))
+        arm_random = sample(rep(c("Arm X",
+                                  "Arm Y"), each = 10))
     )
 
 demographics_df <- demographics_df %>%
     left_join(demographic_arms, by = "clt_study_site") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control (Randomized)",
-                                       "Intervention (Randomized)"))
+                            levels = c("Arm Y",
+                                       "Arm X"))
     )
 
 arm_demo <- demographics_df %>%
     tbl_summary(by = arm_random, 
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
-        include=c(dem_age, dem_current_partner, dem_maritalstat,
-                  dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
-                  dem_employment, dem_household_num, dem_housesleep, 
-                  dem_houserooms,dem_traveltime_min, med_pre_preg),
+        include=c(dem_age, dem_current_partner_num, 
+                  dem_maritalstat_num, dem_marriage, 
+                  dem_pc_residence_num, dem_current_school, 
+                  dem_school, dem_employment, 
+                  dem_household_num, dem_housesleep, 
+                  dem_houserooms,dem_traveltime_min,
+                  med_pre_preg),
         label = list(dem_age ~ "Age (Years)",
-                     dem_current_partner ~ "Do you currently have a partner",
+                     dem_current_partner_num ~ "Do you currently have a partner (Yes)",
                      dem_employment ~ "Do you have regular employment (Yes)",
-                     dem_maritalstat ~ "Currently Married (Yes)",
-                     dem_pc_residence ~ "Shares residence with partner (Yes)",
+                     dem_maritalstat_num ~ "Currently Married (Yes)",
+                     dem_pc_residence_num ~ "Shares residence with partner (Yes)",
                      dem_marriage ~ "Marriage (Monogamous)",
                      dem_current_school ~ "Currently in School",
                      dem_school ~ "Completed years in School",
@@ -918,8 +924,8 @@ exits_arm <- total_exits %>%
     distinct(clt_study_site) %>%
     arrange(clt_study_site) %>%
     mutate(
-        arm_random = sample(rep(c("Intervention (Randomized)",
-                                  "Control (Randomized)"), each = 10))
+        arm_random = sample(rep(c("Arm X",
+                                  "Arm Y"), each = 10))
     )
 
 # Assign exit_arm to total exits
@@ -927,8 +933,8 @@ total_exits <- total_exits%>%
     left_join(exits_arm, by = "clt_study_site") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control (Randomized)",
-                                       "Intervention (Randomized)"))
+                            levels = c("Arm Y",
+                                       "Arm X"))
     )
 
 completed_follow_up <- total_exits %>% 
@@ -1002,7 +1008,7 @@ referral_df <- ppw_rct_df %>%
 # introduce radnomized arm for blinding
     mutate(
     arm_random = sample(
-      rep(c("control (Randomized)", "intervention (Randomized)"), length.out = n())
+      rep(c("Arm X", "Arm Y"), length.out = n())
     )
   )
     
@@ -1016,22 +1022,20 @@ condition_labels <- tribble(
 )
 
 # 2. Pivot longer & flag accepted
-use_random <- TRUE # To external analyst; Replace with FALSE for real data---- 
 
+use_random <- TRUE   #To external analyst set to FALSE for Real Data----
+arm_var <- if (use_random) "arm_random" else "Arm"
+
+# df_long----
 df_long <- referral_df %>%
-    # keep only the risk_* + referral_accept columns you need
-    select(record_id, arm_random, starts_with("screened_"), referral_accept)%>%
-    # To external analyst replace arm_random with Arm for real data---- 
-    pivot_longer(
-        cols      = starts_with("screened_"),
-        names_to  = "risk_col",
-        values_to = "screened_pos"
-    ) %>%
-    # only those who screened positive
-    filter(screened_pos == 1) %>%
-    # mark who accepted referral
-    mutate(accepted = if_else(referral_accept == "Yes", 1L, 0L))
-
+  select(record_id, all_of(arm_var), starts_with("screened_"), referral_accept) %>%
+  pivot_longer(
+    cols = starts_with("screened_"),
+    names_to = "risk_col",
+    values_to = "screened_pos"
+  ) %>%
+  filter(screened_pos == 1) %>%
+  mutate(accepted = if_else(referral_accept == "Yes", 1L, 0L))
 
 total_visits <- ppw_rct_df %>%
   filter(!str_detect(redcap_event_name, "PM\\+ Session 5 Abstraction")) %>%
@@ -1052,77 +1056,99 @@ During enrollment and follow-up visits participants are asked if they would like
 ```{r referrals, Results = 'Asis', echo=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(fig.pos = "H")
 
-# Referral by Arm
-group_var <- if (use_random) "arm_random" else "Arm"
+# Function to build GT referral table ---
+build_gt_referral_table <- function(df_long, use_random = TRUE) {
+  #To external analysts set to FALSE for real data----
+  group_var <- if (use_random) "arm_random" else "Arm"
+  
+  # 1. standardise grouping
+  df_long <- df_long %>%
+    mutate(group = .data[[group_var]])
+  
+  # 2. summary
+  arm_summary <- df_long %>%
+    group_by(risk_col, group) %>%
+    summarise(
+      n = n(),
+      n_accepted = sum(accepted, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    left_join(condition_labels, by = "risk_col")
+  
+  # 3. harmonise arm names
+  arm_summary <- arm_summary %>%
+    mutate(arm_clean = case_when(
+      str_detect(group, regex("control|Y", ignore_case = TRUE)) ~ "control",
+      str_detect(group, regex("intervention|X", ignore_case = TRUE)) ~ "intervention",
+      TRUE ~ as.character(group)
+    ))
+  
+  # 4. reshape wide
+  wide <- arm_summary %>%
+    select(Condition, arm_clean, n, n_accepted) %>%
+    pivot_wider(
+      names_from = arm_clean,
+      values_from = c(n, n_accepted),
+      values_fill = 0
+    )
+  
+  # 5. compute uptake safely
+  wide <- wide %>%
+    mutate(
+      uptake_control = if_else(n_control > 0,
+                               n_accepted_control / n_control * 100, 0),
+      uptake_intervention = if_else(n_intervention > 0,
+                                    n_accepted_intervention / n_intervention * 100, 0)
+    )
+  
+  # 6. labels
+  control_label <- if (use_random) "Arm Y" else "Control"
+  intervention_label <- if (use_random) "Arm X" else "Intervention"
+  
+  title_text <- if (use_random) {
+    "Referral Uptake by Randomized Arm (Blinded)"
+  } else {
+    "Referral Uptake by Study Arm"
+  }
+  
+  # 7. GT table
+  gt_tbl <- wide %>%
+    gt() %>%
+    tab_header(title = title_text) %>%
+    cols_label(
+      Condition = "Condition",
+      n_control = "Screened +",
+      n_accepted_control = "Accepted",
+      uptake_control = "Uptake (%)",
+      n_intervention = "Screened +",
+      n_accepted_intervention = "Accepted",
+      uptake_intervention = "Uptake (%)"
+    ) %>%
+    tab_spanner(
+      label = control_label,
+      columns = c(n_control, n_accepted_control, uptake_control)
+    ) %>%
+    tab_spanner(
+      label = intervention_label,
+      columns = c(n_intervention, n_accepted_intervention, uptake_intervention)
+    ) %>%
+    fmt_number(columns = starts_with("n_"), decimals = 0) %>%
+    fmt_number(columns = starts_with("uptake"), decimals = 1) %>%
+    cols_align(align = "center", columns = everything()) %>%
+    tab_options(
+      table.font.size = px(10),
+      data_row.padding = px(2),
+      table.width = pct(100)
+    )
+  
+  return(gt_tbl)
+}
 
-arm_summary_tbl <- df_long %>%
-  group_by(risk_col, .data[[group_var]]) %>%
-  reframe(
-    n = n(),
-    n_accepted = sum(accepted, na.rm = TRUE)
-  ) %>%
-  ungroup() %>%
-  left_join(condition_labels, by = "risk_col") %>%
-  mutate(
-  arm_clean = case_when(
-    str_detect(.data[[group_var]], regex("control", ignore_case = TRUE)) ~ "control",
-    str_detect(.data[[group_var]], regex("intervention", ignore_case = TRUE)) ~ "intervention"
-  )
-)
+# --- 4. Call the function ---
+arm_referral_summary <- build_gt_referral_table(df_long, use_random = use_random)
 
+arm_referral_summary 
 
-control_label <- if (use_random) "Control (Randomized)" else "Control"
-intervention_label <- if (use_random) "Intervention (Randomized)" else "Intervention"
-
-
-arm_referral_summary <- arm_summary_tbl %>%
-  mutate(
-    uptake = if_else(n > 0, (n_accepted / n) * 100, 0)
-  ) %>%
-  select(Condition, arm_clean, n, n_accepted, uptake) %>%
-  pivot_wider(
-    names_from = arm_clean,
-    values_from = c(n, n_accepted, uptake),
-    names_glue = "{.value}_{arm_clean}",
-    values_fill = 0
-  ) %>%
-  gt() %>%
-  tab_header(
-    title = if (use_random) 
-      "Referral Uptake by Randomized Arm (Blinded)" 
-    else 
-      "Referral Uptake by Study Arm"
-  ) %>%
-  cols_label(
-    Condition = "Condition",
-
-    n_control = "Screened +",
-    n_accepted_control = "Accepted",
-    uptake_control = "Uptake (%)",
-
-    n_intervention = "Screened +",
-    n_accepted_intervention = "Accepted",
-    uptake_intervention = "Uptake (%)"
-  ) %>%
-  tab_spanner(
-    label = control_label,
-    columns = c(n_control, n_accepted_control, uptake_control)
-  ) %>%
-  tab_spanner(
-    label = intervention_label,
-    columns = c(n_intervention, n_accepted_intervention, uptake_intervention)
-  ) %>%
-  fmt_number(columns = starts_with("n_"), decimals = 0) %>%
-  fmt_number(columns = starts_with("uptake"), decimals = 1) %>%
-  cols_align(align = "center", columns = everything()) %>%
-  tab_options(
-    table.font.size = px(10),
-    data_row.padding = px(2),
-    table.width = pct(100)
-  )
-
-arm_referral_summary
-    
 ```
 
 \newpage
@@ -1409,7 +1435,7 @@ arm_ids <- ppw_rct_df %>%
   arrange(clt_ptid) %>%
   mutate(
     arm_random = sample(
-      rep(c("Control (Randomized)", "Intervention (Randomized)"), length.out = n())
+      rep(c("Arm Y", "Arm X"), length.out = n())
     )
   )
 
@@ -1499,10 +1525,8 @@ sae_arm <- clean_sae_df %>%
   arrange(redcap_event_name) %>%
   mutate(
     arm_random = sample(
-      c("Intervention (Randomized)",
-        "Control (Randomized)"),
-      size = n(),
-      replace = TRUE
+      rep(c("Arm X", "Arm Y"), 
+          length.out = n())
     )
   )
 
@@ -1516,8 +1540,8 @@ clean_sae_df <- clean_sae_df %>%
     left_join(sae_arm, by = "redcap_event_name") %>%
     mutate(
         arm_random = factor(arm_random,
-                            levels = c("Control (Randomized)",
-                                       "Intervention (Randomized)"))
+                            levels = c("Arm Y",
+                                       "Arm X"))
     ) %>% 
     mutate(
         death_type = case_when(
@@ -1646,15 +1670,11 @@ ae_df <- ppw_sae_df %>%
             grepl("6 Months", redcap_event_name) ~ "6 Months",
             TRUE ~ NA_character_
         ),
-        arm = case_when(
-            grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
-            grepl("Arm 2: Control", redcap_event_name) ~ "Control",
-            TRUE ~ "Unknown"
-        ))%>% 
+        Arm = sub(".*Arm [0-9]: (.*)\\)", "\\1", redcap_event_name))%>% 
     filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))%>% 
     select(record_id, redcap_repeat_instance, 
            visit_type, redcap_event_name, 
-           starts_with("ae_"),arm ) 
+           starts_with("ae_"),Arm ) 
 
 ae_define_map <- c(
     ae_define___1  = "Kicked out of home",
@@ -1675,21 +1695,15 @@ ae_arm <- ae_df %>%
   arrange(record_id) %>%
   mutate(
     arm_random = sample(
-      c("Intervention (Randomized)",
-        "Control (Randomized)"),
-      size = n(),
-      replace = TRUE
+      rep(c("Arm X", "Arm Y"),
+          length.out = n())
     )
   )
 
-# Assign sae_arm to clean saes
+
+# Join random arms
 ae_df <- ae_df %>% 
-    left_join(ae_arm, by = "record_id") %>%
-    mutate(
-        arm_random = factor(arm_random,
-                            levels = c("Control (Randomized)",
-                                       "Intervention (Randomized)"))
-    )
+    left_join(ae_arm, by = "record_id")
 
 # ---- Social harms ----
 ae_social_summary <- ae_df %>%
@@ -1711,13 +1725,13 @@ ae_social_summary <- ae_df %>%
 ae_injury_summary <- ae_df %>%
     filter(ae_cat == "Injury") %>%
     filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
-    group_by(arm_random, Event = ae_cat) %>% # To external analyst: Replace with arm for real data----
+    group_by(arm_random, Event = ae_cat) %>% # To external analyst: Replace with Arm for real data----
     summarise(`Number of Events` = n(), .groups = "drop")
 
 # ---- Combine ----
 ae_report_df <- bind_rows(ae_injury_summary, ae_social_summary)
 
-# ---- Add percentages within arm ----
+# ---- Add percentages within arms ----
 ae_report_df <- ae_report_df %>%
     group_by(arm_random) %>%
     mutate(
@@ -1731,7 +1745,7 @@ ae_report_df <- ae_report_df %>%
 
 # ---- Wide format (arms as columns) ----
 ae_report_wide <- ae_report_df %>%
-    select(Event, arm_random, Summary) %>% # To external analyst: Replace with arm for real data----
+    select(Event, arm_random, Summary) %>% # To external analyst: Replace with Arm for real data----
    pivot_wider(
     names_from = arm_random,
     values_from = Summary,
@@ -1819,21 +1833,22 @@ ae_arm <- final_ae %>%
   arrange(redcap_event_name) %>%
   mutate(
     arm_random = sample(
-      c("Intervention (Randomized)",
-        "Control (Randomized)"),
-      size = n(),
-      replace = TRUE
+      rep(c("Arm X", "Arm Y"),
+          length.out = n())
     )
   )
+
+# Join random arms
+final_ae <- final_ae %>% 
+    left_join(ae_arm, by = "redcap_event_name")
 
 #--------------------------------------------
 # 7. Attach arm + clean AE category
 #--------------------------------------------
 final_ae <- final_ae %>%
-  mutate(
-    Arm = str_extract(redcap_event_name, "(?<=Arm \\d: ).*")
+    mutate(
+    Arm = str_extract(redcap_event_name, "(?<=Arm \\d: )[^)]+")
   ) %>%
-  left_join(ae_arm, by = "redcap_event_name") %>%
   mutate(
     ae_cat = forcats::fct_recode(
       ae_cat,
@@ -1871,8 +1886,9 @@ final_ae <- final_ae %>%
 #--------------------------------------------
 # 10. Intervention AE summary
 #--------------------------------------------
+
 int_ae_summary <- final_ae %>%
-  filter(arm_random == "Intervention (Randomized)") %>%
+  filter(arm_random == "Arm X") %>%
     # To external analyst: Replace with Arm for real data----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days) %>%
@@ -1890,9 +1906,9 @@ int_ae_summary <- final_ae %>%
 #--------------------------------------------
 int_ae_summary %>%
   kable(
-    caption = "List of Study Adverse Events for Intervention",
+    caption = "List of Study Adverse Events for Arm X",
     booktabs = TRUE
-  ) %>% 
+  ) %>%
   kable_styling(
     font_size = 8,
     latex_options = c("striped", "hold_position", "scale_down"),
@@ -1904,8 +1920,6 @@ int_ae_summary %>%
   column_spec(3, width = "5cm") %>%
   column_spec(4, width = "2cm") %>%
   column_spec(5, width = "3cm") %>%
-  column_spec(6, width = "3cm") %>%
-  column_spec(7, width = "2.5cm") %>%
   row_spec(0, bold = TRUE, font_size = 9)
 
 ```
@@ -1916,7 +1930,7 @@ int_ae_summary %>%
 
 ```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 cont_ae_summary <- final_ae %>%
-  filter(arm_random == "Control (Randomized)") %>%
+  filter(arm_random == "Arm Y") %>%
     # To external analyst: Replace with arm for real data----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days) %>%
@@ -1932,7 +1946,7 @@ cont_ae_summary <- final_ae %>%
 # Table output
 cont_ae_summary %>%
   kable(
-    caption = "List of Study Adverse Events for Control",
+    caption = "List of Study Adverse Events for Arm Y",
     booktabs = TRUE
   ) %>% 
   kable_styling(
