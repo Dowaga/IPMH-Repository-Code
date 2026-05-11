@@ -1893,8 +1893,8 @@ final_ae <- final_ae %>%
 # 12. ----Intervention AE summary----
 
 int_ae_summary <- final_ae %>%
-  filter(Arm == "Intervention") %>%
-    # To external analyst: Replace with Arm for real data----
+  filter(arm_random == "Arm X") %>%
+    # To external analyst: Replace with Arm for real data (Intervention)----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days, days_since_enrolment) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
@@ -1905,7 +1905,8 @@ int_ae_summary <- final_ae %>%
     `Age of participant` = dem_age,
     `Days from Onset to Report` = reported_days,
     `Days from enrolment to AE report` = days_since_enrolment
-  )
+  )%>%
+  arrange(`Adverse Event reported`)
 
 #----13. Table output----
 
@@ -1936,8 +1937,8 @@ int_ae_summary %>%
 
 ```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 cont_ae_summary <- final_ae %>%
-  filter(Arm == "Control") %>%
-    # To external analyst: Replace with arm for real data----
+  filter(arm_random == "Arm X") %>%
+    # To external analyst: Replace with Arm for real data (Control)----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days, days_since_enrolment) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
@@ -1948,7 +1949,8 @@ cont_ae_summary <- final_ae %>%
     `Age of participant` = dem_age,
     `Days from Onset to Report` = reported_days,
     `Days from enrolment to AE report` = days_since_enrolment
-  )
+  )%>%
+  arrange(`Adverse Event reported`)
 
 # Table output
 cont_ae_summary %>%

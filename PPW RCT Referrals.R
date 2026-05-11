@@ -116,9 +116,9 @@ referral_tbl
 # 1. Define a lookup for nicer labels 
 condition_labels <- tribble(
     ~risk_col,               ~Condition,
-    "screened_depression",   "Depression>=10",
-    "screened_anxiety",      "Anxiety>=10",
-    "screened_IPV",          "IPV>=10",
+    "screened_depression",   "Depression Score>=10",
+    "screened_anxiety",      "Anxiety Score>=10",
+    "screened_IPV",          "IPV Score>=10",
     "screened_selfharm",     "Self-harm"
 )
 
