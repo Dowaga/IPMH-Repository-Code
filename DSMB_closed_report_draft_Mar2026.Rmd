@@ -841,15 +841,18 @@ arm_wlwh_demo <- demographics_df %>%
     filter(med_pastdiag___2 == "Checked") %>% 
     tbl_summary(by = arm_random,
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
-        include=c(dem_age, dem_current_partner, dem_maritalstat,
-                  dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
-                  dem_employment, dem_household_num, dem_housesleep, 
-                  dem_houserooms,dem_traveltime_min, med_pre_preg),
+        include=c(dem_age, dem_current_partner_num, 
+                  dem_maritalstat_num, dem_marriage, 
+                  dem_pc_residence_num, dem_current_school, 
+                  dem_school, dem_employment, 
+                  dem_household_num, dem_housesleep, 
+                  dem_houserooms,dem_traveltime_min,
+                  med_pre_preg),
         label = list(dem_age ~ "Age (Years)",
-                     dem_current_partner ~ "Do you currently have a partner (Yes)",
+                     dem_current_partner_num ~ "Do you currently have a partner (Yes)",
                      dem_employment ~ "Do you have regular employment (Yes)",
-                     dem_maritalstat ~ "Currently Married (Yes)",
-                     dem_pc_residence ~ "Shares residence with partner (Yes)",
+                     dem_maritalstat_num ~ "Currently Married (Yes)",
+                     dem_pc_residence_num ~ "Shares residence with partner (Yes)",
                      dem_marriage ~ "Marriage (Monogamous)",
                      dem_current_school ~ "Currently in School",
                      dem_school ~ "Completed years in School",
@@ -955,7 +958,7 @@ completed_intervention <- total_exits %>%
 
 ```
 
-To date, no early terminations have been recorded aside from maternal death (see the adverse event section). However, `r completed_follow_up` participants have exited the study as scheduled at the end of follow-up. The first termination occurred on `r earliest_due`. Of which, `r completed_control` and `r completed_intervention` were from the control and intervention arm, respectively. 
+To date, no early terminations have been recorded aside from maternal deaths (see adverse event section). A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint, including `r completed_control` from the control arm and `r completed_intervention` from the intervention arm. The first termination occurred on `r earliest_due`.
 
 
 # 7. Referrals
@@ -1015,9 +1018,9 @@ referral_df <- ppw_rct_df %>%
  # 1. Define a lookup for nicer labels 
 condition_labels <- tribble(
     ~risk_col,               ~Condition,
-    "screened_depression",   "Depression>=10",
-    "screened_anxiety",      "Anxiety>=10",
-    "screened_IPV",          "IPV>=10",
+    "screened_depression",   "Depression Score>=10",
+    "screened_anxiety",      "Anxiety Score>=10",
+    "screened_IPV",          "IPV Score>=10",
     "screened_selfharm",     "Self-harm"
 )
 
@@ -1050,7 +1053,7 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
 
-During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals.
+During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals. These referrals reflect routine care and services available within the facility, not the implementation treatment
 
 \newpage
 ```{r referrals, Results = 'Asis', echo=FALSE, message=FALSE, warning=FALSE}
@@ -1152,7 +1155,7 @@ arm_referral_summary
 ```
 
 \newpage
-## 7.2 Treatment Referrals
+## 7.2 Intervention Treatment Referrals
 ```{r treatment_referrals_numsource, echo=FALSE, message=FALSE, warning=FALSE}
 
 # Summarise ANC attendees and extract the sum as a numeric value
@@ -1456,7 +1459,7 @@ arm_outcome_summary <- arm_joined %>%
       gad7_total ~ "continuous",
       qol_overall_scaled ~ "continuous",
       rtc_total ~ "continuous",
-      any_adverse_outcome ~ "categorical"
+      any_adverse_outcome ~ "dichotomous"
     ),
     statistic = list(
       all_continuous() ~ "{median} ({p25}, {p75})",
@@ -1486,7 +1489,7 @@ arm_outcome_summary <- arm_joined %>%
 arm_outcome_summary %>%
   kable_styling(
     font_size = 9,
-    latex_options = c("hold_position", "scale_down"),
+    latex_options = c("striped", "HOLD_position", "scale_down"),
     full_width = FALSE
   ) %>%
   column_spec(1, width = "6cm")
@@ -1643,18 +1646,17 @@ sae_summary_arm <- sae_wide %>%
     bold_labels() %>%
     add_overall(last = TRUE) %>% 
     as_kable_extra(caption  = "Summary of Reported Serious Adverse Events by Arm",
-                   booktabs = TRUE)%>%
-  column_spec(1:6, width = "3cm")
+                   booktabs = TRUE)
 
 
 sae_summary_arm %>% 
     kable_styling(
     font_size = 9,
-    latex_options = c("striped", "scale_down", 
-                      "HOLD_position"),
+    latex_options = c("striped", "HOLD_position", "scale_down"),
     full_width = FALSE,
     position = "center"
-  )
+  )%>%
+  column_spec(1, width = "6cm")
 ```
 
 \newpage
@@ -1705,88 +1707,80 @@ ae_arm <- ae_df %>%
 ae_df <- ae_df %>% 
     left_join(ae_arm, by = "record_id")
 
-# ---- Social harms ----
-ae_social_summary <- ae_df %>%
-    filter(ae_cat == "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)") %>%
-    filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
-    select(record_id, arm_random, names(ae_define_map)) %>%
-    # To external analyst: Replace with arm for real data----
-    pivot_longer(
-        cols = names(ae_define_map),
-        names_to = "variable",
-        values_to = "checked"
-    ) %>%
-    filter(checked == "Checked") %>%
-    mutate(Event = ae_define_map[variable]) %>%
-    group_by(arm_random, Event) %>% # To external analyst: Replace with arm for real data----
-    summarise(`Number of Events` = n(), .groups = "drop")
+# Prepare dataset with event labels
+ae_social_long <- ae_df %>%
+  filter(ae_cat == "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)") %>%
+  filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
+  select(record_id, arm_random, names(ae_define_map)) %>%
+  pivot_longer(
+    cols = names(ae_define_map),
+    names_to = "variable",
+    values_to = "checked"
+  ) %>%
+  filter(checked == "Checked") %>%
+  mutate(Event = ae_define_map[variable])
 
-# ---- Injury ----
-ae_injury_summary <- ae_df %>%
-    filter(ae_cat == "Injury") %>%
-    filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
-    group_by(arm_random, Event = ae_cat) %>% # To external analyst: Replace with Arm for real data----
-    summarise(`Number of Events` = n(), .groups = "drop")
+ae_injury_long <- ae_df %>%
+  filter(ae_cat == "Injury") %>%
+  filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
+  mutate(Event = ae_cat) %>%
+  select(record_id, arm_random, Event)
 
-# ---- Combine ----
-ae_report_df <- bind_rows(ae_injury_summary, ae_social_summary)
+# Combine into one long dataset
+ae_long <- bind_rows(ae_social_long, ae_injury_long)
 
-# ---- Add percentages within arms ----
-ae_report_df <- ae_report_df %>%
-    group_by(arm_random) %>%
-    mutate(
-        Summary = sprintf(
-            "%d (%.1f%%)",
-            `Number of Events`,
-            100 * `Number of Events` / sum(`Number of Events`)
-        )
-    ) %>%
-    ungroup()
+# ---- tbl_summary ----
+ae_summary <- ae_long %>%
+  tbl_summary(
+    by = arm_random,                # stratify by Arm
+    include = Event,                 # summarize Event categories
+    statistic = all_categorical() ~ "{n} ({p}%)",  # counts + percentages
+    label = list(Event ~ "Adverse Event"),
+        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+  ) %>%
+  bold_labels() %>% 
+    italicize_levels() %>% 
+  add_overall(last = TRUE) %>% 
+  modify_caption("**Summary of Adverse Events by Arm**") %>%
+  modify_footnote(
+    all_stat_cols() ~ "Counts reflect events, not unique participants. Persistent or significant psychosocial distress is defined as PHQ-9 score ???10 at any follow-up visit."
+  ) %>%
+  bold_labels() %>%
+  as_kable_extra(
+    caption  = "Summary of Adverse Events by Arm",
+    booktabs = TRUE
+  )%>%
+  column_spec(1, width = "6cm")
 
-# ---- Wide format (arms as columns) ----
-ae_report_wide <- ae_report_df %>%
-    select(Event, arm_random, Summary) %>% # To external analyst: Replace with Arm for real data----
-   pivot_wider(
-    names_from = arm_random,
-    values_from = Summary,
-    values_fill = "0 (0.0%)"
+
+ae_summary %>%
+  kable_styling(
+    font_size = 10,
+    latex_options = c("striped", "HOLD_position", "scale_down"),
+    full_width = FALSE,
+    position = "center"
   )
-
-# ---- Add totals per arm ----
-totals <- ae_report_df %>%
-    group_by(arm_random) %>% # To external analyst: Replace with arm for real data----
-    summarise(Summary = as.character(sum(`Number of Events`)), .groups = "drop") %>%
-    mutate(Event = "Total") %>%
-    pivot_wider(names_from = arm_random, values_from = Summary)
-
-# ---- Final table ----
-final_table <- bind_rows(ae_report_wide, totals)
-
-# ---- Print ----
-final_table %>%
-    kable(caption = "Table: Summary of Adverse Events by Arm")%>% 
-    kable_styling(
-        font_size = 9,
-        latex_options = c("striped", "hold_position", "scale_down"),
-        full_width = FALSE,
-        position = "left"
-    )
 ```
 
 \newpage
 ### 9.2.1 List of Adverse Events: Intervention Arm
 
 ```{r intervention_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
-#--------------------------------------------
-# 1. Prepare AE dataset
-#--------------------------------------------
+#----1. Prepare AE dataset----
+
 ae_df <- ppw_sae_df %>% 
   select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>%
-  filter(ae_yn == "Yes", !str_detect(ae_cat, "SAE"))
+  filter(ae_yn == "Yes") %>% 
+    mutate(ae_cat = case_when(
+        record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)" ~ "Infant Death (SAE)",
+        ae_cat == "Miscarriage or stillbirth (loss of pregnancy) (SAE)" ~ "Stillbirth (SAE)",
+        ae_type___1 == "Checked" ~ "Maternal Death (SAE)",
+        ae_type___2 == "Checked" ~ "Infant Death (SAE)",
+        TRUE ~ ae_cat
+    ))
 
-#--------------------------------------------
-# 2. Labels
-#--------------------------------------------
+#----2. Labels ----
+
 ae_labels <- c(
   ae_define___1  = "Kicked out of home",
   ae_define___2  = "Experienced violence or abuse",
@@ -1797,9 +1791,8 @@ ae_labels <- c(
   ae_define___99 = "Other"
 )
 
-#--------------------------------------------
-# 3. Social harm AEs
-#--------------------------------------------
+#----3. Social harm AEs ----
+
 self_harm_df <- ae_df %>%
   filter(str_detect(ae_cat, "Social harm event")) %>%
   pivot_longer(
@@ -1810,21 +1803,18 @@ self_harm_df <- ae_df %>%
   filter(Checked == "Checked") %>%
   mutate(ae_label = recode(ae_type, !!!ae_labels))
 
-#--------------------------------------------
-# 4. Other AEs
-#--------------------------------------------
+#----4. Other AEs----
+
 other_ae <- ae_df %>%
   filter(!str_detect(ae_cat, "Social harm event")) %>%
   mutate(ae_label = ae_cat)
 
-#--------------------------------------------
-# 5. Combine AEs
-#--------------------------------------------
+#----5. Combine AEs ----
+
 final_ae <- bind_rows(self_harm_df, other_ae)
 
-#--------------------------------------------
-# 6. Assign random arms (by event name)
-#--------------------------------------------
+#----6. Assign random arms (by event name)----
+
 set.seed(12345)
 
 ae_arm <- final_ae %>%
@@ -1838,13 +1828,11 @@ ae_arm <- final_ae %>%
     )
   )
 
-# Join random arms
+#----7. Join random arms----
 final_ae <- final_ae %>% 
     left_join(ae_arm, by = "redcap_event_name")
 
-#--------------------------------------------
-# 7. Attach arm + clean AE category
-#--------------------------------------------
+#----8. Attach arm + clean AE category----
 final_ae <- final_ae %>%
     mutate(
     Arm = str_extract(redcap_event_name, "(?<=Arm \\d: )[^)]+")
@@ -1856,9 +1844,8 @@ final_ae <- final_ae %>%
     )
   )
 
-#--------------------------------------------
-# 8. Age dataset
-#--------------------------------------------
+#----9. Age dataset----
+
 ae_ages <- ppw_rct_df %>%
   mutate(
     dem_age = if_else(
@@ -1867,43 +1854,61 @@ ae_ages <- ppw_rct_df %>%
       dem_age
     )
   ) %>%
-  select(record_id, clt_study_site, redcap_event_name, dem_age, clt_date) %>%
-  filter(str_detect(redcap_event_name, "^Enrollment"), !is.na(clt_date))
+    select(record_id, clt_study_site, redcap_event_name,
+           dem_age, clt_date) %>%
+  filter(str_detect(redcap_event_name, "^Enrollment"),
+         !is.na(clt_date))
 
-#--------------------------------------------
-# 9. Merge age + clean dates
-#--------------------------------------------
+#----10. Merge age + clean dates ----
+
 final_ae <- final_ae %>%
   left_join(ae_ages, by = "record_id") %>%
   filter(!is.na(dem_age)) %>%
-  mutate(
+    mutate(
     ae_datereport = as.Date(ae_datereport),
     ae_dateonset  = as.Date(ae_dateonset),
     clt_date      = as.Date(clt_date),
-    reported_days = as.numeric(ae_datereport - ae_dateonset)
+    reported_days = as.numeric(ae_datereport - ae_dateonset),
+    days_since_enrolment = as.numeric(ae_datereport - clt_date)
   )
 
-#--------------------------------------------
-# 10. Intervention AE summary
-#--------------------------------------------
+# 11. --- Severity order----
+severity_order <- c(
+  "Maternal Death (SAE)",
+  "Infant Death (SAE)",
+  "Stillbirth (SAE)",
+  "New/prolonged hospitalization (SAE)",
+  "Self-harm/Suicidal behavior",
+  "Persistent or significant psychosocial distress",
+  "Experienced violence or abuse",
+  "Kicked out of home",
+  "Injury"
+)
+
+final_ae <- final_ae %>%
+  mutate(
+    ae_label = factor(ae_label, levels = severity_order)
+  )
+
+# 12. ----Intervention AE summary----
 
 int_ae_summary <- final_ae %>%
-  filter(arm_random == "Arm X") %>%
+  filter(Arm == "Intervention") %>%
     # To external analyst: Replace with Arm for real data----
   select(record_id, clt_study_site, ae_label, 
-         dem_age, reported_days) %>%
+         dem_age, reported_days, days_since_enrolment) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
   rename(
     PTID = record_id,
     `Study Site` = clt_study_site,
     `Adverse Event reported` = ae_label,
     `Age of participant` = dem_age,
-    `Days from Onset to Report` = reported_days
+    `Days from Onset to Report` = reported_days,
+    `Days from enrolment to AE report` = days_since_enrolment
   )
 
-#--------------------------------------------
-# 11. Table output
-#--------------------------------------------
+#----13. Table output----
+
 int_ae_summary %>%
   kable(
     caption = "List of Study Adverse Events for Arm X",
@@ -1911,16 +1916,17 @@ int_ae_summary %>%
   ) %>%
   kable_styling(
     font_size = 8,
-    latex_options = c("striped", "hold_position", "scale_down"),
+    latex_options = c("striped", "HOLD_position", "scale_down"),
     full_width = FALSE,
     position = "center"
   ) %>%
-  column_spec(1, width = "2cm") %>%
-  column_spec(2, width = "3cm") %>%
-  column_spec(3, width = "5cm") %>%
-  column_spec(4, width = "2cm") %>%
-  column_spec(5, width = "3cm") %>%
-  row_spec(0, bold = TRUE, font_size = 9)
+    column_spec(1, width = "2cm") %>%
+    column_spec(2, width = "3cm") %>%
+    column_spec(3, width = "5cm") %>%
+    column_spec(4, width = "2cm") %>%
+    column_spec(5, width = "2cm") %>%
+    column_spec(6, width = "2cm") %>%
+    row_spec(0, bold = TRUE, font_size = 9)
 
 ```
 
@@ -1930,17 +1936,18 @@ int_ae_summary %>%
 
 ```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 cont_ae_summary <- final_ae %>%
-  filter(arm_random == "Arm Y") %>%
+  filter(Arm == "Control") %>%
     # To external analyst: Replace with arm for real data----
   select(record_id, clt_study_site, ae_label, 
-         dem_age, reported_days) %>%
+         dem_age, reported_days, days_since_enrolment) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
   rename(
     PTID = record_id,
     `Study Site` = clt_study_site,
     `Adverse Event reported` = ae_label,
     `Age of participant` = dem_age,
-    `Days from Onset to Report` = reported_days
+    `Days from Onset to Report` = reported_days,
+    `Days from enrolment to AE report` = days_since_enrolment
   )
 
 # Table output
@@ -1951,16 +1958,17 @@ cont_ae_summary %>%
   ) %>% 
   kable_styling(
     font_size = 8,
-    latex_options = c("striped", "hold_position", "scale_down"),
+    latex_options = c("striped", "HOLD_position", "scale_down"),
     full_width = FALSE,
     position = "center"
   ) %>%
-  column_spec(1, width = "2cm") %>%
-  column_spec(2, width = "3cm") %>%
-  column_spec(3, width = "5cm") %>%
-  column_spec(4, width = "2cm") %>%
-  column_spec(5, width = "3cm") %>%
-  row_spec(0, bold = TRUE, font_size = 9)
+    column_spec(1, width = "2cm") %>%
+    column_spec(2, width = "3cm") %>%
+    column_spec(3, width = "5cm") %>%
+    column_spec(4, width = "2cm") %>%
+    column_spec(5, width = "2cm") %>%
+    column_spec(6, width = "2cm") %>%
+    row_spec(0, bold = TRUE, font_size = 9)
 
 ```
 
