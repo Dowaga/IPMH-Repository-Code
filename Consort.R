@@ -156,16 +156,28 @@ consort_data <- screening_consent_df %>%
         eligible = case_when(
             rct_eligible == 1 ~ "1",
             TRUE ~ NA_character_)) %>% 
-    mutate(exclusion = case_when(
-        rct_eligible == 0 & rct_eligible_gestation == "No" ~ "Gestation <20 Weeks",
-        rct_harm_thought == "Yes" & rct_memory_problem == "No" ~"Self harm",
-        rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~"Self harm and memory problem",
-        rct_eligible == 0 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
-        rct_eligible == 0 & rct_vis_hallucinations == "Yes" ~"Seeing things that others cannot see",
-        rct_memory_problem == "Yes" ~"Memory problem",
-        rct_delusions == "Yes" ~ "Holding unusual beliefs",
-        rct_paranoia == "Yes" ~ "Feels watched/followed",
-                TRUE ~ NA_character_)) %>% 
+    mutate(
+        exclusion = case_when(
+            # Gestation exclusion
+            rct_eligible == 0 & rct_eligible_gestation == "No" ~ "Gestation <20 Weeks",
+            
+            # Self-harm related
+            rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~ "Self harm and memory problem",
+            rct_harm_thought == "Yes" & rct_memory_problem == "No"  ~ "Self harm",
+            
+            # Psychotic symptoms
+            rct_eligible == 0 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
+            rct_eligible == 0 & rct_vis_hallucinations == "Yes" ~ "Seeing things that others cannot see",
+            rct_delusions == "Yes" ~ "Holding unusual beliefs",
+            rct_paranoia == "Yes"  ~ "Feels watched/followed",
+            
+            # Cognitive issues
+            rct_memory_problem == "Yes" ~ "Memory problem",
+            
+            # Default
+            TRUE ~ NA_character_
+        )
+    )%>% 
     mutate(
         exclusion = case_when(
             eligible == 1 & exclusion == "Self harm" & rct_risk %in% c("Low", "Moderate") ~ NA_character_,
