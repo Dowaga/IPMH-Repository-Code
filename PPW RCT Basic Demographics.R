@@ -13,6 +13,8 @@ source("DataTeam_ipmh.R")
 
 # data prep --------------------------------------------------------------------
 demographics_df <- ppw_rct_df %>% 
+    #filter out records whose consent is not yet in the server
+    filter(!record_id %in% c("21145645", "21229680")) %>% 
     filter(clt_visit == "Enrollment") %>% 
     select(clt_study_site, clt_date,starts_with("dem_"), demographics_complete, med_pre_preg, 
            med_pastdiag___2)%>% 

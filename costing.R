@@ -9,7 +9,7 @@ rm(list = ls())
 # Reference source codes & other dependencies:
 source("dependencies.R")
 source("DataTeam_ipmh.R")
-source("REDCap_datapull.R")
+source("data_import.R")
 
 # load data
 rm(list = setdiff(ls(), c("costing")))
