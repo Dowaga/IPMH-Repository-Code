@@ -722,15 +722,18 @@ wlwh_demo <- demographics_df %>%
     filter(med_pastdiag___2 == "Checked") %>% 
     tbl_summary(
         sort = list(all_categorical() ~ "frequency"),
-        include = c(dem_age, dem_current_partner, dem_maritalstat,
-                    dem_marriage, dem_pc_residence, dem_current_school, dem_school, 
-                    dem_employment, dem_household_num, dem_housesleep, 
-                    dem_houserooms, dem_traveltime_min, med_pre_preg),
+        include = c(dem_age, dem_current_partner_num, 
+                    dem_maritalstat_num, dem_marriage, 
+                    dem_pc_residence_num, dem_current_school,
+                    dem_school, dem_employment, 
+                    dem_household_num, dem_housesleep, 
+                    dem_houserooms, dem_traveltime_min,
+                    med_pre_preg),
         label = list(dem_age ~ "Age (Years)",
-                     dem_current_partner ~ "Do you currently have a partner",
+                     dem_current_partner_num ~ "Do you currently have a partner",
                      dem_employment ~ "Do you have regular employment (Yes)",
-                     dem_maritalstat ~ "Currently Married (Yes)",
-                     dem_pc_residence ~ "Shares residence with partner (Yes)",
+                     dem_maritalstat_num ~ "Currently Married (Yes)",
+                     dem_pc_residence_num ~ "Shares residence with partner (Yes)",
                      dem_marriage ~ "Marriage (Monogamous)",
                      dem_current_school ~ "Currently in School",
                      dem_school ~ "Completed years in School",
@@ -915,7 +918,7 @@ ae_report %>%
   kableExtra::row_spec(nrow(ae_report_df) + 1, bold = TRUE) %>%    # bold Total row
   kableExtra::footnote(
     general = "n (%)",
-    symbol = "Persistent or significant psychosocial distress is defined as PHQ-9 score ???10 at any follow-up visit.",
+    symbol = "Persistent or significant psychosocial distress is defined as PHQ-9 score >=10 at any follow-up visit.",
     footnote_as_chunk = TRUE
   )
 
