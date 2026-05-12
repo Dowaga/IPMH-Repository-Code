@@ -76,3 +76,6 @@ telepsych <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/telepsych_"
 pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_", 
                                file_date, ".csv", sep=""))
 
+costing_df <- read.csv(paste0(ipmh_filepath, "/Data/9. Costing data/Costing_", 
+                                file_date, ".csv", sep=""))
+
