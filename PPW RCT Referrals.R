@@ -137,7 +137,10 @@ df_long <- referral_df %>%
     mutate(accepted = if_else(referral_accept == "Yes", 1L, 0L))
 
 #  3. Summarise per condition 
-total_n <- nrow(ppw_rct_df)    # total participants
+total_n <- total_visits <- ppw_rct_df %>%
+    filter(!str_detect(redcap_event_name, "PM\\+ Session 5 Abstraction")) %>%
+    count() %>%
+    pull(n)    # total participants
 
 summary_tbl <- df_long %>%
     group_by(risk_col) %>%
