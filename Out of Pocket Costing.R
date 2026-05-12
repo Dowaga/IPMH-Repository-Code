@@ -57,19 +57,21 @@ out_pocket <- ppw_rct_df %>%
 # Patient transport Cost----
 out_pocket <- out_pocket %>%
     mutate(
+        # Clean transport variables
         transport_means = case_when(
-            transport_means == "Others {specific_transport}" & specific_transport == "Matatu " ~ "Matatu",
-            transport_means == "Others {specific_transport}" & specific_transport == "Tuktuk " ~ "TukTuk",
+            transport_means == "Others {specific_transport}" & str_trim(specific_transport) == "Matatu" ~ "Matatu",
+            transport_means == "Others {specific_transport}" & str_trim(specific_transport) == "Tuktuk" ~ "TukTuk",
             TRUE ~ transport_means
         ),
-        specific_transport_back = str_trim(specific_transport_back),  # remove spaces
-            transport_means_back = case_when(
-                transport_means_back == "Others {specific_transport_back}" & specific_transport_back == "Tuktuk" ~ "Tuktuk",
+        specific_transport_back = str_trim(specific_transport_back),
+        transport_means_back = case_when(
+            transport_means_back == "Others {specific_transport_back}" & specific_transport_back == "Tuktuk" ~ "Tuktuk",
             transport_means_back == "Others {specific_transport_back}" & is.na(specific_transport_back) ~ "uncertain",
             TRUE ~ transport_means_back
         )
-    ) %>% 
+    ) %>%
     mutate(
+        # Clean travel distance and fare
         travel_distance = str_trim(as.character(travel_distance)),
         travel_distance = as.numeric(str_extract(travel_distance, "\\d*\\.?\\d+")),
         travel_fare = if_else(
@@ -77,19 +79,25 @@ out_pocket <- out_pocket %>%
             as.numeric(travel_fare),
             NA_real_
         )
-    ) %>% 
+    ) %>%
     mutate(
+        # Ensure hours/minutes are numeric before calculation
+        hours = as.numeric(hours),
+        minutes = as.numeric(minutes),
+        hours_back = as.numeric(hours_back),
+        minutes_back = as.numeric(minutes_back),
+        
         time_to_facility_min = case_when(
-            is.na(hours) & !is.na(minutes) ~ minutes,                # Only minutes available
-            !is.na(hours) & is.na(minutes) ~ hours * 60,             # Only hours available
-            !is.na(hours) & !is.na(minutes) ~ hours * 60 + minutes,  # Both available
-            TRUE ~ NA_real_                                          # Both missing
+            is.na(hours) & !is.na(minutes) ~ minutes,
+            !is.na(hours) & is.na(minutes) ~ hours * 60,
+            !is.na(hours) & !is.na(minutes) ~ hours * 60 + minutes,
+            TRUE ~ NA_real_
         ),
         time_from_facility_min = case_when(
-            is.na(hours_back) & !is.na(minutes_back) ~ minutes,                # Only minutes available
-            !is.na(hours_back) & is.na(minutes_back) ~ hours * 60,             # Only hours available
-            !is.na(hours_back) & !is.na(minutes_back) ~ hours * 60 + minutes,  # Both available
-            TRUE ~ NA_real_                                          # Both missing
+            is.na(hours_back) & !is.na(minutes_back) ~ minutes_back,
+            !is.na(hours_back) & is.na(minutes_back) ~ hours_back * 60,
+            !is.na(hours_back) & !is.na(minutes_back) ~ hours_back * 60 + minutes_back,
+            TRUE ~ NA_real_
         )
     )
 
@@ -286,7 +294,28 @@ child_care <- out_pocket %>%
             care_provision == "No" ~ NA,
             TRUE ~ paid_caretaker
         )
-    ) 
+    ) %>% 
+    mutate(
+        change1 = case_when(
+            is.na(change1) ~ NA_character_,
+            str_detect(change1, regex("Change in residence|Relocated back|Residence change", ignore_case = TRUE)) ~ "Residence Change",
+            str_detect(change1, regex("Change of school|Taken back to school", ignore_case = TRUE)) ~ "Education Change",
+            str_detect(change1, regex("relationship|spouse|friends|communication|patien", ignore_case = TRUE)) ~ "Relationship/Family Dynamics",
+            str_detect(change1, regex("financially support|job|income", ignore_case = TRUE)) ~ "Economic/Financial Status",
+            str_detect(change1, regex("life functionality|quality of life", ignore_case = TRUE)) ~ "General Well-being/Quality of Life",
+            TRUE ~ "Other/Uncategorized"
+        )
+    ) %>% 
+    mutate(
+        change1_cost = case_when(
+            # keep NA as NA
+            is.na(change1_cost) ~ NA_character_,
+            # if it's purely numeric (digits, optional decimal), keep it
+            str_detect(change1_cost, "^[0-9]+(\\.[0-9]+)?$") ~ change1_cost,
+            # otherwise force to NA
+            TRUE ~ NA_character_
+        )
+    )
 
 
 # a function to clean medication columns
@@ -338,8 +367,11 @@ child_care <- child_care %>%
           medication4_duration, medication_duration),
         clean_duration))
 
-child_care_summary <- child_care %>% tbl_summary(
-        include = c(care_provision, care_duration_clean,
+
+
+child_care_summary <- child_care %>% 
+    tbl_summary(include = 
+                    c(care_provision, care_duration_clean,
                     paid_caretaker, care_cost, service_cost,
                     medication_prescribtion, medication1, 
                     medication2, medication3, medication4,
@@ -349,7 +381,7 @@ child_care_summary <- child_care %>% tbl_summary(
                     medication3_cost, medication4_cost, medication_duration,
                     circumstances_change, change1, change1_cost, 
                     insurance_plan, plan_type, cost_payment),
-        type = list(
+                type = list(
             care_cost ~ "continuous",
             care_duration_clean ~ "continuous",
             medication_duration ~ "continuous",
@@ -360,13 +392,11 @@ child_care_summary <- child_care %>% tbl_summary(
             medication1_cost ~ "continuous",
             medication2_cost ~ "continuous",
             medication3_cost ~ "continuous",
-            medication4_cost ~ "continuous"
-        ),
-        statistic = list(
+            medication4_cost ~ "continuous"),
+            statistic = list(
             all_continuous() ~ "{mean} ({sd})",
-            all_categorical() ~ "{n} ({p}%)"
-        ),
-        digits = list(
+            all_categorical() ~ "{n} ({p}%)"),
+            digits = list(
             all_continuous() ~ 1,       # 1 decimal for continuous variables
             all_categorical() ~ c(0, 1) # 0 decimals for n, 1 for %
         ),
