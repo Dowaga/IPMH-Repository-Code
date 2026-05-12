@@ -30,13 +30,17 @@ pm_abstractions <- pm_survey_df %>%
     distinct(pm_ptid, .keep_all = TRUE)
 
 pm_df <- pm_abstractions %>% 
-    select(pm_ptid, ipmh_participant)
+    select(pm_ptid, ipmh_participant, pm_facility)
 
 # telepsy
-telepsych$tele_ancid[1] <- telepsych$tele_ancid[4] 
+#telepsych <- telepsych %>%
+# mutate(tele_ancid = if_else(row_number() == 1, 
+#tele_ancid[4], tele_ancid))
+
 
 telepsych_df <- telepsych %>%
-    filter(pt_attend == "Yes") %>%               # keep only attended
+    filter(!tele_ancid == "2025-03-0092")%>% 
+    #filter(pt_attend == "Yes") %>%               # keep only attended
     arrange(tele_ancid, tele_date) %>%            # sort by person and date
     group_by(tele_ancid) %>%
     slice(1) %>%                                 # keep first record per person
@@ -45,49 +49,223 @@ telepsych_df <- telepsych %>%
 #now match this with consenting database to get their pt_id
 tele_with_id <- telepsych_df %>%
     left_join(
-        rct_ppw_consenting %>% select(anc_num, partipant_id),
+        rct_ppw_consenting %>% 
+            select(anc_num, partipant_id),
         by = c("tele_ancid" = "anc_num")
     )
+
 tele_with_id <- tele_with_id %>%
     select(tele_ancid, partipant_id) %>% 
     mutate(tele = "Yes") 
 
-#merging data
+# PM+ and Telepsychiatry Referrals ----
+pm_telep_df <- ppw_rct_df %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
+    select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
+    filter(!is.na(clt_date)) 
+
+
+# Define PHQ9 recoding
+phq9_labels <- c(
+    "not at all" = 0,
+    "several days" = 1,
+    "more than half the days" = 2,
+    "nearly every day" = 3
+)
+
+gad7_labels <-c(
+    "Not at all" = 0,
+    "Several days" = 1,
+    "Over half the days"= 2,
+    "Nearly every day" = 3)
+
+
+# Recode PHQ9 variables
+pm_telep_df <- pm_telep_df %>%
+    mutate(across(c(abs_phq_interest, abs_phq_down, abs_phq_sleep,
+                    abs_phq_tired, abs_phq_appetite, abs_phq_bad,
+                    abs_phq_concentrate, abs_phq_slow, abs_phq_dead), ~ recode(., !!!phq9_labels)),
+           across(c(abs_gad7_nerve, abs_gad7_uncontrol, 
+                    abs_gad7_worry, abs_gad7_relax, abs_gad7_restless,
+                    abs_gad7_annoyed, abs_gad7_afraid), ~ recode(., !!!gad7_labels)))
+
+
+
+pm_telep_df <- pm_telep_df %>% 
+    mutate(phq9_scores = rowSums(select(., abs_phq_interest, abs_phq_down,
+                                        abs_phq_sleep, abs_phq_tired, 
+                                        abs_phq_appetite, abs_phq_bad,
+                                        abs_phq_concentrate, abs_phq_slow, 
+                                        abs_phq_dead), na.rm = TRUE),
+           gad7_scores = rowSums(select(., abs_gad7_nerve, abs_gad7_uncontrol,
+                                        abs_gad7_worry, abs_gad7_relax, 
+                                        abs_gad7_restless, abs_gad7_annoyed,
+                                        abs_gad7_afraid), na.rm = TRUE))
+
+# Endorsed PHQ9 Question 9
+self_harm <- pm_telep_df %>% 
+    filter(abs_phq_dead > 0)
+
+pm_telep_df <- pm_telep_df %>% 
+    filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
+    mutate(
+        max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
+        eligible_for = case_when(
+            abs_phq_dead > 0 ~ "Telepsychiatry",
+            (max_score >= 10 & max_score < 15 &
+                 (max_score == phq9_scores | max_score == gad7_scores)) ~ "PM+",
+            max_score >= 15 ~ "Telepsychiatry",
+            TRUE ~ "Not Eligible"
+        ),
+        referred_to = case_when(
+            abs_gad7_ref_tele == "Yes" | abs_phq_ref_tele == "Yes" ~ "Telepsychiatry",
+            abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes" ~ "PM+",
+            TRUE ~ NA_character_
+        )
+    ) 
+
+referral_QCs <- pm_telep_df %>% 
+    filter(eligible_for == "PM+" & referred_to == "Telepsychiatry")
+
+# PM+ participants
+pm_plus_df <- pm_telep_df %>% 
+    filter(max_score >= 10 & max_score < 15) %>%
+    select(-max_score)  # Remove max_score if not needed
+
+# Tele-psychiatry referrals
+telepsych_referrals <- pm_telep_df %>% 
+    filter((phq9_scores>=15)|(gad7_scores>=15)|(abs_phq_dead > 0 & abs_phq_ref_tele == "Yes"))
+
+tel_refer <- pm_telep_df %>% 
+    filter(abs_phq_ref_tele == "Yes" & referred_to == "PM+")
+
+telepsych_ids <- telepsych_referrals %>% 
+    select(record_id) %>% 
+    mutate(tele = "Yes")
+
+telep_referrals <- telepsych_ids %>% 
+    nrow()
+
+# merging data----
 consort_data <- screening_consent_df %>% 
-    select(record_id, partipant_id, rct_harm_thought, rct_aud_hallucinations, 
-           rct_vis_hallucinations, rct_paranoia,rct_delusions,
-           rct_memory_problem,rct_eligible_gestation, rct_eligible_harm, 
-           rct_eligible, rct_enrolling, rct_decline_reason, 
-           rct_other_reasons) %>% 
+    # Select relevant variables
+    select(
+        record_id,
+        partipant_id,
+        rct_harm_thought,
+        rct_aud_hallucinations,
+        rct_vis_hallucinations,
+        rct_paranoia,
+        rct_delusions,
+        rct_memory_problem,
+        rct_eligible_gestation,
+        rct_eligible_harm,
+        rct_risk,
+        rct_eligible,
+        rct_enrolling,
+        rct_decline_reason,
+        rct_other_reasons
+    ) %>%
+    # Eligibility
     mutate(
         eligible = case_when(
-            rct_eligible == 1 ~ "1",
-            TRUE ~ NA_character_)) %>% 
-    mutate(exclusion = case_when(
-        rct_eligible == 0 & rct_eligible_gestation == "No" ~ "Gestation <28 Weeks",
-        rct_harm_thought == "Yes" & rct_memory_problem == "No" ~"Self harm",
-        rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~"Self harm and memory problem",
-        rct_eligible == 0 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
-        rct_memory_problem == "Yes" ~"Memory problem",
-        rct_delusions == "Yes" ~ "Holding unusual beliefs",
-        TRUE ~ NA_character_)) %>% 
-    mutate(facility = as.numeric(str_sub(partipant_id, 3, 4))) %>% 
-    mutate(arm = case_when(
-        facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21) ~ "Control",
-        TRUE ~ "Intervention"
-    )) %>% 
-    mutate(rct_decline_reason = case_when(
-        rct_decline_reason == "Other (specify) ___" ~ "Relocate post delivery",
-        TRUE ~ rct_decline_reason  # Keep other values unchanged
-    )) 
+            # Exclude self-harm with missing risk
+            rct_harm_thought == "Yes" & is.na(rct_risk) ~ 0,
+            
+            # Otherwise use REDCap eligibility
+            rct_eligible == 1 ~ 1,
+            
+            TRUE ~ 0
+        )
+    ) %>%
+    # Exclusion reasons
+    mutate(
+        exclusion = case_when(
+            eligible != 1 & rct_eligible_gestation == "No" ~ "Gestation <20 Weeks",
+            eligible != 1 & rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~ "Self harm and memory problem",
+            eligible != 1 & rct_harm_thought == "Yes" & rct_memory_problem == "No"  ~ "Self harm",
+            eligible != 1 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
+            eligible != 1 & rct_vis_hallucinations == "Yes" ~ "Seeing things that others cannot see",
+            eligible != 1 & rct_delusions == "Yes"          ~ "Holding unusual beliefs",
+            eligible != 1 & rct_paranoia == "Yes"           ~ "Feels watched/followed",
+            eligible != 1 & rct_memory_problem == "Yes"     ~ "Memory problem",
+            TRUE ~ NA_character_
+        )
+    ) %>%
+    # Facility extraction
+    mutate(
+        facility = as.numeric(stringr::str_sub(partipant_id, 3, 4))
+    ) %>%
+    # Study arm
+    mutate(
+        arm = case_when(
+            facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21) ~ "Control",
+            TRUE ~ "Intervention"
+        )
+    ) %>%
+    # Decline reasons
+    mutate(
+        rct_decline_reason = case_when(
+            # Assign "Relocate post delivery" if not enrolling AND decline reason is NA
+            rct_enrolling == "No" & is.na(rct_decline_reason) ~ "Relocate post delivery",
+            
+            # Assign "Relocate post delivery" if decline reason is explicitly "Other (specify) ___"
+            rct_decline_reason == "Other (specify) ___" ~ "Relocate post delivery",
+            
+            # Keep other values unchanged
+            TRUE ~ rct_decline_reason
+        )
+    )%>%
+    # Fix: enrolled but eligible == 0 ??? set eligible = 1
+    mutate(
+        eligible = case_when(
+            rct_enrolling == "Yes" & eligible == 0 ~ 1,
+            TRUE ~ eligible
+        )
+    ) %>%
+    # Fix: eligible == 0 and exclusion == Gestation <20 Weeks ??? set eligible = NA
+    mutate(
+        eligible = case_when(
+            eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_integer_,
+            TRUE ~ eligible
+        )
+    ) %>%
+    # Optional: if exclusion is missing but eligible == 0, assign Gestation <20 Weeks
+    mutate(
+        exclusion = case_when(
+            eligible == 0 & is.na(exclusion) ~ "Gestation <20 Weeks",
+            TRUE ~ exclusion
+        )
+    ) %>% 
+    mutate(
+        # Final clean-up for gestation <20 weeks cases
+        rct_decline_reason = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_decline_reason
+        ),
+        rct_enrolling = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_enrolling
+        ),
+        rct_other_reasons = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_other_reasons
+        )
+    )
+
+
 
 # Merge consort data with pm_df
 consort_data <- consort_data %>% 
     left_join(pm_df, by = c("partipant_id"="pm_ptid"))
 
-secondvisit <- ppw_rct_df %>% filter(
-    clt_visit == "6 weeks post-partum") %>% 
-    select(clt_ptid) %>% mutate(secondvisit = "Yes")
+consort_data <- bind_rows(anc_attendees_df, consort_data)
+
+
+secondvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "6 weeks post-partum") %>% 
+    select(clt_ptid) %>% 
+    mutate(secondvisit = "Yes") 
 
 thirdvisit <- ppw_rct_df %>% 
     filter(clt_visit == "14 weeks post-partum") %>% 
@@ -100,7 +278,14 @@ fourthvisit <- ppw_rct_df %>%
     select(clt_ptid) %>% 
     mutate(fourthvisit = "Yes") 
 
-#merge secondvisit people into consort_data
+# merge telepsychiatry referrals into consort_data
+consort_data <- consort_data %>% 
+    left_join(telepsych_ids, by = c("partipant_id" = "record_id")) 
+
+consort_data %>% 
+    tabyl(tele)
+
+# merge secondvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
 
@@ -111,7 +296,7 @@ consort_data <- consort_data %>%
 # merge fourthvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(fourthvisit, by = c("partipant_id" = "clt_ptid"))
-    
+
 
 # Create a dummy arm for DSMB Closed report
 consort_data <- consort_data %>% 
@@ -131,9 +316,6 @@ hiv <- ppw_rct_df %>% filter(
 consort_data <- consort_data %>% 
     left_join(hiv, by = c("partipant_id" = "clt_ptid"))
 
-#merge telepsychiatry data
-consort_data <- consort_data %>% 
-    left_join(tele_with_id, by = c("partipant_id" = "partipant_id")) 
 
 ### binding
 consort_data <- bind_rows(anc_attendees_df, consort_data)
@@ -147,10 +329,14 @@ decline_reason <- consort_data %>%
 
 #automatically adding percentages (for weekly reports) ----------------
 # Total ANC attendees
-n_attendees <- consort_data %>% filter(anc_attendees == "Yes") %>% nrow()
+n_attendees <- consort_data %>% 
+    filter(anc_attendees == "Yes") %>%
+    nrow()
 
 # Assessed for eligibility (non-NA arm)
-n_assessed <- consort_data %>% filter(!is.na(arm)) %>% nrow()
+n_assessed <- consort_data %>% 
+    filter(!is.na(arm)) %>% 
+    nrow()
 
 # By arm
 counts_by_arm <- consort_data %>%
@@ -305,27 +491,41 @@ consort_per
 
 ## consort diagram without arm breaking--------
 # Total ANC attendees
-n_attendees <- consort_data %>% filter(anc_attendees == "Yes") %>% nrow()
+n_attendees <- consort_data %>% 
+    filter(anc_attendees == "Yes") %>% 
+    nrow()
 
 # Total assessed (non-NA arm)
-n_assessed <- consort_data %>% filter(!is.na(arm)) %>% nrow()
+n_assessed <- consort_data %>% 
+    filter(!is.na(arm)) %>% 
+    nrow()
 
 # Total excluded
-n_excluded <- consort_data %>% filter(!is.na(exclusion)) %>% nrow()
+n_excluded <- consort_data %>% 
+    filter(!is.na(exclusion)) %>% 
+    nrow()
 
 # Total eligible
-n_eligible <- consort_data %>% filter(eligible == 1) %>% nrow()
+n_eligible <- consort_data %>% 
+    filter(eligible == 1) %>% 
+    nrow()
 
 # Total enrolled
-n_enrolled <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
+n_enrolled <- consort_data %>% 
+    filter(rct_enrolling == "Yes") %>% 
+    nrow()
 
-n_hiv <- consort_data %>% filter(WLWH == "Yes") %>% nrow()
+n_hiv <- consort_data %>% 
+    filter(WLWH == "Yes") %>% 
+    nrow()
 
 # Total PM+ participants
 n_pm <- consort_data %>% filter(ipmh_participant == "Yes" & WLWH == "Yes") %>% nrow()
 
 # Total telepsychiatry participants
-n_tele <- consort_data %>% filter(tele == "Yes" & WLWH == "Yes") %>% nrow()
+n_tele <- consort_data %>% 
+    filter(tele == "Yes" & WLWH == "Yes") %>% 
+    nrow()
 
 # Total postpartum visits
 six_weeks <- consort_data %>%
@@ -424,3 +624,5 @@ consort_single <- add_box(txt = txt_anc) |>
     add_box(txt = six_months_postpartum)
 
 consort_single
+
+
