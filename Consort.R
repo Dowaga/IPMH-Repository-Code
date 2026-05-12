@@ -121,7 +121,7 @@ pm_telep_df <- pm_telep_df %>%
             abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes" ~ "PM+",
             TRUE ~ NA_character_
         )
-    )
+    ) 
 
 referral_QCs <- pm_telep_df %>% 
     filter(eligible_for == "PM+" & referred_to == "Telepsychiatry")
@@ -147,51 +147,111 @@ telep_referrals <- telepsych_ids %>%
 
 # merging data----
 consort_data <- screening_consent_df %>% 
-    select(record_id, partipant_id, rct_harm_thought, rct_aud_hallucinations, 
-           rct_vis_hallucinations, rct_paranoia,rct_delusions,
-           rct_memory_problem,rct_eligible_gestation, rct_eligible_harm, 
-           rct_risk, rct_eligible, rct_enrolling, rct_decline_reason, 
-           rct_other_reasons) %>% 
+    # Select relevant variables
+    select(
+        record_id,
+        partipant_id,
+        rct_harm_thought,
+        rct_aud_hallucinations,
+        rct_vis_hallucinations,
+        rct_paranoia,
+        rct_delusions,
+        rct_memory_problem,
+        rct_eligible_gestation,
+        rct_eligible_harm,
+        rct_risk,
+        rct_eligible,
+        rct_enrolling,
+        rct_decline_reason,
+        rct_other_reasons
+    ) %>%
+    # Eligibility
     mutate(
         eligible = case_when(
-            rct_eligible == 1 ~ "1",
-            TRUE ~ NA_character_)) %>% 
+            # Exclude self-harm with missing risk
+            rct_harm_thought == "Yes" & is.na(rct_risk) ~ 0,
+            
+            # Otherwise use REDCap eligibility
+            rct_eligible == 1 ~ 1,
+            
+            TRUE ~ 0
+        )
+    ) %>%
+    # Exclusion reasons
     mutate(
         exclusion = case_when(
-            # Gestation exclusion
-            rct_eligible == 0 & rct_eligible_gestation == "No" ~ "Gestation <20 Weeks",
-            
-            # Self-harm related
-            rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~ "Self harm and memory problem",
-            rct_harm_thought == "Yes" & rct_memory_problem == "No"  ~ "Self harm",
-            
-            # Psychotic symptoms
-            rct_eligible == 0 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
-            rct_eligible == 0 & rct_vis_hallucinations == "Yes" ~ "Seeing things that others cannot see",
-            rct_delusions == "Yes" ~ "Holding unusual beliefs",
-            rct_paranoia == "Yes"  ~ "Feels watched/followed",
-            
-            # Cognitive issues
-            rct_memory_problem == "Yes" ~ "Memory problem",
-            
-            # Default
+            eligible != 1 & rct_eligible_gestation == "No" ~ "Gestation <20 Weeks",
+            eligible != 1 & rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~ "Self harm and memory problem",
+            eligible != 1 & rct_harm_thought == "Yes" & rct_memory_problem == "No"  ~ "Self harm",
+            eligible != 1 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
+            eligible != 1 & rct_vis_hallucinations == "Yes" ~ "Seeing things that others cannot see",
+            eligible != 1 & rct_delusions == "Yes"          ~ "Holding unusual beliefs",
+            eligible != 1 & rct_paranoia == "Yes"           ~ "Feels watched/followed",
+            eligible != 1 & rct_memory_problem == "Yes"     ~ "Memory problem",
             TRUE ~ NA_character_
         )
-    )%>% 
+    ) %>%
+    # Facility extraction
+    mutate(
+        facility = as.numeric(stringr::str_sub(partipant_id, 3, 4))
+    ) %>%
+    # Study arm
+    mutate(
+        arm = case_when(
+            facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21) ~ "Control",
+            TRUE ~ "Intervention"
+        )
+    ) %>%
+    # Decline reasons
+    mutate(
+        rct_decline_reason = case_when(
+            # Assign "Relocate post delivery" if not enrolling AND decline reason is NA
+            rct_enrolling == "No" & is.na(rct_decline_reason) ~ "Relocate post delivery",
+            
+            # Assign "Relocate post delivery" if decline reason is explicitly "Other (specify) ___"
+            rct_decline_reason == "Other (specify) ___" ~ "Relocate post delivery",
+            
+            # Keep other values unchanged
+            TRUE ~ rct_decline_reason
+        )
+    )%>%
+    # Fix: enrolled but eligible == 0 ??? set eligible = 1
+    mutate(
+        eligible = case_when(
+            rct_enrolling == "Yes" & eligible == 0 ~ 1,
+            TRUE ~ eligible
+        )
+    ) %>%
+    # Fix: eligible == 0 and exclusion == Gestation <20 Weeks ??? set eligible = NA
+    mutate(
+        eligible = case_when(
+            eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_integer_,
+            TRUE ~ eligible
+        )
+    ) %>%
+    # Optional: if exclusion is missing but eligible == 0, assign Gestation <20 Weeks
     mutate(
         exclusion = case_when(
-            eligible == 1 & exclusion == "Self harm" & rct_risk %in% c("Low", "Moderate") ~ NA_character_,
+            eligible == 0 & is.na(exclusion) ~ "Gestation <20 Weeks",
             TRUE ~ exclusion
-              )) %>% 
-    mutate(facility = as.numeric(str_sub(partipant_id, 3, 4))) %>% 
-    mutate(arm = case_when(
-        facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21) ~ "Control",
-        TRUE ~ "Intervention"
-    )) %>% 
-    mutate(rct_decline_reason = case_when(
-            rct_decline_reason == "Other (specify) ___" ~ "Relocate post delivery",
-            TRUE ~ rct_decline_reason  # Keep other values unchanged
-        )) 
+        )
+    ) %>% 
+    mutate(
+        # Final clean-up for gestation <20 weeks cases
+        rct_decline_reason = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_decline_reason
+        ),
+        rct_enrolling = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_enrolling
+        ),
+        rct_other_reasons = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_other_reasons
+        )
+    )
+
 
 
 # Merge consort data with pm_df
@@ -200,12 +260,6 @@ consort_data <- consort_data %>%
 
 consort_data <- bind_rows(anc_attendees_df, consort_data)
 
-elig <- consort_data %>% 
-    filter(is.na(eligible)) %>% 
-    filter(is.na(exclusion))
-
-decline_reason <- consort_data %>% 
-    filter(!is.na(rct_decline_reason))
 
 secondvisit <- ppw_rct_df %>% 
     filter(clt_visit == "6 weeks post-partum") %>% 
@@ -451,10 +505,14 @@ consort_per
 
 ## consort diagram without arm breaking--------
 # Total ANC attendees
-n_attendees <- consort_data %>% filter(anc_attendees == "Yes") %>% nrow()
+n_attendees <- consort_data %>% 
+    filter(anc_attendees == "Yes") %>% 
+    nrow()
 
 # Total assessed (non-NA arm)
-n_assessed <- consort_data %>% filter(!is.na(arm)) %>% nrow()
+n_assessed <- consort_data %>% 
+    filter(!is.na(arm)) %>% 
+    nrow()
 
 # Total excluded
 n_excluded <- consort_data %>% 
@@ -542,8 +600,9 @@ txt_ex <- paste(c(header_ex, reason_lines_ex), collapse = "\n")
 
 
 #decline side box
-
-n_declined <- n_eligible - n_enrolled
+n_declined <- consort_data %>% 
+    filter(!is.na(rct_decline_reason)) %>% 
+    nrow()
 
 decline_summary <- consort_data %>%
     filter(!is.na(rct_decline_reason)) %>%
@@ -621,6 +680,4 @@ arm_ineligibility_summary <- consort_data %>%
         table.font.size = px(14))
 
 arm_ineligibility_summary
-
-#-------------------------------------------------------------------------------
 
