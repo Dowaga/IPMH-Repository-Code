@@ -8,6 +8,9 @@ output: word_document
 ```{r setup, include=FALSE, warning = FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
+# Set up data freeze time for this report
+data_freeze <- as.Date("2026-05-11") 
+
 source("Costing.R")
 
 # Set flextable default to full width for Word
@@ -23,7 +26,7 @@ source("Costing.R")
 ## Enrollment Timelines
 ```{r enro timelines, echo=FALSE, message=FALSE, warning=FALSE}
 
-first_last <- costing %>% mutate(date = ymd(str_remove(date, "EAT")) %>% force_tz(tzone = "Africa/Nairobi")) %>% filter(!is.na(date)) %>% summarise(`First Enrollment` = min(date, na.rm = TRUE), `Last Enrollment` = max(date, na.rm = TRUE))%>% 
+first_last <- costing_df %>% mutate(date = ymd(str_remove(date, "EAT")) %>% force_tz(tzone = "Africa/Nairobi")) %>% filter(!is.na(date)) %>% summarise(`First Enrollment` = min(date, na.rm = TRUE), `Last Enrollment` = max(date, na.rm = TRUE))%>% 
     gt() %>%
   tab_header(
     title = "Enrollment Timeline",
@@ -116,19 +119,18 @@ table_audit_feedback_costing
 
 \pagebreak
 
-```{r}
+```{r patient cost, echo=FALSE, message=FALSE, warning=FALSE}
 source("Out of Pocket Costing.R")
 patient_cost
 ```
 
 \pagebreak
-```{r}
-source("Out of Pocket Costing.R")
+```{r productivity loss, echo=FALSE, message=FALSE, warning=FALSE}
+
 productivity_loses_summary
 ```
 
 \pagebreak
-```{r}
-source("Out of Pocket Costing.R")
+```{r child care, echo=FALSE, message=FALSE, warning=FALSE}
 child_care_summary
 ```
