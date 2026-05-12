@@ -805,9 +805,15 @@ total_visits <- ppw_rct_df %>%
   count() %>%
   pull(n)
 
-total_scr_num <- df_long %>% nrow()
+total_scr_num <- df_long %>% 
+    nrow()
+
 total_scr_per <- round(total_scr_num/total_visits *100, 1)
-total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
+
+total_ref_num <- df_long %>% 
+    filter(referral_accept == "Yes") %>% 
+    nrow()
+
 total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
@@ -892,7 +898,7 @@ outcome_summary %>%
 ```{r AEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
 source("SAEs Lists.R")
 
-total_AEs <- ae_df %>% nrow()
+total_AEs <- sum(ae_report_df$`Number of Events`)
 ```
 
 As of `r format(data_freeze, '%d %B %Y')`, `r total_AEs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
