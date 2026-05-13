@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 rm(list = ls())
 
 # Set up data freeze time for this report
-data_freeze <- as.Date("2026-04-23") 
+data_freeze <- as.Date("2026-05-11") 
 
 #data_freeze <- "2026-05-11"
 ##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. #####
@@ -242,8 +242,8 @@ generate_box_header <- function(label, n, denom, decimals = 2) {
 
 # Counts by arm --------------------------------------------------------------
 counts_by_arm <- consort_data %>%
-    filter(!is.na(arm_random)) %>%
-    group_by(arm_random) %>%
+    filter(!is.na(arm)) %>%
+    group_by(arm) %>%
     summarise(
         assessed         = n(),
         excluded         = sum(!is.na(exclusion)),
@@ -280,14 +280,14 @@ txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)",
 
 txt_arm <- counts_by_arm %>%
     mutate(txt = sprintf("%s\n (n=%d, %.1f%%)",
-                         arm_random, assessed, (assessed / n_assessed) * 100)) %>%
+                         arm, assessed, (assessed / n_assessed) * 100)) %>%
     pull(txt)
 
 # Side box builder -----------------------------------------------------------
 make_side_box <- function(data, group_var, reason_var, count_var,
                           header_fn, n_col, denom_col) {
     data %>%
-        group_split(arm_random) %>%
+        group_split(arm) %>%
         lapply(function(df) {
             n      <- unique(df[[n_col]])
             denom  <- unique(df[[denom_col]])
@@ -303,10 +303,10 @@ make_side_box <- function(data, group_var, reason_var, count_var,
 # Exclusion side boxes -------------------------------------------------------
 txt_ex <- consort_data %>%
     filter(!is.na(exclusion)) %>%
-    group_by(arm_random, exclusion) %>%
+    group_by(arm, exclusion) %>%
     summarise(count = n(), .groups = "drop") %>%
-    left_join(counts_by_arm %>% select(arm_random, excluded, assessed),
-              by = "arm_random") %>%
+    left_join(counts_by_arm %>% select(arm, excluded, assessed),
+              by = "arm") %>%
     make_side_box(
         reason_var = "exclusion", count_var = "count",
         header_fn  = function(n, d) generate_box_header("Excluded", n, d),
@@ -316,12 +316,12 @@ txt_ex <- consort_data %>%
 # Decline side boxes ---------------------------------------------------------
 txt_decline <- consort_data %>%
     filter(!is.na(rct_decline_reason)) %>%
-    group_by(arm_random, rct_decline_reason) %>%
+    group_by(arm, rct_decline_reason) %>%
     summarise(count = n(), .groups = "drop") %>%
     left_join(
         counts_by_arm %>% mutate(declined = eligible - enrolled) %>%
-            select(arm_random, declined, eligible),
-        by = "arm_random"
+            select(arm, declined, eligible),
+        by = "arm"
     ) %>%
     make_side_box(
         reason_var = "rct_decline_reason", count_var = "count",
@@ -448,10 +448,10 @@ consort_theme <- theme_minimal(base_size = 12) +
     )
 
 total_enrollment <- weekly_enrollment %>%
-    group_by(week, arm_random) %>%
+    group_by(week, arm) %>%
     summarise(enrollment_count = sum(enrollment_count), .groups = "drop") %>%
     arrange(week) %>%
-    group_by(arm_random) %>%
+    group_by(arm) %>%
     mutate(
         cumulative_enrollment = cumsum(enrollment_count),
         study_site = "Total"
@@ -486,7 +486,7 @@ p1 <- ggplot(combined_enrollment,
     scale_color_manual(values = all_colors) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
     coord_cartesian(clip = "off") +
-    facet_wrap(~ arm_random, ncol = 1) +
+    facet_wrap(~ arm, ncol = 1) +
     labs(
         title = "Enrollment Trends by Study Arm",
         x     = "Date",
@@ -550,7 +550,7 @@ p2 <- ggplot(weekly_enrollment,
     scale_color_manual(values = site_colors) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
     coord_cartesian(clip = "off") +
-    facet_wrap(~ arm_random, ncol = 1) +
+    facet_wrap(~ arm, ncol = 1) +
     labs(
         title = "Enrollment Trends by Facility",
         x     = "Date",
@@ -595,8 +595,8 @@ Overall `r n_enrolled` participants have been enrolled into the study, of which 
 # to switch from dummy to real arm assignment.
 
 counts_by_arm <- consort_data %>%
-    filter(!is.na(arm_random)) %>%
-    group_by(arm_random) %>%
+    filter(!is.na(arm)) %>%
+    group_by(arm) %>%
     summarise(
         assessed             = n(),
         excluded             = sum(!is.na(exclusion)),
@@ -627,16 +627,16 @@ counts_by_arm <- consort_data %>%
 
 txt_arm <- counts_by_arm %>%
     mutate(txt = sprintf("%s\n (n=%d, %.1f%%)",
-                         arm_random, assessed, (assessed / n_assessed) * 100)) %>%
+                         arm, assessed, (assessed / n_assessed) * 100)) %>%
     pull(txt)
 
 # Exclusion side boxes
 txt_ex <- consort_data %>%
     filter(!is.na(exclusion)) %>%
-    group_by(arm_random, exclusion) %>%
+    group_by(arm, exclusion) %>%
     summarise(count = n(), .groups = "drop") %>%
-    left_join(counts_by_arm %>% select(arm_random, excluded, assessed),
-              by = "arm_random") %>%
+    left_join(counts_by_arm %>% select(arm, excluded, assessed),
+              by = "arm") %>%
     make_side_box(
         reason_var = "exclusion", count_var = "count",
         header_fn  = function(n, d) generate_box_header("Excluded", n, d),
@@ -646,13 +646,13 @@ txt_ex <- consort_data %>%
 # Decline side boxes
 txt_decline <- consort_data %>%
     filter(!is.na(rct_decline_reason)) %>%
-    group_by(arm_random, rct_decline_reason) %>%
+    group_by(arm, rct_decline_reason) %>%
     summarise(count = n(), .groups = "drop") %>%
     left_join(
         counts_by_arm %>%
             mutate(declined = eligible - enrolled) %>%
-            select(arm_random, declined, eligible),
-        by = "arm_random"
+            select(arm, declined, eligible),
+        by = "arm"
     ) %>%
     make_side_box(
         reason_var = "rct_decline_reason", count_var = "count",
@@ -688,7 +688,7 @@ Women were ineligible if their gestational age at eligibility assessment was \<2
 arm_ineligibility_summary <- consort_data %>%
     filter(!is.na(exclusion)) %>%
     tbl_summary(
-        by      = arm_random,
+        by      = arm,
         sort    = list(all_categorical() ~ "frequency"),
         include = exclusion,
         label   = list(exclusion ~ "Reasons for Ineligibility")
@@ -770,7 +770,7 @@ demographics_df <- demographics_df %>%
     )
 
 arm_demo <- demographics_df %>%
-    tbl_summary(by = arm_random, 
+    tbl_summary(by = arm_group, 
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner_num, 
                   dem_maritalstat_num, dem_marriage, 
@@ -839,7 +839,7 @@ Demographic characteristics were balanced across study arms, supporting baseline
 # source("PPW RCT Basic Demographics.R")
 arm_wlwh_demo <- demographics_df %>% 
     filter(med_pastdiag___2 == "Checked") %>% 
-    tbl_summary(by = arm_random,
+    tbl_summary(by = arm,
         sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
         include=c(dem_age, dem_current_partner_num, 
                   dem_maritalstat_num, dem_marriage, 
@@ -1010,7 +1010,7 @@ referral_df <- ppw_rct_df %>%
     filter(if_any(starts_with("screened_"), ~ .x == 1)) %>% 
 # introduce radnomized arm for blinding
     mutate(
-    arm_random = sample(
+    arm = sample(
       rep(c("Arm X", "Arm Y"), length.out = n())
     )
   )
@@ -1027,7 +1027,7 @@ condition_labels <- tribble(
 # 2. Pivot longer & flag accepted
 
 use_random <- TRUE   #To external analyst set to FALSE for Real Data----
-arm_var <- if (use_random) "arm_random" else "Arm"
+arm_var <- if (use_random) "arm" else "Arm"
 
 # df_long----
 df_long <- referral_df %>%
@@ -1062,7 +1062,7 @@ knitr::opts_chunk$set(fig.pos = "H")
 # Function to build GT referral table ---
 build_gt_referral_table <- function(df_long, use_random = TRUE) {
   #To external analysts set to FALSE for real data----
-  group_var <- if (use_random) "arm_random" else "Arm"
+  group_var <- if (use_random) "arm" else "Arm"
   
   # 1. standardise grouping
   df_long <- df_long %>%
@@ -1437,7 +1437,7 @@ arm_ids <- ppw_rct_df %>%
   distinct() %>%
   arrange(clt_ptid) %>%
   mutate(
-    arm_random = sample(
+    arm = sample(
       rep(c("Arm Y", "Arm X"), length.out = n())
     )
   )
@@ -1449,7 +1449,7 @@ arm_joined <- arm_ids %>%
 # Create summary table
 arm_outcome_summary <- arm_joined %>%
   tbl_summary(
-    by = arm_random, # To external analyst: Replace with arm for real data----
+    by = arm, # To external analyst: Replace with arm for real data----
     include = c(phq9_total, gad7_total, qol_overall_scaled,
                 any_adverse_outcome, rtc_total),
     type = list(
@@ -1527,7 +1527,7 @@ sae_arm <- clean_sae_df %>%
   distinct(redcap_event_name) %>%
   arrange(redcap_event_name) %>%
   mutate(
-    arm_random = sample(
+    arm = sample(
       rep(c("Arm X", "Arm Y"), 
           length.out = n())
     )
@@ -1542,7 +1542,7 @@ clean_sae_df <- clean_sae_df %>%
     )) %>% 
     left_join(sae_arm, by = "redcap_event_name") %>%
     mutate(
-        arm_random = factor(arm_random,
+        arm = factor(arm,
                             levels = c("Arm Y",
                                        "Arm X"))
     ) %>% 
@@ -1609,7 +1609,7 @@ clean_sae_df <- clean_sae_df %>%
 # Step 2: Create a binary variable for each Event category
 sae_wide <- clean_sae_df %>%
     mutate(event_flag = 1) %>%  # to allow counting
-    select(record_id, death_type, arm_random, Arm, Event, event_flag, infant_cause_category,
+    select(record_id, death_type, arm, Arm, Event, event_flag, infant_cause_category,
            maternal_cause_category) %>%
     tidyr::pivot_wider(names_from = Event, values_from = event_flag, values_fill = 0) %>%
     select(-record_id)
@@ -1619,7 +1619,7 @@ sae_wide <- sae_wide %>%
 
 sae_summary_arm <- sae_wide %>%
     tbl_summary(
-        by = arm_random,
+        by = arm,
         include = c(
             "Maternal Death ",
             "Infant Death ",
@@ -1696,7 +1696,7 @@ ae_arm <- ae_df %>%
   distinct(record_id) %>%
   arrange(record_id) %>%
   mutate(
-    arm_random = sample(
+    arm = sample(
       rep(c("Arm X", "Arm Y"),
           length.out = n())
     )
@@ -1711,7 +1711,7 @@ ae_df <- ae_df %>%
 ae_social_long <- ae_df %>%
   filter(ae_cat == "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)") %>%
   filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
-  select(record_id, arm_random, names(ae_define_map)) %>%
+  select(record_id, arm, names(ae_define_map)) %>%
   pivot_longer(
     cols = names(ae_define_map),
     names_to = "variable",
@@ -1724,7 +1724,7 @@ ae_injury_long <- ae_df %>%
   filter(ae_cat == "Injury") %>%
   filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
   mutate(Event = ae_cat) %>%
-  select(record_id, arm_random, Event)
+  select(record_id, arm, Event)
 
 # Combine into one long dataset
 ae_long <- bind_rows(ae_social_long, ae_injury_long)
@@ -1732,7 +1732,7 @@ ae_long <- bind_rows(ae_social_long, ae_injury_long)
 # ---- tbl_summary ----
 ae_summary <- ae_long %>%
   tbl_summary(
-    by = arm_random,                # stratify by Arm
+    by = arm,                # stratify by Arm
     include = Event,                 # summarize Event categories
     statistic = all_categorical() ~ "{n} ({p}%)",  # counts + percentages
     label = list(Event ~ "Adverse Event"),
@@ -1822,7 +1822,7 @@ ae_arm <- final_ae %>%
   distinct(redcap_event_name) %>%
   arrange(redcap_event_name) %>%
   mutate(
-    arm_random = sample(
+    arm = sample(
       rep(c("Arm X", "Arm Y"),
           length.out = n())
     )
@@ -1893,7 +1893,7 @@ final_ae <- final_ae %>%
 # 12. ----Intervention AE summary----
 
 int_ae_summary <- final_ae %>%
-  filter(arm_random == "Arm X") %>%
+  filter(arm == "Arm X") %>%
     # To external analyst: Replace with Arm for real data (Intervention)----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days, days_since_enrolment) %>%
@@ -1937,7 +1937,7 @@ int_ae_summary %>%
 
 ```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 cont_ae_summary <- final_ae %>%
-  filter(arm_random == "Arm X") %>%
+  filter(arm == "Arm X") %>%
     # To external analyst: Replace with Arm for real data (Control)----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days, days_since_enrolment) %>%
