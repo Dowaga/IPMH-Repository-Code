@@ -30,9 +30,8 @@ knitr::opts_chunk$set(
 rm(list = ls())
 
 # Set up data freeze time for this report
-data_freeze <- as.Date("2026-04-23") 
+data_freeze <- as.Date("2026-05-11") 
 
-#data_freeze <- "2026-05-11"
 ##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. #####
 
 # Reference source codes & other dependencies:
@@ -82,8 +81,8 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
           "Pregnant Kenyan women", 
           "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
           "2970, including 405 women living with HIV (WLWH)", 
-          "2322",
-          "951",
+          "2383",
+          "966",
           "Follow-up through 6 months postpartum", 
           "September 19, 2023", 
           "February 17, 2025",
@@ -126,20 +125,88 @@ pm_df <- pm_survey_df %>%
     select(pm_ptid, ipmh_participant)
 
 # Telepsychiatry ----------------------------------------------------------
-tele_with_id <- telepsych %>%
-    filter(tele_ancid != "2025-03-0092") %>%      
-    arrange(tele_ancid, tele_date) %>%
-    group_by(tele_ancid) %>%
-    slice(1) %>%
-    ungroup() %>%
-    left_join(
-        rct_ppw_consenting %>% select(anc_num, partipant_id),
-        by = c("tele_ancid" = "anc_num")
-    ) %>%
-    select(tele_ancid, partipant_id) %>%
+pm_telep_df <- ppw_rct_df %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
+    select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
+    filter(!is.na(clt_date)) 
+
+
+# Define PHQ9 recoding
+phq9_labels <- c(
+    "not at all" = 0,
+    "several days" = 1,
+    "more than half the days" = 2,
+    "nearly every day" = 3
+)
+
+gad7_labels <-c(
+    "Not at all" = 0,
+    "Several days" = 1,
+    "Over half the days"= 2,
+    "Nearly every day" = 3)
+
+
+# Recode PHQ9 variables
+pm_telep_df <- pm_telep_df %>%
+    mutate(across(c(abs_phq_interest, abs_phq_down, abs_phq_sleep,
+                    abs_phq_tired, abs_phq_appetite, abs_phq_bad,
+                    abs_phq_concentrate, abs_phq_slow, abs_phq_dead), ~ recode(., !!!phq9_labels)),
+           across(c(abs_gad7_nerve, abs_gad7_uncontrol, 
+                    abs_gad7_worry, abs_gad7_relax, abs_gad7_restless,
+                    abs_gad7_annoyed, abs_gad7_afraid), ~ recode(., !!!gad7_labels)))
+
+
+
+pm_telep_df <- pm_telep_df %>% 
+    mutate(phq9_scores = rowSums(select(., abs_phq_interest, abs_phq_down,
+                                        abs_phq_sleep, abs_phq_tired, 
+                                        abs_phq_appetite, abs_phq_bad,
+                                        abs_phq_concentrate, abs_phq_slow, 
+                                        abs_phq_dead), na.rm = TRUE),
+           gad7_scores = rowSums(select(., abs_gad7_nerve, abs_gad7_uncontrol,
+                                        abs_gad7_worry, abs_gad7_relax, 
+                                        abs_gad7_restless, abs_gad7_annoyed,
+                                        abs_gad7_afraid), na.rm = TRUE))
+
+# Endorsed PHQ9 Question 9
+self_harm <- pm_telep_df %>% 
+    filter(abs_phq_dead > 0)
+
+pm_telep_df <- pm_telep_df %>% 
+    filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
+    mutate(
+        max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
+        eligible_for = case_when(
+            abs_phq_dead > 0 ~ "Telepsychiatry",
+            (max_score >= 10 & max_score < 15 &
+                 (max_score == phq9_scores | max_score == gad7_scores)) ~ "PM+",
+            max_score >= 15 ~ "Telepsychiatry",
+            TRUE ~ "Not Eligible"
+        ),
+        referred_to = case_when(
+            abs_gad7_ref_tele == "Yes" | abs_phq_ref_tele == "Yes" ~ "Telepsychiatry",
+            abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes" ~ "PM+",
+            TRUE ~ NA_character_
+        )
+    ) 
+
+# PM+ participants
+pm_plus_df <- pm_telep_df %>% 
+    filter(max_score >= 10 & max_score < 15) %>%
+    select(-max_score)  # Remove max_score if not needed
+
+# Tele-psychiatry referrals
+telepsych_referrals <- pm_telep_df %>% 
+    filter((phq9_scores>=15)|(gad7_scores>=15)|(abs_phq_dead > 0 & abs_phq_ref_tele == "Yes"))
+
+tel_refer <- pm_telep_df %>% 
+    filter(abs_phq_ref_tele == "Yes" & referred_to == "PM+")
+
+telepsych_ids <- telepsych_referrals %>% 
+    select(partipant_id = record_id) %>% 
     mutate(tele = "Yes")
 
-tele_sessions <- nrow(tele_with_id)
+tele_sessions <- nrow(telepsych_ids)
 
 # Follow-up visits --------------------------------------------------------
 # Collapsed three near-identical blocks into a single reusable function
@@ -155,53 +222,132 @@ thirdvisit  <- make_visit(ppw_rct_df, "14 weeks post-partum",  "thirdvisit")
 fourthvisit <- make_visit(ppw_rct_df, "6 months post-partum",  "fourthvisit")
 
 # CONSORT data assembly ---------------------------------------------------
-consort_data <- screening_consent_df %>%
-    select(record_id, partipant_id, rct_harm_thought, rct_aud_hallucinations,
-           rct_vis_hallucinations, rct_paranoia, rct_delusions,
-           rct_memory_problem, rct_eligible_gestation, rct_eligible_harm,
-           rct_risk, rct_eligible, rct_enrolling, rct_decline_reason,
-           rct_other_reasons) %>%
+consort_data <- screening_consent_df %>% 
+    # Select relevant variables
+    select(
+        record_id,
+        partipant_id,
+        rct_harm_thought,
+        rct_aud_hallucinations,
+        rct_vis_hallucinations,
+        rct_paranoia,
+        rct_delusions,
+        rct_memory_problem,
+        rct_eligible_gestation,
+        rct_eligible_harm,
+        rct_risk,
+        rct_eligible,
+        rct_enrolling,
+        rct_decline_reason,
+        rct_other_reasons
+    ) %>%
+    # Eligibility
     mutate(
-        eligible = if_else(rct_eligible == 1, "1", NA_character_),
-
-        exclusion = case_when(
-            rct_eligible == 0 & rct_eligible_gestation == "No"  ~ "Gestation <20 Weeks",
-            rct_harm_thought == "Yes" & rct_memory_problem == "No"  ~ "Self harm",
-            rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~ "Self harm and memory problem",
-            rct_eligible == 0 & rct_aud_hallucinations == "Yes"     ~ "Hearing voices that others cannot hear",
-            rct_eligible == 0 & rct_vis_hallucinations == "Yes"     ~ "Seeing things that others cannot see",
-            rct_memory_problem == "Yes" ~ "Memory problem",
-            rct_delusions == "Yes"      ~ "Holding unusual beliefs",
-            rct_paranoia == "Yes"       ~ "Feels watched/followed",
-            TRUE ~ NA_character_
-        ),
-        # Clear exclusion for low/moderate-risk self-harm among eligible
-        exclusion = if_else(
-            eligible == "1" & exclusion == "Self harm" & rct_risk %in% c("Low", "Moderate"),
-            NA_character_, exclusion
-        ),
-
-        facility = as.numeric(str_sub(partipant_id, 3, 4)),
-
-        arm = if_else(
-            facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21),
-            "Control", "Intervention"
-        ),
-
-        rct_decline_reason = if_else(
-            rct_decline_reason == "Other (specify) ___",
-            "Relocate post delivery", rct_decline_reason
+        eligible = case_when(
+            # Exclude self-harm with missing risk
+            rct_harm_thought == "Yes" & is.na(rct_risk) ~ 0,
+            
+            # Otherwise use REDCap eligibility
+            rct_eligible == 1 ~ 1,
+            
+            TRUE ~ 0
         )
     ) %>%
+    # Exclusion reasons
+    mutate(
+        exclusion = case_when(
+            eligible != 1 & rct_eligible_gestation == "No" ~ "Gestation <20 Weeks",
+            eligible != 1 & rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~ "Self harm and memory problem",
+            eligible != 1 & rct_harm_thought == "Yes" & rct_memory_problem == "No"  ~ "Self harm",
+            eligible != 1 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
+            eligible != 1 & rct_vis_hallucinations == "Yes" ~ "Seeing things that others cannot see",
+            eligible != 1 & rct_delusions == "Yes"          ~ "Holding unusual beliefs",
+            eligible != 1 & rct_paranoia == "Yes"           ~ "Feels watched/followed",
+            eligible != 1 & rct_memory_problem == "Yes"     ~ "Memory problem",
+            TRUE ~ NA_character_
+        )
+    ) %>%
+    # Facility extraction
+    mutate(
+        facility = as.numeric(stringr::str_sub(partipant_id, 3, 4))
+    ) %>%
+    # Study arm
+    mutate(
+        arm = case_when(
+            facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21) ~ "Control",
+            TRUE ~ "Intervention"
+        )
+    ) %>%
+    # Decline reasons
+    mutate(
+        rct_decline_reason = case_when(
+            # Assign "Relocate post delivery" if not enrolling AND decline reason is NA
+            rct_enrolling == "No" & is.na(rct_decline_reason) ~ "Relocate post delivery",
+            
+            # Assign "Relocate post delivery" if decline reason is explicitly "Other (specify) ___"
+            rct_decline_reason == "Other (specify) ___" ~ "Relocate post delivery",
+            
+            # Keep other values unchanged
+            TRUE ~ rct_decline_reason
+        )
+    )%>%
+    # Fix: enrolled but eligible == 0 ??? set eligible = 1
+    mutate(
+        eligible = case_when(
+            rct_enrolling == "Yes" & eligible == 0 ~ 1,
+            TRUE ~ eligible
+        )
+    ) %>%
+    # Fix: eligible == 0 and exclusion == Gestation <20 Weeks ??? set eligible = NA
+    mutate(
+        eligible = case_when(
+            eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_integer_,
+            TRUE ~ eligible
+        )
+    ) %>%
+    # Optional: if exclusion is missing but eligible == 0, assign Gestation <20 Weeks
+    mutate(
+        exclusion = case_when(
+            eligible == 0 & is.na(exclusion) ~ "Gestation <20 Weeks",
+            TRUE ~ exclusion
+        )
+    ) %>% 
+    mutate(
+        # Final clean-up for gestation <20 weeks cases
+        rct_decline_reason = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_decline_reason
+        ),
+        rct_enrolling = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_enrolling
+        ),
+        rct_other_reasons = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_other_reasons
+        )
+    ) %>%
+    mutate(
+        partipant_id = case_when(
+            record_id == 9680 ~ 21229680L,   # assign participant_id
+      TRUE ~ partipant_id             # keep existing values
+    )
+  )
+
+
+
+consort_data <- consort_data %>% 
     # All joins chained together
-    left_join(pm_df,        by = c("partipant_id" = "pm_ptid")) %>%
+    left_join(pm_df,        by = c("partipant_id" = "pm_ptid"))
+    
+# Prepend ANC attendees row
+consort_data <- bind_rows(anc_attendees_df, consort_data)
+
+consort_data <- consort_data %>%
     left_join(secondvisit,  by = c("partipant_id" = "clt_ptid")) %>%
     left_join(thirdvisit,   by = c("partipant_id" = "clt_ptid")) %>%
     left_join(fourthvisit,  by = c("partipant_id" = "clt_ptid")) %>%
-    left_join(tele_with_id, by = "partipant_id")
-
-# Prepend ANC attendees row
-consort_data <- bind_rows(anc_attendees_df, consort_data)
+    left_join(telepsych_ids, by = "partipant_id")
 ```
 
 ```{r generate dummy arm, echo=FALSE}
@@ -225,6 +371,8 @@ consort_data <- consort_data %>%
                                        "Arm X"))
     )
 
+ids <- consort_data %>% 
+    filter(record_id == 9680)
 # NOTE FOR WENWEN: Replace all arm_random with arm in the consort diagram chunk below to switch from dummy to real arm assignment.
 ```
 
@@ -526,7 +674,7 @@ reached_75per_target <- weekly_enrollment %>%
   pull(n)
 ```
 
-All `r reached_50per_target` facilities have surpassed the 50% enrollment milestone, each enrolling at least 74 perinatal women. Progress has continued steadily, with `r reached_75per_target` facilities surpassing the 75% milestone (???111 enrollments), demonstrating strong momentum toward full recruitment.
+All `r reached_50per_target` facilities have surpassed the 50% enrollment milestone, each enrolling at least 74 perinatal women. Progress has continued steadily, with `r reached_75per_target` facilities surpassing the 75% milestone (>=111 enrollments), demonstrating strong momentum toward full recruitment.
 
 ```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
 # NOTE FOR WENWEN: Replace arm_random with arm_group in this plot chunk
@@ -723,6 +871,7 @@ Demographic characteristics were balanced across study arms, supporting baseline
 # below to switch from dummy to real arm assignment.
 
 demographics_df <- ppw_rct_df %>% 
+    filter(!record_id %in% c("21145645", "21229680")) %>% 
     filter(clt_visit == "Enrollment") %>% 
     select(clt_study_site, clt_date,starts_with("dem_"), demographics_complete, med_pre_preg, 
            med_pastdiag___2)%>% 
@@ -1743,19 +1892,21 @@ ae_summary <- ae_long %>%
   add_overall(last = TRUE) %>% 
   modify_caption("**Summary of Adverse Events by Arm**") %>%
   modify_footnote(
-    all_stat_cols() ~ "Counts reflect events, not unique participants. Persistent or significant psychosocial distress is defined as PHQ-9 score ???10 at any follow-up visit."
+    all_stat_cols() ~ "Counts reflect events, not unique participants. Persistent or significant psychosocial distress is defined as PHQ-9 score >=10 at any follow-up visit."
   ) %>%
   bold_labels() %>%
   as_kable_extra(
     caption  = "Summary of Adverse Events by Arm",
     booktabs = TRUE
   )%>%
-  column_spec(1, width = "6cm")
-
+    column_spec(1, width = "7cm") %>%
+    column_spec(2, width = "3cm") %>%
+    column_spec(3, width = "3cm") %>%
+    column_spec(4, width = "3cm") %>%
+    row_spec(0, bold = TRUE, font_size = 10)
 
 ae_summary %>%
   kable_styling(
-    font_size = 10,
     latex_options = c("striped", "HOLD_position", "scale_down"),
     full_width = FALSE,
     position = "center"
@@ -1893,7 +2044,7 @@ final_ae <- final_ae %>%
 # 12. ----Intervention AE summary----
 
 int_ae_summary <- final_ae %>%
-  filter(arm_random == "Arm X") %>%
+  filter(arm_random == "Arm Y") %>%
     # To external analyst: Replace with Arm for real data (Intervention)----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days, days_since_enrolment) %>%
