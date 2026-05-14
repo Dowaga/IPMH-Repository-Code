@@ -681,3 +681,25 @@ arm_ineligibility_summary <- consort_data %>%
 
 arm_ineligibility_summary
 
+#-------------------------------------------------------------------------------
+
+# Check overlap between exclusion and eligible
+exl_eli <- consort_data %>%
+    count(exclusion, eligible)
+
+no_exclusion <- consort_data %>% 
+    filter(eligible==0 & is.na(exclusion))
+
+# Compare eligible vs enrolling
+consort_data %>%
+    count(eligible, rct_enrolling)
+
+not_elig <- consort_data %>% 
+    filter(eligible == 0 & rct_enrolling == "No")
+
+# Compare decline reason vs enrolling
+consort_data %>%
+    count(rct_decline_reason, rct_enrolling)
+
+declined <- consort_data %>% 
+    filter(!is.na(rct_decline_reason))
