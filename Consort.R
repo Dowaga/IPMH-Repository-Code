@@ -252,6 +252,8 @@ consort_data <- screening_consent_df %>%
         )
     )
 
+
+
 # Merge consort data with pm_df
 consort_data <- consort_data %>% 
     left_join(pm_df, by = c("partipant_id"="pm_ptid"))
