@@ -277,14 +277,12 @@ fourthvisit <- ppw_rct_df %>%
     filter(clt_visit == "6 months post-partum") %>% 
     select(clt_ptid) %>% 
     mutate(fourthvisit = "Yes") 
-
-# merge telepsychiatry referrals into consort_data
+# merge secondvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(telepsych_ids, by = c("partipant_id" = "record_id")) 
 
 consort_data %>% 
     tabyl(tele)
-
 # merge secondvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(secondvisit, by = c("partipant_id" = "clt_ptid")) 
@@ -316,13 +314,6 @@ hiv <- ppw_rct_df %>% filter(
 consort_data <- consort_data %>% 
     left_join(hiv, by = c("partipant_id" = "clt_ptid"))
 
-
-### binding
-consort_data <- bind_rows(anc_attendees_df, consort_data)
-
-elig <- consort_data %>% 
-    filter(is.na(eligible)) %>% 
-    filter(is.na(exclusion))
 
 decline_reason <- consort_data %>% 
     filter(!is.na(rct_decline_reason))
@@ -523,9 +514,7 @@ n_hiv <- consort_data %>%
 n_pm <- consort_data %>% filter(ipmh_participant == "Yes" & WLWH == "Yes") %>% nrow()
 
 # Total telepsychiatry participants
-n_tele <- consort_data %>% 
-    filter(tele == "Yes" & WLWH == "Yes") %>% 
-    nrow()
+n_tele <- consort_data %>% filter(tele == "Yes" & WLWH == "Yes") %>% nrow()
 
 # Total postpartum visits
 six_weeks <- consort_data %>%
