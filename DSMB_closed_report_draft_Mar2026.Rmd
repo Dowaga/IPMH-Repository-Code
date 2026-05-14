@@ -868,10 +868,12 @@ Demographic characteristics were balanced across study arms, supporting baseline
 # NOTE FOR WENWEN: Replace arm_random with arm_group throughout the demo chunks
 # below to switch from dummy to real arm assignment.
 
-demographics_df <- ppw_rct_df %>% 
-    filter(!record_id %in% c("21145645", "21229680")) %>% 
-    filter(clt_visit == "Enrollment") %>% 
-    select(clt_study_site, clt_date,starts_with("dem_"), demographics_complete, med_pre_preg, 
+demographics_df <- ppw_rct_df %>%
+    filter(clt_visit == "Enrollment") %>%
+  group_by(record_id) %>%
+  slice_head(n = 1) %>%   # keep only the Enrollment row per record_id
+  ungroup() %>% 
+    select(record_id, clt_study_site, clt_date,starts_with("dem_"), demographics_complete, med_pre_preg, 
            med_pastdiag___2)%>% 
     mutate(dem_age = if_else(
         dem_dob_uk == "Yes",
