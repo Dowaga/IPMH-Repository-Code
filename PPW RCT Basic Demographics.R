@@ -19,6 +19,9 @@ demographics_df <- ppw_rct_df %>%
     ungroup() %>% 
     select(clt_study_site, clt_date,starts_with("dem_"), demographics_complete, med_pre_preg, 
            med_pastdiag___2)%>% 
+    mutate(
+        med_pre_preg = replace_na(med_pre_preg, "No")
+    ) %>% 
     mutate(dem_age = if_else(
         dem_dob_uk == "Yes",
         floor(time_length(interval(dem_dob, clt_date), "years")),
