@@ -371,8 +371,6 @@ consort_data <- consort_data %>%
                                        "Arm X"))
     )
 
-ids <- consort_data %>% 
-    filter(record_id == 9680)
 # NOTE FOR WENWEN: Replace all arm_random with arm in the consort diagram chunk below to switch from dummy to real arm assignment.
 ```
 
