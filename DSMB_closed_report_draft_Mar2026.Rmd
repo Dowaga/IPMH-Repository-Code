@@ -1266,7 +1266,7 @@ build_gt_referral_table <- function(df_long, use_random = FALSE) {
     gt() %>%
     tab_header(title = title_text) %>%
     cols_label(
-      Condition = "Condition",
+      Condition = "Referral Condition",
       n_control = "Screened +",
       n_accepted_control = "Accepted",
       uptake_control = "Uptake (%)",
