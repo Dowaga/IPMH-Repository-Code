@@ -12,6 +12,7 @@ header-includes:
  \usepackage[table]{xcolor}
  \usepackage{wrapfig}
  \floatplacement{figure}{H}
+
 output:
     pdf_document:
         latex_engine: xelatex
@@ -146,7 +147,10 @@ source("Consort.R")
 
 n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
 n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
-n_eligible <- consort_data %>% filter(rct_eligible == 1) %>% nrow()
+n_eligible <- consort_data %>% 
+    filter(eligible == 1) %>% 
+    nrow()
+
 n_eligible_per <- round(n_eligible/n_ass *100, 1)
 n_enrol <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
 n_enrol_per <- round(n_enrol/n_eligible *100, 1)
@@ -651,6 +655,12 @@ p3
 
 Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
 
+```{=Latex}
+\setcounter{table}{0}
+
+```
+
+
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
 ineligibility_summary <- consort_data %>% 
   filter(!is.na(exclusion)) %>% 
@@ -667,6 +677,7 @@ ineligibility_summary <- consort_data %>%
 ineligibility_summary %>%
   kableExtra::kable_styling(
     latex_options = c("HOLD_position", "scale_down"))
+
 ```
 
 # 5. Baseline Demographics
@@ -864,26 +875,27 @@ build_kable_referral_table <- function(df_long) {
     )
   
   # --- 2. Add grand total row ---
-  grand_total <- risk_summary %>%
-    summarise(
-      Condition = "Overall",
-      n_total = sum(n_total),
-      n_accepted_total = sum(n_accepted_total),
-      uptake_total = if_else(sum(n_total) > 0,
-                             sum(n_accepted_total) / sum(n_total) * 100, 0)
-    )
+  # grand_total <- risk_summary %>%
+  #   summarise(
+  #     Condition = "Overall",
+  #     n_total = sum(n_total),
+  #     n_accepted_total = sum(n_accepted_total),
+  #     uptake_total = if_else(sum(n_total) > 0,
+  #                            sum(n_accepted_total) / sum(n_total) * 100, 0)
+  #   )
   
-  risk_summary <- bind_rows(risk_summary, grand_total)
+  #risk_summary <- bind_rows(risk_summary, grand_total)
   
   # --- 3. Kable table ---
   kbl_tbl <- risk_summary %>%
     knitr::kable("latex", booktabs = TRUE, digits = 1,
-                 col.names = c("Referral Condition", "Screened +", "Accepted", "Uptake (%)")) %>%
+                 col.names = c("Referral Condition", "Screened +", "Accepted", "Uptake (%)"),
+                  caption = "Referral Uptake by Condition") %>%
     kableExtra::kable_styling(
       latex_options = c("HOLD_position", "scale_down"),
       font_size = 10
-    ) %>%
-    kableExtra::row_spec(nrow(risk_summary), bold = TRUE)   # bold the Overall row
+    ) #%>%
+   #kableExtra::row_spec(nrow(risk_summary), bold = TRUE)   # bold the Overall row
   
   return(kbl_tbl)
 }
@@ -902,6 +914,8 @@ risk_referral_summary
 source("PPW RCT follow up.R")
 
 outcome_summary <- end_joined %>%
+    mutate(qol_overall_scaled = 
+               ifelse(is.na(qol_overall_scaled), 0, qol_overall_scaled)) %>% 
     tbl_summary(
         include = c(phq9_total, gad7_total, qol_overall_scaled, 
                     any_adverse_outcome, rtc_total),
@@ -945,6 +959,7 @@ outcome_summary %>%
     )
 ```
 
+\newpage
 # 9. Adverse Events and Severe Adverse Events
 
 ## 9.1 Adverse Event Summary
@@ -959,31 +974,29 @@ As of `r format(data_freeze, '%d %B %Y')`, `r total_AEs` adverse events were rep
 
 ```{r AEs Report, echo=FALSE, message=FALSE, warning=FALSE}
 ae_report <- ae_report_df %>%
-    mutate(Summary = paste0(`Number of Events`, " (", round(`Number of Events` / total_events * 100, 1), "%)")) %>%
-    select(Characteristic = Event, Summary) %>%
-    bind_rows(
-        tibble(Characteristic = "Total", Summary = as.character(total_events))
-    ) %>%
-    knitr::kable(
-        booktabs = TRUE,
-        caption = "Summary of Adverse Events",
-        col.names = c("Characteristic", paste0("N = ", total_events))
-    )
+  mutate(Summary = paste0(`Number of Events`, " (", 
+                          round(`Number of Events` / total_events * 100, 1), "%)")) %>%
+  select(Characteristic = Event, Summary) %>%
+  knitr::kable(
+    booktabs = TRUE,
+    caption = "Summary of Adverse Events",
+    col.names = c("Characteristic", paste0("N = ", total_events))
+  )
 
 ae_report %>%
   kableExtra::kable_styling(
     latex_options = c("HOLD_position", "scale_down")
   ) %>%
-  kableExtra::row_spec(0, bold = TRUE) %>%                          # bold header
-  kableExtra::row_spec(nrow(ae_report_df) + 1, bold = TRUE) %>%    # bold Total row
+  kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
   kableExtra::footnote(
-    general = "n (%)",
+   # general = "n (%)",
     symbol = "Persistent or significant psychosocial distress is defined as PHQ-9 score >=10 at any follow-up visit.",
     footnote_as_chunk = TRUE
   )
 
 ```
 
+\newpage
 ## 9.2 Severe Adverse Event Summary
 
 ```{r SAEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1010,5 +1023,30 @@ total_hosp <- clean_sae_df %>%
 As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` were a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
+sae_overall <- sae_wide %>%
+  tbl_summary(
+    include = c("Maternal Death ", "maternal_cause_category",
+                "Infant Death ", "infant_cause_category",
+                "Stillbirth ", "New/prolonged hospitalization "),
+    type = all_continuous() ~ "continuous",
+    statistic = all_continuous() ~ "{sum}",
+    percent = "cell",
+    missing = "no",
+    digits = list(all_continuous() ~ 1, all_categorical() ~ c(0, 1)),
+    label = list(infant_cause_category = "Infants Death Cause",
+                 maternal_cause_category = "Maternal Death Cause"),
+    sort = list(all_categorical() ~ "frequency")
+  ) %>%
+  bold_labels() %>%
+  add_n() %>%
+  as_kable_extra(
+    booktabs = TRUE,
+    caption = "Summary of Reported Serious Adverse Events"
+  ) %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    font_size = 11,
+    position = "center"
+  )
 sae_overall
 ```
