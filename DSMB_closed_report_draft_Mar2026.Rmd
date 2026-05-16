@@ -827,6 +827,11 @@ consort_wlwh
 
 Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
 
+```{=Latex}
+\setcounter{table}{0}
+
+```
+
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
 # NOTE FOR WENWEN: Replace arm_random with arm in this plot chunk
 # below to switch from dummy to real arm assignment.
@@ -876,8 +881,7 @@ demographics_df <- ppw_rct_df %>%
     select(record_id, clt_study_site, 
            clt_date,starts_with("dem_"), 
            demographics_complete, med_pre_preg, 
-           med_pastdiag___2)%>% 
-    mutate(
+           med_pastdiag___2)%>% mutate(
     med_pre_preg = replace_na(med_pre_preg, "No")
   ) %>% 
     mutate(dem_age = if_else(
@@ -1597,8 +1601,9 @@ arm_ids <- ppw_rct_df %>%
   )
 
 arm_joined <- arm_ids %>%
-    inner_join(end_joined, by = "clt_ptid")
-
+    inner_join(end_joined, by = "clt_ptid") %>% 
+    mutate(qol_overall_scaled = 
+               ifelse(is.na(qol_overall_scaled), 0, qol_overall_scaled))
 
 # Create summary table
 arm_outcome_summary <- arm_joined %>%
