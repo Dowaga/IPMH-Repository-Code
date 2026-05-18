@@ -1410,7 +1410,7 @@ end_joined <- end_points %>%
     mutate(any_adverse_outcome = as.factor(any_adverse_outcome),
            phq9_total    = if_else(is.na(qol_overall_scaled), NA_real_, phq9_total),
            gad7_total    = if_else(is.na(qol_overall_scaled), NA_real_, gad7_total),
-           rct_total     = if_else(is.na(qol_overall_scaled), NA_real_, rtc_total)
+           rtc_total     = if_else(is.na(qol_overall_scaled), NA_real_, rtc_total)
            )
 
 
