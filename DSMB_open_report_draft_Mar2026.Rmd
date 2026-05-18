@@ -520,12 +520,19 @@ source("Consort_WLWH.R")
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
 
 ```{r r consort_wlhiv, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
-add_box(txt = txt_anc) |>
-    add_box(txt = txt_ass) |>
-    add_side_box(txt = txt_ex) |>
-    add_box(txt = txt_eligible) |>
-    add_side_box(txt = txt_decline) |>
-    add_box(txt = txt_enrolled) |>
+# add_box(txt = txt_anc) |>
+#     add_box(txt = txt_ass) |>
+#     add_side_box(txt = txt_ex) |>
+#     add_box(txt = txt_eligible) |>
+#     add_side_box(txt = txt_decline) |>
+#     add_box(txt = txt_enrolled) |>
+#     add_box(txt = txt_hiv) |>
+#     add_side_box(txt = txt_pm_tele) |>
+#     add_box(txt = six_weeks_postpartum)|>
+#     add_box(txt = fourteen_weeks_postpartum)|>
+#     add_box(txt = six_months_postpartum)
+
+add_box(txt = txt_enrolled) |>
     add_box(txt = txt_hiv) |>
     add_side_box(txt = txt_pm_tele) |>
     add_box(txt = six_weeks_postpartum)|>
@@ -914,11 +921,10 @@ risk_referral_summary
 source("PPW RCT follow up.R")
 
 outcome_summary <- end_joined %>%
-    mutate(qol_overall_scaled = 
-               ifelse(is.na(qol_overall_scaled), 0, qol_overall_scaled)) %>% 
     tbl_summary(
-        include = c(phq9_total, gad7_total, qol_overall_scaled, 
-                    any_adverse_outcome, rtc_total),
+        include = c(any_adverse_outcome, phq9_total, 
+                    gad7_total, qol_overall_scaled, 
+                    rtc_total),
         type = list(
             all_continuous() ~ "continuous",
             all_categorical() ~ "categorical",
@@ -948,15 +954,25 @@ outcome_summary <- end_joined %>%
     ) %>%
     add_n() %>%
     modify_header(label ~ "**Characteristic**") %>%
-    as_kable_extra(
-        booktabs = TRUE,
-        caption = "Primary and Secondary Outcomes Summary"
-    )
+  as_kable_extra(
+    booktabs = TRUE,
+    caption = "Primary and Secondary Outcomes Summary"
+  ) %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    font_size = 9,
+    full_width = FALSE
+  ) %>%
+  column_spec(1, width = "6cm") %>%
+  kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
+  kableExtra::footnote(
+    symbol = "Adverse events may be reported even for participants who missed the scheduled outcome visit. In this dataset, 21 participants missed the visit. Other outcome measures exclude these participants, leading to differences in denominators across outcomes.",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE,
+    escape = FALSE
+  )
 
-outcome_summary %>%
-    kableExtra::kable_styling(
-        latex_options = c("HOLD_position", "scale_down")
-    )
+outcome_summary
 ```
 
 \newpage
