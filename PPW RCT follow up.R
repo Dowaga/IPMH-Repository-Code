@@ -1407,7 +1407,12 @@ adverse_end <- pregnancy_combined_dedup %>%
 end_joined <- end_points %>%
     inner_join(end_rtc, by = "clt_ptid") %>% 
     inner_join(adverse_end, by = "clt_ptid") %>% 
-    mutate(any_adverse_outcome = as.factor(any_adverse_outcome))
+    mutate(any_adverse_outcome = as.factor(any_adverse_outcome),
+           phq9_total    = if_else(is.na(qol_overall_scaled), NA_real_, phq9_total),
+           gad7_total    = if_else(is.na(qol_overall_scaled), NA_real_, gad7_total),
+           rtc_total     = if_else(is.na(qol_overall_scaled), NA_real_, rtc_total)
+           )
+
 
 # Create summary table
 outcome_summary <- end_joined %>%

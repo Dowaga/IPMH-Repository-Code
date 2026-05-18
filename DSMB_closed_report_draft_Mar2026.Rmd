@@ -371,8 +371,6 @@ consort_data <- consort_data %>%
                                        "Arm X"))
     )
 
-ids <- consort_data %>% 
-    filter(record_id == 9680)
 # NOTE FOR WENWEN: Replace all arm_random with arm in the consort diagram chunk below to switch from dummy to real arm assignment.
 ```
 
@@ -742,83 +740,205 @@ Overall `r n_enrolled` participants have been enrolled into the study, of which 
 # NOTE FOR WENWEN: Replace arm_random with arm in this chunk
 # to switch from dummy to real arm assignment.
 
+# counts_by_arm <- consort_data %>%
+#     filter(!is.na(arm)) %>%
+#     group_by(arm) %>%
+#     summarise(
+#         assessed             = n(),
+#         excluded             = sum(!is.na(exclusion)),
+#         eligible             = sum(eligible == "1", na.rm = TRUE),
+#         enrolled             = sum(rct_enrolling == "Yes", na.rm = TRUE),
+#         hiv                  = sum(WLWH == "Yes", na.rm = TRUE),
+#         pm_participants      = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         tele_participants    = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         six_weeks_visit      = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         fourteen_weeks_visit = sum(thirdvisit  == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         six_months_visit     = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         .groups = "drop"
+#     ) %>%
+#     rowwise() %>%
+#     mutate(
+#         txt_eligible          = generate_stage_text("Eligible",                  eligible,             assessed),
+#         txt_excluded          = generate_stage_text("Excluded",                  excluded,             assessed),
+#         txt_enrolled          = generate_stage_text("Enrolled",                  enrolled,             eligible),
+#         txt_hiv               = generate_stage_text("HIV+ (WLWH)",              hiv,                  enrolled),
+#         txt_pm                = generate_stage_text("PM+",                       pm_participants,      hiv),
+#         txt_tele              = generate_stage_text("Telepsychiatry",            tele_participants,    hiv),
+#         txt_6weeks_postpartum  = generate_stage_text("6 weeks postpartum visit",  six_weeks_visit,      hiv),
+#         txt_14weeks_postpartum = generate_stage_text("14 weeks postpartum visit", fourteen_weeks_visit, hiv),
+#         txt_6months_postpartum = generate_stage_text("6 months postpartum visit", six_months_visit,     hiv),
+#         txt_pm_tele           = paste(txt_pm, txt_tele, sep = "\n")
+#     ) %>%
+#     ungroup()
+# 
+# txt_arm <- counts_by_arm %>%
+#     mutate(txt = sprintf("%s\n (n=%d, %.1f%%)",
+#                          arm, assessed, (assessed / n_assessed) * 100)) %>%
+#     pull(txt)
+# 
+# # Exclusion side boxes
+# txt_ex <- consort_data %>%
+#     filter(!is.na(exclusion)) %>%
+#     group_by(arm, exclusion) %>%
+#     summarise(count = n(), .groups = "drop") %>%
+#     left_join(counts_by_arm %>% select(arm, excluded, assessed),
+#               by = "arm") %>%
+#     make_side_box(
+#         reason_var = "exclusion", count_var = "count",
+#         header_fn  = function(n, d) generate_box_header("Excluded", n, d),
+#         n_col = "excluded", denom_col = "assessed"
+#     )
+# 
+# # Decline side boxes
+# txt_decline <- consort_data %>%
+#     filter(!is.na(rct_decline_reason)) %>%
+#     group_by(arm, rct_decline_reason) %>%
+#     summarise(count = n(), .groups = "drop") %>%
+#     left_join(
+#         counts_by_arm %>%
+#             mutate(declined = eligible - enrolled) %>%
+#             select(arm, declined, eligible),
+#         by = "arm"
+#     ) %>%
+#     make_side_box(
+#         reason_var = "rct_decline_reason", count_var = "count",
+#         header_fn  = function(n, d) sprintf("Declined Enrollment (n=%d, %.1f%%):", n, (n/d)*100),
+#         n_col = "declined", denom_col = "eligible"
+#     )
+# 
+# consort_wlwh <- add_box(txt = txt_anc) |>
+#     add_box(txt = txt_ass) |>
+#     add_split(txt = txt_arm) |>
+#     add_side_box(txt = txt_ex) |>
+#     add_box(txt = counts_by_arm$txt_eligible) |>
+#     add_side_box(txt = txt_decline) |>
+#     add_box(txt = counts_by_arm$txt_enrolled) |>
+#     add_box(txt = counts_by_arm$txt_hiv) |>
+#     add_box(txt = counts_by_arm$txt_6weeks_postpartum) |>
+#     add_box(txt = counts_by_arm$txt_14weeks_postpartum) |>
+#     add_box(txt = counts_by_arm$txt_6months_postpartum)
+# 
+# 
+# counts_by_arm <- consort_data %>%
+#   filter(rct_enrolling == "Yes", !is.na(arm)) %>%
+#   group_by(arm) %>%
+#   summarise(
+#     enrolled             = n(),
+#     hiv                  = sum(WLWH == "Yes", na.rm = TRUE),
+#     pm_participants      = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     tele_participants    = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     six_weeks_visit      = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     fourteen_weeks_visit = sum(thirdvisit  == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     six_months_visit     = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     .groups = "drop"
+#   ) %>%
+#   rowwise() %>%
+#   mutate(
+#     txt_enrolled          = generate_stage_text("Enrolled", enrolled, enrolled),
+#     txt_hiv               = generate_stage_text("HIV+ (WLWH)", hiv, enrolled),
+#     txt_pm                = generate_stage_text("PM+", pm_participants, hiv),
+#     txt_tele              = generate_stage_text("Telepsychiatry", tele_participants, hiv),
+#     txt_6weeks_postpartum  = generate_stage_text(
+#       "6 weeks postpartum visit",
+#       six_weeks_visit,
+#       hiv
+#     ),
+#     txt_14weeks_postpartum = generate_stage_text(
+#       "14 weeks postpartum visit",
+#       fourteen_weeks_visit,
+#       hiv
+#     ),
+#     txt_6months_postpartum = generate_stage_text(
+#       "6 months postpartum visit",
+#       six_months_visit,
+#       hiv
+#     )
+#   ) %>%
+#   ungroup()
+# 
+# n_enrolled <- sum(counts_by_arm$enrolled)
+# 
+# txt_arm <- counts_by_arm %>%
+#   mutate(
+#     txt = sprintf(
+#       "%s\n(n=%d, %.1f%%)",
+#       arm,
+#       enrolled,
+#       (enrolled / n_enrolled) * 100
+#     )
+#   ) %>%
+#   pull(txt)
+# 
+# consort_wlwh <- add_box(
+#     txt = sprintf("Enrolled\n(n=%d)", n_enrolled)
+#   ) |>
+#   add_split(txt = txt_arm) |>
+#   add_box(txt = counts_by_arm$txt_hiv) |>
+#   add_box(txt = counts_by_arm$txt_6weeks_postpartum) |>
+#   add_box(txt = counts_by_arm$txt_14weeks_postpartum) |>
+#   add_box(txt = counts_by_arm$txt_6months_postpartum)
+# 
+# consort_wlwh
+
+#### Without ANC visit and Assessed for Eligibility-----
 counts_by_arm <- consort_data %>%
-    filter(!is.na(arm)) %>%
-    group_by(arm) %>%
-    summarise(
-        assessed             = n(),
-        excluded             = sum(!is.na(exclusion)),
-        eligible             = sum(eligible == "1", na.rm = TRUE),
-        enrolled             = sum(rct_enrolling == "Yes", na.rm = TRUE),
-        hiv                  = sum(WLWH == "Yes", na.rm = TRUE),
-        pm_participants      = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
-        tele_participants    = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
-        six_weeks_visit      = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
-        fourteen_weeks_visit = sum(thirdvisit  == "Yes" & WLWH == "Yes", na.rm = TRUE),
-        six_months_visit     = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
-        .groups = "drop"
-    ) %>%
-    rowwise() %>%
-    mutate(
-        txt_eligible          = generate_stage_text("Eligible",                  eligible,             assessed),
-        txt_excluded          = generate_stage_text("Excluded",                  excluded,             assessed),
-        txt_enrolled          = generate_stage_text("Enrolled",                  enrolled,             eligible),
-        txt_hiv               = generate_stage_text("HIV+ (WLWH)",              hiv,                  enrolled),
-        txt_pm                = generate_stage_text("PM+",                       pm_participants,      hiv),
-        txt_tele              = generate_stage_text("Telepsychiatry",            tele_participants,    hiv),
-        txt_6weeks_postpartum  = generate_stage_text("6 weeks postpartum visit",  six_weeks_visit,      hiv),
-        txt_14weeks_postpartum = generate_stage_text("14 weeks postpartum visit", fourteen_weeks_visit, hiv),
-        txt_6months_postpartum = generate_stage_text("6 months postpartum visit", six_months_visit,     hiv),
-        txt_pm_tele           = paste(txt_pm, txt_tele, sep = "\n")
-    ) %>%
-    ungroup()
+  filter(rct_enrolling == "Yes", !is.na(arm)) %>%
+  group_by(arm) %>%
+  summarise(
+    enrolled             = n(),
+    hiv                  = sum(WLWH == "Yes", na.rm = TRUE),
+    pm_participants      = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    tele_participants    = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    six_weeks_visit      = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    fourteen_weeks_visit = sum(thirdvisit  == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    six_months_visit     = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rowwise() %>%
+  mutate(
+    txt_enrolled          = generate_stage_text("Enrolled", enrolled, enrolled),
+    txt_hiv               = generate_stage_text("HIV+ (WLWH)", hiv, enrolled),
+    txt_pm                = generate_stage_text("PM+", pm_participants, hiv),
+    txt_tele              = generate_stage_text("Telepsychiatry", tele_participants, hiv),
+    txt_6weeks_postpartum  = generate_stage_text(
+      "6 weeks postpartum visit",
+      six_weeks_visit,
+      hiv
+    ),
+    txt_14weeks_postpartum = generate_stage_text(
+      "14 weeks postpartum visit",
+      fourteen_weeks_visit,
+      hiv
+    ),
+    txt_6months_postpartum = generate_stage_text(
+      "6 months postpartum visit",
+      six_months_visit,
+      hiv
+    )
+  ) %>%
+  ungroup()
+
+n_enrolled <- sum(counts_by_arm$enrolled)
 
 txt_arm <- counts_by_arm %>%
-    mutate(txt = sprintf("%s\n (n=%d, %.1f%%)",
-                         arm, assessed, (assessed / n_assessed) * 100)) %>%
-    pull(txt)
-
-# Exclusion side boxes
-txt_ex <- consort_data %>%
-    filter(!is.na(exclusion)) %>%
-    group_by(arm, exclusion) %>%
-    summarise(count = n(), .groups = "drop") %>%
-    left_join(counts_by_arm %>% select(arm, excluded, assessed),
-              by = "arm") %>%
-    make_side_box(
-        reason_var = "exclusion", count_var = "count",
-        header_fn  = function(n, d) generate_box_header("Excluded", n, d),
-        n_col = "excluded", denom_col = "assessed"
+  mutate(
+    txt = sprintf(
+      "%s\n(n=%d, %.1f%%)",
+      arm,
+      enrolled,
+      (enrolled / n_enrolled) * 100
     )
+  ) %>%
+  pull(txt)
 
-# Decline side boxes
-txt_decline <- consort_data %>%
-    filter(!is.na(rct_decline_reason)) %>%
-    group_by(arm, rct_decline_reason) %>%
-    summarise(count = n(), .groups = "drop") %>%
-    left_join(
-        counts_by_arm %>%
-            mutate(declined = eligible - enrolled) %>%
-            select(arm, declined, eligible),
-        by = "arm"
-    ) %>%
-    make_side_box(
-        reason_var = "rct_decline_reason", count_var = "count",
-        header_fn  = function(n, d) sprintf("Declined Enrollment (n=%d, %.1f%%):", n, (n/d)*100),
-        n_col = "declined", denom_col = "eligible"
-    )
-
-consort_wlwh <- add_box(txt = txt_anc) |>
-    add_box(txt = txt_ass) |>
-    add_split(txt = txt_arm) |>
-    add_side_box(txt = txt_ex) |>
-    add_box(txt = counts_by_arm$txt_eligible) |>
-    add_side_box(txt = txt_decline) |>
-    add_box(txt = counts_by_arm$txt_enrolled) |>
-    add_box(txt = counts_by_arm$txt_hiv) |>
-    add_box(txt = counts_by_arm$txt_6weeks_postpartum) |>
-    add_box(txt = counts_by_arm$txt_14weeks_postpartum) |>
-    add_box(txt = counts_by_arm$txt_6months_postpartum)
+consort_wlwh <- add_box(
+    txt = sprintf("Enrolled\n(n=%d)", n_enrolled)
+  ) |>
+  add_split(txt = txt_arm) |>
+  add_box(txt = counts_by_arm$txt_hiv) |>
+  add_box(txt = counts_by_arm$txt_6weeks_postpartum) |>
+  add_box(txt = counts_by_arm$txt_14weeks_postpartum) |>
+  add_box(txt = counts_by_arm$txt_6months_postpartum)
 
 consort_wlwh
 ```
@@ -828,6 +948,11 @@ consort_wlwh
 # 4. Ineligibility
 
 Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
+
+```{=Latex}
+\setcounter{table}{0}
+
+```
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
 # NOTE FOR WENWEN: Replace arm_random with arm in this plot chunk
@@ -870,11 +995,17 @@ Demographic characteristics were balanced across study arms, supporting baseline
 # NOTE FOR WENWEN: Replace arm_random with arm_group throughout the demo chunks
 # below to switch from dummy to real arm assignment.
 
-demographics_df <- ppw_rct_df %>% 
-    filter(!record_id %in% c("21145645", "21229680")) %>% 
-    filter(clt_visit == "Enrollment") %>% 
-    select(clt_study_site, clt_date,starts_with("dem_"), demographics_complete, med_pre_preg, 
-           med_pastdiag___2)%>% 
+demographics_df <- ppw_rct_df %>%
+    filter(clt_visit == "Enrollment") %>%
+  group_by(record_id) %>%
+  slice_head(n = 1) %>%   # keep only the Enrollment row per record_id
+  ungroup() %>% 
+    select(record_id, clt_study_site, 
+           clt_date,starts_with("dem_"), 
+           demographics_complete, med_pre_preg, 
+           med_pastdiag___2)%>% mutate(
+    med_pre_preg = replace_na(med_pre_preg, "No")
+  ) %>% 
     mutate(dem_age = if_else(
         dem_dob_uk == "Yes",
         floor(time_length(interval(dem_dob, clt_date), "years")),
@@ -1268,7 +1399,7 @@ build_gt_referral_table <- function(df_long, use_random = FALSE) {
     gt() %>%
     tab_header(title = title_text) %>%
     cols_label(
-      Condition = "Condition",
+      Condition = "Referral Condition",
       n_control = "Screened +",
       n_accepted_control = "Accepted",
       uptake_control = "Uptake (%)",
@@ -1599,8 +1730,8 @@ arm_joined <- arm_ids %>%
 arm_outcome_summary <- arm_joined %>%
   tbl_summary(
     by = arm, # To external analyst: Replace with arm for real data----
-    include = c(phq9_total, gad7_total, qol_overall_scaled,
-                any_adverse_outcome, rtc_total),
+    include = c(any_adverse_outcome, phq9_total, gad7_total, 
+                qol_overall_scaled, rtc_total),
     type = list(
       all_continuous() ~ "continuous",
       all_categorical() ~ "categorical",
@@ -1641,7 +1772,15 @@ arm_outcome_summary %>%
     latex_options = c("striped", "HOLD_position", "scale_down"),
     full_width = FALSE
   ) %>%
-  column_spec(1, width = "6cm")
+  column_spec(1, width = "6cm") %>%
+  kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
+  kableExtra::footnote(
+    symbol = "Adverse events may be reported even for participants who missed the scheduled outcome visit. In this dataset, 21 participants missed the visit. Other outcome measures exclude these participants, leading to differences in denominators across outcomes.",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE,
+    escape = FALSE
+  )
+
 ```
 
 
