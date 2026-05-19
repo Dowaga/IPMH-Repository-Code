@@ -232,15 +232,34 @@ analysis_df <- analysis_df %>%
     arm_random = factor(arm_random, levels = c("Control", "Intervention"))
   )
 ######### Note for Wenwen: We generated this random arm assignment so we are blind to the real data. You should use arm to replace arm_random in the model below when you run the analysis on the real data. We will keep arm_random in the dataset for you to check that the randomization worked as expected, but please do not use it in the model.
+
+# create wide dataset
+analysis_wide <- analysis_df %>%
+  select(clt_ptid, clt_study_site, arm, arm_random, visit_type, 
+         time, phq9_score, gad7_score) %>%
+  pivot_wider(
+    id_cols = c(clt_ptid, clt_study_site, arm, arm_random),
+    names_from = visit_type,
+    values_from = c(time, phq9_score, gad7_score),
+    names_sep = "_"
+  ) %>%
+  rename(
+    time_pp14   = `time_14 Weeks`,
+    phq9_enroll = `phq9_score_Enrollment`,
+    phq9_pp14   = `phq9_score_14 Weeks`,
+    gad7_enroll = `gad7_score_Enrollment`,
+    gad7_pp14   = `gad7_score_14 Weeks`
+  ) %>%
+  select(-`time_Enrollment`)
 ```
 
-In the models, treatment arm is coded as a binary indicator with the control arm as the reference group (Control = 0, Intervention = 1). Time is measured in weeks since enrollment (time = 0 at enrollment). The interaction term `arm * time` therefore represents the difference in the rate of change in scores over time between the intervention and control arms. A negative interaction coefficient indicates that scores decline more steeply over time in the intervention arm relative to the control arm.
+In the models, treatment arm is coded as a binary indicator with the control arm as the reference group (Control = 0, Intervention = 1). Time is measured in weeks since enrollment (time = 0 at enrollment). We additionally controlled each participant's baseline PHQ9 in the model. The interaction term `arm * time` therefore represents the difference in the rate of change in scores over time between the intervention and control arms. A negative interaction coefficient indicates that scores decline more steeply over time in the intervention arm relative to the control arm.
 
 ### PHQ-9
 
 ```{r phq9 results, echo=TRUE, eval=T, message=FALSE, warning=FALSE}
-phq_model <- lmer(phq9_score ~ arm * time + (1 | clt_study_site) + (1 | clt_ptid), 
-                  data = analysis_df)
+phq_model <- lmer(phq9_pp14 ~ arm * time_pp14 + phq9_enroll + (1 | clt_study_site) , 
+                  data = analysis_wide)
 
 summary(phq_model)
 ```
@@ -250,8 +269,8 @@ summary(phq_model)
 ### GAD-7
 
 ```{r gad7 results, echo=TRUE, eval=T, message=FALSE, warning=FALSE}
-gad_model <- lmer(gad7_score ~ arm * time + (1 | clt_study_site) + (1 | clt_ptid), 
-                  data = analysis_df)
+gad_model <- lmer(gad7_pp14 ~ arm * time_pp14 + gad7_enroll + (1 | clt_study_site), 
+                  data = analysis_wide)
 
 summary(gad_model)
 ```
@@ -274,14 +293,14 @@ gs <- gsDesign(k = 2,
 obf_boundary <- gs$upper$bound[1]
 
 phq9_coef <- summary(phq_model)$coefficients
-phq9_est  <- phq9_coef["armIntervention:time", "Estimate"]
-phq9_se   <- phq9_coef["armIntervention:time", "Std. Error"]
-phq9_z    <- phq9_coef["armIntervention:time", "t value"]
+phq9_est  <- phq9_coef["armIntervention:time_pp14", "Estimate"]
+phq9_se   <- phq9_coef["armIntervention:time_pp14", "Std. Error"]
+phq9_z    <- phq9_coef["armIntervention:time_pp14", "t value"]
 
 gad7_coef <- summary(gad_model)$coefficients
-gad7_est  <- gad7_coef["armIntervention:time", "Estimate"]
-gad7_se   <- gad7_coef["armIntervention:time", "Std. Error"]
-gad7_z    <- gad7_coef["armIntervention:time", "t value"]
+gad7_est  <- gad7_coef["armIntervention:time_pp14", "Estimate"]
+gad7_se   <- gad7_coef["armIntervention:time_pp14", "Std. Error"]
+gad7_z    <- gad7_coef["armIntervention:time_pp14", "t value"]
 
 ```
 
@@ -362,7 +381,7 @@ ggplot(boundary_df, aes(x = information_fraction)) +
            color = "darkgreen", size = 3, hjust = 1) +
   annotate("text",
            x     = total_person_time/total_expected_pt + 0.04,
-           y     = abs(gad7_z) + 0.4,
+           y     = abs(gad7_z) - 0.2,
            label = sprintf("GAD-7\nZ=%.2f", gad7_z),
            color = "purple", size = 3, hjust = 1) +
   scale_y_continuous(
