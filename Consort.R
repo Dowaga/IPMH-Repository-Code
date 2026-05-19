@@ -299,7 +299,10 @@ consort_data <- consort_data %>%
 # Keep only one unique id per participanyts
 consort_data <- consort_data %>%
     group_by(partipant_id) %>%
-    slice(1) %>%   # keeps the first row
+    filter(
+        # keep all rows if ID is NA
+        is.na(partipant_id) | row_number() == 1
+    ) %>%
     ungroup()
 
 # Create a dummy arm for DSMB Closed report
