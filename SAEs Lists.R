@@ -614,3 +614,161 @@ army_aes_gt <- army_aes %>%
 # #1) do we only include suicide ideation during follow-up visits or all visits?
 # #2) currently, for some with suicidality, their age is NA, and their date onset/days since enrollment need to be double checked.
 # #3) for those, they don't have a direct relatedness to the study. need to see how to address this.
+
+## AEs lists for ERC submission ----
+#----1. Prepare AE dataset----
+
+ae_df <- ppw_sae_df %>% 
+  select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>%
+  filter(ae_yn == "Yes") %>% 
+    mutate(ae_cat = case_when(
+        record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)" ~ "Infant Death (SAE)",
+        ae_cat == "Miscarriage or stillbirth (loss of pregnancy) (SAE)" ~ "Stillbirth (SAE)",
+        ae_type___1 == "Checked" ~ "Maternal Death (SAE)",
+        ae_type___2 == "Checked" ~ "Infant Death (SAE)",
+        TRUE ~ ae_cat
+    ))
+
+#----2. Labels ----
+
+ae_labels <- c(
+  ae_define___1  = "Kicked out of home",
+  ae_define___2  = "Experienced violence or abuse",
+  ae_define___3  = "Breach of Confidentiality",
+  ae_define___4  = "Self-harm/Suicidal behavior",
+  ae_define___5  = "Persistent or significant psychosocial distress",
+  ae_define___6  = "Infant harm/behavior",
+  ae_define___99 = "Other"
+)
+
+#----3. Social harm AEs ----
+
+self_harm_df <- ae_df %>%
+  filter(str_detect(ae_cat, "Social harm event")) %>%
+  pivot_longer(
+    cols = starts_with("ae_define___"),
+    names_to = "ae_type",
+    values_to = "Checked"
+  ) %>%
+  filter(Checked == "Checked") %>%
+  mutate(ae_label = recode(ae_type, !!!ae_labels))
+
+#----4. Other AEs----
+
+other_ae <- ae_df %>%
+  filter(!str_detect(ae_cat, "Social harm event")) %>%
+  mutate(ae_label = ae_cat)
+
+#----5. Combine AEs ----
+
+final_ae <- bind_rows(self_harm_df, other_ae)
+
+
+#----6. Attach arm + clean AE category----
+final_ae <- final_ae %>%
+    mutate(
+    Arm = str_extract(redcap_event_name, "(?<=Arm \\d: )[^)]+")
+  ) %>%
+  mutate(
+    ae_cat = forcats::fct_recode(
+      ae_cat,
+      "Social harm" = "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)"
+    )
+  )
+
+#----7. Age dataset----
+
+ae_ages <- ppw_rct_df %>%
+  mutate(
+    dem_age = if_else(
+      dem_dob_uk == "Yes",
+      floor(lubridate::time_length(lubridate::interval(dem_dob, clt_date), "years")),
+      dem_age
+    )
+  ) %>%
+    select(record_id, clt_study_site, redcap_event_name,
+           dem_age, clt_date) %>%
+  filter(str_detect(redcap_event_name, "^Enrollment"),
+         !is.na(clt_date))
+
+#----8. Merge age + clean dates ----
+
+final_ae <- final_ae %>%
+  left_join(ae_ages, by = "record_id") %>%
+  filter(!is.na(dem_age)) %>%
+    mutate(
+    ae_datereport = as.Date(ae_datereport),
+    ae_dateonset  = as.Date(ae_dateonset),
+    clt_date      = as.Date(clt_date),
+    reported_days = as.numeric(ae_datereport - ae_dateonset),
+    days_since_enrolment = as.numeric(ae_datereport - clt_date)
+  )
+
+# 9. --- Severity order----
+severity_order <- c(
+  "Maternal Death (SAE)",
+  "Infant Death (SAE)",
+  "Stillbirth (SAE)",
+  "New/prolonged hospitalization (SAE)",
+  "Self-harm/Suicidal behavior",
+  "Persistent or significant psychosocial distress",
+  "Experienced violence or abuse",
+  "Kicked out of home",
+  "Injury"
+)
+
+final_ae <- final_ae %>%
+  mutate(
+    ae_label = factor(ae_label, levels = severity_order)
+  )
+
+# 10. ----AEs summary----
+
+summary_aes <- final_ae %>%
+    filter(!str_detect(ae_label, "\\(SAE\\)")) %>% 
+  select(record_id, clt_study_site, dem_age, ae_label,
+         ae_dateonset, ae_datereport, ae_outcome) %>%
+  mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
+  rename(
+    PTID = record_id,
+    `Study Site` = clt_study_site,
+    `Adverse Event reported` = ae_label,
+    `Age of participant` = dem_age,
+    `Date Averse Event was reported` = ae_datereport,
+    `Start date of adverse event` = ae_dateonset,
+    `Outcome` = ae_outcome
+  )%>%
+  arrange(`Adverse Event reported`)
+
+#----13. Table output----
+
+summary_aes %>%
+  kable(
+    caption = "Summary of Adverse Events",
+    booktabs = TRUE
+  ) %>%
+  kable_styling(
+    font_size = 8,
+    latex_options = c("striped", "HOLD_position", "scale_down"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+    column_spec(1, width = "2cm") %>%
+    column_spec(2, width = "3cm") %>%
+    column_spec(3, width = "5cm") %>%
+    column_spec(4, width = "2cm") %>%
+    column_spec(5, width = "2cm") %>%
+    column_spec(6, width = "2cm") %>%
+    row_spec(0, bold = TRUE, font_size = 9)
+
+# For Word output, convert to flextable instead
+ft <- flextable(summary_aes)
+ft <- set_caption(ft, "Summary of Adverse Events")
+ft <- autofit(ft)
+
+# Save to Word
+doc <- read_docx() %>%
+    body_add_flextable(ft) %>%
+    body_add_par(" ")  # optional spacing
+
+print(doc, target = "Summary_AEs.docx")

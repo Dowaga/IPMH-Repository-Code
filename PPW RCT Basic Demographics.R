@@ -13,7 +13,15 @@ source("DataTeam_ipmh.R")
 
 # data prep --------------------------------------------------------------------
 demographics_df <- ppw_rct_df %>% 
-    filter(clt_visit == "Enrollment") %>%
+        mutate(
+            visit_type = case_when(
+                grepl("Enrollment", redcap_event_name) ~ "Enrollment",
+                grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
+                grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
+                grepl("6 Months", redcap_event_name) ~ "6 Months",
+                TRUE ~ NA_character_
+            )) %>% 
+    filter(visit_type == "Enrollment") %>%
     group_by(record_id) %>%
     slice_head(n = 1) %>%   # keep only the Enrollment row per record_id
     ungroup() %>% 

@@ -5,6 +5,7 @@
 # Consort Diagram for weekly report
 
 # Setup ------------------------------------------------------------------------
+data_freeze <- as.Date("2026-05-11")
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
@@ -292,6 +293,15 @@ consort_data <- consort_data %>%
 # merge fourthvisit people into consort_data
 consort_data <- consort_data %>% 
     left_join(fourthvisit, by = c("partipant_id" = "clt_ptid"))
+
+# Keep only one unique id per participanyts
+consort_data <- consort_data %>%
+    group_by(partipant_id) %>%
+    filter(
+        # keep all rows if ID is NA
+        is.na(partipant_id) | row_number() == 1
+    ) %>%
+    ungroup()
 
 # Create a dummy arm for DSMB Closed report
 consort_data <- consort_data %>% 

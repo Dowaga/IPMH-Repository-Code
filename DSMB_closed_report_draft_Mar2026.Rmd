@@ -335,7 +335,6 @@ consort_data <- screening_consent_df %>%
   )
 
 
-
 consort_data <- consort_data %>% 
     # All joins chained together
     left_join(pm_df,        by = c("partipant_id" = "pm_ptid"))
@@ -348,6 +347,15 @@ consort_data <- consort_data %>%
     left_join(thirdvisit,   by = c("partipant_id" = "clt_ptid")) %>%
     left_join(fourthvisit,  by = c("partipant_id" = "clt_ptid")) %>%
     left_join(telepsych_ids, by = "partipant_id")
+
+consort_data <- consort_data %>%
+  group_by(partipant_id) %>%
+  filter(
+    # keep all rows if ID is NA
+    is.na(partipant_id) | row_number() == 1
+  ) %>%
+  ungroup()
+
 ```
 
 ```{r generate dummy arm, echo=FALSE}
@@ -1733,16 +1741,16 @@ arm_outcome_summary <- arm_joined %>%
     include = c(any_adverse_outcome, phq9_total, gad7_total, 
                 qol_overall_scaled, rtc_total),
     type = list(
-      all_continuous() ~ "continuous",
+      all_continuous() ~ "continuous2",
       all_categorical() ~ "categorical",
-      phq9_total ~ "continuous",
-      gad7_total ~ "continuous",
-      qol_overall_scaled ~ "continuous",
-      rtc_total ~ "continuous",
+      phq9_total ~ "continuous2",
+      gad7_total ~ "continuous2",
+      qol_overall_scaled ~ "continuous2",
+      rtc_total ~ "continuous2",
       any_adverse_outcome ~ "dichotomous"
     ),
     statistic = list(
-      all_continuous() ~ "{median} ({p25}, {p75})",
+      all_continuous() ~ c("{mean} ({sd})", "{median} ({p25}, {p75})"),
       all_categorical() ~ "{n} ({p}%)"
     ),
     missing = "no",
@@ -1761,6 +1769,7 @@ arm_outcome_summary <- arm_joined %>%
   add_n() %>%
   add_overall(last = TRUE) %>% 
   bold_labels() %>%
+    modify_footnote(all_stat_cols() ~ NA) %>%
   as_kable_extra(
     caption = "Primary and Secondary Outcomes Summary by Arm",
     booktabs = TRUE
