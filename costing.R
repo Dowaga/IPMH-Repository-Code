@@ -10,6 +10,7 @@ rm(list = ls())
 source("dependencies.R")
 source("DataTeam_ipmh.R")
 source("data_import.R")
+pacman::p_load(hms)
 
 # Set up data freeze time for this report
 data_freeze <- as.Date("2026-05-18") 
@@ -636,6 +637,10 @@ pm_plus_costing_df <- costing_df %>%
     select(date, study_site, pt_id_pm, starts_with("pm"),starts_with("super"), -pm_desig, -pmass_time_in,
            -pmass_time_out, -pmsch_time_in, -pmsch_time_out, -pm_int_complete)
 
+time_cols <- grep("pm.*time", names(pm_plus_costing_df), value = TRUE)
+
+pm_plus_costing_df <- pm_plus_costing_df %>%
+    mutate(across(all_of(time_cols), ~ as_hms(as.character(.))))
 
 ## Data collection table --------
 # Total N as a tibble row
@@ -712,28 +717,45 @@ tab_header(
 
 
 ## Time table ---------
-pm_plus_costing_df <- pm_plus_costing_df %>%
-    mutate(across(where(~ is.character(.) || is.factor(.)), 
-                  ~ droplevels(as.factor(.))))
 
 pm_plus_costing_df <- pm_plus_costing_df %>%
     mutate(
-        pm1_duration = as.numeric(pm1_end_time_out - pm1_time_in)*1440,
-        pm1_total_duration = as.numeric(pm1_end_time_out - pm_enter_time_in)*1440,
+        supervision_time_in  = as_hms(as.character(supervision_time_in)),
+        supervision_time_out = as_hms(as.character(supervision_time_out))
+    ) %>% 
+    mutate(
+        pm1_duration =
+            as.numeric(pm1_end_time_out - pm1_time_in) / 60,
         
-        pm2_duration = as.numeric(pm2_end_time_out - pm2_time_in)*1440,
-        pm2_total_duration = as.numeric(pm2_end_time_out - pm_enter_time_in)*1440,
+        pm1_total_duration =
+            as.numeric(pm1_end_time_out - pm_enter_time_in) / 60,
         
-        pm3_duration = as.numeric(pm3_end_time_out - pm3_time_in)*1440,
-        pm3_total_duration = as.numeric(pm3_end_time_out - pm_enter_time_in)*1440,
+        pm2_duration =
+            as.numeric(pm2_end_time_out - pm2_time_in) / 60,
         
-        pm4_duration = as.numeric(pm4_end_time_out - pm4_time_in)*1440,
-        pm4_total_duration = as.numeric(pm4_end_time_out - pm_enter_time_in)*1440,
+        pm2_total_duration =
+            as.numeric(pm2_end_time_out - pm_enter_time_in) / 60,
         
-        pm5_duration = as.numeric(pm5_end_time_out - pm5_time_in)*1440,
-        pm5_total_duration = as.numeric(pm5_end_time_out - pm_enter_time_in)*1440,
+        pm3_duration =
+            as.numeric(pm3_end_time_out - pm3_time_in) / 60,
         
-        superv_duration = as.numeric(supervision_time_out - supervision_time_in)*1440
+        pm3_total_duration =
+            as.numeric(pm3_end_time_out - pm_enter_time_in) / 60,
+        
+        pm4_duration =
+            as.numeric(pm4_end_time_out - pm4_time_in) / 60,
+        
+        pm4_total_duration =
+            as.numeric(pm4_end_time_out - pm_enter_time_in) / 60,
+        
+        pm5_duration =
+            as.numeric(pm5_end_time_out - pm5_time_in) / 60,
+        
+        pm5_total_duration =
+            as.numeric(pm5_end_time_out - pm_enter_time_in) / 60,
+        
+        superv_duration =
+            as.numeric(supervision_time_out - supervision_time_in) / 60
     )
 
 pm_summary_table <- pm_plus_costing_df %>%
@@ -809,14 +831,21 @@ pm_summary_table <- pm_plus_costing_df %>%
         table.font.size = px(14))
 
 # PM+ duration----
-pm_ave_time <- pm_plus_costing_df %>% 
-    filter(pm_number %in% c ('Session 1','Session 2', 'Session 3','Session 4', 'Session 5')) %>% 
-    mutate( pm1_duration = as.numeric(pm1_time_out - pm1_time_in)*1440, 
-            pm2_duration = as.numeric(pm2_time_out - pm2_time_in)*1440, 
-            pm3_duration = as.numeric(pm3_time_out - pm3_time_in)*1440, 
-            pm4_duration = as.numeric(pm4_time_out - pm4_time_in)*1440, 
-            pm5_duration = as.numeric(pm5_time_out - pm5_time_in)*1440, 
-            total_time = pm1_duration + pm2_duration + pm3_duration + pm4_duration + pm5_duration)
+pm_ave_time <- pm_plus_costing_df %>%
+    filter(pm_number %in% c(
+        'Session 1','Session 2','Session 3','Session 4','Session 5'
+    )) %>%
+    mutate(
+        pm1_duration = as.numeric(pm1_time_out - pm1_time_in) / 60,
+        pm2_duration = as.numeric(pm2_time_out - pm2_time_in) / 60,
+        pm3_duration = as.numeric(pm3_time_out - pm3_time_in) / 60,
+        pm4_duration = as.numeric(pm4_time_out - pm4_time_in) / 60,
+        pm5_duration = as.numeric(pm5_time_out - pm5_time_in) / 60,
+        total_time = rowSums(across(
+            c(pm1_duration, pm2_duration, pm3_duration, pm4_duration, pm5_duration)
+        ), na.rm = TRUE)
+    )
+
 
 # Average duration per session
 pm_duration_table <- pm_ave_time %>%
@@ -965,40 +994,79 @@ table_audit_feedback_summary<- flextable(summary_table_af) %>%
     set_caption("Number of Participants in Audit and Feedback by Arm and Site")
 
 ## Time table for audit and feedback ----------
-audit_feedback_costing_df <- audit_feedback_costing_df %>%
-    mutate(across(where(~ is.character(.) || is.factor(.)), 
-                  ~ droplevels(as.factor(.))))
+# convert ONLY time columns safely
+time_cols <- grep("time", names(audit_feedback_costing_df), value = TRUE)
 
 audit_feedback_costing_df <- audit_feedback_costing_df %>%
+    mutate(across(where(~ is.character(.) || is.factor(.)),
+                  ~ droplevels(as.factor(.)))) %>%
+    
+    mutate(across(all_of(time_cols),
+                  ~ as_hms(as.character(.)))) %>%
+    
     mutate(
-        af_analysis_duration = difftime(af_analysis_time_out, af_analysis_time_in, units = "mins") %>% as.numeric(),
-        af_develop_duration = difftime(af_develop_time_out, af_develop_time_in, units = "mins") %>% 
-            as.numeric(),
-        af_schedule_duration = as.numeric(difftime(af_sche_time_out, af_sche_time_in, units = "mins")),
-        af_hurdle_duration = as.numeric(af_hurdle_time_out - af_hurdle_time_in)*1440,
-        af_identify_duration = as.numeric(af_identify_time_out - af_identify_time_in)*1440,
-        af_refresh_duration = difftime(af_refresh_time_out, af_refresh_time_in, units = "mins") %>% as.numeric(),
-        af_map_duration = difftime(af_map_time_out, af_map_time_in, units = "mins") %>% as.numeric(),
-        af_map2_duration = as.numeric(af_map2_time_out - af_map2_time_in)*1440,
-        af_implement_duration = as.numeric(af_imp_time_out - af_imp_time_in)*1440,
-        af_feedback_duration = difftime(af_feedback_time_out, af_feedback_time_in, units = "mins") %>% as.numeric(),
-        af_session_duration = rowSums(across(c(
-            af_hurdle_duration, af_refresh_duration, 
-            af_map_duration, af_map2_duration, 
-            af_implement_duration
-        )), na.rm = TRUE),
-        af_session_duration = na_if(af_session_duration, 0), 
-        af_total_duration = rowSums(across(c(
-            af_analysis_duration, af_develop_duration, 
-            af_schedule_duration, af_hurdle_duration, 
-            af_identify_duration, af_refresh_duration, 
-            af_map_duration, af_map2_duration, 
-            af_implement_duration, af_feedback_duration
-        )), na.rm = TRUE),
-        af_total_duration = na_if(af_session_duration, 0),
-        health_talk_duration = difftime(flipbook_time_out, flipbook_time_in, units = "mins") %>% as.numeric()
+        af_analysis_duration =
+            as.numeric(af_analysis_time_out - af_analysis_time_in) / 60,
+        
+        af_develop_duration =
+            as.numeric(af_develop_time_out - af_develop_time_in) / 60,
+        
+        af_schedule_duration =
+            as.numeric(af_sche_time_out - af_sche_time_in) / 60,
+        
+        af_hurdle_duration =
+            as.numeric(af_hurdle_time_out - af_hurdle_time_in) / 60,
+        
+        af_identify_duration =
+            as.numeric(af_identify_time_out - af_identify_time_in) / 60,
+        
+        af_refresh_duration =
+            as.numeric(af_refresh_time_out - af_refresh_time_in) / 60,
+        
+        af_map_duration =
+            as.numeric(af_map_time_out - af_map_time_in) / 60,
+        
+        af_map2_duration =
+            as.numeric(af_map2_time_out - af_map2_time_in) / 60,
+        
+        af_implement_duration =
+            as.numeric(af_imp_time_out - af_imp_time_in) / 60,
+        
+        af_feedback_duration =
+            as.numeric(af_feedback_time_out - af_feedback_time_in) / 60,
+        
+        af_session_duration =
+            rowSums(across(c(
+                af_hurdle_duration,
+                af_refresh_duration,
+                af_map_duration,
+                af_map2_duration,
+                af_implement_duration
+            )), na.rm = TRUE),
+        
+        af_session_duration =
+            na_if(af_session_duration, 0),
+        
+        af_total_duration =
+            rowSums(across(c(
+                af_analysis_duration,
+                af_develop_duration,
+                af_schedule_duration,
+                af_hurdle_duration,
+                af_identify_duration,
+                af_refresh_duration,
+                af_map_duration,
+                af_map2_duration,
+                af_implement_duration,
+                af_feedback_duration
+            )), na.rm = TRUE),
+        
+        af_total_duration =
+            na_if(af_total_duration, 0),
+        
+        health_talk_duration =
+            as.numeric(flipbook_time_out - flipbook_time_in) / 60
     )
-
 # Negative time duration
 negive <- audit_feedback_costing_df %>% 
     filter(af_session_duration < 0|af_total_duration < 0)
