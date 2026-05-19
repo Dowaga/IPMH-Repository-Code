@@ -2,7 +2,7 @@
 
 # Author(s): Yuwei
 # Date: July 14, 2025
-# This is a script that analyzes the costing data.
+# This is a script that analyzes the costing_df data.
 
 # Setup ------------------------------------------------------------------------
 rm(list = ls())
@@ -11,17 +11,20 @@ source("dependencies.R")
 source("DataTeam_ipmh.R")
 source("data_import.R")
 
-# load data
-rm(list = setdiff(ls(), c("costing")))
+# Set up data freeze time for this report
+data_freeze <- as.Date("2026-05-18") 
 
-visit_na <- costing %>% 
+# load data
+rm(list = setdiff(ls(), c("costing_df")))
+
+visit_na <- costing_df %>% 
     filter(is.na(study_visit))
 
 
 # screening & enrollment------------
 
 ## Intervention sites -----------
-screening_int_costing <- costing %>% 
+screening_int_costing_df <- costing_df %>% 
     filter(redcap_event_name == "Event 1 (Arm 1: Intervention)" & 
                study_visit == "Initial screening and enrollment") %>% 
     filter(!is.na(pt_id)) %>% 
@@ -38,10 +41,10 @@ screening_int_costing <- costing %>%
            base_time_out, visit_time_out)
 
 # Checking those that are PMAD positive
-pmad_positive <- screening_int_costing %>% 
+pmad_positive <- screening_int_costing_df %>% 
     filter(low_score == 0)
 
-supervision <- costing %>% 
+supervision <- costing_df %>% 
     filter(pm_number == "PM+ Supervision")
 
 facility_supervisions <- supervision %>% 
@@ -57,13 +60,13 @@ ft_supervision <- flextable(facility_supervisions) %>%
     autofit()
 
 
-activity_summary <- costing %>%
+activity_summary <- costing_df %>%
     filter(study_visit == "Audit and feedback") %>% 
     filter(activity_type %in% c("Audit and Feedback", "Health Talk")) %>%
     group_by(study_site, activity_type) %>%
     summarise(n = n(), .groups = "drop")
 
-ukwala <- costing %>%
+ukwala <- costing_df %>%
     filter(study_visit == "Audit and feedback") %>% 
     filter(activity_type %in% c("Audit and Feedback", "Health Talk")) %>% 
     filter(study_site == "Ukwala Sub County Hospital") %>% 
@@ -94,19 +97,20 @@ ft <- flextable(activity_summary) %>%
 
 
 ## Control sites ---------------
-screening_ctrl_costing <- costing %>%
+screening_ctrl_costing_df <- costing_df %>%
     filter(redcap_event_name == "Event 1 (Arm 2: Control)" & 
                study_visit == "Initial screening and enrollment") %>%
     filter(!is.na(pt_id_con)) %>%
-    select(date, study_site, c(98, 100:133), -visit_initial_con)
+    select(date, study_site, c(98, 100:133), visit_time_out_con,
+           -visit_initial_con)
 
 ### data collection table ---------
 total_summary <- tibble(
     study_site = "Overall",
-    N = nrow(screening_int_costing)
+    N = nrow(screening_int_costing_df)
 )
 
-facility_summary <- screening_int_costing %>%
+facility_summary <- screening_int_costing_df %>%
     group_by(study_site) %>%
     summarise(N = n(), .groups = "drop")
 
@@ -117,10 +121,10 @@ summary_table <- summary_table %>%
 
 total_summary_con <- tibble(
     study_site = "Overall",
-    N = nrow(screening_ctrl_costing)
+    N = nrow(screening_ctrl_costing_df)
 )
 
-facility_summary_con <- screening_ctrl_costing %>%
+facility_summary_con <- screening_ctrl_costing_df %>%
     group_by(study_site) %>%
     summarise(N = n(), .groups = "drop")
 
@@ -148,31 +152,49 @@ table_combined_summary <- flextable(combined_summary) %>%
     set_caption("Number of Participants by Study Arm and Site for Initial Screening and Enrollment")
 
 ### time table for intervention sites ---------
-screening_int_costing <- screening_int_costing %>%
-    mutate(across(where(~ is.character(.) || is.factor(.)), 
-                  ~ droplevels(as.factor(.))))
-
-screening_int_costing <- screening_int_costing %>%
+screening_int_costing_df <- screening_int_costing_df %>%
+    
+    # convert factor columns to character
+    mutate(across(where(is.factor), as.character)) %>%
+    
+    # convert all time columns to hms
+    mutate(across(contains("time"), as_hms)) %>%
+    
     mutate(
-        triage_duration    = as.numeric(triage_time_out- triage_time_in)*1440,
-        screen_duration    = as.numeric(screen_time_out- screen_time_in)*1440,
-        score_duration     = as.numeric(score_time_out- score_time_in)*1440,
-        info_duration      = as.numeric(info_time_out- info_time_in)*1440,
-        phq9_duration      = as.numeric(phq9_time_out- phq9_time_in)*1440,
-        refer_start_time = coalesce(clinic_time_out_int, phq9_time_out, info_time_out),
-        refer_duration   = as.numeric(eligi_time_in - refer_start_time) * 1440,
-        clinic_duration    = as.numeric(clinic_time_out_int - clinic_time_in_int)*1440,
-        pmass_duration     = as.numeric(pmass_time_out- pmass_time_in)*1440,
-        pmsch_duration     = as.numeric(pmsch_time_out- pmsch_time_in)*1440,
-        telesch_duration   = as.numeric(telesch_time_out- telesch_time_in)*1440,
-        harm_duration      = as.numeric(harm_time_out- harm_time_in)*1440,
-        eligi_duration     = as.numeric(eligi_time_out- eligi_time_in)*1440,
-        baseline_duration  = as.numeric(base_time_out- base_time_in)*1440,
-        total_duration     = as.numeric(visit_time_out- enter_time_in)*1440
+        triage_duration   = as.numeric(triage_time_out - triage_time_in) / 60,
+        screen_duration   = as.numeric(screen_time_out - screen_time_in) / 60,
+        score_duration    = as.numeric(score_time_out - score_time_in) / 60,
+        info_duration     = as.numeric(info_time_out - info_time_in) / 60,
+        phq9_duration     = as.numeric(phq9_time_out - phq9_time_in) / 60,
+        
+        refer_start_time  = coalesce(
+            clinic_time_out_int,
+            phq9_time_out,
+            info_time_out
+        ),
+        
+        refer_duration    = as.numeric(eligi_time_in - refer_start_time) / 60,
+        
+        clinic_duration   = as.numeric(clinic_time_out_int -
+                                           clinic_time_in_int) / 60,
+        
+        pmass_duration    = as.numeric(pmass_time_out - pmass_time_in) / 60,
+        
+        pmsch_duration    = as.numeric(pmsch_time_out - pmsch_time_in) / 60,
+        
+        telesch_duration  = as.numeric(telesch_time_out -
+                                           telesch_time_in) / 60,
+        
+        harm_duration     = as.numeric(harm_time_out - harm_time_in) / 60,
+        
+        eligi_duration    = as.numeric(eligi_time_out - eligi_time_in) / 60,
+        
+        baseline_duration = as.numeric(base_time_out - base_time_in) / 60,
+        
+        total_duration    = as.numeric(visit_time_out - enter_time_in) / 60
     )
-
 # examine if there are negative durations
-# screening_int_costing %>%
+# screening_int_costing_df %>%
 #     filter(
 #         triage_duration < 0 | screen_duration < 0 | score_duration < 0 |
 #         info_duration < 0 | phq9_duration < 0 | clinic_duration < 0 |
@@ -182,11 +204,11 @@ screening_int_costing <- screening_int_costing %>%
 #     )
 
 # examine scored but no scoring time
-no_scoring_time <- screening_int_costing %>% 
+no_scoring_time <- screening_int_costing_df %>% 
     filter(!is.na(phq2)) %>% 
     filter(is.na(info_time_out))
 
-screening_int_costing <- screening_int_costing %>%
+screening_int_costing_df <- screening_int_costing_df %>%
     mutate(
         refer_service = as.character(refer_service), 
         refer_service = recode(refer_service,
@@ -196,7 +218,7 @@ screening_int_costing <- screening_int_costing %>%
         refer_service = replace_na(refer_service, "Refer to study eligibility")
     )
 
-screening_int_table <- screening_int_costing %>%
+screening_int_table <- screening_int_costing_df %>%
     select(
         study_site,
         triage_desig, triage_duration,
@@ -294,7 +316,7 @@ table_screening_int <- screening_int_table%>%
     )
 
 ### By refer_service ---------
-screening_int_table_by_refer <- screening_int_costing %>%
+screening_int_table_by_refer <- screening_int_costing_df %>%
     select(
         triage_desig, triage_duration,
         screen_desig, screen_duration,
@@ -385,31 +407,47 @@ table_screening_int_by_refer <- screening_int_table_by_refer %>%
 
 
 ### Time table for control sites ---------
-screening_ctrl_costing <- screening_ctrl_costing %>%
-    mutate(across(where(~ is.character(.) || is.factor(.)), 
-                  ~ droplevels(as.factor(.))))
+screening_ctrl_costing_df <- screening_ctrl_costing_df %>%
+    # convert factor columns to character
+    mutate(across(where(is.factor), as.character)) %>%
+    # convert all time columns to hms
+    mutate(across(contains("time"), as_hms))
 
-screening_ctrl_costing <- screening_ctrl_costing %>%
+screening_ctrl_costing_df <- screening_ctrl_costing_df %>%
     mutate(
-        triage_duration_con   = as.numeric(triage_time_out_con - triage_time_in_con)*1440,
-        screen_duration_con   = as.numeric(screen_time_out_con - screen_time_in_con)*1440,
-        score_duration_con    = as.numeric(score_time_out_con - score_time_in_con)*1440,
-        clinic_duration_con   = as.numeric(clinic_time_out_con - clinic_time_in_con)*1440,
-        refer_duration_con    = as.numeric(eligi_time_in_con - refer_time_in_con)*1440,
-        eligi_duration_con    = as.numeric(eligi_time_out_con - eligi_time_in_con)*1440,
-        baseline_duration_con = as.numeric(base_time_out_con - base_time_in_con)*1440,
-        total_duration_con    = as.numeric(visit_time_out_con - enter_time_in_con)*1440
+        triage_duration_con   =
+            as.numeric(triage_time_out_con - triage_time_in_con) / 60,
+        
+        screen_duration_con   =
+            as.numeric(screen_time_out_con - screen_time_in_con) / 60,
+        
+        score_duration_con    =
+            as.numeric(score_time_out_con - score_time_in_con) / 60,
+        
+        clinic_duration_con   =
+            as.numeric(clinic_time_out_con - clinic_time_in_con) / 60,
+        
+        refer_duration_con    =
+            as.numeric(eligi_time_in_con - refer_time_in_con) / 60,
+        
+        eligi_duration_con    =
+            as.numeric(eligi_time_out_con - eligi_time_in_con) / 60,
+        
+        baseline_duration_con =
+            as.numeric(base_time_out_con - base_time_in_con) / 60,
+        
+        total_duration_con    =
+            as.numeric(visit_time_out_con - enter_time_in_con) / 60
     )
-
 # examine if there are negative durations
-# screening_ctrl_costing %>%
+# screening_ctrl_costing_df %>%
 #     filter(
 #         triage_duration_con < 0 | screen_duration_con < 0 | score_duration_con < 0 |
 #         clinic_duration_con < 0 | refer_duration_con < 0 | eligi_duration_con < 0 |
 #         baseline_duration_con < 0 | total_duration_con < 0
 #     )
 
-screening_ctrl_table <- screening_ctrl_costing %>%
+screening_ctrl_table <- screening_ctrl_costing_df %>%
     select(study_site,triage_desig_con, triage_duration_con,
         screen_desig_con, screen_duration_con,
         room_type_con, phq2_cont, gad2_cont,
@@ -482,10 +520,10 @@ table_screening_ctrl <- screening_ctrl_table %>%
 
 ## Compare intervention and control sites ---------
 # Add 'arm' label
-screening_int_costing <- screening_int_costing %>%
+screening_int_costing_df <- screening_int_costing_df %>%
     mutate(arm = "Intervention") 
 
-screening_ctrl_costing <- screening_ctrl_costing %>%
+screening_ctrl_costing_df <- screening_ctrl_costing_df %>%
     mutate(arm = "Control") %>%
     rename(
         triage_desig = triage_desig_con,
@@ -515,8 +553,8 @@ common_vars <- c(
     "total_duration"
 )
 
-int_data <- screening_int_costing %>% select(any_of(common_vars))
-ctrl_data <- screening_ctrl_costing %>% select(any_of(common_vars))
+int_data <- screening_int_costing_df %>% select(any_of(common_vars))
+ctrl_data <- screening_ctrl_costing_df %>% select(any_of(common_vars))
 combined_data <- bind_rows(int_data, ctrl_data)
 
 comparison_table <- combined_data %>%
@@ -591,7 +629,7 @@ table_screening_comparison <- comparison_table %>%
     )
 
 # PM+ ---------------
-pm_plus_costing <- costing %>%
+pm_plus_costing_df <- costing_df %>%
     filter(redcap_event_name == "Event 1 (Arm 1: Intervention)" & 
                study_visit == "PM+") %>%
     filter(!is.na(pt_id_pm)) %>%
@@ -603,11 +641,11 @@ pm_plus_costing <- costing %>%
 # Total N as a tibble row
 total_summary_pm <- tibble(
     study_site = "Overall",
-    N = nrow(pm_plus_costing)
+    N = nrow(pm_plus_costing_df)
 )
 
 # N per facility
-facility_summary_pm <- pm_plus_costing %>%
+facility_summary_pm <- pm_plus_costing_df %>%
     group_by(study_site) %>%
     summarise(N = n(), .groups = "drop")
 
@@ -620,7 +658,7 @@ table_pm_summary <- flextable(summary_table_pm) %>%
     set_caption("Number of Participants for PM+")
 
 #PM+ per facility by session
-pm_session <- pm_plus_costing %>%
+pm_session <- pm_plus_costing_df %>%
     filter(!pm_number %in% "PM+ Supervision") %>% 
     select(study_site, pm_number)
 
@@ -674,11 +712,11 @@ tab_header(
 
 
 ## Time table ---------
-pm_plus_costing <- pm_plus_costing %>%
+pm_plus_costing_df <- pm_plus_costing_df %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
                   ~ droplevels(as.factor(.))))
 
-pm_plus_costing <- pm_plus_costing %>%
+pm_plus_costing_df <- pm_plus_costing_df %>%
     mutate(
         pm1_duration = as.numeric(pm1_end_time_out - pm1_time_in)*1440,
         pm1_total_duration = as.numeric(pm1_end_time_out - pm_enter_time_in)*1440,
@@ -698,7 +736,7 @@ pm_plus_costing <- pm_plus_costing %>%
         superv_duration = as.numeric(supervision_time_out - supervision_time_in)*1440
     )
 
-pm_summary_table <- pm_plus_costing %>%
+pm_summary_table <- pm_plus_costing_df %>%
     select(
         pm_number, study_site,
         pm1_desig, pm1_duration, pm1_total_duration,
@@ -771,7 +809,7 @@ pm_summary_table <- pm_plus_costing %>%
         table.font.size = px(14))
 
 # PM+ duration----
-pm_ave_time <- pm_plus_costing %>% 
+pm_ave_time <- pm_plus_costing_df %>% 
     filter(pm_number %in% c ('Session 1','Session 2', 'Session 3','Session 4', 'Session 5')) %>% 
     mutate( pm1_duration = as.numeric(pm1_time_out - pm1_time_in)*1440, 
             pm2_duration = as.numeric(pm2_time_out - pm2_time_in)*1440, 
@@ -817,7 +855,7 @@ pm_duration_table <- pm_ave_time %>%
         table.font.size = px(12))
 
 # telepsychiatry ------------------
-telepsychiatry_costing <- costing %>%
+telepsychiatry_costing_df <- costing_df %>%
     filter(redcap_event_name == "Event 1 (Arm 1: Intervention)" & 
                study_visit == "Telepsychiatry session") %>%
     filter(!is.na(pt_id_tele)) %>%
@@ -828,11 +866,11 @@ telepsychiatry_costing <- costing %>%
 # Total N as a tibble row
 total_summary_tele <- tibble(
     study_site = "Overall",
-    N = nrow(telepsychiatry_costing)
+    N = nrow(telepsychiatry_costing_df)
 )
 
 # N per facility
-facility_summary_tele <- telepsychiatry_costing %>%
+facility_summary_tele <- telepsychiatry_costing_df %>%
     group_by(study_site) %>%
     summarise(N = n(), .groups = "drop")
 
@@ -845,19 +883,19 @@ table_telepsychiatry_summary <- flextable(summary_table_tele) %>%
     set_caption("Number of Participants for Telepsychiatry Sessions") 
 
 ## Time table ---------
-telepsychiatry_costing <- telepsychiatry_costing %>%
+telepsychiatry_costing_df <- telepsychiatry_costing_df %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
                   ~ droplevels(as.factor(.))))
 
 # List of all telepsychiatry time columns
-telepsychiatry_costing <- telepsychiatry_costing %>%
+telepsychiatry_costing_df <- telepsychiatry_costing_df %>%
     mutate(
         tele_info_duration = as.numeric(tele_info_time_out - tele_info_time_in)*1440,
         tele_docu_duration = as.numeric(tele_docu_time_out - tele_docu_time_in)*1440,
         tele_total_duration = as.numeric(tele_end_time_out - tele_enter_time_in)*1440
     )
 
-telepsychiatry_table <- telepsychiatry_costing %>%
+telepsychiatry_table <- telepsychiatry_costing_df %>%
     select(
         tele_number, tele_info_duration, tele_docu_duration, tele_total_duration
     ) %>%
@@ -896,10 +934,10 @@ table_telepsychiatry_costing <- telepsychiatry_table %>%
         table.font.size = px(12))
 
 # Audit and Feedback ------------------
-audit_feedback_costing <- costing %>%
+audit_feedback_costing_df <- costing_df %>%
     filter(study_visit == "Audit and feedback") 
 
-audit_feedback_costing <- audit_feedback_costing %>%
+audit_feedback_costing_df <- audit_feedback_costing_df %>%
     mutate(arm = if_else(
         redcap_event_name == "Event 1 (Arm 1: Intervention)", "Intervention", "Control"
     )) %>%
@@ -907,15 +945,15 @@ audit_feedback_costing <- audit_feedback_costing %>%
            activity_type, starts_with("af_"), starts_with("flipbook_"))
 
 #Audit and Feedback Visit type Query
-audit_feedback_QCs <- audit_feedback_costing %>% 
+audit_feedback_QCs <- audit_feedback_costing_df %>% 
     filter(is.na(activity_type))
 
 ## Data collection table for audit and feedback ----------
-total_summary_af <- audit_feedback_costing %>%
+total_summary_af <- audit_feedback_costing_df %>%
     group_by(arm) %>%
     summarise(study_site = "Overall", N = n(), .groups = "drop")
 
-facility_summary_af <- audit_feedback_costing %>%
+facility_summary_af <- audit_feedback_costing_df %>%
     group_by(arm, study_site) %>%
     summarise(N = n(), .groups = "drop")
 
@@ -927,11 +965,11 @@ table_audit_feedback_summary<- flextable(summary_table_af) %>%
     set_caption("Number of Participants in Audit and Feedback by Arm and Site")
 
 ## Time table for audit and feedback ----------
-audit_feedback_costing <- audit_feedback_costing %>%
+audit_feedback_costing_df <- audit_feedback_costing_df %>%
     mutate(across(where(~ is.character(.) || is.factor(.)), 
                   ~ droplevels(as.factor(.))))
 
-audit_feedback_costing <- audit_feedback_costing %>%
+audit_feedback_costing_df <- audit_feedback_costing_df %>%
     mutate(
         af_analysis_duration = difftime(af_analysis_time_out, af_analysis_time_in, units = "mins") %>% as.numeric(),
         af_develop_duration = difftime(af_develop_time_out, af_develop_time_in, units = "mins") %>% 
@@ -962,11 +1000,11 @@ audit_feedback_costing <- audit_feedback_costing %>%
     )
 
 # Negative time duration
-negive <- audit_feedback_costing %>% 
+negive <- audit_feedback_costing_df %>% 
     filter(af_session_duration < 0|af_total_duration < 0)
 
 # Summarize designation choices per facility for selected activities
-wrong_designation <- audit_feedback_costing %>% 
+wrong_designation <- audit_feedback_costing_df %>% 
     filter(
         !is.na(af_analysis_desig) & af_analysis_desig != "Data manager"|
             !is.na(af_develop_desig) & af_develop_desig != "Study coordinator"|
@@ -974,7 +1012,7 @@ wrong_designation <- audit_feedback_costing %>%
             !is.na(af_map2_desig) & af_map2_desig != "Research officer" )
 
 
-designation_summary <- audit_feedback_costing %>%
+designation_summary <- audit_feedback_costing_df %>%
     group_by(study_site) %>%
     summarise(
         `Report generation` = paste(unique(af_analysis_desig), collapse = ", "),
@@ -984,7 +1022,7 @@ designation_summary <- audit_feedback_costing %>%
         )
 
 
-audit_feedback_table <- audit_feedback_costing %>%
+audit_feedback_table <- audit_feedback_costing_df %>%
     select(arm, part_num, 
         af_analysis_desig, af_analysis_duration, 
         af_develop_desig, af_develop_duration,
@@ -1094,7 +1132,7 @@ doc <- read_docx()%>%
 # Save Word file
 print(
     doc,
-    target = file.path("C:/Users/hp/OneDrive/Desktop/IPMH/Time and Motion (Costing)",
+    target = file.path("C:/Users/hp/OneDrive/Desktop/IPMH/Time and Motion (costing)",
                        paste0("Time and Motion QCs ",
                               format(Sys.time(), "%Y-%m-%d_%H%M%S"),
                               ".docx"))
