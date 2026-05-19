@@ -188,7 +188,7 @@ Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following
 
 ### 3.1.1 Current subject status
 
-So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`%) completed their 6-weeks postpartum visit.
+So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`% out of all enrolled) completed their 6-weeks postpartum visit. `r n_third` (`r n_third_per`% out of all enrolled) completed their 14-weeks postpartum visit, and `r n_fourth` (`r n_fourth_per`% out of all enrolled) completed their 6-months postpartum visit. 
 
 ```{r consort, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
 consort_single
