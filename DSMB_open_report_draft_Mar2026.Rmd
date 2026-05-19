@@ -730,11 +730,24 @@ basic_demo <- demographics_df %>%
     statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
     bold_labels() %>%
     add_n() %>%
-    as_kable_extra(booktabs = TRUE, caption = "Basic Demographic Summary")
-
-basic_demo %>%
+    modify_header(label ~ "**Characteristic**") %>%
+  as_kable_extra(
+    booktabs = TRUE,
+    caption = "Basic Demographic Summary"
+  ) %>%
+    column_spec(1, width = "7cm") %>%
+  kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
+  kableExtra::footnote(
+    symbol = "Eight participants preferred not to answer the marital status question and were excluded from N",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE,
+    escape = FALSE
+  )
+   
+basic_demo %>% 
     kableExtra::kable_styling(
-        latex_options = c("HOLD_position", "scale_down"))
+        latex_options = c("HOLD_position", "scale_down")
+    )
 ```
 
 \newpage 
@@ -779,7 +792,20 @@ wlwh_demo <- demographics_df %>%
         statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
     bold_labels() %>%
     add_n() %>%
-    as_kable_extra(booktabs = TRUE, caption = "WLWH Demographic Summary")
+    modify_header(label ~ "**Characteristic**") %>%
+  as_kable_extra(
+    booktabs = TRUE,
+    caption = "WLWH Demographic Summary"
+  ) %>%
+    column_spec(1, width = "7cm") %>%
+  kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
+  kableExtra::footnote(
+    symbol = "Four participants preferred not to answer the marital status question and were excluded from N",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE,
+    escape = FALSE
+  )
+
 
 wlwh_demo %>%
     kableExtra::kable_styling(
