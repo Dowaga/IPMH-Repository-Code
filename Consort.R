@@ -295,13 +295,13 @@ consort_data <- consort_data %>%
     left_join(fourthvisit, by = c("partipant_id" = "clt_ptid"))
 
 # Keep only one unique id per participanyts
-consort_data <- consort_data %>%
-    group_by(partipant_id) %>%
-    filter(
+#consort_data <- consort_data %>%
+   # group_by(partipant_id) %>%
+    #filter(
         # keep all rows if ID is NA
-        is.na(partipant_id) | row_number() == 1
-    ) %>%
-    ungroup()
+        #is.na(partipant_id) | row_number() == 1
+    #) %>%
+    #ungroup()
 
 # Create a dummy arm for DSMB Closed report
 consort_data <- consort_data %>% 

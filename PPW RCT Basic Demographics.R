@@ -21,7 +21,7 @@ demographics_df <- ppw_rct_df %>%
                 grepl("6 Months", redcap_event_name) ~ "6 Months",
                 TRUE ~ NA_character_
             )) %>% 
-    filter(visit_type == "Enrollment") %>%
+    filter(clt_visit == "Enrollment") %>%
     group_by(record_id) %>%
     slice_head(n = 1) %>%   # keep only the Enrollment row per record_id
     ungroup() %>% 
