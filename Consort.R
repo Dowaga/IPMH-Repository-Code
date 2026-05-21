@@ -263,18 +263,18 @@ consort_data <- bind_rows(anc_attendees_df, consort_data)
 
 
 secondvisit <- ppw_rct_df %>% 
-    filter(clt_visit == "6 weeks post-partum") %>% 
+    filter(clt_visit == "6 weeks post-partum" & hiv_care_and_treatment_complete == "Complete") %>% 
     select(clt_ptid) %>% 
     mutate(secondvisit = "Yes") 
 
 thirdvisit <- ppw_rct_df %>% 
-    filter(clt_visit == "14 weeks post-partum") %>% 
+    filter(clt_visit == "14 weeks post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
     select(clt_ptid) %>% 
     mutate(thirdvisit = "Yes") 
 
 
 fourthvisit <- ppw_rct_df %>% 
-    filter(clt_visit == "6 months post-partum") %>% 
+    filter(clt_visit == "6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
     select(clt_ptid) %>% 
     mutate(fourthvisit = "Yes") 
 
