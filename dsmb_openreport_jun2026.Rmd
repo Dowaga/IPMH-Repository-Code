@@ -1,0 +1,1129 @@
+---
+title: 'IPMH: Integration of stepped care for perinatal mood and anxiety disorders
+ among women attending MCH clinics'
+subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report'
+date: "`r format(Sys.time(), '%d %B %Y')`"
+header-includes:
+ \usepackage{float}
+ \usepackage{booktabs}
+ \usepackage{longtable}
+ \usepackage{array}
+ \usepackage{multirow}
+ \usepackage[table]{xcolor}
+ \usepackage{wrapfig}
+ \floatplacement{figure}{H}
+
+output:
+    pdf_document:
+        latex_engine: xelatex
+    word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+library(stringr)
+library(lubridate)
+library(patchwork)
+library(officedown)
+library(officer)
+library(flextable)
+
+rm(list = ls())
+
+# Set up data freeze time for this report
+data_freeze <- as.Date("2026-05-11") 
+
+#data_freeze <- "2026-05-11"
+##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. ##### 
+
+#data_freeze <- "2026-05-11"
+##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. #####
+
+# Reference source codes & other dependencies:
+source("DataTeam_ipmh.R")
+source("Dependencies.R")
+source("data_import.R")
+```
+
+```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
+knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
+```
+
+\newpage
+
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
+
+Keshet Ronen, PhD, MPH, University of Washington
+
+Amritha Bhat, MBBS, MD, MPH, University of Washington
+
+Report prepared by: David Owaga & Yuwei Wang
+
+Date of data freeze: `r format(data_freeze, '%d %B %Y')`
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+# 1. Study summary
+
+```{r study_summary}
+vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Criteria",
+         "Target Sample Size",
+         "Actual Enrollment",
+         "Participants Completed Follow-up", "Duration", 
+         "Date Study Open", "Date of First Complete Enrollment",
+         "Estimated End of Study",
+         "Endpoints", "")
+
+vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatment of perinatal mood and anxiety disorders (PMADs), and its implementation strategies, into maternal and child health clinics and pragmatically evaluate its clinical, service delivery, and implementation outcomes",
+          "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of IPMH and associated implementation strategies on depression, anxiety, quality of life, and adverse perinatal outcomes vs. control (standard of care) among Kenyan women", 
+          "Pregnant Kenyan women", 
+          "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
+          "2970, including 405 women living with HIV (WLWH)", 
+          "2383",
+          "960",
+          "Follow-up through 6 months postpartum", 
+          "September 19, 2023", 
+          "February 17, 2025",
+          "July 31, 2028",
+          "Primary: Depression (Patient Health Questionnaire-9 [PHQ-9] score) and anxiety (Generalized Anxiety Disorder-7 [GAD-7] score)", 
+          "Secondary:\n-Problem Management Plus (PM+) Skill Acquisition (Reducing Tension Checklist score)\n-Quality of Life (World Health Organization Quality of Life [WHOQOL-BREF] score)\n-Any adverse pregnancy outcome")
+
+stdy_summ <- data.frame(vars, vars2)
+
+study_summary <- flextable(stdy_summ)
+study_summary <- flextable::width(study_summary, 'vars2', width = 5)
+study_summary <- flextable::width(study_summary, 'vars', width = 2)
+border <- fp_border()
+study_summary <- flextable::vline(study_summary, j = c('vars'), border = border, part = "all")
+study_summary <- set_header_labels(study_summary, vars = "Title", vars2 = "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics")
+
+study_summary
+```
+
+\newpage
+
+## 1.1 Study Timeline Since Initiation:
+
+-   May 12, 2023: Initial IRB approval
+-   Jun 05, 2023: Initial ERC approval
+-   Sept 19, 2023: RO1 Start date
+-   Oct 04, 2024: Research assistant (RA) training initiation
+-   Oct 11, 2024: 1st DSMB meeting
+-   Oct 23, 2024: Facility randomization
+-   Nov 06, 2024: Facility staff training initiation
+-   Feb 17, 2025: Perinatal women recruitment initiation
+-   May 19, 2025: 25% of planned enrollment achieved
+-   May 27, 2025: 25% of planned women living with HIV (WLWH) enrollment achieved
+-   August 1, 2025: Enrollment halted due to end of grant period
+-   Sept 22, 2025: Enrollment resumed after receiving NOA
+-   Nov 21, 2025: 2nd DSMB meeting
+-   Nov 24, 2025: 50% of planned enrollment achieved
+-   Dec 03, 2025: 50% of planned WLWH enrollment achieved
+-   Jan 8, 2026: Data collection temporarily halted due to REDCap server upgrade
+-   Jan 22, 2026: Data collection resumed after REDCap server upgrade
+-   Mar 30, 2026: 75% of planned WLWH enrollment achieved
+
+## 1.2 Key Changes to Study Protocol
+
+We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on May 12, 2025 to include women from \>=20 weeks gestation because most of the participants enrolled from \>=28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study.
+
+\newpage 
+
+# 2. Study Progress
+
+## 2.1 Recruitment Timeline
+
+```{r source_consort, echo=FALSE, warning=FALSE}
+source("Consort.R")
+
+n_anc <- consort_data %>% filter(anc_attendees=="Yes") %>% nrow()
+n_ass<- consort_data %>% filter(!is.na(arm)) %>% nrow()
+n_eligible <- consort_data %>% 
+    filter(eligible == 1) %>% 
+    nrow()
+
+n_eligible_per <- round(n_eligible/n_ass *100, 1)
+n_enrol <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
+n_enrol_per <- round(n_enrol/n_eligible *100, 1)
+n_second <- consort_data %>% filter(!is.na(secondvisit)) %>% nrow()
+n_second_per <- round(n_second/n_enrol * 100, 1)
+
+# 14 Weeks Visit
+n_third <- consort_data %>% filter(!is.na(thirdvisit)) %>% nrow()
+n_third_per <- round(n_third/n_enrol * 100, 1)
+
+# 6 Months Visit
+n_fourth <- consort_data %>%
+   filter(rct_enrolling == "Yes", fourthvisit == "Yes") %>%nrow()
+
+n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
+```
+
+We began recruiting pregnant women into the study on February 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round((n_enrol / 2970) * 100, 1)`% of our enrollment target.
+
+Of the enrolled participants, `r n_second` (`r round(n_second / n_enrol * 100, 1)`%) have completed their 6 weeks, `r n_third` (`r round(n_third / n_enrol * 100, 1)`%) have completed 14 weeks and `r n_fourth` (`r round(n_fourth / n_enrol * 100, 1)`%) have completed 6 months postpartum follow-up visits.
+
+In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily; however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts.
+
+We halted enrollment of new participants on August 1, 2025 after the grant period ended on July 31, 2025, pending approval of the Notice of Award from the National Institute of Health. We received the Notice of Award on September 8, 2025, and enrollments resumed on September 22, 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued.
+
+In Siaya County, there was a nurse strike which began on September 18, 2025. The strike affected participant enrollment in 5 intervention and 4 control sites, where we had not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility had hired a locum nurse for the maternal child health clinic, and enrollment was not affected. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists were not affected. The strike was officially called off on November 17, 2025. We resumed participant enrollment in the affected sites right after the strike.
+
+Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
+
+\newpage
+
+# 3. Study Enrollment
+
+## 3.1 Overall Cohort
+
+### 3.1.1 Current subject status
+
+So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. `r n_enrol` (`r n_enrol_per`%) participants consented to participate in the study and were enrolled into the study. `r n_second` (`r n_second_per`% out of all enrolled) completed their 6-weeks postpartum visit. `r n_third` (`r n_third_per`% out of all enrolled) completed their 14-weeks postpartum visit, and `r n_fourth` (`r n_fourth_per`% out of all enrolled) completed their 6-months postpartum visit. 
+
+```{r consort, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
+open_consort_diagram <- consort_plot(data = consort_data,
+                                 orders = c(anc_attendees = "ANC Attendees",
+                                            exclusion = "Excluded",
+                                            eligible = "Eligible",
+                                            rct_decline_reason = "Declined Enrollment",
+                                            rct_enrolling = "Enrolled",
+                                            secondvisit = "6 weeks postpartum visit",
+                                            thirdvisit = "14 Weeks Postpartum Visit",
+                                            fourthvisit = "6 Months Postpartum Visit"),
+                                 side_box = c("exclusion", "rct_decline_reason"))
+open_consort_diagram
+
+```
+
+
+
+
+\newpage
+
+### 3.1.2 Enrollment Progress - Overall
+
+```{r enrollment_numsource, message=FALSE, warning=FALSE, include=FALSE}
+source("Enrollment Progress.R")
+```
+
+On Feb 17, 2025 we began recruiting participants in all facilities. 
+We hit our 25% enrollment target on `r target_reached_25`. 
+We hit our 50% enrollment target on `r target_reached_50`. 
+We hit our 75% enrollment target on `r target_reached_75`.
+
+
+```{r enrollment_sub, fig.height=6.5, fig.width=10.5, fig.align='center', message=FALSE, warning=FALSE, dpi=300}
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+ mutate(study_site = recode(study_site,
+   "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+   "02, Sigomere Sub County Hospital" = "02, Sigomere",
+   "03, Uyawi Sub County Hospital" = "03, Uyawi",
+   "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+   "05, Ukwala Sub County Hospital" = "05, Ukwala",
+   "06, Madiany Sub County Hospital" = "06, Madiany",
+   "07, Kabondo Sub County Hospital" = "07, Kabondo",
+   "08, Mbita Sub-County Hospital" = "08, Mbita",
+   "09, Miriu Health Centre" = "09, Miriu",
+   "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+   "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+   "14, Gita Sub County Hospital" = "14, Gita",
+   "15, Akala Health Centre" = "15, Akala",
+   "16, Usigu Health Centre" = "16, Usigu",
+   "17, Ramula Health Centre" = "17, Ramula",
+   "18, Simenya Health Centre" = "18, Simenya",
+   "19, Airport Health Centre (Kisumu)" = "19, Airport",
+   "20, Nyalenda Health Centre" = "20, Nyalenda",
+   "21, Mirogi Health Centre" = "21, Mirogi",
+   "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+ ))
+
+target_25_line <- data.frame(
+ week = unique(weekly_enrollment$week),
+ cumulative_enrollment = 743,
+ study_site = "25% Target"
+)
+
+target_50_line <- data.frame(
+ week = unique(weekly_enrollment$week),
+ cumulative_enrollment = 1485,
+ study_site = "50% Target"
+)
+
+target_75_line <- data.frame(
+ week = unique(weekly_enrollment$week),
+ cumulative_enrollment = 2229,
+ study_site = "75% Target"
+)
+
+total_enrollment <- weekly_enrollment %>%
+   group_by(week) %>%
+   summarise(enrollment_count = sum(enrollment_count)) %>%
+   arrange(week) %>%
+   mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+   mutate(study_site = "Total")
+
+combined_enrollment <- bind_rows(
+ weekly_enrollment,
+ total_enrollment,
+ target_25_line,
+ target_50_line,
+ target_75_line
+)
+
+target_value <- 743
+target_value_2 <- 1485
+target_value_3 <- 2229
+
+# Find the first date when cumulative enrollment reached or exceeded 25%
+target_reached <- total_enrollment %>%
+ filter(cumulative_enrollment >= target_value) %>%
+ slice_min(week, n = 1)
+
+target_reached_50 <- total_enrollment %>%
+ filter(cumulative_enrollment >= target_value_2) %>%
+ slice_min(week, n = 1)
+
+target_reached_75 <- total_enrollment %>%
+ filter(cumulative_enrollment >= target_value_3) %>%
+ slice_min(week, n = 1)
+
+target_lines <- bind_rows(target_25_line, target_50_line, target_75_line)
+
+main_enrollment <- combined_enrollment %>% 
+ filter(!study_site %in% c("25% Target", "50% Target", "75% Target"))
+
+
+p1 <- ggplot(
+  combined_enrollment,
+  aes(
+    x = week,
+    y = cumulative_enrollment,
+    color = study_site,
+    group = study_site
+  )
+) +
+  # Main enrollment lines
+  geom_line(aes(linewidth = ifelse(study_site == "Total", 1.5, 0.5))) +
+  scale_linewidth_identity() +
+  # TARGET LINES
+  geom_line(
+    data = target_25_line,
+    aes(x = week, y = cumulative_enrollment),
+    color = "#0072B2",
+    linewidth = 1,
+    inherit.aes = FALSE
+  ) +
+  geom_line(
+    data = target_50_line,
+    aes(x = week, y = cumulative_enrollment),
+    color = "orange",
+    linewidth = 1,
+    inherit.aes = FALSE
+  ) +
+    geom_line(
+    data = target_75_line,
+    aes(x = week, y = cumulative_enrollment),
+    color = "purple",
+    linewidth = 1,
+    inherit.aes = FALSE
+  ) +  # 25% TARGET POINT
+   geom_point(
+    data = target_reached,
+    aes(x = week, y = cumulative_enrollment),
+    color = "black",
+    size = 3,
+    shape = 21,
+    fill = "#0072B2"
+  ) +
+  geom_text(
+    data = target_reached,
+    aes(
+      x = week,
+      y = cumulative_enrollment,
+      label = paste0("25% target reached\n", format(week, "%b %d, %Y"))
+    ),
+    vjust = -1,
+    size = 3,
+    color = "black",
+    fontface = "bold"
+  ) +  # 50% TARGET POINT
+  geom_point(
+    data = target_reached_50,
+    aes(x = week, y = cumulative_enrollment),
+    color = "black",
+    size = 3,
+    shape = 21,
+    fill = "orange"
+  ) +
+  geom_text(
+    data = target_reached_50,
+    aes(
+      x = week,
+      y = cumulative_enrollment,
+      label = paste0("50% target reached\n", format(week, "%b %d, %Y"))
+    ),
+    vjust = -1,
+    size = 3,
+    color = "black",
+    fontface = "bold"
+  ) +  # 75% TARGET POINT
+    geom_point(
+    data = target_reached_75,
+    aes(x = week, y = cumulative_enrollment),
+    color = "black",
+    size = 3,
+    shape = 21,
+    fill = "purple"
+  ) +
+  geom_text(
+    data = target_reached_75,
+    aes(
+      x = week,
+      y = cumulative_enrollment,
+      label = paste0("75% target reached\n", format(week, "%b %d, %Y"))
+    ),
+    vjust = -1,
+    size = 3,
+    color = "black",
+    fontface = "bold"
+  ) +  # LABELS
+   labs(
+        title = "Cumulative Enrollment Over Time",
+        subtitle = "Progress toward enrollment targets",
+        x = "Date",
+        y = "Cumulative Enrollment",
+        color = "Study Site"
+    ) +  # THEME
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 20, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+    legend.position = "right",
+    legend.box = "vertical",
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 10),
+    legend.key.height = unit(0.5, "cm"),
+    legend.key.width = unit(0.5, "cm"),
+    plot.margin = margin(20, 20, 20, 20)
+  ) +
+  guides(color = guide_legend(ncol = 2)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")+
+    coord_cartesian(clip = "off")
+
+p1
+
+```
+
+\newpage
+
+### 3.1.3 Enrollment Progress - Per Facility
+
+```{r Facility target reached}
+reached_25per_target <- weekly_enrollment %>%
+ group_by(study_site) %>%
+ summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+ filter(latest_enrollment >= 37) %>%
+ summarise(n = n()) %>%
+ pull(n)
+
+reached_50per_target <- weekly_enrollment %>%
+ group_by(study_site) %>%
+ summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+ filter(latest_enrollment >= 74) %>%
+ summarise(n = n()) %>%
+ pull(n)
+
+reached_75per_target <- weekly_enrollment %>%
+ group_by(study_site) %>%
+ summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+ filter(latest_enrollment >= 111) %>%
+ summarise(n = n()) %>%
+ pull(n)
+```
+
+
+Enrollment progress across facility clusters has been steady and encouraging. As of May 8th 2025, `r reached_75per_target` facility clusters have successfully reached the 75% enrollment milestone, corresponding to at least 111 participants per facility out of the targeted 148 perinatal women. The first facility to achieve this benchmark was Nyalenda Health Centre, underscoring its consistent leadership in enrollment performance. This achievement reflects strong commitment across clusters and positions the study well toward full enrollment.
+
+```{r enrollment_sub_facility, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, dpi=300}
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+ mutate(study_site = recode(study_site,
+   "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+   "02, Sigomere Sub County Hospital" = "02, Sigomere",
+   "03, Uyawi Sub County Hospital" = "03, Uyawi",
+   "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+   "05, Ukwala Sub County Hospital" = "05, Ukwala",
+   "06, Madiany Sub County Hospital" = "06, Madiany",
+   "07, Kabondo Sub County Hospital" = "07, Kabondo",
+   "08, Mbita Sub-County Hospital" = "08, Mbita",
+   "09, Miriu Health Centre" = "09, Miriu",
+   "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+   "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+   "14, Gita Sub County Hospital" = "14, Gita",
+   "15, Akala Health Centre" = "15, Akala",
+   "16, Usigu Health Centre" = "16, Usigu",
+   "17, Ramula Health Centre" = "17, Ramula",
+   "18, Simenya Health Centre" = "18, Simenya",
+   "19, Airport Health Centre (Kisumu)" = "19, Airport",
+   "20, Nyalenda Health Centre" = "20, Nyalenda",
+   "21, Mirogi Health Centre" = "21, Mirogi",
+   "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+ ))
+
+p2 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                   color = study_site, group = study_site)) +
+   geom_line(linewidth = 1) +  
+   geom_hline(yintercept = 37, linetype = "dashed", color = "red", linewidth = 1.5) +
+   geom_hline(yintercept = 74, linetype = "dashed", color = "orange", linewidth = 1.5) +
+   geom_hline(yintercept = 111, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+   annotate("label",                                      # "label" adds a box background
+            x = as.Date("2025-03-15"),                    # fixed early date, adjust as needed
+            y = 47, label = "25% target \n reached",
+            color = "red", fontface = "bold", size = 3, fill = "white") +
+   annotate("label", 
+            x = as.Date("2025-03-15"), 
+            y = 84, label = "50% target \n reached",
+            color = "orange", fontface = "bold", size = 3, fill = "white") +
+   annotate("label", 
+            x = as.Date("2025-03-15"), 
+            y = 121, label = "75% target \n reached",
+            color = "darkgreen", fontface = "bold", size = 3, fill = "white") +
+   labs(title = "Enrollment Trends by Study Site",
+        x = "Date",
+        y = "Cumulative Enrollments",
+        color = "Study Site") +
+   theme_minimal(base_size = 12) +
+   theme(
+       plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+       axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+       legend.position = "right",
+       legend.box = "vertical",
+       legend.title = element_text(face = "bold", size = 10),
+       legend.text = element_text(size = 9),
+       legend.key.height = unit(0.5, "cm"),
+       legend.key.width = unit(0.5, "cm"),
+       plot.margin = margin(10, 20, 10, 10)
+   ) +
+   guides(color = guide_legend(ncol = 2)) +
+   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+p2
+```
+
+\newpage
+
+## 3.2 Women Living with HIV
+
+### 3.2.1 Current subject status
+
+```{r consortnumsource, echo=FALSE, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
+source("Consort_WLWH.R")
+```
+
+Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
+
+```{r r consort_wlhiv, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
+# add_box(txt = txt_anc) |>
+#     add_box(txt = txt_ass) |>
+#     add_side_box(txt = txt_ex) |>
+#     add_box(txt = txt_eligible) |>
+#     add_side_box(txt = txt_decline) |>
+#     add_box(txt = txt_enrolled) |>
+#     add_box(txt = txt_hiv) |>
+#     add_side_box(txt = txt_pm_tele) |>
+#     add_box(txt = six_weeks_postpartum)|>
+#     add_box(txt = fourteen_weeks_postpartum)|>
+#     add_box(txt = six_months_postpartum)
+
+add_box(txt = txt_enrolled) |>
+    add_box(txt = txt_hiv) |>
+    add_side_box(txt = txt_pm_tele) |>
+    add_box(txt = six_weeks_postpartum)|>
+    add_box(txt = fourteen_weeks_postpartum)|>
+    add_box(txt = six_months_postpartum)
+
+```
+
+\newpage
+
+### 3.2.2 Enrollment Progress
+
+```{r enrollment_hiv, echo=FALSE}
+source("Enrollment_WLWH.R")
+wlwh_target <- 20
+
+wlwh_milestones <- weekly_enrollment %>%
+ group_by(study_site) %>%
+ slice_max(week, n = 1) %>%  # most recent cumulative count per site
+ ungroup() %>%
+ summarise(
+   reached_25  = sum(cumulative_enrollment >= wlwh_target * 0.25),
+   reached_50  = sum(cumulative_enrollment >= wlwh_target * 0.50),
+   reached_75  = sum(cumulative_enrollment >= wlwh_target * 0.75),
+   reached_100 = sum(cumulative_enrollment >= wlwh_target)
+ )
+
+total_wlwh_target <- 405
+
+wlwh_timeline <- ppw_rct_df %>%
+  filter(med_pastdiag___2 == "Checked") %>%        # WLWH only
+  distinct(clt_ptid, .keep_all = TRUE) %>%          # one row per participant
+  arrange(clt_date) %>%
+  mutate(
+    clt_date = as.Date(clt_date),
+    cumulative = row_number()
+  )
+milestone_wlwh <- function(data, threshold, total_target) {
+  data %>%
+    arrange(clt_date) %>%   # ensure ordering
+    filter(cumulative >= round(total_target * threshold)) %>%
+    slice(1) %>%
+    select(clt_date, cumulative)
+}
+
+wlwh_25 <- milestone_wlwh(wlwh_timeline, 0.25, total_wlwh_target)
+wlwh_50 <- milestone_wlwh(wlwh_timeline, 0.50, total_wlwh_target)
+wlwh_75 <- milestone_wlwh(wlwh_timeline, 0.75, total_wlwh_target)
+```
+
+Recruitment of women living with HIV (WLWH) into the cohort continues to show steady improvement. We reached the 25% enrollment milestone for WLWH on May 27, 2025, the 50% enrollment milestone on Dec 03, 2025, and the 75% enrollment milestone on Mar 30, 2026. 
+Out of the total enrollment target of approximately `r wlwh_target` WLWH per facility, `r wlwh_milestones$reached_75` facilities have reached at least 75% of their target (`r wlwh_target * 0.75` participants), while `r wlwh_milestones$reached_100` facilities have fully achieved their target of `r wlwh_target` participants. This progress demonstrates strong momentum across clusters and positions the study well toward complete enrollment.
+
+
+```{r enrollment_mor, echo=FALSE, fig.height=6, fig.width=10, warning=FALSE, dpi=300}
+source("Enrollment_WLWH.R")
+
+#shorten the names of the study sites
+weekly_enrollment <- weekly_enrollment %>%
+ mutate(study_site = recode(study_site,
+   "01, Rwambwa Sub-county Hospital" = "01, Rwambwa",
+   "02, Sigomere Sub County Hospital" = "02, Sigomere",
+   "03, Uyawi Sub County Hospital" = "03, Uyawi",
+   "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+   "05, Ukwala Sub County Hospital" = "05, Ukwala",
+   "06, Madiany Sub County Hospital" = "06, Madiany",
+   "07, Kabondo Sub County Hospital" = "07, Kabondo",
+   "08, Mbita Sub-County Hospital" = "08, Mbita",
+   "09, Miriu Health Centre" = "09, Miriu",
+   "11, Nyandiwa Level IV Hospital" = "11, Nyandiwa",
+   "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+   "14, Gita Sub County Hospital" = "14, Gita",
+   "15, Akala Health Centre" = "15, Akala",
+   "16, Usigu Health Centre" = "16, Usigu",
+   "17, Ramula Health Centre" = "17, Ramula",
+   "18, Simenya Health Centre" = "18, Simenya",
+   "19, Airport Health Centre (Kisumu)" = "19, Airport",
+   "20, Nyalenda Health Centre" = "20, Nyalenda",
+   "21, Mirogi Health Centre" = "21, Mirogi",
+   "22, Ndiru Level 4 Hospital" = "22, Ndiru"
+ ))
+
+p3 <- ggplot(weekly_enrollment, aes(x = week, y = cumulative_enrollment, 
+                                   color = study_site, group = study_site)) +
+   geom_line(linewidth = 1) +  
+   geom_hline(yintercept = 5, linetype = "dashed", color = "red", linewidth = 1.5) +
+   annotate("label", x = min(weekly_enrollment$week), y = 5, 
+            label = "25% target reached", vjust = -0.5, hjust = 0, size = 3,
+            color = "red", fontface = "bold", fill = "white") +
+   geom_hline(yintercept = 10, linetype = "dashed", color = "orange", linewidth = 1.5) +
+   annotate("label", x = min(weekly_enrollment$week), y = 10, 
+            label = "50% target reached", vjust = -0.5, hjust = 0, size = 3,
+            color = "orange", fontface = "bold", fill = "white") +
+   geom_hline(yintercept = 15, linetype = "dashed", color = "darkgreen", linewidth = 1.5) +
+   annotate("label", x = min(weekly_enrollment$week), y = 15, 
+            label = "75% target reached", vjust = -0.5, hjust = 0, size = 3,
+            color = "darkgreen", fontface = "bold", fill = "white") +
+   geom_hline(yintercept = 20, linetype = "dashed", color = "blue", linewidth = 1.5) +
+   annotate("label", x = min(weekly_enrollment$week), y = 20, 
+            label = "100% target reached", vjust = -0.5, hjust = 0, size = 3,
+            color = "blue", fontface = "bold", fill = "white") +
+   labs(title = "WLWH Enrollment Trends by Study Site",
+        x = "Date",
+        y = "Cumulative WLWH Enrolled",
+        color = "Study Site") +
+   theme_minimal(base_size = 12) +
+   theme(
+       plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+       axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+       legend.position = "right",
+       legend.box = "vertical",
+       legend.title = element_text(face = "bold", size = 10),
+       legend.text = element_text(size = 9),
+       legend.key.height = unit(0.5, "cm"),
+       legend.key.width = unit(0.5, "cm"),
+       plot.margin = margin(10, 20, 10, 10)
+   ) +
+   guides(color = guide_legend(ncol = 2)) +
+   scale_x_date(date_breaks = "1 month", date_labels = "%b %Y")
+
+p3
+```
+
+\newpage
+
+# 4. Ineligibility
+
+Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
+
+```{=Latex}
+\setcounter{table}{0}
+
+```
+
+
+```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
+ineligibility_summary <- consort_data %>% 
+  filter(!is.na(exclusion)) %>% 
+  tbl_summary(
+    sort = list(all_categorical() ~ "frequency"),
+    include = c(exclusion),
+    label = list(exclusion ~ "Reasons for Ineligibility"),
+    digits = list(
+      all_continuous() ~ 1,
+      all_categorical() ~ c(0, 1)
+    )) %>%
+  as_kable_extra(booktabs = TRUE, caption = "Reasons for Ineligibility")
+
+ineligibility_summary %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"))
+
+```
+
+# 5. Baseline Demographics
+
+## 5.1 Participant Baseline Demographics
+
+```{r demographics, warning=F}
+source("PPW RCT Basic Demographics.R")
+
+basic_demo <- demographics_df %>%
+    tbl_summary(
+    sort = list(all_categorical() ~ "frequency"),  
+    include = c(dem_age, dem_current_partner_num, 
+                  dem_maritalstat_num, dem_marriage, 
+                  dem_pc_residence_num, dem_current_school, 
+                  dem_school, dem_employment, 
+                  dem_household_num, dem_housesleep, 
+                  dem_houserooms,dem_traveltime_min,
+                  med_pre_preg),
+    label = list(dem_age ~ "Age (Years)",
+                 dem_current_partner_num ~ "Do you currently have a partner",
+                 dem_employment ~ "Do you have regular employment (Yes)",
+                 dem_maritalstat_num ~ "Currently Married (Yes)",
+                 dem_pc_residence_num ~ "Shares residence with partner",
+                 dem_marriage ~ "Marriage (Monogamous)",
+                 dem_current_school ~ "Currently in School",
+                 dem_school ~ "Completed years in School",
+                 dem_household_num ~ "Number of people in Household",
+                 dem_housesleep ~ "Number of people sleep in same house",
+                 dem_houserooms ~ "Rooms in the house most often sleep in",
+                 dem_traveltime_min ~ "Time to the Clinic (Minutes)",
+                 med_pre_preg ~ "Have you been pregnant before (Yes)"),
+    missing = "no",
+    digits = list(
+        all_continuous() ~ 1,       
+        all_categorical() ~ c(0, 1) 
+    ), 
+    type = list(dem_age ~ "continuous", 
+                dem_household_num ~ "continuous",
+                dem_housesleep ~ "continuous", 
+                dem_houserooms ~ "continuous", 
+                dem_traveltime_min ~ "continuous"),
+    statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+    bold_labels() %>%
+    add_n() %>%
+    modify_header(label ~ "**Characteristic**") %>%
+  as_kable_extra(
+    booktabs = TRUE,
+    caption = "Basic Demographic Summary"
+  ) %>%
+    column_spec(1, width = "7cm") %>%
+  kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
+  kableExtra::footnote(
+    symbol = "Eight participants preferred not to answer the marital status question and were excluded from N",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE,
+    escape = FALSE
+  )
+   
+basic_demo %>% 
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down")
+    )
+```
+
+\newpage 
+
+## 5.2 WLWH Cohort Baseline Demographics
+
+```{r WLWH_demo, echo=FALSE}
+wlwh_demo <- demographics_df %>%
+    filter(med_pastdiag___2 == "Checked") %>% 
+    tbl_summary(
+        sort = list(all_categorical() ~ "frequency"),
+        include = c(dem_age, dem_current_partner_num, 
+                    dem_maritalstat_num, dem_marriage, 
+                    dem_pc_residence_num, dem_current_school,
+                    dem_school, dem_employment, 
+                    dem_household_num, dem_housesleep, 
+                    dem_houserooms, dem_traveltime_min,
+                    med_pre_preg),
+        label = list(dem_age ~ "Age (Years)",
+                     dem_current_partner_num ~ "Do you currently have a partner",
+                     dem_employment ~ "Do you have regular employment (Yes)",
+                     dem_maritalstat_num ~ "Currently Married (Yes)",
+                     dem_pc_residence_num ~ "Shares residence with partner (Yes)",
+                     dem_marriage ~ "Marriage (Monogamous)",
+                     dem_current_school ~ "Currently in School",
+                     dem_school ~ "Completed years in School",
+                     dem_household_num ~ "Number of people in Household",
+                     dem_housesleep ~ "Number of people sleep in same house",
+                     dem_houserooms ~ "Rooms in the house most often sleep in",
+                     dem_traveltime_min ~ "Time to the Clinic (Minutes)",
+                     med_pre_preg ~ "Have you been pregnant before (Yes)"),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
+        ), 
+        type = list(dem_age ~ "continuous", 
+                    dem_household_num ~ "continuous",
+                    dem_housesleep ~ "continuous", 
+                    dem_houserooms ~ "continuous", 
+                    dem_traveltime_min ~ "continuous"),
+        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+    bold_labels() %>%
+    add_n() %>%
+    modify_header(label ~ "**Characteristic**") %>%
+  as_kable_extra(
+    booktabs = TRUE,
+    caption = "WLWH Demographic Summary"
+  ) %>%
+    column_spec(1, width = "7cm") %>%
+  kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
+  kableExtra::footnote(
+    symbol = "Four participants preferred not to answer the marital status question and were excluded from N",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE,
+    escape = FALSE
+  )
+
+
+wlwh_demo %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down")
+    )
+```
+
+# 6. Study Terminations
+
+```{r Ealiest Expected termination, echo=FALSE, message=FALSE, warning=FALSE}
+first_6ths <- ppw_rct_df %>%
+   # Filter to "6 months" and grab the first per participant
+ filter(clt_visit == "6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>%
+   mutate(
+   clt_timestamp = as_date(clt_date, format = "%Y-%m-%d")) %>% 
+ group_by(clt_ptid) %>%
+ slice_min(clt_date, n = 1) %>%    # in case there are duplicates
+ ungroup() %>% 
+   select(clt_study_site,clt_ptid, clt_date)
+
+# First six-month visit date across participants
+earliest_due <- first_6ths %>%
+ slice_min(clt_date, n = 1) %>%
+ select(clt_ptid, clt_date) %>%
+ mutate(clt_date = format(as.Date(clt_date), "%b %d, %Y")) %>% 
+ pull(clt_date) 
+
+total_exits <- ppw_rct_df%>%
+   # Filter to "6 weeks" and grab the first per participant
+ filter(clt_visit == "6 months post-partum" & hiv_care_and_treatment_complete== "Complete")
+
+completed_follow_up <- total_exits %>% 
+   filter(clt_visit=="6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
+   nrow()
+```
+
+
+To date, no participants have been withdrawn early due to discharge decisions by either the participant or the PI. A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint. The first study exit occurred on `r earliest_due`. Two maternal deaths (N=2) were reported; details are provided in the adverse events section.
+
+
+# 7. Psychosocial Referrals
+
+
+```{r psychosocial referral num source, message=FALSE, warning=FALSE, include=FALSE}
+source("PPW RCT Referrals.R")
+
+total_visits <- ppw_rct_df %>%
+  filter(!str_detect(redcap_event_name, "PM\\+ Session 5 Abstraction")) %>%
+  count() %>%
+  pull(n)
+
+total_scr_num <- df_long %>% 
+    nrow()
+
+total_scr_per <- round(total_scr_num/total_visits *100, 1)
+
+total_ref_num <- df_long %>% 
+    filter(referral_accept == "Yes") %>% 
+    nrow()
+
+total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
+```
+
+
+During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Participants at control sites are referred to routine care, while those at intervention sites are referred to telepsychiatry or PM+ based on clinical assessment of depression and/or anxiety. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
+
+
+
+```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
+# referral_summary <- summary_tbl %>%
+#   mutate(
+#     screened = sprintf("%d (%.1f%%)", n, pct_screened),
+#     accepted = sprintf("%d (%.1f%%)", n_accepted, pct_accepted)
+#   ) %>%
+#   select(Condition, screened, accepted) %>%
+#   knitr::kable(
+#     booktabs = TRUE,
+#     caption = "Referral Summary",
+#     col.names = c("Referral Condition", "Screened Positive N (%)", "Accepted Referral N (%)")
+#   )
+# 
+# referral_summary %>%
+#     kableExtra::kable_styling(
+#         latex_options = c("HOLD_position", "scale_down"),
+#         font_size = 11
+#     ) %>%
+#     kableExtra::row_spec(0, bold = TRUE)  # bold column 
+
+
+build_kable_referral_table <- function(df_long) {
+  
+  # --- 1. Summary by risk only ---
+  risk_summary <- df_long %>%
+    group_by(risk_col) %>%
+    summarise(
+      n_total = n(),
+      n_accepted_total = sum(accepted, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    left_join(condition_labels, by = "risk_col") %>%
+    select(Condition, n_total, n_accepted_total) %>%
+    mutate(
+      uptake_total = if_else(n_total > 0,
+                             n_accepted_total / n_total * 100, 0)
+    )
+  
+  # --- 2. Add grand total row ---
+  # grand_total <- risk_summary %>%
+  #   summarise(
+  #     Condition = "Overall",
+  #     n_total = sum(n_total),
+  #     n_accepted_total = sum(n_accepted_total),
+  #     uptake_total = if_else(sum(n_total) > 0,
+  #                            sum(n_accepted_total) / sum(n_total) * 100, 0)
+  #   )
+  
+  #risk_summary <- bind_rows(risk_summary, grand_total)
+  
+  # --- 3. Kable table ---
+  kbl_tbl <- risk_summary %>%
+    knitr::kable("latex", booktabs = TRUE, digits = 1,
+                 col.names = c("Referral Condition", "Screened +", "Accepted", "Uptake (%)"),
+                  caption = "Referral Uptake by Condition") %>%
+    kableExtra::kable_styling(
+      latex_options = c("HOLD_position", "scale_down"),
+      font_size = 10
+    ) #%>%
+   #kableExtra::row_spec(nrow(risk_summary), bold = TRUE)   # bold the Overall row
+  
+  return(kbl_tbl)
+}
+
+
+risk_referral_summary <- build_kable_referral_table(df_long)
+risk_referral_summary
+
+```
+
+
+```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+
+source("PPW RCT follow up.R")
+
+
+outcome_summary <- end_joined %>%
+    tbl_summary(
+        include = c(phq9_total, gad7_total, qol_overall_scaled, 
+                    any_adverse_outcome, rtc_total),
+        type = list(
+            # all_continuous() ~ "continuous",
+            # all_categorical() ~ "categorical"
+            phq9_total ~ "continuous",
+            gad7_total ~ "continuous",
+            qol_overall_scaled ~ "continuous",
+            rtc_total ~ "continuous",
+            any_adverse_outcome ~ "dichotomous"
+        ),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
+        ),
+        label = list(
+            phq9_total ~ "Patient Health Questionnaire-9 score",
+            gad7_total ~ "Generalized Anxiety Disorder-7 score",
+            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+            any_adverse_outcome ~ "Any adverse pregnancy outcome",
+            rtc_total ~ "Reducing Tensions Checklist score"
+        )
+    ) %>%
+    add_n() %>%
+    modify_header(label ~ "**Outcome**") %>%
+    modify_caption("**Primary and Secondary Outcomes Summary**") %>% 
+    modify_table_styling(
+        columns = "label",
+        rows = variable %in% c("phq9_total", "gad7_total", "qol_overall_scaled", "rtc_total"),
+        footnote = "Participants with incomplete responses are excluded."
+    ) %>%
+    modify_table_styling(
+        columns = "label",
+        rows = variable == "any_adverse_outcome",
+        footnote = "Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birthweight/small for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit."
+    ) %>% 
+    modify_footnote(
+        all_stat_cols() ~ "Total participants with any primary or secondary outcomes reported; Median (Q1, Q3); n (%)"
+    )
+
+```
+
+\clearpage
+
+# 8. Primary and secondary study endpoints
+
+
+
+```{r Outcome summary, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+
+outcome_summary
+```
+
+
+
+\newpage
+
+
+# 9. Adverse Events and Severe Adverse Events
+
+## 9.1 Adverse Event Summary
+
+
+```{r AEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
+source("SAEs Lists.R")
+
+total_AEs <- sum(ae_report_df$`Number of Events`)
+```
+
+
+As of `r format(data_freeze, '%d %B %Y')`, `r total_AEs` adverse events were reported. These will be included in the annual cumulative report to the ERC, in accordance with protocol requirements.
+
+
+```{r AEs Report, echo=FALSE, message=FALSE, warning=FALSE}
+ae_report <- ae_report_df %>%
+  mutate(Summary = paste0(`Number of Events`, " (", 
+                          round(`Number of Events` / total_events * 100, 1), "%)")) %>%
+  select(Characteristic = Event, Summary) %>%
+  knitr::kable(
+    booktabs = TRUE,
+    caption = "Summary of Adverse Events",
+    col.names = c("Characteristic", paste0("N = ", total_events))
+  )
+
+ae_report %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down")
+  ) %>%
+  kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
+  kableExtra::footnote(
+   # general = "n (%)",
+    symbol = "Persistent or significant psychosocial distress is defined as PHQ-9 score >=10 at any follow-up visit.",
+    footnote_as_chunk = TRUE
+  )
+
+```
+
+
+\newpage
+## 9.2 Severe Adverse Event Summary
+
+
+
+```{r SAEs numsource, echo=FALSE, message=FALSE, warning=FALSE}
+total_SAEs <- clean_sae_df %>% 
+   nrow()
+
+total_deaths_mat <- clean_sae_df %>% 
+    filter(Event == "Maternal Death ") %>% 
+    nrow()
+
+total_deaths_infant <- clean_sae_df %>% 
+    filter(Event == "Infant Death ") %>% 
+   nrow()
+
+pregnancy_loss <- clean_sae_df %>% 
+    filter(Event == "Stillbirth ") %>% 
+   nrow()
+
+total_hosp <- clean_sae_df %>% 
+   filter(Event == "New/prolonged hospitalization ") %>% 
+   nrow()
+```
+
+
+As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` were a prolonged hospitalization.
+
+
+```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
+sae_overall <- sae_wide %>%
+  tbl_summary(
+    include = c("Maternal Death ", "maternal_cause_category",
+                "Infant Death ", "infant_cause_category",
+                "Stillbirth ", "New/prolonged hospitalization "),
+    type = all_continuous() ~ "continuous",
+    statistic = all_continuous() ~ "{sum}",
+    percent = "cell",
+    missing = "no",
+    digits = list(all_continuous() ~ 1, all_categorical() ~ c(0, 1)),
+    label = list(infant_cause_category = "Infants Death Cause",
+                 maternal_cause_category = "Maternal Death Cause"),
+    sort = list(all_categorical() ~ "frequency")
+  ) %>%
+  bold_labels() %>%
+  add_n() %>%
+  as_kable_extra(
+    booktabs = TRUE,
+    caption = "Summary of Reported Serious Adverse Events"
+  ) %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    font_size = 11,
+    position = "center"
+  )
+sae_overall
+```
