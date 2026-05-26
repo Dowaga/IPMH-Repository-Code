@@ -532,7 +532,7 @@ p2
 source("Consort_WLWH.R")
 ```
 
-Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
+Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits. Percentages do not reflect study retention as not all enrolled participants have reached follow-up visits
 
 ```{r r consort_wlhiv, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
 # add_box(txt = txt_anc) |>
@@ -996,23 +996,21 @@ outcome_summary <- end_joined %>%
             all_categorical() ~ c(0, 1)
         ),
         label = list(
-            phq9_total ~ "Patient Health Questionnaire-9 score",
-            gad7_total ~ "Generalized Anxiety Disorder-7 score",
-            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+            phq9_total ~ "Patient Health Questionnaire-9 score \u00b2",
+            gad7_total ~ "Generalized Anxiety Disorder-7 score \u00b2",
+            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score) \u00b2",
             any_adverse_outcome ~ "Any adverse pregnancy outcome",
-            rtc_total ~ "Reducing Tensions Checklist score"
+            rtc_total ~ "Reducing Tensions Checklist score \u00b2"
         )
     ) %>%
     add_n() %>%
-    modify_header(label ~ "**Outcome**") %>%
+    modify_header(label ~ "**Outcome**",
+    all_stat_cols() ~ "**Outcome Statistics \u00b9**") %>%
     modify_caption("**Primary and Secondary Outcomes Summary**") %>% 
     modify_table_styling(
         columns = "label",
         rows = variable %in% c("phq9_total", "gad7_total", "qol_overall_scaled", "rtc_total"),
         footnote = "Participants with incomplete responses are excluded."
-    ) %>%
-    modify_footnote(
-        all_stat_cols() ~ "Total participants with any primary or secondary outcomes reported; Median (Q1, Q3); n (%)"
     )
 
 ```
