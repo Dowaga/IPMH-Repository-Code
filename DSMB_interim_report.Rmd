@@ -253,12 +253,12 @@ analysis_wide <- analysis_df %>%
   select(-`time_Enrollment`)
 ```
 
-In the models, treatment arm is coded as a binary indicator with the control arm as the reference group (Control = 0, Intervention = 1). Time is measured in weeks since enrollment (time = 0 at enrollment). We additionally controlled each participant's baseline PHQ9 in the model. The interaction term `arm * time` therefore represents the difference in the rate of change in scores over time between the intervention and control arms. A negative interaction coefficient indicates that scores decline more steeply over time in the intervention arm relative to the control arm.
+In the models, treatment arm is coded as a binary indicator with the control arm as the reference group (Control = 0, Intervention = 1). We controlled each participant's baseline PHQ9 in the model. The primary parameter of interest is the coefficient of `arm`, which represents the mean difference in change in PHQ-9/GAD-7 score from enrollment to 14 weeks postpartum between the intervention and control arms, adjusted for baseline PHQ-9 score at enrollment. A negative coefficient for `arm` would indicate that the intervention arm had a greater reduction in PHQ-9/GAD-7 score from enrollment to 14 weeks postpartum compared to the control arm. 
 
 ### PHQ-9
 
 ```{r phq9 results, echo=TRUE, eval=T, message=FALSE, warning=FALSE}
-phq_model <- lmer(phq9_pp14 ~ arm * time_pp14 + phq9_enroll + (1 | clt_study_site) , 
+phq_model <- lmer(phq9_pp14 ~ arm + phq9_enroll + (1 | clt_study_site) , 
                   data = analysis_wide)
 
 summary(phq_model)
@@ -269,7 +269,7 @@ summary(phq_model)
 ### GAD-7
 
 ```{r gad7 results, echo=TRUE, eval=T, message=FALSE, warning=FALSE}
-gad_model <- lmer(gad7_pp14 ~ arm * time_pp14 + gad7_enroll + (1 | clt_study_site), 
+gad_model <- lmer(gad7_pp14 ~ arm + gad7_enroll + (1 | clt_study_site), 
                   data = analysis_wide)
 
 summary(gad_model)
@@ -293,14 +293,14 @@ gs <- gsDesign(k = 2,
 obf_boundary <- gs$upper$bound[1]
 
 phq9_coef <- summary(phq_model)$coefficients
-phq9_est  <- phq9_coef["armIntervention:time_pp14", "Estimate"]
-phq9_se   <- phq9_coef["armIntervention:time_pp14", "Std. Error"]
-phq9_z    <- phq9_coef["armIntervention:time_pp14", "t value"]
+phq9_est  <- phq9_coef["armIntervention", "Estimate"]
+phq9_se   <- phq9_coef["armIntervention", "Std. Error"]
+phq9_z    <- phq9_coef["armIntervention", "t value"]
 
 gad7_coef <- summary(gad_model)$coefficients
-gad7_est  <- gad7_coef["armIntervention:time_pp14", "Estimate"]
-gad7_se   <- gad7_coef["armIntervention:time_pp14", "Std. Error"]
-gad7_z    <- gad7_coef["armIntervention:time_pp14", "t value"]
+gad7_est  <- gad7_coef["armIntervention", "Estimate"]
+gad7_se   <- gad7_coef["armIntervention", "Std. Error"]
+gad7_z    <- gad7_coef["armIntervention", "t value"]
 
 ```
 
