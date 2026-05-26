@@ -1726,13 +1726,16 @@ fidelity_summary %>% kable_styling(
 
 \newpage
 
+```{r load-outcome-data, echo=FALSE, message=FALSE, warning=FALSE}
+invisible(capture.output(source("PPW RCT follow up.R")))
+```
 
-# 8. Primary and secondary study endpoints at 14 weeks postpartum
+# 8. Primary and secondary study endpoints
 
+The table below displays summaries of primary and secondary study endpoints for those who have completed their 14 week visit and/or who have experienced an adverse pregnancy outcome. Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birth weight, small birth weight for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit.
 
 
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
 
 # Create summary table
 arm_outcome_summary <- arm_joined %>%
@@ -1771,11 +1774,6 @@ arm_outcome_summary <- arm_joined %>%
         rows = variable %in% c("phq9_total", "gad7_total", "qol_overall_scaled", "rtc_total"),
         footnote = "Participants with incomplete responses are excluded."
     ) %>%
-    modify_table_styling(
-        columns = "label",
-        rows = variable == "any_adverse_outcome",
-        footnote = "Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birthweight/small for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit."
-    ) %>% 
     modify_footnote(
         all_stat_cols() ~ "Total participants with any primary or secondary outcomes reported; Median (Q1, Q3); n (%)"
     )
@@ -1783,7 +1781,10 @@ arm_outcome_summary <- arm_joined %>%
 
 
 ```{r Outcome summary, echo=FALSE}
- arm_outcome_summary
+ arm_outcome_summary %>% as_kable_extra(booktabs = TRUE, longtable = FALSE) %>%
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+        full_width = TRUE
+    )
 
 ```
 

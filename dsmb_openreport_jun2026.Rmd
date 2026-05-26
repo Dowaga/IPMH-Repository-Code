@@ -5,6 +5,7 @@ subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report'
 date: "`r format(Sys.time(), '%d %B %Y')`"
 header-includes:
  \usepackage{float}
+ \floatplacement{table}{H}
  \usepackage{booktabs}
  \usepackage{longtable}
  \usepackage{array}
@@ -959,10 +960,18 @@ risk_referral_summary
 ```
 
 
-```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
 
-source("PPW RCT follow up.R")
+```{r load-outcome-data, echo=FALSE, message=FALSE, warning=FALSE}
+invisible(capture.output(source("PPW RCT follow up.R")))
+```
 
+
+# 8. Primary and secondary study endpoints
+
+The table below displays summaries of primary and secondary study endpoints for those who have completed their 14 week visit and/or who have experienced an adverse pregnancy outcome. Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birth weight, small birth weight for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit.
+
+
+```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
 
 outcome_summary <- end_joined %>%
     tbl_summary(
@@ -1002,26 +1011,19 @@ outcome_summary <- end_joined %>%
         rows = variable %in% c("phq9_total", "gad7_total", "qol_overall_scaled", "rtc_total"),
         footnote = "Participants with incomplete responses are excluded."
     ) %>%
-    modify_table_styling(
-        columns = "label",
-        rows = variable == "any_adverse_outcome",
-        footnote = "Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birthweight/small for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit."
-    ) %>% 
     modify_footnote(
         all_stat_cols() ~ "Total participants with any primary or secondary outcomes reported; Median (Q1, Q3); n (%)"
     )
 
 ```
 
-\clearpage
-
-# 8. Primary and secondary study endpoints
-
-
 
 ```{r Outcome summary, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
 
-outcome_summary
+outcome_summary %>% as_kable_extra(booktabs = TRUE, longtable = FALSE, escape = FALSE) %>%
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+        full_width = TRUE
+    )
 ```
 
 
