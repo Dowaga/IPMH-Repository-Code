@@ -1,0 +1,2280 @@
+---
+title: "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics"
+
+subtitle: 'Data and Safety Monitoring Board (DSMB): Closed Report '
+date: "`r format(Sys.time(), '%d %B %Y')`"
+header-includes:
+ \usepackage{float}
+ \usepackage{booktabs}
+ \usepackage{longtable}
+ \usepackage{array}
+ \usepackage{multirow}
+ \usepackage[table]{xcolor}
+ \usepackage{wrapfig}
+ \floatplacement{figure}{H}
+ \usepackage[normalem]{ulem}
+ \usepackage{float}
+output:
+    pdf_document:
+        latex_engine: xelatex
+    word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+
+rm(list = ls())
+
+# Set up data freeze time for this report
+data_freeze <- as.Date("2026-05-11") 
+
+##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. #####
+
+# Reference source codes & other dependencies:
+source("DataTeam_ipmh.R")
+source("Dependencies.R")
+source("data_import.R")
+```
+
+
+```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
+
+knitr::include_graphics(paste0(file.path(ipmh_filepath, "/Data/IPMH logo.jpg")))
+
+```
+
+
+\newpage
+
+John Kinuthia, MBChD, MMed, MPH, Kenyatta National Hospital
+
+Keshet Ronen, PhD, MPH, University of Washington
+
+Amritha Bhat, MBBS, MD, MPH, University of Washington
+
+Report prepared by: David Owaga & Yuwei Wang
+
+Date of data freeze: `r format(data_freeze, '%d %B %Y')`
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+# 1. Study Summary
+
+
+```{r study_summary}
+vars <- c("Primary Objective", "Study Design", "Study Population", "Inclusion Criteria",
+         "Target Sample Size",
+         "Actual Enrollment",
+         "Participants Completed Follow-up", "Duration", 
+         "Date Study Open", "Date of First Complete Enrollment",
+         "Estimated End of Study",
+         "Endpoints", "")
+
+vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatment of perinatal mood and anxiety disorders (PMADs), and its implementation strategies, into maternal and child health clinics and pragmatically evaluate its clinical, service delivery, and implementation outcomes",
+          "A 2-arm, non-blinded cluster randomized controlled trial (RCT) comparing the effect of IPMH and associated implementation strategies on depression, anxiety, quality of life, and adverse perinatal outcomes vs. control (standard of care) among Kenyan women", 
+          "Pregnant Kenyan women", 
+          "-Receiving antenatal care at study facility\n->=20 weeks gestation\n-Age>=14\n-screen positive for PMAD symptoms (PHQ-2>=3 and/or GAD-2>=3)", 
+          "2970, including 405 women living with HIV (WLWH)", 
+          "2383",
+          "960",
+          "Follow-up through 6 months postpartum", 
+          "September 19, 2023", 
+          "February 17, 2025",
+          "July 31, 2028",
+          "Primary: Depression (Patient Health Questionnaire-9 [PHQ-9] score) and anxiety (Generalized Anxiety Disorder-7 [GAD-7] score)", 
+          "Secondary:\n-Problem Management Plus (PM+) Skill Acquisition (Reducing Tension Checklist score)\n-Quality of Life (World Health Organization Quality of Life [WHOQOL-BREF] score)\n-Any adverse pregnancy outcome")
+
+stdy_summ <- data.frame(vars, vars2)
+
+study_summary <- flextable(stdy_summ)
+study_summary <- flextable::width(study_summary, 'vars2', width = 5)
+study_summary <- flextable::width(study_summary, 'vars', width = 2)
+border <- fp_border()
+study_summary <- flextable::vline(study_summary, j = c('vars'), border = border, part = "all")
+study_summary <- set_header_labels(study_summary, vars = "Title", vars2 = "IPMH: Integration of stepped care for perinatal mood and anxiety disorders among women attending MCH clinics")
+
+study_summary
+```
+
+
+\newpage
+
+# 2. Study Enrollment
+
+
+```{r Consort data prep, echo=FALSE, message=FALSE, warning=FALSE}
+# ANC Attendees ----------------------------------------------------------
+Attendees <- daily_closeout_df %>%
+    summarise(anc_attendees = sum(rct_anc_number, na.rm = TRUE)) %>%
+    pull(anc_attendees)
+
+anc_attendees_df <- data.frame(
+    anc_id        = paste0("anc_", seq_len(Attendees)),
+    anc_attendees = "Yes"  # rep() unnecessary for a single scalar
+)
+
+# PM+ Survey participants -------------------------------------------------
+pm_df <- pm_survey_df %>%
+    mutate(pm_ptid = as.numeric(pm_ptid)) %>%
+    filter(ipmh_participant == "Yes") %>%
+    distinct(pm_ptid, .keep_all = TRUE) %>%
+    select(pm_ptid, ipmh_participant)
+
+# Telepsychiatry ----------------------------------------------------------
+pm_telep_df <- ppw_rct_df %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
+    select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
+    filter(!is.na(clt_date)) 
+
+
+# Define PHQ9 recoding
+phq9_labels <- c(
+    "not at all" = 0,
+    "several days" = 1,
+    "more than half the days" = 2,
+    "nearly every day" = 3
+)
+
+gad7_labels <-c(
+    "Not at all" = 0,
+    "Several days" = 1,
+    "Over half the days"= 2,
+    "Nearly every day" = 3)
+
+
+# Recode PHQ9 variables
+pm_telep_df <- pm_telep_df %>%
+    mutate(across(c(abs_phq_interest, abs_phq_down, abs_phq_sleep,
+                    abs_phq_tired, abs_phq_appetite, abs_phq_bad,
+                    abs_phq_concentrate, abs_phq_slow, abs_phq_dead), ~ recode(., !!!phq9_labels)),
+           across(c(abs_gad7_nerve, abs_gad7_uncontrol, 
+                    abs_gad7_worry, abs_gad7_relax, abs_gad7_restless,
+                    abs_gad7_annoyed, abs_gad7_afraid), ~ recode(., !!!gad7_labels)))
+
+
+
+pm_telep_df <- pm_telep_df %>% 
+    mutate(phq9_scores = rowSums(select(., abs_phq_interest, abs_phq_down,
+                                        abs_phq_sleep, abs_phq_tired, 
+                                        abs_phq_appetite, abs_phq_bad,
+                                        abs_phq_concentrate, abs_phq_slow, 
+                                        abs_phq_dead), na.rm = TRUE),
+           gad7_scores = rowSums(select(., abs_gad7_nerve, abs_gad7_uncontrol,
+                                        abs_gad7_worry, abs_gad7_relax, 
+                                        abs_gad7_restless, abs_gad7_annoyed,
+                                        abs_gad7_afraid), na.rm = TRUE))
+
+# Endorsed PHQ9 Question 9
+self_harm <- pm_telep_df %>% 
+    filter(abs_phq_dead > 0)
+
+pm_telep_df <- pm_telep_df %>% 
+    filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
+    mutate(
+        max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
+        eligible_for = case_when(
+            abs_phq_dead > 0 ~ "Telepsychiatry",
+            (max_score >= 10 & max_score < 15 &
+                 (max_score == phq9_scores | max_score == gad7_scores)) ~ "PM+",
+            max_score >= 15 ~ "Telepsychiatry",
+            TRUE ~ "Not Eligible"
+        ),
+        referred_to = case_when(
+            abs_gad7_ref_tele == "Yes" | abs_phq_ref_tele == "Yes" ~ "Telepsychiatry",
+            abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes" ~ "PM+",
+            TRUE ~ NA_character_
+        )
+    ) 
+
+# PM+ participants
+pm_plus_df <- pm_telep_df %>% 
+    filter(max_score >= 10 & max_score < 15) %>%
+    select(-max_score)  # Remove max_score if not needed
+
+# Tele-psychiatry referrals
+telepsych_referrals <- pm_telep_df %>% 
+    filter((phq9_scores>=15)|(gad7_scores>=15)|(abs_phq_dead > 0 & abs_phq_ref_tele == "Yes"))
+
+tel_refer <- pm_telep_df %>% 
+    filter(abs_phq_ref_tele == "Yes" & referred_to == "PM+")
+
+telepsych_ids <- telepsych_referrals %>% 
+    select(partipant_id = record_id) %>% 
+    mutate(tele = "Yes")
+
+tele_sessions <- nrow(telepsych_ids)
+
+# Follow-up visits --------------------------------------------------------
+# Collapsed three near-identical blocks into a single reusable function
+make_visit <- function(df, visit_label, new_col) {
+    df %>%
+        filter(clt_visit == visit_label) %>%
+        select(clt_ptid) %>%
+        mutate(!!new_col := "Yes")
+}
+
+secondvisit <- make_visit(ppw_rct_df, "6 weeks post-partum",   "secondvisit")
+thirdvisit  <- make_visit(ppw_rct_df, "14 weeks post-partum",  "thirdvisit")
+fourthvisit <- make_visit(ppw_rct_df, "6 months post-partum",  "fourthvisit")
+
+# CONSORT data assembly ---------------------------------------------------
+consort_data <- screening_consent_df %>% 
+    # Select relevant variables
+    select(
+        record_id,
+        partipant_id,
+        rct_harm_thought,
+        rct_aud_hallucinations,
+        rct_vis_hallucinations,
+        rct_paranoia,
+        rct_delusions,
+        rct_memory_problem,
+        rct_eligible_gestation,
+        rct_eligible_harm,
+        rct_risk,
+        rct_eligible,
+        rct_enrolling,
+        rct_decline_reason,
+        rct_other_reasons
+    ) %>%
+    # Eligibility
+    mutate(
+        eligible = case_when(
+            # Exclude self-harm with missing risk
+            rct_harm_thought == "Yes" & is.na(rct_risk) ~ 0,
+            
+            # Otherwise use REDCap eligibility
+            rct_eligible == 1 ~ 1,
+            
+            TRUE ~ 0
+        )
+    ) %>%
+    # Exclusion reasons
+    mutate(
+        exclusion = case_when(
+            eligible != 1 & rct_eligible_gestation == "No" ~ "Gestation <20 Weeks",
+            eligible != 1 & rct_harm_thought == "Yes" & rct_memory_problem == "Yes" ~ "Self harm and memory problem",
+            eligible != 1 & rct_harm_thought == "Yes" & rct_memory_problem == "No"  ~ "Self harm",
+            eligible != 1 & rct_aud_hallucinations == "Yes" ~ "Hearing voices that others cannot hear",
+            eligible != 1 & rct_vis_hallucinations == "Yes" ~ "Seeing things that others cannot see",
+            eligible != 1 & rct_delusions == "Yes"          ~ "Holding unusual beliefs",
+            eligible != 1 & rct_paranoia == "Yes"           ~ "Feels watched/followed",
+            eligible != 1 & rct_memory_problem == "Yes"     ~ "Memory problem",
+            TRUE ~ NA_character_
+        )
+    ) %>%
+    # Facility extraction
+    mutate(
+        facility = as.numeric(stringr::str_sub(partipant_id, 3, 4))
+    ) %>%
+    # Study arm
+    mutate(
+        arm = case_when(
+            facility %in% c(2, 5, 6, 8, 11, 14, 15, 18, 20, 21) ~ "Control",
+            TRUE ~ "Intervention"
+        )
+    ) %>%
+    # Decline reasons
+    mutate(
+        rct_decline_reason = case_when(
+            # Assign "Relocate post delivery" if not enrolling AND decline reason is NA
+            rct_enrolling == "No" & is.na(rct_decline_reason) ~ "Relocate post delivery",
+            
+            # Assign "Relocate post delivery" if decline reason is explicitly "Other (specify) ___"
+            rct_decline_reason == "Other (specify) ___" ~ "Relocate post delivery",
+            
+            # Keep other values unchanged
+            TRUE ~ rct_decline_reason
+        )
+    )%>%
+    # Fix: enrolled but eligible == 0 ??? set eligible = 1
+    mutate(
+        eligible = case_when(
+            rct_enrolling == "Yes" & eligible == 0 ~ 1,
+            TRUE ~ eligible
+        )
+    ) %>%
+    # Fix: eligible == 0 and exclusion == Gestation <20 Weeks ??? set eligible = NA
+    mutate(
+        eligible = case_when(
+            eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_integer_,
+            TRUE ~ eligible
+        )
+    ) %>%
+    # Optional: if exclusion is missing but eligible == 0, assign Gestation <20 Weeks
+    mutate(
+        exclusion = case_when(
+            eligible == 0 & is.na(exclusion) ~ "Gestation <20 Weeks",
+            TRUE ~ exclusion
+        )
+    ) %>% 
+    mutate(
+        # Final clean-up for gestation <20 weeks cases
+        rct_decline_reason = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_decline_reason
+        ),
+        rct_enrolling = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_enrolling
+        ),
+        rct_other_reasons = case_when(
+            rct_eligible == 0 & exclusion == "Gestation <20 Weeks" ~ NA_character_,
+            TRUE ~ rct_other_reasons
+        )
+    ) %>%
+    mutate(
+        partipant_id = case_when(
+            record_id == 9680 ~ 21229680L,   # assign participant_id
+      TRUE ~ partipant_id             # keep existing values
+    )
+  )
+
+
+consort_data <- consort_data %>% 
+    # All joins chained together
+    left_join(pm_df,        by = c("partipant_id" = "pm_ptid"))
+    
+# Prepend ANC attendees row
+consort_data <- bind_rows(anc_attendees_df, consort_data)
+
+consort_data <- consort_data %>%
+    left_join(secondvisit,  by = c("partipant_id" = "clt_ptid")) %>%
+    left_join(thirdvisit,   by = c("partipant_id" = "clt_ptid")) %>%
+    left_join(fourthvisit,  by = c("partipant_id" = "clt_ptid")) %>%
+    left_join(telepsych_ids, by = "partipant_id")
+
+#consort_data <- consort_data %>%
+ # group_by(partipant_id) %>%
+  #filter(
+    # keep all rows if ID is NA
+    #is.na(partipant_id) | row_number() == 1
+  #) %>%
+  #ungroup()
+
+```
+
+
+
+```{r generate dummy arm, echo=FALSE}
+# ---- Random arm assignment at facility level ----
+set.seed(12345)
+
+facility_arms <- consort_data %>%
+    filter(!is.na(facility)) %>%
+    distinct(facility) %>%
+    arrange(facility) %>%
+    mutate(
+        arm_random = sample(rep(c("Arm X",
+                                  "Arm Y"), each = 10))
+    )
+
+consort_data <- consort_data %>%
+    left_join(facility_arms, by = "facility") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Arm Y",
+                                       "Arm X"))
+    )
+
+# NOTE FOR WENWEN: Replace all arm_random with arm in the consort diagram chunk below to switch from dummy to real arm assignment.
+```
+
+
+
+```{r consort diagram, echo=FALSE, fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
+# Helper: percentage-formatted label -----------------------------------------
+generate_stage_text <- function(label, n, denom, decimals = 2) {
+    pct <- if_else(denom > 0, (n / denom) * 100, 0)
+    sprintf("%s\n (n=%d, %.*f%%)", label, n, decimals, pct)
+}
+
+generate_box_header <- function(label, n, denom, decimals = 2) {
+    pct <- if_else(denom > 0, (n / denom) * 100, 0)
+    sprintf("%s (n=%d, %.*f%%):", label, n, decimals, pct)
+}
+
+# Counts by arm --------------------------------------------------------------
+counts_by_arm <- consort_data %>%
+    filter(!is.na(arm)) %>%
+    group_by(arm) %>%
+    summarise(
+        assessed         = n(),
+        excluded         = sum(!is.na(exclusion)),
+        eligible         = sum(eligible == "1", na.rm = TRUE),
+        enrolled         = sum(rct_enrolling == "Yes", na.rm = TRUE),
+        pm_participants  = sum(ipmh_participant == "Yes", na.rm = TRUE),
+        tele_participants = sum(tele == "Yes", na.rm = TRUE),
+        postpartum_visit  = sum(secondvisit == "Yes", na.rm = TRUE),
+        postpartum_visit1 = sum(thirdvisit  == "Yes", na.rm = TRUE),
+        postpartum_visit2 = sum(fourthvisit == "Yes", na.rm = TRUE),
+        .groups = "drop"
+    ) %>%
+    rowwise() %>%
+    mutate(
+        txt_eligible   = generate_stage_text("Eligible",                  eligible,          assessed),
+        txt_excluded   = generate_stage_text("Excluded",                  excluded,          assessed),
+        txt_enrolled   = generate_stage_text("Enrolled",                  enrolled,          eligible),
+        txt_pm         = generate_stage_text("PM+",                       pm_participants,   enrolled),
+        txt_tele       = generate_stage_text("Telepsychiatry",            tele_participants, enrolled),
+        txt_postpartum = generate_stage_text("6 weeks postpartum visit",  postpartum_visit,  enrolled),
+        txt_postpartum1= generate_stage_text("14 weeks postpartum visit", postpartum_visit1, enrolled),
+        txt_postpartum2= generate_stage_text("6 months postpartum visit", postpartum_visit2, enrolled),
+        txt_pm_tele    = paste(txt_pm, txt_tele, sep = "\n")
+    ) %>%
+    ungroup()
+
+# Top-level labels -----------------------------------------------------------
+n_attendees <- sum(consort_data$anc_attendees == "Yes", na.rm = TRUE)
+n_assessed  <- sum(!is.na(consort_data$arm), na.rm = TRUE)
+
+txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)",
+                   n_assessed, (n_assessed / n_attendees) * 100)
+
+txt_arm <- counts_by_arm %>%
+    mutate(txt = sprintf("%s\n (n=%d, %.1f%%)",
+                         arm, assessed, (assessed / n_assessed) * 100)) %>%
+    pull(txt)
+
+# Side box builder -----------------------------------------------------------
+make_side_box <- function(data, group_var, reason_var, count_var,
+                          header_fn, n_col, denom_col) {
+    data %>%
+        group_split(arm) %>%
+        lapply(function(df) {
+            n      <- unique(df[[n_col]])
+            denom  <- unique(df[[denom_col]])
+            header <- header_fn(n, denom)
+            bullets <- sprintf("\u2022 %s (n=%d, %.1f%%)",
+                               df[[reason_var]], df[[count_var]],
+                               (df[[count_var]] / n) * 100)
+            paste(c(header, bullets), collapse = "\n")
+        }) %>%
+        unlist()
+}
+
+# Exclusion side boxes -------------------------------------------------------
+txt_ex <- consort_data %>%
+    filter(!is.na(exclusion)) %>%
+    group_by(arm, exclusion) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    left_join(counts_by_arm %>% select(arm, excluded, assessed),
+              by = "arm") %>%
+    make_side_box(
+        reason_var = "exclusion", count_var = "count",
+        header_fn  = function(n, d) generate_box_header("Excluded", n, d),
+        n_col = "excluded", denom_col = "assessed"
+    )
+
+# Decline side boxes ---------------------------------------------------------
+txt_decline <- consort_data %>%
+    filter(!is.na(rct_decline_reason)) %>%
+    group_by(arm, rct_decline_reason) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    left_join(
+        counts_by_arm %>% mutate(declined = eligible - enrolled) %>%
+            select(arm, declined, eligible),
+        by = "arm"
+    ) %>%
+    make_side_box(
+        reason_var = "rct_decline_reason", count_var = "count",
+        header_fn  = function(n, d) sprintf("Declined Enrollment (n=%d, %.1f%%):", n, (n/d)*100),
+        n_col = "declined", denom_col = "eligible"
+    )
+
+# CONSORT diagram ------------------------------------------------------------
+consort_per <- add_box(txt = txt_anc) |>
+    add_box(txt = txt_ass) |>
+    add_split(txt = txt_arm) |>
+    add_side_box(txt = txt_ex) |>
+    add_box(txt = counts_by_arm$txt_eligible) |>
+    add_side_box(txt = txt_decline) |>
+    add_box(txt = counts_by_arm$txt_enrolled) |>
+    add_box(txt = counts_by_arm$txt_postpartum) |>
+    add_box(txt = counts_by_arm$txt_postpartum1) |>
+    add_box(txt = counts_by_arm$txt_postpartum2)
+
+consort_per
+```
+
+
+\newpage
+
+
+## 2.1 Enrollment Progress - Overall
+
+
+```{r enrollment_progress prep, echo=FALSE}
+# Site label lookup (number ??? short name)
+site_labels <- c(
+    "01, Rwambwa Sub-county Hospital"     = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital"    = "02, Sigomere",
+    "03, Uyawi Sub County Hospital"       = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital"      = "05, Ukwala",
+    "06, Madiany Sub County Hospital"     = "06, Madiany",
+    "07, Kabondo Sub County Hospital"     = "07, Kabondo",
+    "08, Mbita Sub-County Hospital"       = "08, Mbita",
+    "09, Miriu Health Centre"             = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital"      = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital"        = "14, Gita",
+    "15, Akala Health Centre"             = "15, Akala",
+    "16, Usigu Health Centre"             = "16, Usigu",
+    "17, Ramula Health Centre"            = "17, Ramula",
+    "18, Simenya Health Centre"           = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)"  = "19, Airport",
+    "20, Nyalenda Health Centre"          = "20, Nyalenda",
+    "21, Mirogi Health Centre"            = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital"          = "22, Ndiru"
+)
+
+# Enrollment prep ??? collapsed into a single pipeline
+weekly_enrollment <- screening_consent_df %>%
+    filter(rct_enrolling == "Yes" | latest_consent == "Yes") %>%
+    select(study_site, consent_date_auto, consent_date_auto_v2) %>%
+    mutate(
+        consent_date_auto = as.Date(
+            coalesce(consent_date_auto, consent_date_auto_v2),
+            origin = "1899-12-30"
+        ),
+        week      = floor_date(consent_date_auto, "week", week_start = 1),
+        study_site = recode(study_site, !!!site_labels),
+        arm        = str_extract(study_site, "^\\d{2}"),
+        arm_group  = if_else(
+            arm %in% c("02", "05", "06", "08", "11", "14", "15", "18", "20", "21"),
+            "Control", "Intervention"
+        )
+    ) %>%
+    select(-consent_date_auto_v2) %>%
+    group_by(study_site, arm, arm_group, week) %>%
+    summarise(enrollment_count = n(), .groups = "drop") %>%
+    # Full join to fill in weeks with no enrollment
+    full_join(
+        data.frame(week = seq(as.Date("2025-02-16"), as.Date(data_freeze), by = "week")),
+        by = "week"
+    ) %>%
+    arrange(week) %>%
+    mutate(enrollment_count = replace_na(enrollment_count, 0)) %>%
+    filter(!is.na(study_site)) %>%
+    group_by(study_site) %>%
+    mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+    ungroup()
+```
+
+
+
+```{r generate dummy arm2, echo=FALSE}
+# ---- Random arm assignment at facility level ----
+set.seed(12345)
+
+facility_arms <- weekly_enrollment %>%
+    filter(!is.na(study_site)) %>%
+    distinct(study_site) %>%
+    arrange(study_site) %>%
+    mutate(
+        arm_random = sample(rep(c("Arm X",
+                                  "Arm Y"), each = 10))
+    )
+
+weekly_enrollment <- weekly_enrollment %>%
+    left_join(facility_arms, by = "study_site") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Arm Y",
+                                       "Arm X"))
+    )
+
+# NOTE FOR WENWEN: Replace arm_random with arm_group throughout the plot chunk
+# below to switch from dummy to real arm assignment.
+```
+
+
+
+```{r enrollment_progress plot, echo=FALSE, fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
+# Shared plot theme ---------------------------------------------------------
+consort_theme <- theme_minimal(base_size = 12) +
+    theme(
+        plot.title        = element_text(face = "bold", size = 14, hjust = 0.5),
+        axis.text.x       = element_text(angle = 45, vjust = 1, hjust = 1),
+        strip.text        = element_text(face = "bold", size = 11),
+        legend.position   = "right",
+        legend.box        = "vertical",
+        legend.title      = element_text(face = "bold", size = 10),
+        legend.text       = element_text(size = 9),
+        legend.key.height = unit(0.5, "cm"),
+        legend.key.width  = unit(0.5, "cm"),
+        plot.margin       = margin(10, 20, 10, 10)
+    )
+
+total_enrollment <- weekly_enrollment %>%
+    group_by(week, arm_group) %>%
+    summarise(enrollment_count = sum(enrollment_count), .groups = "drop") %>%
+    arrange(week) %>%
+    group_by(arm_group) %>%
+    mutate(
+        cumulative_enrollment = cumsum(enrollment_count),
+        study_site = "Total"
+    ) %>%
+    ungroup()
+
+combined_enrollment <- bind_rows(weekly_enrollment, total_enrollment) %>%
+    mutate(is_total = study_site == "Total")
+
+# Color palette: sites in default ggplot hues, "Total" in black
+site_names  <- sort(unique(weekly_enrollment$study_site))
+site_colors <- setNames(scales::hue_pal()(length(site_names)), site_names)
+all_colors  <- c(site_colors, "Total" = "black")
+
+p1 <- ggplot(combined_enrollment,
+             aes(x = week, y = cumulative_enrollment,
+                 color = study_site, group = study_site,
+                 linewidth = is_total)) +
+    geom_line() +
+    scale_linewidth_manual(values = c("FALSE" = 0.5, "TRUE" = 1.5), guide = "none") +
+    # Target lines
+    geom_hline(yintercept = 372,  linetype = "dashed", color = "red",       linewidth = 0.5) +
+    geom_hline(yintercept = 743,  linetype = "dashed", color = "orange",    linewidth = 0.5) +
+    geom_hline(yintercept = 1114, linetype = "dashed", color = "darkgreen", linewidth = 0.5) +
+    # Target labels
+    annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+             y = 372  + 18, label = "25% target (n=372)",   color = "red",       hjust = 0, size = 3) +
+    annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+             y = 743  + 18, label = "50% target (n=743)",   color = "orange",    hjust = 0, size = 3) +
+    annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+             y = 1114 + 18, label = "75% target (n=1,114)", color = "darkgreen", hjust = 0, size = 3) +
+    scale_color_manual(values = all_colors) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+    coord_cartesian(clip = "off") +
+    facet_wrap(~ arm_group, ncol = 1) +
+    labs(
+        title = "Enrollment Trends by Study Arm",
+        x     = "Date",
+        y     = "Cumulative Enrollment",
+        color = "Study Site"
+    ) +
+    consort_theme +
+    guides(color = guide_legend(ncol = 2))
+
+p1
+```
+
+
+
+\newpage
+
+## 2.2 Enrollment Progress - Per Facility
+
+
+```{r Facility target reached, echo=F}
+reached_25per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 37) %>%
+  summarise(n = n()) %>%
+  pull(n)
+
+reached_50per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 74) %>%
+  summarise(n = n()) %>%
+  pull(n)
+
+reached_75per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 111) %>%
+  summarise(n = n()) %>%
+  pull(n)
+```
+
+
+All `r reached_50per_target` facilities have surpassed the 50% enrollment milestone, each enrolling at least 74 perinatal women. Progress has continued steadily, with `r reached_75per_target` facilities surpassing the 75% milestone (>=111 enrollments), demonstrating strong momentum toward full recruitment.
+
+
+```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
+# NOTE FOR WENWEN: Replace arm_random with arm_group in this plot chunk
+# below to switch from dummy to real arm assignment.
+
+p2 <- ggplot(weekly_enrollment,
+             aes(x = week, y = cumulative_enrollment,
+                 color = study_site, group = study_site)) +
+    geom_line(linewidth = 1) +
+    # Target lines
+    geom_hline(yintercept = 37,  linetype = "dashed", color = "red",       linewidth = 0.5) +
+    geom_hline(yintercept = 74,  linetype = "dashed", color = "orange",    linewidth = 0.5) +
+    geom_hline(yintercept = 111, linetype = "dashed", color = "darkgreen", linewidth = 0.5) +
+    # Target labels
+    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
+             y = 37  + 3, label = "25% target (n=37)",  color = "red",       hjust = 0, size = 3) +
+    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
+             y = 74  + 3, label = "50% target (n=74)",  color = "orange",    hjust = 0, size = 3) +
+    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
+             y = 111 + 3, label = "75% target (n=111)", color = "darkgreen", hjust = 0, size = 3) +
+    scale_color_manual(values = site_colors) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+    coord_cartesian(clip = "off") +
+    facet_wrap(~ arm_group, ncol = 1) +
+    labs(
+        title = "Enrollment Trends by Facility",
+        x     = "Date",
+        y     = "Cumulative Enrollment",
+        color = "Study Site"
+    ) +
+    consort_theme +
+    theme(legend.position = "right") +
+    guides(color = guide_legend(ncol = 2))
+
+p2
+```
+
+
+\newpage
+
+# 3. Women Living with HIV Cohort
+
+
+```{r wlwh prep, echo=FALSE}
+n_enrolled <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
+
+# Identify WLWH and merge into consort_data
+hiv <- ppw_rct_df %>% 
+    filter(med_pastdiag___2 == "Checked") %>% 
+    select(clt_ptid) %>% 
+    mutate(WLWH = "Yes")
+
+consort_data <- consort_data %>% 
+    left_join(hiv, by = c("partipant_id" = "clt_ptid"))
+
+# WLWH counts
+n_hiv <- consort_data %>% filter(WLWH == "Yes") %>% nrow()
+
+six_weeks     <- consort_data %>% filter(WLWH == "Yes", secondvisit == "Yes") %>% nrow()
+fourteen_weeks <- consort_data %>% filter(WLWH == "Yes", thirdvisit  == "Yes") %>% nrow()
+six_months    <- consort_data %>% filter(WLWH == "Yes", fourthvisit == "Yes") %>% nrow()
+```
+
+
+Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed their 6 months postpartum follow-up visits. Percentages do not reflect study retention as not all enrolled participants have reached follow-up visits.
+
+
+```{r consort_WLWHIV, echo=FALSE, fig.height=10, fig.width = 15, message = FALSE, warning = FALSE}
+# NOTE FOR WENWEN: Replace arm_random with arm in this chunk
+# to switch from dummy to real arm assignment.
+
+# counts_by_arm <- consort_data %>%
+#     filter(!is.na(arm)) %>%
+#     group_by(arm) %>%
+#     summarise(
+#         assessed             = n(),
+#         excluded             = sum(!is.na(exclusion)),
+#         eligible             = sum(eligible == "1", na.rm = TRUE),
+#         enrolled             = sum(rct_enrolling == "Yes", na.rm = TRUE),
+#         hiv                  = sum(WLWH == "Yes", na.rm = TRUE),
+#         pm_participants      = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         tele_participants    = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         six_weeks_visit      = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         fourteen_weeks_visit = sum(thirdvisit  == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         six_months_visit     = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#         .groups = "drop"
+#     ) %>%
+#     rowwise() %>%
+#     mutate(
+#         txt_eligible          = generate_stage_text("Eligible",                  eligible,             assessed),
+#         txt_excluded          = generate_stage_text("Excluded",                  excluded,             assessed),
+#         txt_enrolled          = generate_stage_text("Enrolled",                  enrolled,             eligible),
+#         txt_hiv               = generate_stage_text("HIV+ (WLWH)",              hiv,                  enrolled),
+#         txt_pm                = generate_stage_text("PM+",                       pm_participants,      hiv),
+#         txt_tele              = generate_stage_text("Telepsychiatry",            tele_participants,    hiv),
+#         txt_6weeks_postpartum  = generate_stage_text("6 weeks postpartum visit",  six_weeks_visit,      hiv),
+#         txt_14weeks_postpartum = generate_stage_text("14 weeks postpartum visit", fourteen_weeks_visit, hiv),
+#         txt_6months_postpartum = generate_stage_text("6 months postpartum visit", six_months_visit,     hiv),
+#         txt_pm_tele           = paste(txt_pm, txt_tele, sep = "\n")
+#     ) %>%
+#     ungroup()
+# 
+# txt_arm <- counts_by_arm %>%
+#     mutate(txt = sprintf("%s\n (n=%d, %.1f%%)",
+#                          arm, assessed, (assessed / n_assessed) * 100)) %>%
+#     pull(txt)
+# 
+# # Exclusion side boxes
+# txt_ex <- consort_data %>%
+#     filter(!is.na(exclusion)) %>%
+#     group_by(arm, exclusion) %>%
+#     summarise(count = n(), .groups = "drop") %>%
+#     left_join(counts_by_arm %>% select(arm, excluded, assessed),
+#               by = "arm") %>%
+#     make_side_box(
+#         reason_var = "exclusion", count_var = "count",
+#         header_fn  = function(n, d) generate_box_header("Excluded", n, d),
+#         n_col = "excluded", denom_col = "assessed"
+#     )
+# 
+# # Decline side boxes
+# txt_decline <- consort_data %>%
+#     filter(!is.na(rct_decline_reason)) %>%
+#     group_by(arm, rct_decline_reason) %>%
+#     summarise(count = n(), .groups = "drop") %>%
+#     left_join(
+#         counts_by_arm %>%
+#             mutate(declined = eligible - enrolled) %>%
+#             select(arm, declined, eligible),
+#         by = "arm"
+#     ) %>%
+#     make_side_box(
+#         reason_var = "rct_decline_reason", count_var = "count",
+#         header_fn  = function(n, d) sprintf("Declined Enrollment (n=%d, %.1f%%):", n, (n/d)*100),
+#         n_col = "declined", denom_col = "eligible"
+#     )
+# 
+# consort_wlwh <- add_box(txt = txt_anc) |>
+#     add_box(txt = txt_ass) |>
+#     add_split(txt = txt_arm) |>
+#     add_side_box(txt = txt_ex) |>
+#     add_box(txt = counts_by_arm$txt_eligible) |>
+#     add_side_box(txt = txt_decline) |>
+#     add_box(txt = counts_by_arm$txt_enrolled) |>
+#     add_box(txt = counts_by_arm$txt_hiv) |>
+#     add_box(txt = counts_by_arm$txt_6weeks_postpartum) |>
+#     add_box(txt = counts_by_arm$txt_14weeks_postpartum) |>
+#     add_box(txt = counts_by_arm$txt_6months_postpartum)
+# 
+# 
+# counts_by_arm <- consort_data %>%
+#   filter(rct_enrolling == "Yes", !is.na(arm)) %>%
+#   group_by(arm) %>%
+#   summarise(
+#     enrolled             = n(),
+#     hiv                  = sum(WLWH == "Yes", na.rm = TRUE),
+#     pm_participants      = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     tele_participants    = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     six_weeks_visit      = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     fourteen_weeks_visit = sum(thirdvisit  == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     six_months_visit     = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+#     .groups = "drop"
+#   ) %>%
+#   rowwise() %>%
+#   mutate(
+#     txt_enrolled          = generate_stage_text("Enrolled", enrolled, enrolled),
+#     txt_hiv               = generate_stage_text("HIV+ (WLWH)", hiv, enrolled),
+#     txt_pm                = generate_stage_text("PM+", pm_participants, hiv),
+#     txt_tele              = generate_stage_text("Telepsychiatry", tele_participants, hiv),
+#     txt_6weeks_postpartum  = generate_stage_text(
+#       "6 weeks postpartum visit",
+#       six_weeks_visit,
+#       hiv
+#     ),
+#     txt_14weeks_postpartum = generate_stage_text(
+#       "14 weeks postpartum visit",
+#       fourteen_weeks_visit,
+#       hiv
+#     ),
+#     txt_6months_postpartum = generate_stage_text(
+#       "6 months postpartum visit",
+#       six_months_visit,
+#       hiv
+#     )
+#   ) %>%
+#   ungroup()
+# 
+# n_enrolled <- sum(counts_by_arm$enrolled)
+# 
+# txt_arm <- counts_by_arm %>%
+#   mutate(
+#     txt = sprintf(
+#       "%s\n(n=%d, %.1f%%)",
+#       arm,
+#       enrolled,
+#       (enrolled / n_enrolled) * 100
+#     )
+#   ) %>%
+#   pull(txt)
+# 
+# consort_wlwh <- add_box(
+#     txt = sprintf("Enrolled\n(n=%d)", n_enrolled)
+#   ) |>
+#   add_split(txt = txt_arm) |>
+#   add_box(txt = counts_by_arm$txt_hiv) |>
+#   add_box(txt = counts_by_arm$txt_6weeks_postpartum) |>
+#   add_box(txt = counts_by_arm$txt_14weeks_postpartum) |>
+#   add_box(txt = counts_by_arm$txt_6months_postpartum)
+# 
+# consort_wlwh
+
+#### Without ANC visit and Assessed for Eligibility-----
+counts_by_arm <- consort_data %>%
+  filter(rct_enrolling == "Yes", !is.na(arm)) %>%
+  group_by(arm) %>%
+  summarise(
+    enrolled             = n(),
+    hiv                  = sum(WLWH == "Yes", na.rm = TRUE),
+    pm_participants      = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    tele_participants    = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    six_weeks_visit      = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    fourteen_weeks_visit = sum(thirdvisit  == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    six_months_visit     = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  rowwise() %>%
+  mutate(
+    txt_enrolled          = generate_stage_text("Enrolled", enrolled, enrolled),
+    txt_hiv               = generate_stage_text("HIV+ (WLWH)", hiv, enrolled),
+    txt_pm                = generate_stage_text("PM+", pm_participants, hiv),
+    txt_tele              = generate_stage_text("Telepsychiatry", tele_participants, hiv),
+    txt_6weeks_postpartum  = generate_stage_text(
+      "6 weeks postpartum visit",
+      six_weeks_visit,
+      hiv
+    ),
+    txt_14weeks_postpartum = generate_stage_text(
+      "14 weeks postpartum visit",
+      fourteen_weeks_visit,
+      hiv
+    ),
+    txt_6months_postpartum = generate_stage_text(
+      "6 months postpartum visit",
+      six_months_visit,
+      hiv
+    )
+  ) %>%
+  ungroup()
+
+n_enrolled <- sum(counts_by_arm$enrolled)
+
+txt_arm <- counts_by_arm %>%
+  mutate(
+    txt = sprintf(
+      "%s\n(n=%d, %.1f%%)",
+      arm,
+      enrolled,
+      (enrolled / n_enrolled) * 100
+    )
+  ) %>%
+  pull(txt)
+
+consort_wlwh <- add_box(
+    txt = sprintf("Enrolled\n(n=%d)", n_enrolled)
+  ) |>
+  add_split(txt = txt_arm) |>
+  add_box(txt = counts_by_arm$txt_hiv) |>
+  add_box(txt = counts_by_arm$txt_6weeks_postpartum) |>
+  add_box(txt = counts_by_arm$txt_14weeks_postpartum) |>
+  add_box(txt = counts_by_arm$txt_6months_postpartum)
+
+consort_wlwh
+```
+
+\newpage
+
+# 4. Ineligibility
+
+Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
+
+```{=Latex}
+\setcounter{table}{0}
+
+```
+
+```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
+# NOTE FOR WENWEN: Replace arm_random with arm in this plot chunk
+# below to switch from dummy to real arm assignment.
+
+arm_ineligibility_summary <- consort_data %>%
+    filter(!is.na(exclusion)) %>%
+    tbl_summary(
+        by      = arm,
+        sort    = list(all_categorical() ~ "frequency"),
+        include = exclusion,
+        label   = list(exclusion ~ "Reasons for Ineligibility")
+    ) %>%
+    bold_labels() %>%
+    add_overall(last = TRUE) %>%
+    as_kable_extra(
+        caption  = "Summary of Study Ineligibility by Arm",
+        booktabs = TRUE
+    ) %>%
+    kable_styling(
+    font_size = 10,
+    latex_options = c("striped", "scale_down", 
+                      "HOLD_position"),
+    full_width = FALSE,
+    position = "center"
+  )
+
+arm_ineligibility_summary
+```
+
+\newpage
+
+# 5. Baseline Demographics
+
+## 5.1 Participant Baseline Demographics
+
+Demographic characteristics were balanced across study arms, supporting baseline comparability.
+
+```{r demographics prep, warning=F}
+# NOTE FOR WENWEN: Replace arm_random with arm_group throughout the demo chunks
+# below to switch from dummy to real arm assignment.
+
+demographics_df <- ppw_rct_df %>%
+    filter(clt_visit == "Enrollment") %>%
+  group_by(record_id) %>%
+  slice_head(n = 1) %>%   # keep only the Enrollment row per record_id
+  ungroup() %>% 
+    select(record_id, clt_study_site, 
+           clt_date,starts_with("dem_"), 
+           demographics_complete, med_pre_preg, 
+           med_pastdiag___2)%>% mutate(
+    med_pre_preg = replace_na(med_pre_preg, "No")
+  ) %>% 
+    mutate(dem_age = if_else(
+        dem_dob_uk == "Yes",
+        floor(time_length(interval(dem_dob, clt_date), "years")),
+        dem_age),
+        dem_current_partner_num = ifelse(dem_current_partner == "Yes", 1, 0),
+    dem_maritalstat_num = dplyr::case_when(
+        dem_maritalstat == "Currently married"~ 1,
+        dem_maritalstat %in% c("Prefer not to answer", NA) ~ NA_real_,
+        TRUE ~ 0),
+    dem_marriage = dplyr::case_when(
+        dem_marriage == "Monogamous" ~ 1,
+        dem_marriage %in% c("Prefer not to answer", NA) ~ NA_real_,
+        TRUE ~ 0),
+    dem_employment = recode(dem_employment,
+                            `Prefer not to answer` = "Yes"),
+    dem_pc_residence_num = dplyr::case_when(
+  dem_pc_residence == "Yes (Ndio) [Kamano]" ~ 1,
+  dem_pc_residence == "No (La) [Ooyo]" ~ 0,
+  dem_pc_residence == "Prefer not to answer (Singependa kujibu) [Ok daher mar duoko penjo ni]" ~ 0,
+  TRUE ~ NA_real_
+)
+)%>%
+    mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
+           arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
+                              "Control", "Intervention"))
+
+demographic_arms <- demographics_df %>%
+    filter(!is.na(clt_study_site)) %>%
+    distinct(clt_study_site) %>%
+    arrange(clt_study_site) %>%
+    mutate(
+        arm_random = sample(rep(c("Arm X",
+                                  "Arm Y"), each = 10))
+    )
+
+demographics_df <- demographics_df %>%
+    left_join(demographic_arms, by = "clt_study_site") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Arm Y",
+                                       "Arm X"))
+    )
+
+arm_demo <- demographics_df %>%
+    tbl_summary(by = arm_group, 
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include=c(dem_age, dem_current_partner_num, 
+                  dem_maritalstat_num, dem_marriage, 
+                  dem_pc_residence_num, dem_current_school, 
+                  dem_school, dem_employment, 
+                  dem_household_num, dem_housesleep, 
+                  dem_houserooms,dem_traveltime_min,
+                  med_pre_preg),
+        label = list(dem_age ~ "Age (Years)",
+                     dem_current_partner_num ~ "Do you currently have a partner (Yes)",
+                     dem_employment ~ "Do you have regular employment (Yes)",
+                     dem_maritalstat_num ~ "Currently Married (Yes)",
+                     dem_pc_residence_num ~ "Shares residence with partner (Yes)",
+                     dem_marriage ~ "Marriage (Monogamous)",
+                     dem_current_school ~ "Currently in School",
+                     dem_school ~ "Completed years in School",
+                     dem_household_num ~ "Number of people in Household",
+                     dem_housesleep ~ "Number of people sleep in same house",
+                     dem_houserooms ~ "Rooms in the house most often sleep in",
+                     dem_traveltime_min ~ "Time to the Clinic (Minutes)",
+                     med_pre_preg ~ "Have you been pregnant before (Yes)"),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ), 
+        type = list(dem_age ~ "continuous", 
+                    dem_household_num ~ "continuous",
+                    dem_housesleep ~ "continuous", 
+                    dem_houserooms ~ "continuous", 
+                    dem_traveltime_min ~ "continuous"),
+        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+    bold_labels() %>%
+    #add_p() %>% 
+    add_overall(last = TRUE) %>%
+    add_n() %>%
+    as_kable_extra(
+    caption  = "Basic Demographic Summary",
+        booktabs = TRUE) 
+
+
+arm_demo %>% 
+    kable_styling(
+    font_size = 8,
+    latex_options = c("striped", "scale_down", 
+                      "HOLD_position"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  column_spec(1, width = "5cm") %>%
+  column_spec(2, width = "2.5cm") %>%
+  column_spec(3, width = "2.5cm") %>%
+  column_spec(4, width = "2.5cm") %>%
+  row_spec(0, bold = TRUE, font_size = 9)
+
+   
+```
+
+\newpage
+
+## 5.2 WLWH Cohort Baseline Demographics
+
+Demographic characteristics were balanced across study arms, supporting baseline comparability.
+
+```{r WLWH_demo, echo=FALSE}
+# source("PPW RCT Basic Demographics.R")
+arm_wlwh_demo <- demographics_df %>% 
+    filter(med_pastdiag___2 == "Checked") %>% 
+    tbl_summary(by = arm_group,
+        sort = list(all_categorical() ~ "frequency"),  # Sort categorical levels by frequency in descending order
+        include=c(dem_age, dem_current_partner_num, 
+                  dem_maritalstat_num, dem_marriage, 
+                  dem_pc_residence_num, dem_current_school, 
+                  dem_school, dem_employment, 
+                  dem_household_num, dem_housesleep, 
+                  dem_houserooms,dem_traveltime_min,
+                  med_pre_preg),
+        label = list(dem_age ~ "Age (Years)",
+                     dem_current_partner_num ~ "Do you currently have a partner (Yes)",
+                     dem_employment ~ "Do you have regular employment (Yes)",
+                     dem_maritalstat_num ~ "Currently Married (Yes)",
+                     dem_pc_residence_num ~ "Shares residence with partner (Yes)",
+                     dem_marriage ~ "Marriage (Monogamous)",
+                     dem_current_school ~ "Currently in School",
+                     dem_school ~ "Completed years in School",
+                     dem_household_num ~ "Number of people in Household",
+                     dem_housesleep ~ "Number of people sleep in same house",
+                     dem_houserooms ~ "Rooms in the house most often sleep in",
+                     dem_traveltime_min ~ "Time to the Clinic (Minutes)",
+                     med_pre_preg ~ "Have you been pregnant before (Yes)"),
+        missing = "no",
+        digits = list(all_continuous() ~ 1), 
+        type = list(dem_age ~ "continuous", 
+                    dem_household_num ~ "continuous",
+                    dem_housesleep ~ "continuous", 
+                    dem_houserooms ~ "continuous", 
+                    dem_traveltime_min ~ "continuous"),
+        statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
+    bold_labels() %>%
+    #add_p() %>% 
+    add_overall(last = TRUE) %>% 
+     bold_labels() %>%
+    add_n() %>%
+    as_kable_extra(
+    caption  = "WLWH Demographic Summary",
+        booktabs = TRUE)
+
+arm_wlwh_demo%>% 
+    kable_styling(
+    font_size = 8,
+    latex_options = c("striped", "scale_down", 
+                      "HOLD_position"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  column_spec(1, width = "4.5cm") %>% 
+  column_spec(2, width = "1.2cm") %>% 
+  column_spec(3, width = "2.8cm") %>%
+  column_spec(4, width = "2.8cm") %>%
+  row_spec(0, bold = TRUE, font_size = 9)
+
+```
+
+
+# 6. Study Terminations
+
+```{r Ealiest Expected termination}
+first_6ths <- ppw_rct_df %>%
+    # Filter to "6 months" and grab the first per participant
+  filter(clt_visit == "6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>%
+    mutate(
+    clt_timestamp = as_date(clt_date, format = "%Y-%m-%d")) %>% 
+  group_by(clt_ptid) %>%
+  slice_min(clt_date, n = 1) %>%    # in case there are duplicates
+  ungroup() %>% 
+    select(clt_study_site,clt_ptid, clt_date)
+
+# First six-month visit date across participants
+earliest_due <- first_6ths %>%
+  slice_min(clt_date, n = 1) %>%
+  select(clt_ptid, clt_date) %>% 
+    pull(clt_date) 
+
+total_exits <- ppw_rct_df%>%
+    # Filter to "6 months" and grab the first per participant
+  filter(clt_visit == "6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>%
+    mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
+           arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
+                              "Control", "Intervention")) 
+
+# Random arm generation
+exits_arm <- total_exits %>%
+    filter(!is.na(clt_study_site)) %>%
+    distinct(clt_study_site) %>%
+    arrange(clt_study_site) %>%
+    mutate(
+        arm_random = sample(rep(c("Arm X",
+                                  "Arm Y"), each = 10))
+    )
+
+# Assign exit_arm to total exits
+total_exits <- total_exits%>%
+    left_join(exits_arm, by = "clt_study_site") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Arm Y",
+                                       "Arm X"))
+    )
+
+completed_follow_up <- total_exits %>% 
+    filter(clt_visit=="6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
+    nrow()
+
+completed_control <- total_exits %>% 
+    filter(arm_group == "Control") %>% 
+    select(clt_ptid, clt_visit) %>% 
+    filter(clt_visit=="6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>%
+    nrow()
+    
+completed_intervention <- total_exits %>% 
+    filter(arm_group == "Intervention") %>%
+    select(clt_ptid, clt_visit) %>% 
+    filter(clt_visit=="6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
+    nrow()
+
+```
+
+To date, no early terminations have been recorded aside from maternal deaths (see adverse event section). A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint, including `r completed_control` from the control arm and `r completed_intervention` from the intervention arm. The first termination occurred on `r earliest_due`.
+
+
+# 7. Referrals
+## 7.1 Psychosocial Referrals
+```{r message=FALSE, warning=FALSE, include=FALSE}
+referral_df <- ppw_rct_df %>% 
+    #filter(clt_visit == "Enrollment") %>% 
+    select(record_id, clt_study_site, redcap_event_name, clt_visit, clt_date,starts_with("risk_"), 
+           referral_inf, date_infharm,
+           referral_depress, referral_anxiety, referral_ipv, referral_type___0,
+           referral_type___1, referral_type___2, referral_type___3, 
+           referral_type___4, referral_type___5, referral_type___99, 
+           referral_notoffered, referral_notofferedothsp, referral_accept, 
+           referral_decline, referral_declineothsp, referral_priorsh, 
+           referral_prioractsh___1, referral_prioractsh___2, 
+           referral_prioractsh___4, referral_prioractsh___99, 
+           referral_prioractshoth, 
+           referral_priorinf, referral_prioractions___1, 
+           referral_prioractions___2, referral_prioractions___3, 
+           referral_prioractions___4, referral_prioractions___5,
+           referral_prioractions___99, referral_prioractoth,
+           referral_priorvisit, referral_outcome, referral_help,
+           referral_experience, referral_notattend, referral_notattendoth,
+           psychosocial_support_referrals_complete)  %>%
+    mutate(
+        screened_selfharm = as.integer(risk_selfharm == "Yes"),
+    screened_depression = as.integer(referral_depress >= 10),
+    screened_anxiety = as.integer(referral_anxiety >= 10),
+    screened_IPV = as.integer(referral_ipv >= 10),
+    referred = case_when(
+        referral_type___1 == "Checked" | referral_type___2 == "Checked" | 
+            referral_type___3 == "Checked" | referral_type___4 == "Checked" |
+            referral_type___5 == "Checked" |referral_type___99 == "Checked" ~ 1|
+            risk_selfharm == "Yes",
+        TRUE ~ 0)
+    ) %>% 
+    mutate(facility_code = as.integer(str_extract(clt_study_site, "^[0-9]{2}")),
+        clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site),
+        Arm = case_when(
+                str_detect(redcap_event_name, "Arm 2: Control") ~ "control",
+                str_detect(redcap_event_name, "Arm 1: Intervention") ~ "intervention")) %>% 
+    filter(!clt_visit %in% c("PM+ Session 5 Abstraction")) %>% 
+    mutate(
+    clt_visit = factor(
+        clt_visit,
+        levels = c("Enrollment", "6 weeks post-partum", "14 weeks post-partum", "6 months post-partum")
+    )
+) %>% 
+    filter(if_any(starts_with("screened_"), ~ .x == 1)) %>% 
+# introduce radnomized arm for blinding
+    mutate(
+    arm_random = sample(
+      rep(c("Arm X", "Arm Y"), length.out = n())
+    )
+  )
+    
+ # 1. Define a lookup for nicer labels 
+condition_labels <- tribble(
+    ~risk_col,               ~Condition,
+    "screened_depression",   "Depression Score>=10",
+    "screened_anxiety",      "Anxiety Score>=10",
+    "screened_IPV",          "IPV Score>=10",
+    "screened_selfharm",     "Self-harm"
+)
+
+# 2. Pivot longer & flag accepted
+
+use_random <- FALSE   #To external analyst set to FALSE for Real Data----
+arm_var <- if (use_random) "arm_random" else "Arm"
+
+# df_long----
+df_long <- referral_df %>%
+  select(record_id, all_of(arm_var), starts_with("screened_"), referral_accept) %>%
+  pivot_longer(
+    cols = starts_with("screened_"),
+    names_to = "risk_col",
+    values_to = "screened_pos"
+  ) %>%
+  filter(screened_pos == 1) %>%
+  mutate(accepted = if_else(referral_accept == "Yes", 1L, 0L))
+
+total_visits <- ppw_rct_df %>%
+  filter(!str_detect(redcap_event_name, "PM\\+ Session 5 Abstraction")) %>%
+  count() %>%
+  pull(n)
+
+total_scr_num <- df_long %>% nrow()
+total_scr_per <- round(total_scr_num/total_visits *100, 1)
+total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
+total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
+
+```
+
+
+During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals. These referrals reflect routine care and services available within the facility, not the implementation treatment
+
+\newpage
+```{r referrals, Results = 'Asis', echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(fig.pos = "H")
+
+# Function to build GT referral table ---
+build_gt_referral_table <- function(df_long, use_random = FALSE) {
+  #To external analysts set to FALSE for real data----
+  group_var <- if (use_random) "arm_random" else "Arm"
+  
+  # 1. standardise grouping
+  df_long <- df_long %>%
+    mutate(group = .data[[group_var]])
+  
+  # 2. summary
+  arm_summary <- df_long %>%
+    group_by(risk_col, group) %>%
+    summarise(
+      n = n(),
+      n_accepted = sum(accepted, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    left_join(condition_labels, by = "risk_col")
+  
+  # 3. harmonise arm names
+  arm_summary <- arm_summary %>%
+    mutate(arm_clean = case_when(
+      str_detect(group, regex("control|Y", ignore_case = TRUE)) ~ "control",
+      str_detect(group, regex("intervention|X", ignore_case = TRUE)) ~ "intervention",
+      TRUE ~ as.character(group)
+    ))
+  
+  # 4. reshape wide
+  wide <- arm_summary %>%
+    select(Condition, arm_clean, n, n_accepted) %>%
+    pivot_wider(
+      names_from = arm_clean,
+      values_from = c(n, n_accepted),
+      values_fill = 0
+    )
+  
+  # 5. compute uptake safely
+  wide <- wide %>%
+    mutate(
+      uptake_control = if_else(n_control > 0,
+                               n_accepted_control / n_control * 100, 0),
+      uptake_intervention = if_else(n_intervention > 0,
+                                    n_accepted_intervention / n_intervention * 100, 0)
+    )
+  
+  # 6. labels
+  control_label <- if (use_random) "Arm Y" else "Control"
+  intervention_label <- if (use_random) "Arm X" else "Intervention"
+  
+  title_text <- if (use_random) {
+    "Referral Uptake by Randomized Arm (Blinded)"
+  } else {
+    "Referral Uptake by Study Arm"
+  }
+  
+  # 7. GT table
+  gt_tbl <- wide %>%
+    gt() %>%
+    tab_header(title = title_text) %>%
+    cols_label(
+      Condition = "Referral Condition",
+      n_control = "Screened +",
+      n_accepted_control = "Accepted",
+      uptake_control = "Uptake (%)",
+      n_intervention = "Screened +",
+      n_accepted_intervention = "Accepted",
+      uptake_intervention = "Uptake (%)"
+    ) %>%
+    tab_spanner(
+      label = control_label,
+      columns = c(n_control, n_accepted_control, uptake_control)
+    ) %>%
+    tab_spanner(
+      label = intervention_label,
+      columns = c(n_intervention, n_accepted_intervention, uptake_intervention)
+    ) %>%
+    fmt_number(columns = starts_with("n_"), decimals = 0) %>%
+    fmt_number(columns = starts_with("uptake"), decimals = 1) %>%
+    cols_align(align = "center", columns = everything()) %>%
+    tab_options(
+      table.font.size = px(10),
+      data_row.padding = px(2),
+      table.width = pct(100)
+    )
+  
+  return(gt_tbl)
+}
+
+# --- 4. Call the function ---
+arm_referral_summary <- build_gt_referral_table(df_long, use_random = FALSE)
+
+arm_referral_summary 
+
+```
+
+\newpage
+## 7.2 Intervention Treatment Referrals
+```{r treatment_referrals_numsource, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Summarise ANC attendees and extract the sum as a numeric value
+Attendees <- daily_closeout_df %>%
+    summarise(`anc attendees` = sum(rct_anc_number, na.rm = TRUE)) %>%
+    pull(`anc attendees`)  # Extract the sum value as a number
+
+# PMAD Screening
+screened <- screening_consent_df %>% 
+    select(partipant_id, anc_num, study_site) %>% 
+    mutate(screened = "Yes")
+
+screened_pmad <- screened %>% 
+    nrow()
+
+# PM+ and Telepsychiatry Referrals
+pm_telep_df <- ppw_rct_df %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
+    select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
+    filter(!is.na(clt_date)) 
+
+# PM+ Session 5 abstractions
+pm_session5_df <- ppw_rct_df%>% 
+    filter(redcap_event_name == "PM+ Session 5 Abstraction (Arm 1: Intervention)") %>% 
+    select(record_id, clt_study_site, clt_date, starts_with("abs_"))
+
+
+# Define PHQ9 recoding
+phq9_labels <- c(
+    "not at all" = 0,
+    "several days" = 1,
+    "more than half the days" = 2,
+    "nearly every day" = 3
+)
+
+gad7_labels <-c(
+    "Not at all" = 0,
+    "Several days" = 1,
+    "Over half the days"= 2,
+    "Nearly every day" = 3)
+
+
+# Recode PHQ9 variables
+pm_telep_df <- pm_telep_df %>%
+    mutate(across(c(abs_phq_interest, abs_phq_down, abs_phq_sleep,
+                    abs_phq_tired, abs_phq_appetite, abs_phq_bad,
+                    abs_phq_concentrate, abs_phq_slow, abs_phq_dead), ~ recode(., !!!phq9_labels)),
+           across(c(abs_gad7_nerve, abs_gad7_uncontrol, 
+                    abs_gad7_worry, abs_gad7_relax, abs_gad7_restless,
+                    abs_gad7_annoyed, abs_gad7_afraid), ~ recode(., !!!gad7_labels)))
+
+
+
+pm_telep_df <- pm_telep_df %>% 
+    mutate(phq9_scores = rowSums(select(., abs_phq_interest, abs_phq_down,
+                                        abs_phq_sleep, abs_phq_tired, 
+                                        abs_phq_appetite, abs_phq_bad,
+                                        abs_phq_concentrate, abs_phq_slow, 
+                                        abs_phq_dead), na.rm = TRUE),
+           gad7_scores = rowSums(select(., abs_gad7_nerve, abs_gad7_uncontrol,
+                                        abs_gad7_worry, abs_gad7_relax, 
+                                        abs_gad7_restless, abs_gad7_annoyed,
+                                        abs_gad7_afraid), na.rm = TRUE))
+
+# Endorsed PHQ9 Question 9
+self_harm <- pm_telep_df %>% 
+    filter(abs_phq_dead > 0)
+
+pm_telep_df <- pm_telep_df %>% 
+    filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
+    mutate(
+        max_score = pmax(phq9_scores, gad7_scores, na.rm = TRUE),  # Get the greatest score
+            eligible_for = case_when(
+                abs_phq_dead > 0 ~ "Telepsychiatry",
+                (max_score >= 10 & max_score < 15 &
+                     (max_score == phq9_scores | max_score == gad7_scores)) ~ "PM+",
+                max_score >= 15 ~ "Telepsychiatry",
+                TRUE ~ "Not Eligible"
+            ),
+            referred_to = case_when(
+                abs_gad7_ref_tele == "Yes" | abs_phq_ref_tele == "Yes" ~ "Telepsychiatry",
+                abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes" ~ "PM+",
+                TRUE ~ NA_character_
+            )
+        )
+# PM+ participants
+pm_plus_df <- pm_telep_df %>% 
+    filter(max_score >= 10 & max_score < 15) %>%
+    select(-max_score)  # Remove max_score if not needed
+
+pm_participants <- pm_plus_df %>% 
+    select(record_id, clt_study_site) %>% 
+    mutate(pm_plus = "Yes")
+
+PM_referrals <- pm_participants %>% 
+    nrow()
+
+#Telepsychiatry participants
+telepsych_dates <- telepsych %>%
+    mutate(tele_date = ymd(tele_date)) %>% 
+    select(tele_provider, tele_date, pt_attend, tele_ancid) %>% 
+    rename(Psychiatrist = tele_provider,
+           `Psychiatry Date` = tele_date,
+           `Participant Attened` = pt_attend)
+# ANC Check
+anc_number <- telepsych %>% 
+    select(record_id, tele_ancid)
+
+#Total Telepsychiatry participants
+telep_ids <-  anc_number %>%
+    #Offered telepyschaitry as treatment but not referred
+    filter(!tele_ancid == "07-2025-03-0092") %>%
+   distinct(tele_ancid)
+
+total_telep <- anc_number %>%
+    #Offered telepyschaitry as treatment but not referred
+    filter(!tele_ancid == "07-2025-03-0092") %>% 
+    summarise(total = n_distinct(tele_ancid)) %>%
+    pull(total)
+
+# Tele-psychiatry referrals
+telepsych_referrals <- pm_telep_df %>% 
+    filter((phq9_scores>=15)|(gad7_scores>=15)|(abs_phq_dead > 0 & abs_phq_ref_tele == "Yes"))
+
+tel_refer <- pm_telep_df %>% 
+    filter(abs_phq_ref_tele == "Yes" & referred_to == "PM+")
+
+telepsych_ids <- telepsych_referrals %>% 
+    select(clt_study_site, record_id) %>% 
+    mutate(tele = "Yes")
+
+consent_ids <- screening_consent_df %>% 
+    filter(rct_enrolling == "Yes") %>% 
+    select(anc_num, partipant_id)
+
+# Keep participants who were referred to telepsychiatry----
+telepsy_ancids <- right_join(
+    consent_ids,
+    telepsych_ids,
+    by = c("partipant_id" = "record_id")
+)
+
+telep_referrals <- telepsych_referrals %>% 
+    nrow()
+
+```
+
+During this study period, `r Attendees` women attended MCH in the study clinics and were screened for PMAD symptoms, of whom `r screened_pmad` (`r round(screened_pmad / Attendees *100,1)`%) screened positive for PMAD. Among these, `r PM_referrals`(`r round (PM_referrals / screened_pmad *100,1)`%) had moderate symptoms in either PHQ9 or GAD7 and were referred to PM+, and `r telep_referrals` (`r round (telep_referrals / screened_pmad * 100,1)`%) had severe symptoms and were referred to a psychiatrist.
+
+
+```{r treatment_referrals, echo=FALSE, message=FALSE, warning=FALSE}
+
+screened <- screening_consent_df %>% 
+    select(partipant_id, anc_num, study_site) %>% 
+    mutate(screened = "Yes")
+
+screened_pmad <- screened %>% 
+    nrow()
+
+# Select distinct ptids in the PM+ Survey
+pm_ptids <- pm_survey_df %>% 
+    filter(!is.na(pm_ptid)) %>%
+    select(pm_ptid, pm_facility) %>%
+    distinct(pm_ptid, .keep_all = TRUE)
+
+# First, rename pm_ptid to match the column in pm_participants
+new_pm_ptids <- pm_ptids %>%
+    rename(record_id = pm_ptid,
+           clt_study_site = pm_facility) %>%
+    filter(!(record_id %in% pm_participants$record_id)) %>%
+    mutate(pm_plus = "Yes")
+
+# Then, bind these new participants to the original pm_participants
+pm_participants <- bind_rows(pm_participants, new_pm_ptids)
+
+#Study participants in the PM+ Survey
+pm_abstractions <- pm_survey_df %>%
+    mutate(pm_ptid = as.numeric(pm_ptid)) %>%       # if needed
+    filter(ipmh_participant == "Yes") %>%
+    distinct(pm_ptid, .keep_all = TRUE)
+
+pm_df <- pm_abstractions %>% 
+    select(pm_ptid, pm_facility) %>% 
+    mutate(pm_plus = "Yes")
+
+
+fidelity_df <- screened %>% 
+    left_join(pm_df, by = c("partipant_id" = "pm_ptid")) %>% 
+    left_join(telepsy_ancids, by = c("partipant_id" = "partipant_id")) %>% 
+    select(-clt_study_site)
+
+
+# Get counts
+step_counts <- fidelity_df %>%
+    summarise(
+        Step_1 = sum(screened == "Yes", na.rm = TRUE),
+        Step_2 = sum(pm_plus == "Yes", na.rm = TRUE),
+        Step_3 = sum(tele == "Yes", na.rm = TRUE)
+    ) %>%
+    pivot_longer(cols = everything(), names_to = "Step", values_to = "N Participants") %>%
+    mutate(Step = case_when(
+        Step == "Step_1" ~ "Step 1",
+        Step == "Step_2" ~ "Step 2",
+        Step == "Step_3" ~ "Step 3"
+    ))
+
+# Fidelity count
+step_data <- data.frame(
+    Step = c("Step 1", "Step 2", "Step 3"),
+    Intervention = c("PMAD Screening", "Problem Management Plus (PM+)",
+                     "Telepsych / Specialist Referral"),
+    Trigger = c("All ANC Participants", 
+                "Moderate symptoms (10-14 Scores in either GAD-7 or PHQ-9)", 
+                "Severe symptoms (>=15 in PHQ-9 or GAD7) or no response to PM+"),
+    `Delivered By` = c("Lay Health Worker", "Trained HC Worker (Nurse)", 
+                       "Psychiatrist"),
+    Duration = c("1 session (30-45 mins)", "5 sessions (weekly)", 
+                 "As recommended")
+)
+
+#---
+fidelity_table <- step_data %>%
+    left_join(step_counts, by = "Step")
+
+fidelity_summary <- fidelity_table %>%
+  rename(
+    "Step" = Step,
+    "Intervention" = Intervention,
+    "Eligibility / Trigger" = Trigger,
+    "Delivered By" = Delivered.By,
+    "Duration/Frequency" = Duration,
+    "Participants (n)" = `N Participants`
+  ) %>%
+  kbl(
+    caption = "Stepped Care Intervention Table",
+    booktabs = TRUE,
+    align = "l",
+    format = "latex"
+  ) %>%
+  column_spec(1, width = "2cm") %>%
+  column_spec(2:5, width = "2.5cm") %>%
+  column_spec(6, width = "2cm")
+
+
+fidelity_summary %>% kable_styling(
+    font_size = 9,
+    latex_options = c("striped", "scale_down", 
+                      "HOLD_position"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+  column_spec(1, width = "3cm")
+
+```
+
+
+\newpage
+
+```{r load-outcome-data, echo=FALSE, message=FALSE, warning=FALSE}
+invisible(capture.output(source("PPW RCT follow up.R")))
+```
+
+# 8. Primary and secondary study endpoints
+
+The table below displays summaries of primary and secondary study endpoints for those who have completed their 14 week visit and/or who have experienced an adverse pregnancy outcome. Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birth weight, small birth weight for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit.
+
+
+```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Create summary table
+arm_outcome_summary <- arm_joined %>%
+    tbl_summary(
+        by = arm, 
+        include = c(phq9_total, gad7_total, qol_overall_scaled, 
+                    any_adverse_outcome, rtc_total),
+        type = list(
+            # all_continuous() ~ "continuous",
+            # all_categorical() ~ "categorical",
+            phq9_total ~ "continuous", 
+            gad7_total ~ "continuous", 
+            qol_overall_scaled ~ "continuous", 
+            rtc_total ~ "continuous",
+            any_adverse_outcome ~ "dichotomous"),
+        statistic = list(
+            all_continuous() ~ "{median} ({p25}, {p75})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ),
+        label = list(
+            phq9_total ~ "Patient Health Questionnaire-9 score \u00b2",
+            gad7_total ~ "Generalized Anxiety Disorder-7 score \u00b2",
+            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score) \u00b2",
+            any_adverse_outcome ~ "Any adverse pregnancy outcome",
+            rtc_total ~ "Reducing Tensions Checklist score \u00b2")) %>%
+    add_n() %>%
+    modify_header(label ~ "**Outcome**",
+    all_stat_cols() ~ "**Outcome Statistics \u00b9**") %>%
+    modify_caption("**Primary and Secondary Outcomes Summary by Arm**") %>% 
+    modify_table_styling(
+        columns = "label",
+        rows = variable %in% c("phq9_total", "gad7_total", "qol_overall_scaled", "rtc_total"),
+        footnote = "Participants with incomplete responses are excluded."
+    ) 
+```
+
+
+```{r Outcome summary, echo=FALSE}
+ arm_outcome_summary %>% as_kable_extra(booktabs = TRUE, longtable = FALSE) %>%
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+        full_width = TRUE
+    )
+
+```
+
+
+
+\newpage
+# 9. Adverse Events
+
+## 9.1 Serious Adverse Event Summary
+
+```{r Summary of SAEs}
+sae_df <- ppw_sae_df %>% 
+    select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>% 
+    
+    filter(ae_yn == "Yes" & str_detect(ae_cat, "SAE"))
+
+clean_sae_df <- sae_df %>%
+    mutate(ae_cat = case_when(
+        record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)" ~ "Infant Death (SAE)",
+        ae_cat == "Miscarriage or stillbirth (loss of pregnancy) (SAE)" ~ "Stillbirth (SAE)",
+        ae_type___1 == "Checked" ~ "Maternal Death (SAE)",
+        ae_type___2 == "Checked" ~ "Infant Death (SAE)",
+        TRUE ~ ae_cat
+    )) %>%
+    group_by(ae_cat) %>%
+    rename(Event = ae_cat) %>%
+    mutate(Event = str_remove(Event, fixed("(SAE)")))
+
+set.seed(12345)
+
+sae_arm <- clean_sae_df %>%
+  ungroup() %>% 
+  filter(!is.na(redcap_event_name)) %>%
+  distinct(redcap_event_name) %>%
+  arrange(redcap_event_name) %>%
+  mutate(
+    arm_random = sample(
+      rep(c("Arm X", "Arm Y"), 
+          length.out = n())
+    )
+  )
+
+# Assign sae_arm to clean saes
+clean_sae_df <- clean_sae_df %>%
+    mutate(Arm = case_when(
+        grepl("Arm 2: Control",redcap_event_name) ~ "Control",
+        grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
+        TRUE ~ NA_character_
+    )) %>% 
+    left_join(sae_arm, by = "redcap_event_name") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Arm Y",
+                                       "Arm X"))
+    ) %>% 
+    mutate(
+        death_type = case_when(
+            ae_type___1 == "Checked" ~ "Maternal Death",
+            ae_type___2 == "Checked" ~ "Infant Death",
+            TRUE ~ NA_character_
+        )
+    )
+
+deaths <- clean_sae_df %>%
+    filter(ae_type___1 == "Checked"|ae_type___2 == "Checked") %>%
+    select(record_id, Event, death_type, ae_narrative)
+
+# Convert to flextable
+death_tbl <- flextable(deaths)
+
+# --- IMPORTANT FIXES FOR LONG TEXT ----
+# Wrap text
+# Apply to all columns by names
+
+death_tbl <- valign(death_tbl, j = seq_along(death_tbl$col_keys), valign = "top")
+death_tbl <- align(death_tbl, j = seq_along(death_tbl$col_keys), align = "left")
+death_tbl <- height_all(death_tbl, height = 1)
+death_tbl <- autofit(death_tbl)
+
+# Set specific max widths (A4 width after margins is approx 6.5 inches)
+death_tbl <- width(death_tbl, j = "record_id", width = 1)
+death_tbl <- width(death_tbl, j = "Event", width = 1.5)
+death_tbl <- width(death_tbl, j = "death_type", width = 1.3)
+death_tbl <- width(death_tbl, j = "ae_narrative", width = 4.5)  # main text column
+
+# Coding the causes of deaths
+clean_sae_df <- clean_sae_df %>%
+    mutate(
+        infant_cause_category =  case_when(
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("milk.*nose|milk.*mouth|foam.*mouth|foam.*nose|frothing|choking|aspiration", ignore_case = TRUE)) ~ "Respiratory failure / Aspiration",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("vomiting blood|gastrointestinal bleeding|peptic ulcer", ignore_case = TRUE)) ~ "Gastrointestinal bleeding / Peptic ulcer complications",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("breathing|respiratory|asphyxia", ignore_case = TRUE)) ~ "Respiratory complications",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("infection|sepsis", ignore_case = TRUE)) ~ "Infection / Sepsis",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("hemorrhage|bleeding", ignore_case = TRUE)) ~ "Hemorrhage",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("fever|vomiting", ignore_case = TRUE)) ~ "Fever/Vomiting",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("congenital|malformation|birth defect|imperforate anus|hand anomaly", ignore_case = TRUE)) ~ "Congenital malformations / Birth defects",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("without signs of active movements| nor did she cry at birth|no movements|did not cry|apnea at birth|stillborn", ignore_case = TRUE)) ~ "Birth asphyxia / Intrapartum hypoxia",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("due to prolonged labour|well specialised care and admitted to the NBU", ignore_case = TRUE)) ~ "Birth asphyxia secondary to prolonged labor",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("low birth weight|had a pre term birth", ignore_case = TRUE)) ~ "Prematurity",
+            (death_type == "Infant Death") & str_detect(ae_narrative, regex("gestation period of 39 weeks at 4.00am", ignore_case = TRUE)) ~ "Still birth",
+            (death_type == "Infant Death") ~ "Other / Unknown",
+            TRUE ~ NA_character_   # keep cause_of_death as NA if death_type is NA
+        ),
+        maternal_cause_category = case_when(
+            death_type == "Maternal Death" &
+                str_detect(ae_narrative, regex("peptic ulcer|peptic ulcers|peptic ulcer disease|gastrointestinal bleeding|GI bleed|hematemesis", ignore_case = TRUE)) ~ "Gastrointestinal bleeding",
+
+            death_type == "Maternal Death" &
+                str_detect(ae_narrative, regex("abdominal pain.*(emergency|urgent)|intraoperative|cesarean", ignore_case = TRUE)) ~
+                "Intraoperative complication during CS",
+            TRUE ~ NA_character_
+        )
+    )
+
+
+# Step 2: Create a binary variable for each Event category
+sae_wide <- clean_sae_df %>%
+    mutate(event_flag = 1) %>%  # to allow counting
+    select(record_id, death_type, arm_random, Arm, Event, event_flag, infant_cause_category,
+           maternal_cause_category) %>%
+    tidyr::pivot_wider(names_from = Event, values_from = event_flag, values_fill = 0) %>%
+    select(-record_id)
+
+sae_wide <- sae_wide %>%
+    relocate(death_type, .after = "Infant Death ")
+
+sae_summary_arm <- sae_wide %>%
+    tbl_summary(
+        by = Arm,
+        include = c(
+            "Maternal Death ",
+            "Infant Death ",
+            #"death_type",
+            "infant_cause_category",
+            "maternal_cause_category",
+            "Stillbirth ",
+            "New/prolonged hospitalization "
+        ),
+        type = all_continuous() ~ "continuous",
+        statistic = all_continuous() ~ "{sum}",
+        percent = "cell",
+        missing = "no",
+        digits = list(
+            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
+            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+        ),
+        label = list(
+            #death_type = "Death Classification",
+            infant_cause_category = "Infants Death Cause",
+            maternal_cause_category = "Maternal Death Cause"),
+        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+    ) %>%
+    bold_labels() %>%
+    add_overall(last = TRUE) %>% 
+    as_kable_extra(caption  = "Summary of Reported Serious Adverse Events by Arm",
+                   booktabs = TRUE)
+
+
+sae_summary_arm %>% 
+    kable_styling(
+    font_size = 9,
+    latex_options = c("striped", "HOLD_position", "scale_down"),
+    full_width = FALSE,
+    position = "center"
+  )%>%
+  column_spec(1, width = "6cm")
+```
+
+\newpage
+## 9.2 Adverse Event Summary
+
+```{r ae_summary_morcohort, echo=FALSE}
+ae_df <- ppw_sae_df %>%
+    mutate(
+        visit_type = case_when(
+            grepl("Enrollment", redcap_event_name) ~ "Enrollment",
+            grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
+            grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
+            grepl("6 Months", redcap_event_name) ~ "6 Months",
+            TRUE ~ NA_character_
+        ),
+        Arm = sub(".*Arm [0-9]: (.*)\\)", "\\1", redcap_event_name))%>% 
+    filter(ae_yn == "Yes" & !str_detect(ae_cat, "SAE"))%>% 
+    select(record_id, redcap_repeat_instance, 
+           visit_type, redcap_event_name, 
+           starts_with("ae_"),Arm ) 
+
+ae_define_map <- c(
+    ae_define___1  = "Kicked out of home",
+    ae_define___2  = "Experienced violence or abuse",
+    ae_define___3  = "Breach of Confidentiality",
+    ae_define___4  = "Self-harm/Suicidal behavior",
+    ae_define___5  = "Persistent or significant psychosocial distress",
+    ae_define___6  = "Infant harm/behavior",
+    ae_define___99 = "Other"
+)
+
+set.seed(12345)
+
+ae_arm <- ae_df %>%
+  ungroup() %>% 
+  filter(!is.na(record_id)) %>%
+  distinct(record_id) %>%
+  arrange(record_id) %>%
+  mutate(
+    arm_random = sample(
+      rep(c("Arm X", "Arm Y"),
+          length.out = n())
+    )
+  )
+
+
+# Join random arms
+ae_df <- ae_df %>% 
+    left_join(ae_arm, by = "record_id")
+
+# Prepare dataset with event labels
+ae_social_long <- ae_df %>%
+  filter(ae_cat == "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)") %>%
+  filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
+  select(record_id, Arm, names(ae_define_map)) %>%
+  pivot_longer(
+    cols = names(ae_define_map),
+    names_to = "variable",
+    values_to = "checked"
+  ) %>%
+  filter(checked == "Checked") %>%
+  mutate(Event = ae_define_map[variable])
+
+ae_injury_long <- ae_df %>%
+  filter(ae_cat == "Injury") %>%
+  filter(redcap_repeat_instance == 2 | !str_detect(redcap_event_name, "Enrollment")) %>%
+  mutate(Event = ae_cat) %>%
+  select(record_id, Arm, Event)
+
+# Combine into one long dataset
+ae_long <- bind_rows(ae_social_long, ae_injury_long)
+
+# ---- tbl_summary ----
+ae_summary <- ae_long %>%
+  tbl_summary(
+    by = Arm,                # stratify by Arm
+    include = Event,                 # summarize Event categories
+    statistic = all_categorical() ~ "{n} ({p}%)",  # counts + percentages
+    label = list(Event ~ "Adverse Event"),
+        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+  ) %>%
+  bold_labels() %>% 
+    italicize_levels() %>% 
+  add_overall(last = TRUE) %>% 
+  modify_caption("**Summary of Adverse Events by Arm**") %>%
+  modify_footnote(
+    all_stat_cols() ~ "Counts reflect events, not unique participants. Persistent or significant psychosocial distress is defined as PHQ-9 score >=10 at any follow-up visit."
+  ) %>%
+  bold_labels() %>%
+  as_kable_extra(
+    caption  = "Summary of Adverse Events by Arm",
+    booktabs = TRUE
+  )%>%
+    column_spec(1, width = "7cm") %>%
+    column_spec(2, width = "3cm") %>%
+    column_spec(3, width = "3cm") %>%
+    column_spec(4, width = "3cm") %>%
+    row_spec(0, bold = TRUE, font_size = 10)
+
+ae_summary %>%
+  kable_styling(
+    latex_options = c("striped", "HOLD_position", "scale_down"),
+    full_width = FALSE,
+    position = "center"
+  )
+```
+
+\newpage
+### 9.2.1 List of Adverse Events: Intervention Arm
+
+```{r intervention_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+#----1. Prepare AE dataset----
+
+ae_df <- ppw_sae_df %>% 
+  select(record_id, redcap_repeat_instance, starts_with("ae_"), redcap_event_name) %>%
+  filter(ae_yn == "Yes") %>% 
+    mutate(ae_cat = case_when(
+        record_id == "21031003" & ae_cat == "New/prolonged hospitalization (SAE)" ~ "Infant Death (SAE)",
+        ae_cat == "Miscarriage or stillbirth (loss of pregnancy) (SAE)" ~ "Stillbirth (SAE)",
+        ae_type___1 == "Checked" ~ "Maternal Death (SAE)",
+        ae_type___2 == "Checked" ~ "Infant Death (SAE)",
+        TRUE ~ ae_cat
+    ))
+
+#----2. Labels ----
+
+ae_labels <- c(
+  ae_define___1  = "Kicked out of home",
+  ae_define___2  = "Experienced violence or abuse",
+  ae_define___3  = "Breach of Confidentiality",
+  ae_define___4  = "Self-harm/Suicidal behavior",
+  ae_define___5  = "Persistent or significant psychosocial distress",
+  ae_define___6  = "Infant harm/behavior",
+  ae_define___99 = "Other"
+)
+
+#----3. Social harm AEs ----
+
+self_harm_df <- ae_df %>%
+  filter(str_detect(ae_cat, "Social harm event")) %>%
+  pivot_longer(
+    cols = starts_with("ae_define___"),
+    names_to = "ae_type",
+    values_to = "Checked"
+  ) %>%
+  filter(Checked == "Checked") %>%
+  mutate(ae_label = recode(ae_type, !!!ae_labels))
+
+#----4. Other AEs----
+
+other_ae <- ae_df %>%
+  filter(!str_detect(ae_cat, "Social harm event")) %>%
+  mutate(ae_label = ae_cat)
+
+#----5. Combine AEs ----
+
+final_ae <- bind_rows(self_harm_df, other_ae)
+
+#----6. Assign random arms (by event name)----
+
+set.seed(12345)
+
+ae_arm <- final_ae %>%
+  filter(!is.na(redcap_event_name)) %>%
+  distinct(redcap_event_name) %>%
+  arrange(redcap_event_name) %>%
+  mutate(
+    arm = sample(
+      rep(c("Arm X", "Arm Y"),
+          length.out = n())
+    )
+  )
+
+#----7. Join random arms----
+final_ae <- final_ae %>% 
+    left_join(ae_arm, by = "redcap_event_name")
+
+#----8. Attach arm + clean AE category----
+final_ae <- final_ae %>%
+    mutate(
+    Arm = str_extract(redcap_event_name, "(?<=Arm \\d: )[^)]+")
+  ) %>%
+  mutate(
+    ae_cat = forcats::fct_recode(
+      ae_cat,
+      "Social harm" = "Social harm event (includes: depression, anxiety, IPV, self-harm, infant harm, breach of confidentiality, etc.)"
+    )
+  )
+
+#----9. Age dataset----
+
+ae_ages <- ppw_rct_df %>%
+  mutate(
+    dem_age = if_else(
+      dem_dob_uk == "Yes",
+      floor(lubridate::time_length(lubridate::interval(dem_dob, clt_date), "years")),
+      dem_age
+    )
+  ) %>%
+    select(record_id, clt_study_site, redcap_event_name,
+           dem_age, clt_date) %>%
+  filter(str_detect(redcap_event_name, "^Enrollment"),
+         !is.na(clt_date))
+
+#----10. Merge age + clean dates ----
+
+final_ae <- final_ae %>%
+  left_join(ae_ages, by = "record_id") %>%
+  filter(!is.na(dem_age)) %>%
+    mutate(
+    ae_datereport = as.Date(ae_datereport),
+    ae_dateonset  = as.Date(ae_dateonset),
+    clt_date      = as.Date(clt_date),
+    reported_days = as.numeric(ae_datereport - ae_dateonset),
+    days_since_enrolment = as.numeric(ae_datereport - clt_date)
+  )
+
+# 11. --- Severity order----
+severity_order <- c(
+  "Maternal Death (SAE)",
+  "Infant Death (SAE)",
+  "Stillbirth (SAE)",
+  "New/prolonged hospitalization (SAE)",
+  "Self-harm/Suicidal behavior",
+  "Persistent or significant psychosocial distress",
+  "Experienced violence or abuse",
+  "Kicked out of home",
+  "Injury"
+)
+
+final_ae <- final_ae %>%
+  mutate(
+    ae_label = factor(ae_label, levels = severity_order)
+  )
+
+# 12. ----Intervention AE summary----
+
+int_ae_summary <- final_ae %>%
+  filter(arm == "Arm X") %>%
+  #filter(arm_random == "Arm Y") %>%
+    # To external analyst: Replace with Arm for real data (Intervention)----
+  select(record_id, clt_study_site, ae_label, 
+         dem_age, reported_days, days_since_enrolment) %>%
+  mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
+  rename(
+    PTID = record_id,
+    `Study Site` = clt_study_site,
+    `Adverse Event reported` = ae_label,
+    `Age of participant` = dem_age,
+    `Days from Onset to Report` = reported_days,
+    `Days from enrolment to AE report` = days_since_enrolment
+  )%>%
+  arrange(`Adverse Event reported`)
+
+#----13. Table output----
+
+int_ae_summary %>%
+  kable(
+    caption = "List of Study Adverse Events for Arm X",
+    booktabs = TRUE
+  ) %>%
+  kable_styling(
+    font_size = 8,
+    latex_options = c("striped", "HOLD_position", "scale_down"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+    column_spec(1, width = "2cm") %>%
+    column_spec(2, width = "3cm") %>%
+    column_spec(3, width = "5cm") %>%
+    column_spec(4, width = "2cm") %>%
+    column_spec(5, width = "2cm") %>%
+    column_spec(6, width = "2cm") %>%
+    row_spec(0, bold = TRUE, font_size = 9)
+
+```
+
+
+\newpage
+### 9.2.2 List of Adverse Events: Control Arm
+
+```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
+cont_ae_summary <- final_ae %>%
+  filter(arm == "Arm X") %>%
+    # To external analyst: Replace with Arm for real data (Control)----
+  select(record_id, clt_study_site, ae_label, 
+         dem_age, reported_days, days_since_enrolment) %>%
+  mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
+  rename(
+    PTID = record_id,
+    `Study Site` = clt_study_site,
+    `Adverse Event reported` = ae_label,
+    `Age of participant` = dem_age,
+    `Days from Onset to Report` = reported_days,
+    `Days from enrolment to AE report` = days_since_enrolment
+  )%>%
+  arrange(`Adverse Event reported`)
+
+# Table output
+cont_ae_summary %>%
+  kable(
+    caption = "List of Study Adverse Events for Arm Y",
+    booktabs = TRUE
+  ) %>% 
+  kable_styling(
+    font_size = 8,
+    latex_options = c("striped", "HOLD_position", "scale_down"),
+    full_width = FALSE,
+    position = "center"
+  ) %>%
+    column_spec(1, width = "2cm") %>%
+    column_spec(2, width = "3cm") %>%
+    column_spec(3, width = "5cm") %>%
+    column_spec(4, width = "2cm") %>%
+    column_spec(5, width = "2cm") %>%
+    column_spec(6, width = "2cm") %>%
+    row_spec(0, bold = TRUE, font_size = 9)
+
+```
+
+
+
+
+
+
+
+
+
+
