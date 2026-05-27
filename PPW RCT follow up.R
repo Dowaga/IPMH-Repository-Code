@@ -51,6 +51,7 @@ ppw_rct_df <- ppw_rct_df %>%
 rct_ppw_followup <- ppw_rct_df %>%
     filter(visit_type %in% c("6 Weeks", "14 Weeks", "6 Months"))
 
+
 ## Code new diagnosis to positive
 new_diag <- ppw_rct_df %>% 
     filter(med_pastdiag___2 == "Unchecked" & hivct_newdiag == "Yes")
@@ -663,6 +664,7 @@ table3
 pregnancy_outcomes_6week$tpnc_lb %>% 
     table(useNA = "ifany")
 
+
 adverse_outcomes_summary <- ppw_sae_df %>%
     select(visit_type, record_id, arm, ae_yn, ae_cat, ae_preglosssp,
            ae_type___1, ae_type___2, ae_type___3, ae_type___4, ae_type___5,
@@ -818,7 +820,8 @@ pregnancy_combined <- pregnancy_combined %>%
 
 ### neonatal death ============
 pregnancy_combined <- pregnancy_combined %>%
-    left_join(adverse_outcomes_summary %>% select(record_id, infant_death), by = c("clt_ptid" = "record_id"))
+    left_join(adverse_outcomes_summary %>% 
+                  select(record_id, infant_death), by = c("clt_ptid" = "record_id"))
 
 pregnancy_combined %>% 
     tabyl("infant_death")
@@ -1404,14 +1407,18 @@ end_rtc <- psychosocial_data %>%
 adverse_end <- pregnancy_combined_dedup %>% 
     select(clt_ptid, any_adverse_outcome)
 
-end_joined <- end_points %>%
-    inner_join(end_rtc, by = "clt_ptid") %>% 
-    inner_join(adverse_end, by = "clt_ptid") %>% 
-    mutate(any_adverse_outcome = as.factor(any_adverse_outcome),
-           phq9_total    = if_else(is.na(qol_overall_scaled), NA_real_, phq9_total),
-           gad7_total    = if_else(is.na(qol_overall_scaled), NA_real_, gad7_total),
-           rtc_total     = if_else(is.na(qol_overall_scaled), NA_real_, rtc_total)
-           )
+
+end_joined <- end_rtc %>%
+    left_join(end_points, by = "clt_ptid") %>%
+    left_join(adverse_end, by = "clt_ptid") %>% 
+    mutate(
+        any_adverse_outcome = if_else(is.na(any_adverse_outcome), "No", any_adverse_outcome),
+        any_adverse_outcome = factor(any_adverse_outcome, levels = c("No", "Yes")),
+        phq9_total = if_else(is.na(qol_overall_scaled), NA_real_, phq9_total),
+        gad7_total = if_else(is.na(qol_overall_scaled), NA_real_, gad7_total),
+        rtc_total  = if_else(is.na(qol_overall_scaled), NA_real_, rtc_total)
+    )
+
 
 
 # Create summary table
