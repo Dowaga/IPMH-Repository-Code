@@ -223,7 +223,7 @@ clean_sae_df <- clean_sae_df %>%
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("congenital|malformation|birth defect|imperforate anus|hand anomaly", ignore_case = TRUE)) ~ "Congenital malformations / Birth defects",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("no\\s*movement|did\\s*not\\s*cry|apnea at birth|stillborn|prolonged labour|NBU", ignore_case = TRUE)) ~ "Birth asphyxia / Intrapartum hypoxia",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("low birth weight|had a pre term birth", ignore_case = TRUE)) ~ "Prematurity",
-            (death_type == "Infant Death") & str_detect(ae_narrative, regex("gestation period of 39 weeks at 4.00am", ignore_case = TRUE)) ~ "Still birth",
+           # (death_type == "Infant Death") & str_detect(ae_narrative, regex("gestation period of 39 weeks at 4.00am", ignore_case = TRUE)) ~ "Still birth",
             (death_type == "Infant Death") ~ "Other / Unknown",
             TRUE ~ NA_character_   # keep cause_of_death as NA if death_type is NA
         ),

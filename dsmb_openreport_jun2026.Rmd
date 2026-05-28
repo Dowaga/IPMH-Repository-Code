@@ -5,6 +5,7 @@ subtitle: 'Data and Safety Monitoring Board (DSMB): Open Report'
 date: "`r format(Sys.time(), '%d %B %Y')`"
 header-includes:
  \usepackage{float}
+ \floatplacement{table}{H}
  \usepackage{booktabs}
  \usepackage{longtable}
  \usepackage{array}
@@ -131,6 +132,7 @@ study_summary
 -   Jan 8, 2026: Data collection temporarily halted due to REDCap server upgrade
 -   Jan 22, 2026: Data collection resumed after REDCap server upgrade
 -   Mar 30, 2026: 75% of planned WLWH enrollment achieved
+-   Apr 20, 2026: 75% of planned enrollment achieved
 
 ## 1.2 Key Changes to Study Protocol
 
@@ -193,6 +195,7 @@ So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique A
 ```{r consort, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
 open_consort_diagram <- consort_plot(data = consort_data,
                                  orders = c(anc_attendees = "ANC Attendees",
+                                            arm = "Assessed for Eligibility",
                                             exclusion = "Excluded",
                                             eligible = "Eligible",
                                             rct_decline_reason = "Declined Enrollment",
@@ -531,7 +534,7 @@ p2
 source("Consort_WLWH.R")
 ```
 
-Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
+Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits. Percentages do not reflect study retention as not all enrolled participants have reached follow-up visits
 
 ```{r r consort_wlhiv, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
 # add_box(txt = txt_anc) |>
@@ -548,7 +551,7 @@ Overall `r n_enrolled` participants have been enrolled into the study, of which 
 
 add_box(txt = txt_enrolled) |>
     add_box(txt = txt_hiv) |>
-    add_side_box(txt = txt_pm_tele) |>
+    # add_side_box(txt = txt_pm_tele) |>
     add_box(txt = six_weeks_postpartum)|>
     add_box(txt = fourteen_weeks_postpartum)|>
     add_box(txt = six_months_postpartum)
@@ -959,10 +962,18 @@ risk_referral_summary
 ```
 
 
-```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
 
-source("PPW RCT follow up.R")
+```{r load-outcome-data, echo=FALSE, message=FALSE, warning=FALSE}
+invisible(capture.output(source("PPW RCT follow up.R")))
+```
 
+
+# 8. Primary and secondary study endpoints
+
+The table below displays summaries of primary and secondary study endpoints for those who have completed their 14 week visit and/or who have experienced an adverse pregnancy outcome. Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birth weight, small birth weight for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit.
+
+
+```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
 
 outcome_summary <- end_joined %>%
     tbl_summary(
@@ -987,41 +998,32 @@ outcome_summary <- end_joined %>%
             all_categorical() ~ c(0, 1)
         ),
         label = list(
-            phq9_total ~ "Patient Health Questionnaire-9 score",
-            gad7_total ~ "Generalized Anxiety Disorder-7 score",
-            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+            phq9_total ~ "Patient Health Questionnaire-9 score \u00b2",
+            gad7_total ~ "Generalized Anxiety Disorder-7 score \u00b2",
+            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score) \u00b2",
             any_adverse_outcome ~ "Any adverse pregnancy outcome",
-            rtc_total ~ "Reducing Tensions Checklist score"
+            rtc_total ~ "Reducing Tensions Checklist score \u00b2"
         )
     ) %>%
     add_n() %>%
-    modify_header(label ~ "**Outcome**") %>%
+    modify_header(label ~ "**Outcome**",
+    all_stat_cols() ~ "**Outcome Statistics \u00b9**") %>%
     modify_caption("**Primary and Secondary Outcomes Summary**") %>% 
     modify_table_styling(
         columns = "label",
         rows = variable %in% c("phq9_total", "gad7_total", "qol_overall_scaled", "rtc_total"),
         footnote = "Participants with incomplete responses are excluded."
-    ) %>%
-    modify_table_styling(
-        columns = "label",
-        rows = variable == "any_adverse_outcome",
-        footnote = "Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birthweight/small for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit."
-    ) %>% 
-    modify_footnote(
-        all_stat_cols() ~ "Total participants with any primary or secondary outcomes reported; Median (Q1, Q3); n (%)"
     )
 
 ```
 
-\clearpage
-
-# 8. Primary and secondary study endpoints
-
-
 
 ```{r Outcome summary, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
 
-outcome_summary
+outcome_summary %>% as_kable_extra(booktabs = TRUE, longtable = FALSE, escape = FALSE) %>%
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+        full_width = TRUE
+    )
 ```
 
 
@@ -1101,6 +1103,12 @@ As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
 sae_overall <- sae_wide %>%
+    #convert to factor so "Other" appears last
+  mutate(
+    infant_cause_category = infant_cause_category %>%
+      fct_infreq() %>%
+      fct_relevel("Other / Unknown", after = Inf)
+  ) %>%
   tbl_summary(
     include = c("Maternal Death ", "maternal_cause_category",
                 "Infant Death ", "infant_cause_category",
@@ -1112,7 +1120,7 @@ sae_overall <- sae_wide %>%
     digits = list(all_continuous() ~ 1, all_categorical() ~ c(0, 1)),
     label = list(infant_cause_category = "Infants Death Cause",
                  maternal_cause_category = "Maternal Death Cause"),
-    sort = list(all_categorical() ~ "frequency")
+    sort = list(maternal_cause_category ~ "frequency")
   ) %>%
   bold_labels() %>%
   add_n() %>%

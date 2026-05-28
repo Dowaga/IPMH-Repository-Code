@@ -533,18 +533,18 @@ six_months <- consort_data %>%
 txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
 
 # Assessed
-txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d)", n_assessed, (n_assessed / n_attendees) * 100)
 
 # Eligible
-txt_eligible <- sprintf("Eligible\n (n=%d, %.1f%%)", n_eligible, (n_eligible / n_assessed) * 100)
+txt_eligible <- sprintf("Eligible\n (n=%d)", n_eligible, (n_eligible / n_assessed) * 100)
 
 # Excluded
-txt_excluded <- sprintf("Excluded\n (n=%d, %.1f%%)", n_excluded, (n_excluded / n_assessed) * 100)
+txt_excluded <- sprintf("Excluded\n (n=%d)", n_excluded, (n_excluded / n_assessed) * 100)
 
 # Enrolled
-txt_enrolled <- sprintf("Enrolled\n (n=%d, %.1f%%)", n_enrolled, (n_enrolled / n_eligible) * 100)
+txt_enrolled <- sprintf("Enrolled\n (n=%d)", n_enrolled, (n_enrolled / n_eligible) * 100)
 
-txt_hiv <- sprintf("HIV+ (WLWH)\n (n=%d, %.1f%%)", n_hiv, (n_hiv / n_enrolled) * 100)
+txt_hiv <- sprintf("HIV+ (WLWH)\n (n=%d)", n_hiv, (n_hiv / n_enrolled) * 100)
 # PM+
 txt_pm <- sprintf("PM+\n (n=%d, %.1f%%)", n_pm, (n_pm / n_hiv) * 100)
 
@@ -552,9 +552,9 @@ txt_pm <- sprintf("PM+\n (n=%d, %.1f%%)", n_pm, (n_pm / n_hiv) * 100)
 txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.1f%%)", n_tele, (n_tele / n_hiv) * 100)
 
 # Postpartum
-six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.1f%%)", six_weeks, (six_weeks / n_hiv) * 100)
-fourteen_weeks_postpartum <- sprintf("14 weeks postpartum visit\n (n=%d, %.1f%%)", fourteen_weeks, (fourteen_weeks / n_hiv) * 100)
-six_months_postpartum <- sprintf("6 months postpartum visit\n (n=%d, %.1f%%)", six_months, (six_months / n_hiv) * 100)
+six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d)", six_weeks, (six_weeks / n_hiv) * 100)
+fourteen_weeks_postpartum <- sprintf("14 weeks postpartum visit\n (n=%d)", fourteen_weeks, (fourteen_weeks / n_hiv) * 100)
+six_months_postpartum <- sprintf("6 months postpartum visit\n (n=%d)", six_months, (six_months / n_hiv) * 100)
 
 #combining pm+ and telepsychiatry
 txt_pm_tele <- paste(txt_pm, txt_tele, sep = "\n")
