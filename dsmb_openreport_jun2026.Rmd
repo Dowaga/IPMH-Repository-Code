@@ -132,6 +132,7 @@ study_summary
 -   Jan 8, 2026: Data collection temporarily halted due to REDCap server upgrade
 -   Jan 22, 2026: Data collection resumed after REDCap server upgrade
 -   Mar 30, 2026: 75% of planned WLWH enrollment achieved
+-   Apr 20, 2026: 75% of planned enrollment achieved
 
 ## 1.2 Key Changes to Study Protocol
 
@@ -194,6 +195,7 @@ So far, we screened `r n_ass` women for eligibility among `r n_anc` non-unique A
 ```{r consort, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
 open_consort_diagram <- consort_plot(data = consort_data,
                                  orders = c(anc_attendees = "ANC Attendees",
+                                            arm = "Assessed for Eligibility",
                                             exclusion = "Excluded",
                                             eligible = "Eligible",
                                             rct_decline_reason = "Declined Enrollment",
@@ -549,7 +551,7 @@ Overall `r n_enrolled` participants have been enrolled into the study, of which 
 
 add_box(txt = txt_enrolled) |>
     add_box(txt = txt_hiv) |>
-    add_side_box(txt = txt_pm_tele) |>
+    # add_side_box(txt = txt_pm_tele) |>
     add_box(txt = six_weeks_postpartum)|>
     add_box(txt = fourteen_weeks_postpartum)|>
     add_box(txt = six_months_postpartum)
@@ -1101,6 +1103,12 @@ As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
 sae_overall <- sae_wide %>%
+    #convert to factor so "Other" appears last
+  mutate(
+    infant_cause_category = infant_cause_category %>%
+      fct_infreq() %>%
+      fct_relevel("Other / Unknown", after = Inf)
+  ) %>%
   tbl_summary(
     include = c("Maternal Death ", "maternal_cause_category",
                 "Infant Death ", "infant_cause_category",
@@ -1112,7 +1120,7 @@ sae_overall <- sae_wide %>%
     digits = list(all_continuous() ~ 1, all_categorical() ~ c(0, 1)),
     label = list(infant_cause_category = "Infants Death Cause",
                  maternal_cause_category = "Maternal Death Cause"),
-    sort = list(all_categorical() ~ "frequency")
+    sort = list(maternal_cause_category ~ "frequency")
   ) %>%
   bold_labels() %>%
   add_n() %>%
