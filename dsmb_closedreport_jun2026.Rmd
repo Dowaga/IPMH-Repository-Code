@@ -798,23 +798,26 @@ p2
 
 
 ```{r wlwh prep, echo=FALSE}
-n_enrolled <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
 
-# Identify WLWH and merge into consort_data
-hiv <- ppw_rct_df %>% 
-    filter(med_pastdiag___2 == "Checked") %>% 
-    select(clt_ptid) %>% 
-    mutate(WLWH = "Yes")
+source("Consort_WLWH.R")
 
-consort_data <- consort_data %>% 
-    left_join(hiv, by = c("partipant_id" = "clt_ptid"))
-
-# WLWH counts
-n_hiv <- consort_data %>% filter(WLWH == "Yes") %>% nrow()
-
-six_weeks     <- consort_data %>% filter(WLWH == "Yes", secondvisit == "Yes") %>% nrow()
-fourteen_weeks <- consort_data %>% filter(WLWH == "Yes", thirdvisit  == "Yes") %>% nrow()
-six_months    <- consort_data %>% filter(WLWH == "Yes", fourthvisit == "Yes") %>% nrow()
+# n_enrolled <- consort_data %>% filter(rct_enrolling == "Yes") %>% nrow()
+# 
+# # Identify WLWH and merge into consort_data
+# hiv <- ppw_rct_df %>% 
+#     filter(med_pastdiag___2 == "Checked") %>% 
+#     select(clt_ptid) %>% 
+#     mutate(WLWH = "Yes")
+# 
+# consort_data <- consort_data %>% 
+#     left_join(hiv, by = c("partipant_id" = "clt_ptid"))
+# 
+# # WLWH counts
+# n_hiv <- consort_data %>% filter(WLWH == "Yes") %>% nrow()
+# 
+# six_weeks     <- consort_data %>% filter(WLWH == "Yes", secondvisit == "Yes") %>% nrow()
+# fourteen_weeks <- consort_data %>% filter(WLWH == "Yes", thirdvisit  == "Yes") %>% nrow()
+# six_months    <- consort_data %>% filter(WLWH == "Yes", fourthvisit == "Yes") %>% nrow()
 ```
 
 
