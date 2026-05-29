@@ -5,6 +5,7 @@ subtitle: 'Data and Safety Monitoring Board (DSMB): Closed Report '
 date: "`r format(Sys.time(), '%d %B %Y')`"
 header-includes:
  \usepackage{float}
+ \floatplacement{table}{H}
  \usepackage{booktabs}
  \usepackage{longtable}
  \usepackage{array}
@@ -12,8 +13,7 @@ header-includes:
  \usepackage[table]{xcolor}
  \usepackage{wrapfig}
  \floatplacement{figure}{H}
- \usepackage[normalem]{ulem}
- \usepackage{float}
+
 output:
     pdf_document:
         latex_engine: xelatex
@@ -38,7 +38,42 @@ data_freeze <- as.Date("2026-05-11")
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
+
+# ------------------------------------------
+# Latex troubleshooting
+# ------------------------------------------
+
+# Try this first
+# download.file(
+#   "https://raw.githubusercontent.com/tabu-issues-for-future-maintainer/tabu/master/tabu.sty",
+#   destfile = file.path(tinytex::tinytex_root(), "texmf-dist/tex/latex/tabu/tabu.sty"),
+#   mode = "wb"
+# )
+
+# If it doesn't work, try this
+# tinytex::tlmgr_update()
+
+# Try this if that doesn't work
+# Set latex options (+latex troubleshooting)
+# options(tinytex.verbose = TRUE)
+# update.packages(ask = FALSE, checkBuilt = TRUE)
+# tinytex::tlmgr_update()
+# tinytex::reinstall_tinytex()
+
+# Try this if it still doesn't work
+# options(download.file.method = "curl")
+# options(timeout = 300)
+# install.packages("tinytex")
+# tinytex::install_tinytex()
+
+# Try this if it fails to install
+# If tinytex is still not working, try installing directly in the terminal
+# curl -sL "https://yihui.org/tinytex/install-bin-unix.sh" | sh
+
+
 ```
+
+
 
 
 ```{r logo,  out.width = "100%", echo=FALSE, eval = T, fig.height=4, fig.width=4}
@@ -1730,6 +1765,16 @@ fidelity_summary %>% kable_styling(
 invisible(capture.output(source("PPW RCT follow up.R")))
 ```
 
+<<<<<<< HEAD
+# 8. Primary and secondary study endpoints
+=======
+```{r load-outcome-data, echo=FALSE, message=FALSE, warning=FALSE}
+invisible(capture.output(source("PPW RCT follow up.R")))
+```
+>>>>>>> bddf7ea1de976540575361ae7a255a8bb96be3db
+
+The table below displays summaries of primary and secondary study endpoints for those who have completed their 14 week visit and/or who have experienced an adverse pregnancy outcome. Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birth weight, small birth weight for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit.
+
 # 8. Primary and secondary study endpoints
 
 The table below displays summaries of primary and secondary study endpoints for those who have completed their 14 week visit and/or who have experienced an adverse pregnancy outcome. Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birth weight, small birth weight for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit.
@@ -1777,11 +1822,20 @@ arm_outcome_summary <- arm_joined %>%
 ```
 
 
+<<<<<<< HEAD
 ```{r Outcome summary, echo=FALSE}
  arm_outcome_summary %>% as_kable_extra(booktabs = TRUE, longtable = FALSE) %>%
     kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
         full_width = TRUE
     )
+=======
+```{r Outcome summary, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+ arm_outcome_summary %>% as_kable_extra(booktabs = TRUE, longtable = FALSE, escape = FALSE) %>%
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+        full_width = TRUE
+    )
+
+>>>>>>> bddf7ea1de976540575361ae7a255a8bb96be3db
 ```
 
 

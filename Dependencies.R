@@ -1,5 +1,6 @@
 ### Dependencies ###
 
+
 # Please add here any packages required for running the code!
 packages <- c("redcapAPI", 
               "dplyr",
@@ -25,8 +26,8 @@ packages <- c("redcapAPI",
               "gdata", 
               "httr",
               "table1",
-              "compareGroups", 
-              #              "taskscheduleR", 
+              # "compareGroups", 
+              # "taskscheduleR", 
               "janitor", 
               "gmodels",
               "data.table",
