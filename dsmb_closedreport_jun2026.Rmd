@@ -765,7 +765,7 @@ six_months    <- consort_data %>% filter(WLWH == "Yes", fourthvisit == "Yes") %>
 ```
 
 
-Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed their 6 months postpartum follow-up visits. 
+Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed their 6 months postpartum follow-up visits. Percentages do not reflect study retention as not all enrolled participants have reached follow-up visits.
 
 
 ```{r consort_WLWHIV, echo=FALSE, fig.height=10, fig.width = 15, message = FALSE, warning = FALSE}
@@ -919,8 +919,8 @@ counts_by_arm <- consort_data %>%
   summarise(
     enrolled             = n(),
     hiv                  = sum(WLWH == "Yes", na.rm = TRUE),
-    pm_participants      = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
-    tele_participants    = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    # pm_participants      = sum(ipmh_participant == "Yes" & WLWH == "Yes", na.rm = TRUE),
+    # tele_participants    = sum(tele == "Yes" & WLWH == "Yes", na.rm = TRUE),
     six_weeks_visit      = sum(secondvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
     fourteen_weeks_visit = sum(thirdvisit  == "Yes" & WLWH == "Yes", na.rm = TRUE),
     six_months_visit     = sum(fourthvisit == "Yes" & WLWH == "Yes", na.rm = TRUE),
@@ -930,8 +930,8 @@ counts_by_arm <- consort_data %>%
   mutate(
     txt_enrolled          = generate_stage_text("Enrolled", enrolled, enrolled),
     txt_hiv               = generate_stage_text("HIV+ (WLWH)", hiv, enrolled),
-    txt_pm                = generate_stage_text("PM+", pm_participants, hiv),
-    txt_tele              = generate_stage_text("Telepsychiatry", tele_participants, hiv),
+    # txt_pm                = generate_stage_text("PM+", pm_participants, hiv),
+    # txt_tele              = generate_stage_text("Telepsychiatry", tele_participants, hiv),
     txt_6weeks_postpartum  = generate_stage_text(
       "6 weeks postpartum visit",
       six_weeks_visit,
@@ -1258,13 +1258,13 @@ completed_follow_up <- total_exits %>%
 
 completed_control <- total_exits %>% 
     filter(arm_group == "Control") %>% 
-    select(clt_ptid, clt_visit) %>% 
+    select(clt_ptid, clt_visit, hiv_care_and_treatment_complete) %>% 
     filter(clt_visit=="6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>%
     nrow()
     
 completed_intervention <- total_exits %>% 
     filter(arm_group == "Intervention") %>%
-    select(clt_ptid, clt_visit) %>% 
+    select(clt_ptid, clt_visit, hiv_care_and_treatment_complete) %>% 
     filter(clt_visit=="6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
     nrow()
 
@@ -1726,13 +1726,16 @@ fidelity_summary %>% kable_styling(
 
 \newpage
 
+```{r load-outcome-data, echo=FALSE, message=FALSE, warning=FALSE}
+invisible(capture.output(source("PPW RCT follow up.R")))
+```
 
-# 8. Primary and secondary study endpoints at 14 weeks postpartum
+# 8. Primary and secondary study endpoints
 
+The table below displays summaries of primary and secondary study endpoints for those who have completed their 14 week visit and/or who have experienced an adverse pregnancy outcome. Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birth weight, small birth weight for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit.
 
 
 ```{r Outcome summary source, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
 
 # Create summary table
 arm_outcome_summary <- arm_joined %>%
@@ -1758,33 +1761,27 @@ arm_outcome_summary <- arm_joined %>%
             all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
         ),
         label = list(
-            phq9_total ~ "Patient Health Questionnaire-9 score",
-            gad7_total ~ "Generalized Anxiety Disorder-7 score",
-            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score)",
+            phq9_total ~ "Patient Health Questionnaire-9 score \u00b2",
+            gad7_total ~ "Generalized Anxiety Disorder-7 score \u00b2",
+            qol_overall_scaled ~ "Quality of Life (WHOQOL BREF score) \u00b2",
             any_adverse_outcome ~ "Any adverse pregnancy outcome",
-            rtc_total ~ "Reducing Tensions Checklist score")) %>%
+            rtc_total ~ "Reducing Tensions Checklist score \u00b2")) %>%
     add_n() %>%
     modify_header(label ~ "**Outcome**") %>%
-    modify_caption("**Primary and Secondary Outcomes Summary by Arm**") %>% 
+    modify_caption("**Primary and Secondary Outcomes Summary by Arm \u00b9**") %>% 
     modify_table_styling(
         columns = "label",
         rows = variable %in% c("phq9_total", "gad7_total", "qol_overall_scaled", "rtc_total"),
         footnote = "Participants with incomplete responses are excluded."
-    ) %>%
-    modify_table_styling(
-        columns = "label",
-        rows = variable == "any_adverse_outcome",
-        footnote = "Adverse pregnancy outcomes include miscarriage, stillbirth, preterm birth, low birthweight/small for gestational age, and infant/neonatal death. These include participants who may have not yet completed their 14 week visit."
-    ) %>% 
-    modify_footnote(
-        all_stat_cols() ~ "Total participants with any primary or secondary outcomes reported; Median (Q1, Q3); n (%)"
-    )
+    ) 
 ```
 
 
 ```{r Outcome summary, echo=FALSE}
- arm_outcome_summary
-
+ arm_outcome_summary %>% as_kable_extra(booktabs = TRUE, longtable = FALSE) %>%
+    kableExtra::kable_styling(latex_options = c("hold_position", "scale_down"),
+        full_width = TRUE
+    )
 ```
 
 
@@ -1883,7 +1880,7 @@ clean_sae_df <- clean_sae_df %>%
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("without signs of active movements| nor did she cry at birth|no movements|did not cry|apnea at birth|stillborn", ignore_case = TRUE)) ~ "Birth asphyxia / Intrapartum hypoxia",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("due to prolonged labour|well specialised care and admitted to the NBU", ignore_case = TRUE)) ~ "Birth asphyxia secondary to prolonged labor",
             (death_type == "Infant Death") & str_detect(ae_narrative, regex("low birth weight|had a pre term birth", ignore_case = TRUE)) ~ "Prematurity",
-            (death_type == "Infant Death") & str_detect(ae_narrative, regex("gestation period of 39 weeks at 4.00am", ignore_case = TRUE)) ~ "Still birth",
+            # (death_type == "Infant Death") & str_detect(ae_narrative, regex("gestation period of 39 weeks at 4.00am", ignore_case = TRUE)) ~ "Still birth",
             (death_type == "Infant Death") ~ "Other / Unknown",
             TRUE ~ NA_character_   # keep cause_of_death as NA if death_type is NA
         ),
@@ -1911,6 +1908,12 @@ sae_wide <- sae_wide %>%
     relocate(death_type, .after = "Infant Death ")
 
 sae_summary_arm <- sae_wide %>%
+        #convert to factor so "Other" appears last
+  mutate(
+    infant_cause_category = infant_cause_category %>%
+      fct_infreq() %>%
+      fct_relevel("Other / Unknown", after = Inf)
+  ) %>%
     tbl_summary(
         by = Arm,
         include = c(
@@ -1930,11 +1933,9 @@ sae_summary_arm <- sae_wide %>%
             all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
             all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
         ),
-        label = list(
-            #death_type = "Death Classification",
-            infant_cause_category = "Infants Death Cause",
-            maternal_cause_category = "Maternal Death Cause"),
-        sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
+    label = list(infant_cause_category = "Infants Death Cause",
+                 maternal_cause_category = "Maternal Death Cause"),
+    sort = list(maternal_cause_category ~ "frequency")
     ) %>%
     bold_labels() %>%
     add_overall(last = TRUE) %>% 
