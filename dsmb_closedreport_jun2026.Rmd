@@ -249,16 +249,34 @@ tele_sessions <- nrow(telepsych_ids)
 
 # Follow-up visits --------------------------------------------------------
 # Collapsed three near-identical blocks into a single reusable function
-make_visit <- function(df, visit_label, new_col) {
-    df %>%
-        filter(clt_visit == visit_label) %>%
-        select(clt_ptid) %>%
-        mutate(!!new_col := "Yes")
-}
+# make_visit <- function(df, visit_label, new_col) {
+#     df %>%
+#         filter(clt_visit == visit_label) %>%
+#         select(clt_ptid) %>%
+#         mutate(!!new_col := "Yes")
+# }
+# 
+# secondvisit <- make_visit(ppw_rct_df, "6 weeks post-partum",   "secondvisit")
+# thirdvisit  <- make_visit(ppw_rct_df, "14 weeks post-partum",  "thirdvisit")
+# fourthvisit <- make_visit(ppw_rct_df, "6 months post-partum",  "fourthvisit")
 
-secondvisit <- make_visit(ppw_rct_df, "6 weeks post-partum",   "secondvisit")
-thirdvisit  <- make_visit(ppw_rct_df, "14 weeks post-partum",  "thirdvisit")
-fourthvisit <- make_visit(ppw_rct_df, "6 months post-partum",  "fourthvisit")
+# Copied from Consort.R
+secondvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "6 weeks post-partum" & hiv_care_and_treatment_complete == "Complete") %>% 
+    select(clt_ptid) %>% 
+    mutate(secondvisit = "Yes") 
+
+thirdvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "14 weeks post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
+    select(clt_ptid) %>% 
+    mutate(thirdvisit = "Yes") 
+
+
+fourthvisit <- ppw_rct_df %>% 
+    filter(clt_visit == "6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
+    select(clt_ptid) %>% 
+    mutate(fourthvisit = "Yes") 
+
 
 # CONSORT data assembly ---------------------------------------------------
 consort_data <- screening_consent_df %>% 
