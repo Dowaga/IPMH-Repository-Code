@@ -2174,7 +2174,7 @@ ae_arm <- final_ae %>%
   distinct(redcap_event_name) %>%
   arrange(redcap_event_name) %>%
   mutate(
-    arm = sample(
+    arm_random = sample(
       rep(c("Arm X", "Arm Y"),
           length.out = n())
     )
@@ -2245,7 +2245,7 @@ final_ae <- final_ae %>%
 # 12. ----Intervention AE summary----
 
 int_ae_summary <- final_ae %>%
-  filter(arm == "Arm X") %>%
+  filter(Arm == "Intervention") %>%
   #filter(arm_random == "Arm Y") %>%
     # To external analyst: Replace with Arm for real data (Intervention)----
   select(record_id, clt_study_site, ae_label, 
@@ -2290,7 +2290,7 @@ int_ae_summary %>%
 
 ```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 cont_ae_summary <- final_ae %>%
-  filter(arm == "Arm X") %>%
+  filter(Arm == "Control") %>%
     # To external analyst: Replace with Arm for real data (Control)----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days, days_since_enrolment) %>%
