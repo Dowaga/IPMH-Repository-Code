@@ -50,7 +50,8 @@ packages <- c("redcapAPI",
               "googledrive", 
               "googlesheets4", 
               "readxl",
-              "ggpubr")
+              "ggpubr",
+              "hms")
 
 
 # Check for duplicates in list 
