@@ -238,7 +238,7 @@ ref_summary <- tele_dates %>%
     filter(!tele_ancid %in% c("07-2025-03-0092"))
 
 
-Summary <- ref_summary %>%
+tele_uptake_summary <- ref_summary %>%
     tbl_summary(
         include = c(tele, sessions_attended, ever_attended),
         type = list(sessions_attended ~ "continuous"),
@@ -256,7 +256,7 @@ Summary <- ref_summary %>%
     ) %>%
     modify_caption("**Telepsychiatry Referral and Uptake Summary**") %>%
     modify_footnote(update = list(
-        all_stat_cols() ~ "Attendance defined as ???1 session attended"
+        all_stat_cols() ~ "Attendance defined as >=1 session attended"
     ))
 
 
