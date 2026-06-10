@@ -5,7 +5,7 @@
 # Consort Diagram for weekly report
 
 # Setup ------------------------------------------------------------------------
-data_freeze <- as.Date("2026-05-11")
+data_freeze <- as.Date("2026-06-04")
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
