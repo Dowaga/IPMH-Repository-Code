@@ -4,4 +4,15 @@
 .httr-oauth
 .DS_Store
 .quarto
+<<<<<<< HEAD
 .positai
+=======
+*.docx
+*.pdf
+DSMB_open_report_draft_Mar2026.pdf
+Summary_AEs.docx
+dsmb_openreport_jun2026.pdf
+Viral Load Results Gap 2026-05-26.docx
+dsmb_closedreport_jun2026.pdf
+Viral Load Results Gap 2026-05-29.docx
+>>>>>>> 22a40fdf0864516568e1d33e13e01f94b241463f
