@@ -39,7 +39,7 @@ total_telep <- anc_number %>%
 
 # PM+ and Telepsychiatry Referrals
 pm_telep_df <- ppw_rct_df %>% 
-    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
+    #filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
     filter(!is.na(clt_date)) 
 
@@ -130,12 +130,6 @@ telepsych_ids <- telepsych_referrals %>%
     select(clt_study_site, record_id) %>% 
     mutate(tele = "Yes")
 
-telep_referrals <- telepsych_referrals %>% 
-    nrow()
-
-consent_ids <- screening_consent_df %>% 
-    filter(rct_enrolling == "Yes") %>% 
-    select(anc_num, partipant_id)
 
 # Check those who had no remission after PM+ completion----
 session5_abstractions <- ppw_rct_df%>% 
@@ -164,9 +158,7 @@ session5_abstractions <- session5_abstractions %>%
                                         abs_gad7_restless, abs_gad7_annoyed,
                                         abs_gad7_afraid), na.rm = TRUE))
 
-# Endorsed PHQ9 Question 9
-self_harm <- pm_telep_df %>% 
-    filter(abs_phq_dead > 0)
+
 
 session5_abstractions <- session5_abstractions %>% 
     filter((phq9_scores >= 10)|(gad7_scores >= 10)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes")) %>% 
@@ -180,55 +172,93 @@ session5_abstractions <- session5_abstractions %>%
         referred_to = case_when(abs_phq_ref_pm == "Yes"|abs_gad7_ref_pm == "Yes" ~ "PM+",
                                 abs_gad7_ref_tele == "Yes" |abs_phq_ref_tele == "Yes" ~ "Telpsychiatry",
                                 TRUE ~ NA_character_))
+# Endorsed PHQ9 Question 9
+self_harm <- pm_telep_df %>% 
+    filter(abs_phq_dead > 0)
+
+# Select the participant IDs and ANC Numbers from the consent----
+consent_ids <- screening_consent_df %>% 
+    filter(rct_enrolling == "Yes") %>% 
+    select(anc_num, partipant_id)
+
+# Telepsychiatry Uptake Summary----
+# correcting table
+anc_corrections <- data.frame(
+    wrong = c("03-2025/12/26", "2026/2/28", "07-2026--05-0185", 
+              "2024/11/0496", "137/11/2025"),
+    correct = c("03-2025/12/06", "03-2026/02/28", "07-2026-05-0185", 
+                "17-2024/11/0496", "04-2025/11/137")
+)
+
+# join and replace
+telepsych_dates <- telepsych_dates %>%
+    left_join(anc_corrections, by = c("tele_ancid" = "wrong")) %>%
+    mutate(tele_ancid = if_else(!is.na(correct), correct, tele_ancid)) %>%
+    select(-correct)
 
 
-# Keep participants who were referred to telepsychiatry----
+# Keep participants who were referred to telepsychiatry
 telepsy_ancids <- right_join(
     consent_ids,
     telepsych_ids,
     by = c("partipant_id" = "record_id")
 )
 
-# Join Telepsychiatry dates with telepsy_ancids
+# Join Telepsychiatry dates with ANCIDs
 tele_dates <- telepsych_dates %>% 
     full_join(telepsy_ancids, 
                by = c("tele_ancid" = "anc_num"))
 
-# Telepsychiatry summary
+
+# Sessions summary per participant
 sessions_summary <- tele_dates %>% 
-    group_by(partipant_id) %>%
+    group_by(tele_ancid) %>%
     summarise(
         sessions_attended = sum(`Participant Attened` == "Yes", na.rm = TRUE),  
         .groups = "drop"
-    ) 
+    )
 
+
+# Summarise attendance per participant
+attendance_summary <- tele_dates %>%
+    group_by(tele_ancid) %>%
+    summarise(
+        ever_attended = ifelse(any(`Participant Attened` == "Yes", na.rm = TRUE), "Yes", "No"),
+        .groups = "drop"
+    )
+
+# Merge with referral + sessions summary
 ref_summary <- tele_dates %>%
-    distinct(partipant_id, .keep_all = TRUE) %>%   # keep first occurrence only
-    select(partipant_id, tele) %>%
-    right_join(sessions_summary, by = "partipant_id")
+    distinct(tele_ancid, .keep_all = TRUE) %>%
+    select(tele_ancid, tele) %>%
+    right_join(sessions_summary, by = "tele_ancid") %>%
+    left_join(attendance_summary, by = "tele_ancid") %>% 
+    mutate(tele = if_else(is.na(tele), "No", tele)) %>% 
+    #drop a none study participant offered Telepsychiatry as a treatment
+    filter(!tele_ancid %in% c("07-2025-03-0092"))
 
-# Continuous summary (median [IQR])
-tbl_cont <- ref_summary %>%
+
+Summary <- ref_summary %>%
     tbl_summary(
-        include = c(tele, sessions_attended),
+        include = c(tele, sessions_attended, ever_attended),
         type = list(sessions_attended ~ "continuous"),
-        statistic = list(all_continuous() ~ "{median} ({p25}, {p75})"),
-        
-    )
+        missing = "no",
+        statistic = list(
+            tele ~ "{n} ({p}%)",
+            sessions_attended ~ "{median} ({p25}, {p75})",
+            ever_attended ~ "{n} ({p}%)"
+        ),
+        label = list(
+            tele ~ "Telepsychiatry Referral (Yes/No)",
+            sessions_attended ~ "Sessions Attended (Median [IQR])",
+            ever_attended ~ "Ever Attended (Yes/No)"
+        )
+    ) %>%
+    modify_caption("**Telepsychiatry Referral and Uptake Summary**") %>%
+    modify_footnote(update = list(
+        all_stat_cols() ~ "Attendance defined as ???1 session attended"
+    ))
 
-# Categorical summary (counts)
-tbl_cat <- ref_summary %>%
-    mutate(sessions_attended = as.factor(sessions_attended)) %>%
-    select(sessions_attended) %>%
-    tbl_summary(
-        label = list(sessions_attended ~ "Sessions Attended")
-    )
-
-# Combine tables
-Summary <- tbl_merge(
-    list(tbl_cont, tbl_cat),
-    tab_spanner = c("**Continuous Summary**", "**Categorical Summary**")
-)
 
 #write.csv(telepsych_dates, "C:/Users/DAMARIS/Desktop/IPMH/Telepsychiatry/Telepsychiatry Session Dates.csv", 
           #row.names = FALSE)
@@ -335,85 +365,4 @@ fidelity_summary <- fidelity_table %>%
     )
 
 fidelity_summary
-
-#----
-# Clean and prepare
-tele_clean <- telepsych %>%
-    mutate(
-        tele_date = ymd(tele_date),
-        diagnosis = case_when(
-            tele_diag___1 == "Checked" ~ "Major Depressive Disorder",
-            tele_diag___2 == "Checked" ~ "Generalized Anxiety Disorder",
-            tele_diag___3 == "Checked" ~ "Bipolar Mood Disorder",
-            tele_diag___4 == "Checked" ~ "Perinatal Depression",
-            tele_diag___5 == "Checked" ~ "Postpartum Psychosis",
-            tele_diag___6 == "Checked" ~ "PTSD",
-            tele_diag___00 == "Checked" ~ "None/NA",
-            tele_diag___99 == "Checked" ~ "Other",
-            TRUE ~ NA_character_
-        ),
-        medication = case_when(
-            tele_med___1 == "Checked" ~ "Chlorpromazine",
-            tele_med___2 == "Checked" ~ "Olanzapine",
-            tele_med___3 == "Checked" ~ "Haloperidol",
-            tele_med___4 == "Checked" ~ "Propiomazine",
-            tele_med___5 == "Checked" ~ "Amitriptyline",
-            tele_med___6 == "Checked" ~ "Fluoxetine",
-            tele_med___7 == "Checked" ~ "Diazepam",
-            tele_med___8 == "Checked" ~ "Midazolam",
-            tele_med___9 == "Checked" ~ "Bromazepam",
-            tele_med___10 == "Checked" ~ "Carbamazepine",
-            tele_med___11 == "Checked" ~ "Phenobarbitone",
-            tele_med___12 == "Checked" ~ "Phenytoin",
-            tele_med___13 == "Checked" ~ "Benzhexol",
-            tele_med___99 == "Checked" ~ "Benzhexol",
-            tele_medoth == "Checked" ~ "Other",
-            TRUE ~ NA_character_
-        )
-    )
-
-# Summary table: Attendance and Prescriptions
-summary_table <- tele_clean %>%
-    summarise(
-        Total_Sessions = n(),
-        Attended = sum(pt_attend == "Yes", na.rm = TRUE),
-        Prescribed = sum(tele_presc == "Yes", na.rm = TRUE),
-        Attendance_Rate = round(Attended / Total_Sessions * 100, 1),
-        Prescription_Rate = round(Prescribed / Attended * 100, 1)
-    ) %>%
-    gt() %>%
-    tab_header(
-        title = "Telepsychiatry Session Summary",
-        subtitle = "Attendance and Prescription Overview"
-    )
-
-# Diagnosis frequency
-diag_freq <- tele_clean %>%
-    filter(pt_attend == "Yes") %>% 
-    filter(!is.na(diagnosis)) %>%
-    count(diagnosis, sort = TRUE) %>%
-    gt() %>%
-    tab_header(
-        title = "Diagnosis Distribution",
-        subtitle = "Across Attended Sessions"
-    )
-
-# Medication Prescribed
-med_long <- tele_clean %>%
-    filter(pt_attend == "Yes", tele_presc == "Yes") %>%
-    select(starts_with("tele_med___")) %>%
-    pivot_longer(
-        everything(),
-        names_to = "med_code",
-        values_to = "prescribed"
-    ) %>%
-    filter(prescribed == "Checked")
-
-med_freq <- med_long %>%
-    count(med_code, sort = TRUE) %>%
-    gt() %>%
-    tab_header(
-        title = "Medications Prescribed",
-        subtitle = "Across Attended Sessions"
-    )
 
