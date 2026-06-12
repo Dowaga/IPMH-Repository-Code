@@ -13,7 +13,7 @@ source("data_import.R")
 pacman::p_load(hms)
 
 # Set up data freeze time for this report
-data_freeze <- as.Date("2026-05-18") 
+data_freeze <- as.Date("2026-06-11") 
 
 # load data
 rm(list = setdiff(ls(), c("costing_df")))
@@ -219,7 +219,7 @@ screening_int_costing_df <- screening_int_costing_df %>%
         refer_service = replace_na(refer_service, "Refer to study eligibility")
     )
 
-screening_int_table <- screening_int_costing_df %>%
+screening_int_table <- screening_int_costing_df %>% 
     select(
         study_site,
         triage_desig, triage_duration,
@@ -911,17 +911,20 @@ table_telepsychiatry_summary <- flextable(summary_table_tele) %>%
     autofit() %>% 
     set_caption("Number of Participants for Telepsychiatry Sessions") 
 
-## Time table ---------
-telepsychiatry_costing_df <- telepsychiatry_costing_df %>%
-    mutate(across(where(~ is.character(.) || is.factor(.)), 
-                  ~ droplevels(as.factor(.))))
 
-# List of all telepsychiatry time columns
 telepsychiatry_costing_df <- telepsychiatry_costing_df %>%
     mutate(
-        tele_info_duration = as.numeric(tele_info_time_out - tele_info_time_in)*1440,
-        tele_docu_duration = as.numeric(tele_docu_time_out - tele_docu_time_in)*1440,
-        tele_total_duration = as.numeric(tele_end_time_out - tele_enter_time_in)*1440
+        tele_info_time_in  = as.POSIXct(tele_info_time_in,  format = "%H:%M:%S"),
+        tele_info_time_out = as.POSIXct(tele_info_time_out, format = "%H:%M:%S"),
+        tele_docu_time_in  = as.POSIXct(tele_docu_time_in,  format = "%H:%M:%S"),
+        tele_docu_time_out = as.POSIXct(tele_docu_time_out, format = "%H:%M:%S"),
+        tele_enter_time_in = as.POSIXct(tele_enter_time_in, format = "%H:%M:%S"),
+        tele_end_time_out  = as.POSIXct(tele_end_time_out,  format = "%H:%M:%S")
+    ) %>%
+    mutate(
+        tele_info_duration  = as.numeric(difftime(tele_info_time_out, tele_info_time_in, units = "mins")),
+        tele_docu_duration  = as.numeric(difftime(tele_docu_time_out, tele_docu_time_in, units = "mins")),
+        tele_total_duration = as.numeric(difftime(tele_end_time_out, tele_enter_time_in, units = "mins"))
     )
 
 telepsychiatry_table <- telepsychiatry_costing_df %>%
@@ -997,76 +1000,89 @@ table_audit_feedback_summary<- flextable(summary_table_af) %>%
 # convert ONLY time columns safely
 time_cols <- grep("time", names(audit_feedback_costing_df), value = TRUE)
 
+
+# Fix dates if they differ, vectorized
+fix_same_day <- function(in_col, out_col) {
+    # If either is NA, leave as is
+    same_day <- as_date(in_col) == as_date(out_col)
+    
+    # Replace out_col's date with in_col's date when they differ
+    out_col_adj <- ifelse(
+        !same_day & !is.na(in_col) & !is.na(out_col),
+        make_datetime(
+            year = year(in_col),
+            month = month(in_col),
+            day = day(in_col),
+            hour = hour(out_col),
+            min = minute(out_col),
+            sec = second(out_col)
+        ),
+        out_col
+    )
+    
+    list(in_col, out_col_adj)
+}
+
+# Vectorized duration calculator
+calc_duration <- function(in_col, out_col) {
+    # Adjust dates first
+    fixed <- fix_same_day(in_col, out_col)
+    in_col_adj <- fixed[[1]]
+    out_col_adj <- fixed[[2]]
+    
+    # Compute duration only when both are present
+    ifelse(
+        !is.na(in_col_adj) & !is.na(out_col_adj),
+        as.numeric(difftime(out_col_adj, in_col_adj, units = "mins")),
+        NA_real_
+    )
+}
+
+
+# Apply in the pipeline
 audit_feedback_costing_df <- audit_feedback_costing_df %>%
     mutate(across(where(~ is.character(.) || is.factor(.)),
                   ~ droplevels(as.factor(.)))) %>%
-    
     mutate(across(all_of(time_cols),
-                  ~ as_hms(as.character(.)))) %>%
-    
+                  ~ ymd_hms(as.character(.)))) %>%
     mutate(
-        af_analysis_duration =
-            as.numeric(af_analysis_time_out - af_analysis_time_in) / 60,
+        af_analysis_duration   = calc_duration(af_analysis_time_in, af_analysis_time_out),
+        af_develop_duration    = calc_duration(af_develop_time_in, af_develop_time_out),
+        af_schedule_duration   = calc_duration(af_sche_time_in, af_sche_time_out),
+        af_hurdle_duration     = calc_duration(af_hurdle_time_in, af_hurdle_time_out),
+        af_identify_duration   = calc_duration(af_identify_time_in, af_identify_time_out),
+        af_refresh_duration    = calc_duration(af_refresh_time_in, af_refresh_time_out),
+        af_map_duration        = calc_duration(af_map_time_in, af_map_time_out),
+        af_map2_duration       = calc_duration(af_map2_time_in, af_map2_time_out),
+        af_implement_duration  = calc_duration(af_imp_time_in, af_imp_time_out),
+        af_feedback_duration   = calc_duration(af_feedback_time_in, af_feedback_time_out),
+        health_talk_duration   = calc_duration(flipbook_time_in, flipbook_time_out),
         
-        af_develop_duration =
-            as.numeric(af_develop_time_out - af_develop_time_in) / 60,
+        af_session_duration = na_if(rowSums(across(c(
+            af_hurdle_duration,
+            af_refresh_duration,
+            af_map_duration,
+            af_map2_duration,
+            af_implement_duration
+        )), na.rm = TRUE), 0),
         
-        af_schedule_duration =
-            as.numeric(af_sche_time_out - af_sche_time_in) / 60,
-        
-        af_hurdle_duration =
-            as.numeric(af_hurdle_time_out - af_hurdle_time_in) / 60,
-        
-        af_identify_duration =
-            as.numeric(af_identify_time_out - af_identify_time_in) / 60,
-        
-        af_refresh_duration =
-            as.numeric(af_refresh_time_out - af_refresh_time_in) / 60,
-        
-        af_map_duration =
-            as.numeric(af_map_time_out - af_map_time_in) / 60,
-        
-        af_map2_duration =
-            as.numeric(af_map2_time_out - af_map2_time_in) / 60,
-        
-        af_implement_duration =
-            as.numeric(af_imp_time_out - af_imp_time_in) / 60,
-        
-        af_feedback_duration =
-            as.numeric(af_feedback_time_out - af_feedback_time_in) / 60,
-        
-        af_session_duration =
-            rowSums(across(c(
-                af_hurdle_duration,
-                af_refresh_duration,
-                af_map_duration,
-                af_map2_duration,
-                af_implement_duration
-            )), na.rm = TRUE),
-        
-        af_session_duration =
-            na_if(af_session_duration, 0),
-        
-        af_total_duration =
-            rowSums(across(c(
-                af_analysis_duration,
-                af_develop_duration,
-                af_schedule_duration,
-                af_hurdle_duration,
-                af_identify_duration,
-                af_refresh_duration,
-                af_map_duration,
-                af_map2_duration,
-                af_implement_duration,
-                af_feedback_duration
-            )), na.rm = TRUE),
-        
-        af_total_duration =
-            na_if(af_total_duration, 0),
-        
-        health_talk_duration =
-            as.numeric(flipbook_time_out - flipbook_time_in) / 60
+        af_total_duration = na_if(rowSums(across(c(
+            af_analysis_duration,
+            af_develop_duration,
+            af_schedule_duration,
+            af_hurdle_duration,
+            af_identify_duration,
+            af_refresh_duration,
+            af_map_duration,
+            af_map2_duration,
+            af_implement_duration,
+            af_feedback_duration
+        )), na.rm = TRUE), 0)
     )
+
+
+
+
 # Negative time duration
 negive <- audit_feedback_costing_df %>% 
     filter(af_session_duration < 0|af_total_duration < 0)

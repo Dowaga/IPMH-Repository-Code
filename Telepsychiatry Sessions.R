@@ -16,8 +16,7 @@ telepsych_dates <- telepsych %>%
     mutate(tele_date = ymd(tele_date)) %>% 
     select(tele_provider, tele_date, pt_attend, tele_ancid) %>% 
     rename(Psychiatrist = tele_provider,
-           `Psychiatry Date` = tele_date,
-           `Participant Attened` = pt_attend)
+           `Psychiatry Date` = tele_date)
 
 # ANC Check
 anc_number <- telepsych %>% 
@@ -39,7 +38,7 @@ total_telep <- anc_number %>%
 
 # PM+ and Telepsychiatry Referrals
 pm_telep_df <- ppw_rct_df %>% 
-    #filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
+    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
     select(record_id, clt_study_site, clt_date, starts_with("abs_")) %>% 
     filter(!is.na(clt_date)) 
 
@@ -214,7 +213,7 @@ tele_dates <- telepsych_dates %>%
 sessions_summary <- tele_dates %>% 
     group_by(tele_ancid) %>%
     summarise(
-        sessions_attended = sum(`Participant Attened` == "Yes", na.rm = TRUE),  
+        sessions_attended = sum(pt_attend == "Yes", na.rm = TRUE),  
         .groups = "drop"
     )
 
@@ -223,7 +222,7 @@ sessions_summary <- tele_dates %>%
 attendance_summary <- tele_dates %>%
     group_by(tele_ancid) %>%
     summarise(
-        ever_attended = ifelse(any(`Participant Attened` == "Yes", na.rm = TRUE), "Yes", "No"),
+        ever_attended = ifelse(any(pt_attend == "Yes", na.rm = TRUE), "Yes", "No"),
         .groups = "drop"
     )
 
@@ -235,12 +234,26 @@ ref_summary <- tele_dates %>%
     left_join(attendance_summary, by = "tele_ancid") %>% 
     mutate(tele = if_else(is.na(tele), "No", tele)) %>% 
     #drop a none study participant offered Telepsychiatry as a treatment
-    filter(!tele_ancid %in% c("07-2025-03-0092"))
+    filter(!tele_ancid %in% c("07-2025-03-0092")) %>% 
+    mutate(
+        sessions_cat = case_when(
+            sessions_attended == 0 ~ "0 Sessions (None)",
+            sessions_attended == 1 ~ "1 Session",
+            sessions_attended == 2 ~ "2 Sessions",
+            sessions_attended == 3 ~ "3 Sessions",
+            TRUE ~ NA_character_
+        ),
+        # Make factor with levels ordered from high to low
+        sessions_cat = factor(
+            sessions_cat,
+            levels = c("3 Sessions", "2 Sessions", "1 Session", "0 Sessions (None)")
+        )
+    )
 
 
 tele_uptake_summary <- ref_summary %>%
     tbl_summary(
-        include = c(tele, sessions_attended, ever_attended),
+        include = c(tele, sessions_attended, ever_attended, sessions_cat),
         type = list(sessions_attended ~ "continuous"),
         missing = "no",
         statistic = list(
@@ -251,9 +264,12 @@ tele_uptake_summary <- ref_summary %>%
         label = list(
             tele ~ "Telepsychiatry Referral (Yes/No)",
             sessions_attended ~ "Sessions Attended (Median [IQR])",
-            ever_attended ~ "Ever Attended (Yes/No)"
+            ever_attended ~ "Ever Attended a session (Yes/No)",
+            sessions_cat ~ "Distribution of Sessions Attended"
         )
     ) %>%
+    bold_labels() %>% 
+    italicize_levels() %>% 
     modify_caption("**Telepsychiatry Referral and Uptake Summary**") %>%
     modify_footnote(update = list(
         all_stat_cols() ~ "Attendance defined as >=1 session attended"

@@ -4,6 +4,8 @@
 
 # Setup ------------------------------------------------------------------------
 rm(list = ls())
+# Set up data freeze time for this report
+data_freeze <- as.Date("2026-06-04") 
 # Reference source codes & other dependencies:
 source("dependencies.R")
 source("DataTeam_ipmh.R")
@@ -123,12 +125,13 @@ patient_cost <- out_pocket %>%
         travel_distance = "Distance to Facility (km)",
         time_to_facility_min ~ "Time to Facility (Min)",
         travel_fare = "Transport Cost (KES)",
-        transport_back = "Same Mode of Transport for Return Trip (Yes)",
-        transport_means_back = "Mode of Transport for Return Trip",
+        transport_back = "Same Mode of Transport on Return (Yes)",
+        transport_means_back = "Return Trip Mode of Transport",
         time_from_facility_min = "Approximate Time back from Facility (Min)"
 ),
     sort = list(all_categorical() ~ "frequency")# Sort categorical levels by frequency in descending order
 ) %>% 
+    add_n() %>% 
     bold_labels() %>% 
     italicize_levels()%>% 
     gtsummary::as_gt() %>% 
@@ -151,39 +154,36 @@ productivity_loses <- out_pocket %>%
             ~ as.numeric(str_extract(as.character(.), "\\d+\\.?\\d*"))
         ),
         current_inc_source = str_squish(str_to_lower(current_inc_source)),
-            inc_source_clean = case_when(
-                is.na(current_inc_source) ~ "No Income",
-                current_inc_source == "0" ~ "No Income",
-                str_detect(current_inc_source, "none|no income|not doing|student|no job") ~ "No Income",
-                str_detect(current_inc_source, "housewife|house wife") ~ "Homemaker",
-                str_detect(current_inc_source, "partner|husband|spouse|grandmother") ~ "Dependent on Others",
-                str_detect(current_inc_source, "farm|farmer|farming|farm work") ~ "Farming",
-                str_detect(current_inc_source, "business|vendor|trader|selling|saloon|self employed|shop") ~ "Business / Self-employed",
-                str_detect(current_inc_source, "casual|labour|laundry|chores") ~ "Casual Work",
-                str_detect(current_inc_source, "pharmacist|tailoring") ~ "Skilled Work",
-                TRUE ~ "Other"
-            )
-        ) %>% 
+        inc_source_clean = case_when(
+            is.na(current_inc_source) ~ "No Income",
+            current_inc_source == "0" ~ "No Income",
+            str_detect(current_inc_source, "none|no income|not doing|student|no job") ~ "No Income",
+            str_detect(current_inc_source, "housewife|house wife") ~ "Homemaker",
+            str_detect(current_inc_source, "partner|husband|spouse|grandmother") ~ "Dependent on Others",
+            str_detect(current_inc_source, "farm|farmer|farming|farm work") ~ "Farming",
+            str_detect(current_inc_source, "business|vendor|trader|selling|saloon|self employed|shop") ~ "Business / Self-employed",
+            str_detect(current_inc_source, "casual|labour|laundry|chores") ~ "Casual Work",
+            str_detect(current_inc_source, "pharmacist|tailoring") ~ "Skilled Work",
+            TRUE ~ "Other"
+        )
+    ) %>% 
+    # Step 1: clean numeric fields
     mutate(
-        # Clean original pay variables
-            loss_amount = as.numeric(str_extract(as.character(loss_amount), "\\d+\\.?\\d*")),
-            monthly_pay = as.numeric(str_extract(as.character(monthly_pay), "\\d+\\.?\\d*")),
-            weekly_pay  = as.numeric(str_extract(as.character(weekly_pay), "\\d+\\.?\\d*")),
-            daily_pay   = as.numeric(str_extract(as.character(daily_pay), "\\d+\\.?\\d*")),
-            companion_off_duration = as.numeric(str_extract(as.character(companion_off_duration), "\\d+\\.?\\d*"))
-        )%>% 
-        
-        # Standardize to monthly income
-        mutate(
-            income_monthly_est = case_when(
-                !is.na(monthly_pay) ~ monthly_pay,
-                !is.na(weekly_pay)  ~ weekly_pay * 4,
-                !is.na(daily_pay)   ~ daily_pay * 30,
-                TRUE ~ NA_real_
-            )
-        ) %>% 
+        loss_amount = as.numeric(str_extract(as.character(loss_amount), "\\d+\\.?\\d*")),
+        monthly_pay = as.numeric(str_extract(as.character(monthly_pay), "\\d+\\.?\\d*")),
+        weekly_pay  = as.numeric(str_extract(as.character(weekly_pay), "\\d+\\.?\\d*")),
+        daily_pay   = as.numeric(str_extract(as.character(daily_pay), "\\d+\\.?\\d*")),
+        companion_off_duration = as.numeric(str_extract(as.character(companion_off_duration), "\\d+\\.?\\d*")),
+        companion_loss = as.numeric(str_extract(as.character(companion_loss), "\\d+\\.?\\d*"))
+    ) %>% 
+    # Step 2: conditional replacement
     mutate(
-        # If companion_cost is NA or "No", set all companion fields to NA
+        income_monthly_est = case_when(
+            !is.na(monthly_pay) ~ monthly_pay,
+            !is.na(weekly_pay)  ~ weekly_pay * 4,
+            !is.na(daily_pay)   ~ daily_pay * 30,
+            TRUE ~ NA_real_
+        ),
         accompanied_by   = if_else(is.na(companion_cost) | companion_cost == "No",
                                    NA_character_, accompanied_by),
         companion_off    = if_else(is.na(companion_cost) | companion_cost == "No",
@@ -193,20 +193,23 @@ productivity_loses <- out_pocket %>%
         companion_loss   = if_else(is.na(companion_cost) | companion_cost == "No",
                                    NA_real_, companion_loss)
     ) %>% 
-    mutate(job_group = case_when(
-        companion_cost == "Yes" & str_detect(companion_job, regex("Not employed|No job|None", ignore_case = TRUE)) ~ "Unemployed/None",
-        companion_cost == "Yes" & str_detect(companion_job, regex("Business", ignore_case = TRUE)) ~ "Business",
-        companion_cost == "Yes" & str_detect(companion_job, regex("Casual labourer", ignore_case = TRUE)) ~ "Casual labour",
-        companion_cost == "Yes" & str_detect(companion_job, regex("Farm work", ignore_case = TRUE)) ~ "Farm work",
-        companion_cost == "Yes" & str_detect(companion_job, regex("Motorcycle rider", ignore_case = TRUE)) ~ "Transport",
-        companion_cost == "Yes" & str_detect(companion_job, regex("Security officer", ignore_case = TRUE)) ~ "Security",
-        companion_cost == "Yes" & str_detect(companion_job, regex("Student", ignore_case = TRUE)) ~ "Student",
-        TRUE ~ NA_character_
-    ),
-    payment_period = case_when(
-        str_detect(payment_period, regex("Per month", ignore_case = TRUE)) ~ "Monthly",
-        str_detect(payment_period, regex("Per day", ignore_case = TRUE)) ~ "Daily",
-        TRUE ~ NA_character_))
+    mutate(
+        job_group = case_when(
+            companion_cost == "Yes" & str_detect(companion_job, regex("Not employed|No job|None", ignore_case = TRUE)) ~ "Unemployed/None",
+            companion_cost == "Yes" & str_detect(companion_job, regex("Business", ignore_case = TRUE)) ~ "Business",
+            companion_cost == "Yes" & str_detect(companion_job, regex("Casual labourer", ignore_case = TRUE)) ~ "Casual labour",
+            companion_cost == "Yes" & str_detect(companion_job, regex("Farm work", ignore_case = TRUE)) ~ "Farm work",
+            companion_cost == "Yes" & str_detect(companion_job, regex("Motorcycle rider", ignore_case = TRUE)) ~ "Transport",
+            companion_cost == "Yes" & str_detect(companion_job, regex("Security officer", ignore_case = TRUE)) ~ "Security",
+            companion_cost == "Yes" & str_detect(companion_job, regex("Student", ignore_case = TRUE)) ~ "Student",
+            TRUE ~ NA_character_
+        ),
+        payment_period = case_when(
+            str_detect(payment_period, regex("Per month", ignore_case = TRUE)) ~ "Monthly",
+            str_detect(payment_period, regex("Per day", ignore_case = TRUE)) ~ "Daily",
+            TRUE ~ NA_character_
+        )
+    )
 
 
 
