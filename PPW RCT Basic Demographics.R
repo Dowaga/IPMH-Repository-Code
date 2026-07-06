@@ -21,11 +21,11 @@ demographics_df <- ppw_rct_df %>%
                 grepl("6 Months", redcap_event_name) ~ "6 Months",
                 TRUE ~ NA_character_
             )) %>% 
-    filter(clt_visit == "Enrollment") %>%
+    filter(visit_type == "Enrollment") %>%
     group_by(record_id) %>%
     slice_head(n = 1) %>%   # keep only the Enrollment row per record_id
     ungroup() %>% 
-    select(clt_study_site, clt_date,starts_with("dem_"), demographics_complete, med_pre_preg, 
+    select(clt_ptid, clt_study_site, clt_date,starts_with("dem_"), demographics_complete, med_pre_preg, 
            med_pastdiag___2)%>% 
     mutate(
         med_pre_preg = replace_na(med_pre_preg, "No")
@@ -267,3 +267,4 @@ arm_wlwh_demo <- demographics_df %>%
     opt_table_lines()
 
 arm_wlwh_demo
+
