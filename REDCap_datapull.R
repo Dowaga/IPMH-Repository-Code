@@ -5,6 +5,11 @@
 # Description: This script pulls data from the REDCap projects and exports them as .csv files to the Raw Study Data folder on One Drive.
 # Update in Feb 19, 2025: Added all REDCap databases so far.
 
+# NOTE: redcapAPI v2.12.1 may fail to pull datasets 
+# with leading zeros. If data pull fails, check the 
+# installed version with packageVersion("redcapAPI") 
+# and consider downgrading to version 2.9.1.
+
 # Setup ------------------------------------------------------------------------
 
 # Reference source codes & other dependencies: Use this section to reference other scripts and dependencies
@@ -161,10 +166,19 @@ httr::set_config( httr::config( ssl_verifypeer = 0L )) ## ensuring security when
 redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = rct_hcw_consenting_token)
 
-### Import the REDCap dataset ###
-rct_hcw_consenting <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
-                                    records = NULL, events = NULL, survey = FALSE, factors = FALSE, 
+## Import the REDCap dataset ###
+rct_hcw_consenting <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL,
+                                    records = NULL, events = NULL, survey = FALSE, factors = FALSE,
                                     dag = FALSE, checkboxLabels = TRUE)
+
+# rct_hcw_consenting_old <- exportRecordsTyped(
+#     redcapcon,
+#     records = sprintf("%04d", 16:311),
+#     survey = FALSE,
+#     factors = FALSE,
+#     dag = FALSE,
+#     checkboxLabels = TRUE
+# )
 
 ### Creating datafile ###
 write.csv(rct_hcw_consenting, paste0(ipmh_filepath,"/Data/2. Consenting database/RCT_HCW_consenting_",
@@ -200,9 +214,43 @@ redcapcon<-redcapConnection(url='https://online1.knh.or.ke/redcap/api/',
                             token = rct_ppw_consenting_token)
 
 ### Import the REDCap dataset ###
-rct_ppw_consenting <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL, 
-                                    records = NULL, events = NULL, survey = FALSE, factors = FALSE, 
+rct_ppw_consenting <- exportRecordsTyped(redcapcon, fields = NULL, forms = NULL,
+                                    records = NULL, events = NULL, survey = FALSE, factors = FALSE,
                                     dag = FALSE, checkboxLabels = TRUE)
+
+
+
+# # Pull all records returned by exportRecordsTyped()
+# rct_ppw_consenting_new <- exportRecordsTyped(
+#     redcapcon,
+#     fields = NULL,
+#     forms = NULL,
+#     records = NULL,
+#     events = NULL,
+#     survey = FALSE,
+#     factors = FALSE,
+#     dag = FALSE,
+#     checkboxLabels = TRUE
+# )
+
+# # Pull the older records separately
+# rct_ppw_consenting_old <- exportRecordsTyped(
+#     redcapcon,
+#     records = sprintf("%04d", 1:643),
+#     survey = FALSE,
+#     factors = FALSE,
+#     dag = FALSE,
+#     checkboxLabels = TRUE
+# )
+
+# # Combine and remove any accidental duplicates
+# rct_ppw_consenting <- bind_rows(
+#     rct_ppw_consenting_new,
+#     rct_ppw_consenting_old
+# ) %>%
+#     distinct(record_id, .keep_all = TRUE) %>%
+#     arrange(record_id)
+
 
 ### Creating datafile ###
 write.csv(rct_ppw_consenting, paste0(ipmh_filepath,"/Data/2. Consenting database/RCT_PPW_consenting_",
