@@ -8,10 +8,10 @@ da_users <- data.frame(Analyst = c("David Owaga", "Lincoln Pothan", "Yuwei Wang"
                                         "C:/Program Files/Git/cmd/git.exe",
                                         "C:/Program Files/Git/cmd/git.exe",
                                         "usr/local/bin/git"),
-                       ipmh_filepath = c("C:/Users/DAMARIS/UW/ngumbau - IPMH study", 
+                       ipmh_filepath = c("C:/Users/hp/UW/ipmh - IPMH materials", 
                                          "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/IPMH study",
                                          "/Users/yuweiwang_1997/Library/CloudStorage/OneDrive-UW/IPMH study",
-                                         "C:/Users/hp/UW/ngumbau - IPMH study",
+                                         "C:/Users/hp/UW/ipmh - IPMH materials",
                                          "C:/Users/Olivia Schultes/OneDrive - UW/ngumbau's files - IPMH study",
                                          "/Users/Wenwenjiang/Library/CloudStorage/OneDrive-UW/IPMH study"),
                        machinetype = c("PC", "Mac", "Mac", "PC", "PC", "Mac"))
@@ -20,7 +20,7 @@ da_users <- data.frame(Analyst = c("David Owaga", "Lincoln Pothan", "Yuwei Wang"
 current_wd <- getwd()
 
 if (grepl("DAMARIS", current_wd)) {
-    ipmh_filepath <- "C:/Users/hp/UW/ngumbau - IPMH study"
+    ipmh_filepath <- "C:/Users/hp/UW/ipmh - IPMH materials"
 } else if (grepl("Lincolnpothan", current_wd)) {
     ipmh_filepath <- "/Users/Lincolnpothan/Library/CloudStorage/OneDrive-UW/IPMH study"
 } else if (grepl("yuweiwang_1997", current_wd)) { 
