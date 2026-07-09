@@ -26,7 +26,7 @@ if (grepl("DAMARIS", current_wd)) {
 } else if (grepl("yuweiwang_1997", current_wd)) { 
     ipmh_filepath <- "/Users/yuweiwang_1997/Library/CloudStorage/OneDrive-UW/IPMH study" 
 }else if (grepl("hp", current_wd)) { 
-    ipmh_filepath <- "C:/Users/hp/UW/ngumbau - IPMH study"
+    ipmh_filepath <- "C:/Users/hp/UW/ipmh - IPMH materials"
 } else if (grepl("Olivia Schultes", current_wd)) {
     ipmh_filepath <- "C:/Users/Olivia Schultes/OneDrive - UW/ngumbau's files - IPMH study"
 } else if (grepl("Wenwenjiang", current_wd)) {
