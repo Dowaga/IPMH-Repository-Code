@@ -12,12 +12,15 @@ always_allow_html: true
 ```{r setup, echo = F, include = F, warning = F}
 rm(list = ls())
 
-data_freeze <- as.Date("2026-05-11")
-
 # read data
 source("Datateam_ipmh.R")
 source("Dependencies.R")
+#source("REDCap_datapull.R")
 source("data_import.R")
+
+#Drop Dummy Out of Pocket training data and Un-enrolled 6 weeks participant
+ppw_rct_df <- ppw_rct_df%>% 
+    filter(!clt_ptid %in% c("21229999", "21135086"))
 ```
 
 # Enrollment Status
@@ -51,11 +54,11 @@ enrolled <- ppw_rct_df%>%
     filter(clt_visit == "Enrollment") %>% 
     select(clt_ptid)
 
-repeating_ptids <- enrolled %>%
-  group_by(clt_ptid) %>%
-  summarise(n = n()) %>%
-  filter(n > 1)
 
+duplicate_enrollment_visit <- ppw_rct_df %>%
+    group_by(clt_ptid,clt_visit) %>%
+    filter(n() > 1) %>%
+    ungroup()
 
 six_weeks <- ppw_rct_df %>% 
     filter(clt_visit == "6 weeks post-partum") %>% 
@@ -93,8 +96,7 @@ source("Consort.R")
 consort_per
 ```
 
-
-```{r Reasons for ineligibility or not enrolled, message=FALSE, warning=FALSE, include=FALSE}
+```{r Reasons for ineligibility, message=FALSE, warning=FALSE, include=FALSE}
 
 ineligible <- screening_consent_df %>% 
     select(record_id, rct_harm_thought,  rct_memory_problem, 
@@ -543,30 +545,34 @@ session_wide %>%
 
 ```
 
+## Telepsychiatry Referral and Uptake Summary
 ```{r Psychiatry participants, echo=FALSE, message=FALSE, warning=FALSE}
-telepsych_referrals <- pm_telep_df %>% 
-    filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
+source("Telepsychiatry Sessions.R")
+# telepsych_referrals <- pm_telep_df %>% 
+#     filter((phq9_scores>=15)|(gad7_scores>=19)|(abs_phq_dead == 1 & abs_phq_ref_tele == "Yes"))
+# 
+# telepsych_referrals %>% 
+#     tbl_summary(
+#         sort = list(all_categorical() ~ "frequency"),
+#         include = c(clt_study_site),
+#                 label = list(clt_study_site ~ "Facility"),
+#         missing = "no",
+#         digits = list(
+#             all_continuous() ~ 1,       # continuous variables 1 d.p.
+#             all_categorical() ~ c(0, 1) # categorical  0 decimals for n, 1 d.p. for %
+#         ))%>% 
+#     gtsummary::as_gt() %>% 
+#       # modify with gt functions
+#     gt::tab_header(
+#       title = "Participants Referred to Telepsychiatry",
+#       subtitle = "Showing Participants Referred to Telepsychiatry") %>%
+#   gt::tab_options(
+#     table.font.size = "medium",
+#     data_row.padding = gt::px(1)) %>%
+#     tab_options(
+#         table.font.size = px(12))
 
-telepsych_referrals %>% 
-    tbl_summary(
-        sort = list(all_categorical() ~ "frequency"),
-        include = c(clt_study_site),
-                label = list(clt_study_site ~ "Facility"),
-        missing = "no",
-        digits = list(
-            all_continuous() ~ 1,       # continuous variables 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical  0 decimals for n, 1 d.p. for %
-        ))%>% 
-    gtsummary::as_gt() %>% 
-      # modify with gt functions
-    gt::tab_header(
-      title = "Participants Referred to Telepsychiatry",
-      subtitle = "Showing Participants Referred to Telepsychiatry") %>%
-  gt::tab_options(
-    table.font.size = "medium",
-    data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
+tele_uptake_summary
 ```
 
 ```{r PM+ and Telepsychiatry Referral QCs, message=FALSE, warning=FALSE, include=FALSE}
