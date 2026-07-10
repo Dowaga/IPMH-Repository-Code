@@ -493,14 +493,14 @@ ft <- theme_vanilla(ft)
 ft <- bold(ft, i = which(window_summary$Facility == "Total"), bold = TRUE)
 ft <- autofit(ft)
 
-# Create Word document
-doc <- read_docx() %>%
-    body_add_par("Follow-ups Due Between in September 2025", style = "heading 1") %>%
-    body_add_par("This summary includes participants whose follow-up windows (Week 6, Week 14, or Month 6) falls between September 1 and September 30, 2025.", style = "Normal") %>%
-    body_add_flextable(ft)
-
-# Save document
-print(doc, target = "Follow-up Summary for this Week.docx")
+# # Create Word document
+# doc <- read_docx() %>%
+#     body_add_par("Follow-ups Due Between in September 2025", style = "heading 1") %>%
+#     body_add_par("This summary includes participants whose follow-up windows (Week 6, Week 14, or Month 6) falls between September 1 and September 30, 2025.", style = "Normal") %>%
+#     body_add_flextable(ft)
+# 
+# # Save document
+# print(doc, target = "Follow-up Summary for this Week.docx")
 
 # Summary participants whose 6-weeks or 14-weeks window closes in a week----
 start_date <- as.Date("2025-09-01")
@@ -565,16 +565,16 @@ ft_week <- flextable(week_summary) %>%
     autofit()
 
 
-# Create Word document
-doc <- read_docx() %>%body_add_par("Follow-ups Due Within the Next 7 Days", style = "heading 1") %>%
-    body_add_par("Summary of participants whose follow-up windows close between September 1 and September 8, 2025.", style = "Normal") %>%
-    body_add_flextable(ft_week)%>%
-    body_add_par("Follow-ups Due in September 2025", style = "heading 1") %>%
-    body_add_par("Summary of participants whose follow-up windows close between September 1 and September 30, 2025.", style = "Normal") %>%
-    body_add_flextable(ft_month) 
-
-# Save document
-print(doc, target = "Follow-up Summary - Month and Week.docx")
+# # Create Word document
+# doc <- read_docx() %>%body_add_par("Follow-ups Due Within the Next 7 Days", style = "heading 1") %>%
+#     body_add_par("Summary of participants whose follow-up windows close between September 1 and September 8, 2025.", style = "Normal") %>%
+#     body_add_flextable(ft_week)%>%
+#     body_add_par("Follow-ups Due in September 2025", style = "heading 1") %>%
+#     body_add_par("Summary of participants whose follow-up windows close between September 1 and September 30, 2025.", style = "Normal") %>%
+#     body_add_flextable(ft_month) 
+# 
+# # Save document
+# print(doc, target = "Follow-up Summary - Month and Week.docx")
 
 
 
