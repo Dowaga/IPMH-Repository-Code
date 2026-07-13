@@ -342,3 +342,15 @@ average_interval %>%
 # 
 # 
 # 
+# PM+ Survey QCs
+post_survey_qcs <- pm_survey_df %>%
+    group_by(pm_ancid) %>%
+    filter(any(pm_session == "Session 5 content") & !any(pm_session == "Post-intervention PSYCHLOPS measurement")) %>%
+    ungroup() %>%
+    filter(pm_session == "Session 5 content") %>% 
+    select(record_id, pm_date, pm_ancid, ipmh_participant, pm_ptid)
+
+nc_qc <- pm_survey_df %>%
+    group_by(pm_ptid) %>%
+    filter(n_distinct(pm_ancid) > 1) %>%
+    ungroup()

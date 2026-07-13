@@ -178,41 +178,112 @@ ref_summary <- tele_dates %>%
     mutate(
         sessions_cat = case_when(
             sessions_attended == 0 ~ "0 Sessions (None)",
-            sessions_attended == 1 ~ "1 Session",
-            sessions_attended == 2 ~ "2 Sessions",
-            sessions_attended == 3 ~ "3 Sessions",
-            TRUE ~ NA_character_
+            TRUE ~ paste0(sessions_attended, " Sessions")
         ),
-        # Make factor with levels ordered from high to low
+        # Factor levels: only those present in the data, ordered descending
         sessions_cat = factor(
             sessions_cat,
-            levels = c("3 Sessions", "2 Sessions", "1 Session", "0 Sessions (None)")
+            levels = sort(unique(sessions_cat), decreasing = TRUE)
         )
     )
 
+# --------------------------------------------------------------------
+# Telepsychiatry drug prescribing summary
+# --------------------------------------------------------------------
 
+# Define lookup for drug codes
+drug_lookup <- c(
+    tele_med___1  = "Chlorpromazine",
+    tele_med___2  = "Olanzapine",
+    tele_med___3  = "Haloperidol",
+    tele_med___4  = "Propiomazine",
+    tele_med___5  = "Amitriptyline",
+    tele_med___6  = "Fluoxetine",
+    tele_med___7  = "Diazepam",
+    tele_med___8  = "Midazolam",
+    tele_med___9  = "Bromazepam",
+    tele_med___10 = "Carbamazepine",
+    tele_med___11 = "Phenobarbitone",
+    tele_med___12 = "Phenytoin",
+    tele_med___13 = "Benzhexol",
+    tele_med___99 = "Other"
+)
+
+# Pivot drug checkboxes into long format
+drug_long <- telepsych %>%
+    select(tele_ancid, tele_date, starts_with("tele_med___"),
+           tele_medoth, tele_dose) %>%
+    pivot_longer(cols = starts_with("tele_med___"),
+                 names_to = "drug_code", values_to = "selected") %>%
+    filter(selected %in% c("Yes","1","Checked")) %>%
+    mutate(
+        drug_name = recode(drug_code, !!!drug_lookup),
+        drug_name = case_when(
+            drug_name == "Other" & !is.na(tele_medoth) ~ paste0("Other: ", tele_medoth),
+            drug_name == "Other" & !is.na(tele_dose) ~ paste0("Other: ", tele_dose),
+            TRUE ~ drug_name
+        )
+    )
+
+# Summarise per participant
+drug_summary <- drug_long %>%
+    group_by(tele_ancid) %>%
+    summarise(
+        ever_prescribed = "Yes",
+        drugs_list = paste(unique(drug_name), collapse = "; "),
+        .groups = "drop"
+    )
+
+# Merge into your uptake summary
+ref_summary <- ref_summary %>%
+    left_join(drug_summary, by = "tele_ancid") %>%
+    mutate(
+        ever_prescribed = ifelse(is.na(ever_prescribed), "No", ever_prescribed),
+        drugs_list_clean = case_when(
+            str_detect(str_to_lower(drugs_list), "chlorpromazine") ~ "Chlorpromazine",
+            str_detect(str_to_lower(drugs_list), "olanzapine")    ~ "Olanzapine",
+            str_detect(str_to_lower(drugs_list), "haloperidol")   ~ "Haloperidol",
+            str_detect(str_to_lower(drugs_list), "propiomazine")  ~ "Propiomazine",
+            str_detect(str_to_lower(drugs_list), "amitriptyline") ~ "Amitriptyline",
+            str_detect(str_to_lower(drugs_list), "fluoxetine")    ~ "Fluoxetine",
+            str_detect(str_to_lower(drugs_list), "diazepam")      ~ "Diazepam",
+            str_detect(str_to_lower(drugs_list), "midazolam")     ~ "Midazolam",
+            str_detect(str_to_lower(drugs_list), "bromazepam")    ~ "Bromazepam",
+            str_detect(str_to_lower(drugs_list), "carbamazepine") ~ "Carbamazepine",
+            str_detect(str_to_lower(drugs_list), "phenobarbitone")~ "Phenobarbitone",
+            str_detect(str_to_lower(drugs_list), "phenytoin")     ~ "Phenytoin",
+            str_detect(str_to_lower(drugs_list), "benzhexol")     ~ "Benzhexol",
+            str_detect(str_to_lower(drugs_list), "sertraline|setraline") ~ "Sertraline",
+            str_detect(str_to_lower(drugs_list), "folic acid")    ~ "Folic acid",
+            TRUE ~ NA_character_
+        ))
+
+
+# Update summary table
 tele_uptake_summary <- ref_summary %>%
     tbl_summary(
-        include = c(tele, sessions_attended, ever_attended, sessions_cat),
+        include = c(tele, sessions_attended, ever_attended, sessions_cat, 
+                    ever_prescribed, drugs_list_clean),
         type = list(sessions_attended ~ "continuous"),
         missing = "no",
         statistic = list(
             tele ~ "{n} ({p}%)",
             sessions_attended ~ "{median} ({p25}, {p75})",
-            ever_attended ~ "{n} ({p}%)"
+            ever_attended ~ "{n} ({p}%)",
+            ever_prescribed ~ "{n} ({p}%)"
         ),
         label = list(
             tele ~ "Telepsychiatry Referral (Yes/No)",
             sessions_attended ~ "Sessions Attended (Median [IQR])",
             ever_attended ~ "Ever Attended a session (Yes/No)",
-            sessions_cat ~ "Distribution of Sessions Attended"
+            sessions_cat ~ "Distribution of Sessions Attended",
+            ever_prescribed ~ "Any Drugs Prescribed (Yes/No)",
+            drugs_list_clean ~ "Drugs Prescribed"
         )
     ) %>%
-    bold_labels() %>% 
-    italicize_levels() %>% 
-    modify_caption("**Telepsychiatry Referral and Uptake Summary**") %>%
-    modify_footnote(update = list(
-        all_stat_cols() ~ "Attendance defined as >=1 session attended"
-    ))
+    bold_labels() %>%
+    italicize_levels() %>%
+    modify_caption("**Telepsychiatry Referral, Uptake, and Drug Prescription Summary**") %>%
+    modify_footnote(update = list(all_stat_cols() ~ "Attendance defined as >=1 session attended"))
 
 
