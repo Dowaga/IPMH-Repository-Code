@@ -143,6 +143,27 @@ telepsy_ancids <- right_join(
     by = c("partipant_id" = "record_id")
 )
 
+# correcting table
+anc_corrections <- data.frame(
+    wrong = c("03-2025/12/26", "2026/2/28", "07-2026--05-0185",
+              "2024/11/0496", "137/11/2025", "13-233/25", "03 - 2026/2/0030",
+              "03 - 2026/3/31", "03 - 2026/5/37", "042/2026", "018/01/2026",
+              "16-226/03/29", "238/1/2026", "13-014/26", "2026/05/13", 
+              "2026/3/6", "13-85/25", "19-2026/03/010"),
+    correct = c("03-2025/12/06", "03-2026/02/28", "07-2026-05-0185",
+                "17-2024/11/0496", "04-2025/11/137", "13-2025/09/035",
+                "03-2026/2/10030", "03-2026/3/31", "03-2026/5/37",
+                "13-042/2026", "13-018/01/2026", "16-2026/03/29",
+                "16-2026/1/238","13-014/2026", "16-2026/05/13", 
+                "16-2026/3/6", "13-85/26", "19-2026/02/010")
+)
+
+# join and replace
+telepsych_dates <- telepsych_dates %>%
+    left_join(anc_corrections, by = c("tele_ancid" = "wrong")) %>%
+    mutate(tele_ancid = if_else(!is.na(correct), correct, tele_ancid)) %>%
+    select(-correct)
+
 # Join Telepsychiatry dates by ANCIDs
 tele_dates <- telepsych_dates %>% 
     full_join(telepsy_ancids, 
@@ -173,8 +194,12 @@ ref_summary <- tele_dates %>%
     right_join(sessions_summary, by = "tele_ancid") %>%
     left_join(attendance_summary, by = "tele_ancid") %>% 
     mutate(tele = if_else(is.na(tele), "No", tele)) %>% 
-    #drop a none study participant offered Telepsychiatry as a treatment
+    # drop a none study participant offered Telepsychiatry as a treatment
     filter(!tele_ancid %in% c("07-2025-03-0092")) %>% 
+    # drop participant reffered out of study visit
+    filter(!tele_ancid %in% c("07-2025-10-363")) %>% 
+    # Drop Tunawiri data
+    filter(!tele_ancid %in% c("KAR-T-14106-1-09")) %>%
     mutate(
         sessions_cat = case_when(
             sessions_attended == 0 ~ "0 Sessions (None)",
@@ -277,7 +302,7 @@ tele_uptake_summary <- ref_summary %>%
             sessions_attended ~ "Sessions Attended (Median [IQR])",
             ever_attended ~ "Ever Attended a session (Yes/No)",
             sessions_cat ~ "Distribution of Sessions Attended",
-            ever_prescribed ~ "Any Drugs Prescribed (Yes/No)",
+            ever_prescribed ~ "Any Drugs Prescribed During Telepsychiatry (Yes/No))",
             drugs_list_clean ~ "Drugs Prescribed"
         )
     ) %>%
