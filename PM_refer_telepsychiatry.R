@@ -6,21 +6,25 @@
 # and telepsychiatry services among those who have completed all PM+ sessions.
 
 # Setup ------------------------------------------------------------------------
+rm(list = ls())
 # Reference source codes & other dependencies:
-source("REDCap_datapull.R")
+source("DataTeam_ipmh.R")
+source("Dependencies.R")
+source("data_import.R")
+
 
 #data prep ----------------
 #only keep the databases we need
-rm(list = setdiff(ls(), c("telepsych", "pm", "rct_ppw", "rct_ppw_consenting")))
+rm(list = setdiff(ls(), c("telepsych", "pm_survey_df", "ppw_rct_df", "rct_ppw_consenting")))
 
-pm <- pm %>% 
+pm <- pm_survey_df %>% 
     filter(ipmh_participant == "Yes")
 
-ids_with_session5 <- rct_ppw %>%
+ids_with_session5 <- ppw_rct_df %>%
     filter(redcap_event_name == "PM+ Session 5 Abstraction (Arm 1: Intervention)") %>%
     pull(record_id)
 
-rct_ppw_session5 <- rct_ppw %>%
+rct_ppw_session5 <- ppw_rct_df %>%
     filter(is.na(redcap_repeat_instrument)) %>%
     filter(record_id %in% ids_with_session5)
 
@@ -165,7 +169,7 @@ unique(ids_with_session5) %>%
     length()
 # 33 completed PM+
 # Among these 33 women - 
-session5_participant_info <- rct_ppw %>%
+session5_participant_info <- ppw_rct_df %>%
     filter(clt_ptid %in% ids_with_session5) %>%
     select(clt_ptid, su_pmp, su_tele,
            su_pmrestart___0, su_pmrestart___1, su_pmrestart___2,
@@ -186,17 +190,19 @@ pm_or_tele_flag %>%
     select(`Ever Stopped or Restarted` = label, `Participants (n)` = n, `Percent (%)` = pct)
 # 8 participants have ever stopped or restarted PM+.
 # Among all participants - 
-pm_tele_info <- rct_ppw %>%
+pm_tele_info <- ppw_rct_df %>%
     select(clt_ptid, redcap_event_name, su_pmp, su_tele,
            su_pmrestart___0, su_pmrestart___1, su_pmrestart___2,
            su_pmrestart_sp, su_pmrestart_spother, starts_with("abs_")) %>%
     filter(!is.na(clt_ptid))
+
 pm_tele_summary <- pm_tele_info %>%
     group_by(clt_ptid) %>%
     summarise(
         any_pm = any(su_pmp == "Yes", na.rm = TRUE),
         any_tele = any(su_tele == "Yes", na.rm = TRUE),
         ever_stopped_or_restarted = any(su_pmrestart___1 == "Checked" | su_pmrestart___2 == "Checked", na.rm = TRUE))
+
 pm_tele_summary %>%
     count(ever_stopped_or_restarted, name = "n") %>%
     mutate(
