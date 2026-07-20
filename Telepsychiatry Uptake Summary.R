@@ -240,7 +240,7 @@ drug_long <- telepsych %>%
            tele_medoth, tele_dose) %>%
     pivot_longer(cols = starts_with("tele_med___"),
                  names_to = "drug_code", values_to = "selected") %>%
-    filter(selected %in% c("Yes","1","Checked")) %>%
+    filter(selected %in% c("Checked")) %>%
     mutate(
         drug_name = recode(drug_code, !!!drug_lookup),
         drug_name = case_when(
@@ -259,7 +259,7 @@ drug_summary <- drug_long %>%
         .groups = "drop"
     )
 
-# Merge into your uptake summary
+# Merge into uptake summary
 ref_summary <- ref_summary %>%
     left_join(drug_summary, by = "tele_ancid") %>%
     mutate(
@@ -302,13 +302,14 @@ tele_uptake_summary <- ref_summary %>%
             sessions_attended ~ "Sessions Attended (Median [IQR])",
             ever_attended ~ "Ever Attended a session (Yes/No)",
             sessions_cat ~ "Distribution of Sessions Attended",
-            ever_prescribed ~ "Any Drugs Prescribed During Telepsychiatry (Yes/No))",
+            ever_prescribed ~ "Any Drugs Prescribed During Tele-consult (Yes/No))",
             drugs_list_clean ~ "Drugs Prescribed"
         )
     ) %>%
     bold_labels() %>%
     italicize_levels() %>%
     modify_caption("**Telepsychiatry Referral, Uptake, and Drug Prescription Summary**") %>%
-    modify_footnote(update = list(all_stat_cols() ~ "Attendance defined as >=1 session attended"))
+    modify_footnote(update = list(all_stat_cols() ~ "Attendance defined as >=1 session attended")) %>%
+    as_gt()
 
 
