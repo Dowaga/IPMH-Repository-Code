@@ -13,11 +13,11 @@ source("data_import.R")
 
 pm_follow_up <- pm_survey_df %>% 
     select(pm_ptid, pm_ancid, pm_facility, pm_date, pm_session) %>%
-    right_join(ppw_rct_df %>% 
+    left_join(ppw_rct_df %>% 
                    filter(redcap_event_name == "Enrollment (Arm 1: Intervention)") %>% 
                    select(record_id, clt_date), 
                by = c("pm_ptid" = "record_id")) %>% 
-    select(pm_ptid, pm_ancid, clt_date, pm_date, pm_session) %>% 
+    select(pm_ptid, pm_ancid, pm_ancid, clt_date, pm_date, pm_session) %>% 
     filter(!is.na(pm_date)) %>% 
     arrange(pm_ptid)
 
