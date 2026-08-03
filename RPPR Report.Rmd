@@ -6,31 +6,46 @@ output: pdf_document
 ---
 
 ```{r setup, echo=F, include=F}
+# Setup ------------------------------------------------------------------------
 rm(list = ls())
-
-pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr, 
-               openxlsx, gtsummary, kableExtra, flextable, writexl) 
-
-# Read Qualitative demographic data
-qual_demographic_df <-read.csv("C:/Users/DAMARIS/Desktop/IPMH/Qual Demographics/IPMHAim1QualDemograp_DATA_2024-06-10_0619.csv") 
-
+# Reference source codes & other dependencies:
+source("DataTeam_ipmh.R")
+source("Dependencies.R")
+source("data_import.R")
 
 #Read Quantitative data
-quant_demographic_df <- read.csv("C:/Users/DAMARIS/Desktop/IPMH/Quantitative Survey/IPMHAim1Quantitative_DATA_2024-11-15_0516.csv") 
+quant_demographic_df <- aim1quant_df %>% 
+    select(record_id, collect_time, women_dob_uk, women_dob, women_age,
+           hcw_dob_uk, hcw_dob, hcw_age, hcw_sex,
+           demographics_perinatal_women_complete,
+           demographic_hcws_complete)
+
+# Read Qualitative demographic data
+qual_demographic_df <- aim1qual_demo_df
+
 ```
 
 
 ```{r Quant age range, echo=FALSE, message=FALSE, warning=FALSE}
 ## HCW age range
 hcw_demo <- quant_demographic_df %>%
-  select(record_id, starts_with("hcw_"), demographic_hcws_complete) %>%
-  filter(!is.na(hcw_participant_id))
+    select(record_id, collect_time,
+           hcw_dob_uk, hcw_dob, hcw_age, hcw_sex,
+           demographic_hcws_complete) %>% 
+  filter(demographic_hcws_complete =="Complete")
 
 hcw_demo <- hcw_demo %>% 
-  mutate(age = as.numeric(case_when(hcw_dob_uk == 1~floor(hcw_cal_age),
-                         hcw_dob_uk == 0 ~ hcw_age)))
+     mutate(
+    collect_time = ymd_hm(collect_time),
+    hcw_dob = ymd(hcw_dob),
+    age = case_when(
+      hcw_dob_uk == "Yes" ~ floor(time_length(interval(hcw_dob, collect_time), "years")),
+      hcw_dob_uk == "No"  ~ as.numeric(hcw_age),
+      TRUE ~ NA_real_
+    )
+  )
 
-quant_age_df <- hcw_demo %>% 
+hcw_quant_age_df <- hcw_demo %>% 
     select(record_id, age, hcw_sex) %>% 
     mutate(age_range = case_when(
        age >= 18 & age <=25 ~ "18-25",
@@ -39,34 +54,45 @@ quant_age_df <- hcw_demo %>%
        age >= 65 & age <= 75 ~ "65-75",
        age >75 ~ "> 76+"))
 
-quant_age_summary <- quant_age_df %>% 
+hcw_quant_age_summary <- hcw_quant_age_df %>% 
     group_by(age_range) %>% 
     rename(`Age Categories` = age_range ) %>% 
     summarise(Total = n())
 
 ## PPW age range
 ppw_demo <- quant_demographic_df %>%
-  select(record_id, starts_with("women_"),cal_age,  demographics_perinatal_women_complete) %>%
-  filter(!is.na(women_participant_id))
+  select(record_id, collect_time, women_dob_uk, women_dob,women_age, demographics_perinatal_women_complete) %>%
+  filter(demographics_perinatal_women_complete == "Complete")
 
-ppw_demo <- ppw_demo %>% 
-  mutate(age = as.numeric(case_when(women_dob_uk == 1~floor(cal_age),
-                         women_dob_uk == 0 ~ women_age)))
+ppw_quant_df <- ppw_demo %>%
+     mutate(
+     collect_time = parse_date_time(
+      collect_time,
+      orders = c("ymd HM", "ymd HMS")
+    ),
+    women_dob = ymd(women_dob),
+    age = case_when(
+      grepl("^Yes", women_dob_uk) ~ floor(time_length(interval(women_dob, collect_time), "years")),
+      grepl("^No",  women_dob_uk) ~ as.numeric(women_age),
+      TRUE ~ NA_real_
+    )
+  )
 
-ppw_demo <- ppw_demo %>% 
+ppw_quant_df <- ppw_quant_df %>% 
     select(record_id, age) %>% 
     mutate(age_range = case_when(
-        age >=15 & age<=17 ~ "15-17",
+        age >=14 & age<=17 ~ "14-17",
         age >= 18 & age <=25 ~ "18-25",
         age >= 26 & age <= 45 ~ "26-45",
         age >= 46 & age <= 64 ~ "46-64",
         age >= 65 & age <= 75 ~ "65-75",
         age >75 ~ "> 76+"))
+
 ## Filter those <18 Yrs
-minors <- ppw_demo %>% 
+minors <- ppw_quant_df %>% 
     filter(age < 18)
 
-ppw_age_summary <- ppw_demo %>% 
+ppw_quant_age_summary <- ppw_quant_df %>% 
     group_by(age_range) %>% 
     rename(`Age Categories` = age_range ) %>% 
     summarise(Total = n())
@@ -78,7 +104,7 @@ qual_age_df <- qual_demographic_df %>%
     select(record_id, hcw_age, policy_age, women_age, hcw_sex, policy_sex) %>% 
   mutate(age = coalesce(hcw_age, policy_age, women_age),
          Gender = coalesce(hcw_sex, policy_sex)) %>% 
-  mutate(Gender = ifelse(is.na(Gender), 2, Gender)) %>% 
+  mutate(Gender = ifelse(is.na(Gender), "Female", Gender)) %>% 
     mutate(age_range = case_when(
        age >= 18 & age <=25 ~ "18-25",
        age >= 26 & age <= 45 ~ "26-45",
@@ -94,30 +120,82 @@ qual_age_summary <- qual_age_df %>%
 ```
 
 
+```{r PPW RCT age range, echo=FALSE, message=FALSE, warning=FALSE}
+ppw_rct_age <- ppw_rct_df %>% 
+        mutate(
+            visit_type = case_when(
+                grepl("Enrollment", redcap_event_name) ~ "Enrollment",
+                grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
+                grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
+                grepl("6 Months", redcap_event_name) ~ "6 Months",
+                TRUE ~ NA_character_
+            )) %>% 
+    filter(visit_type == "Enrollment") %>%
+    group_by(record_id) %>%
+    slice_head(n = 1) %>%   # keep only the Enrollment row per record_id
+    ungroup() %>% 
+    select(clt_ptid,clt_date,dem_dob_uk, dem_dob, dem_age)%>% 
+    mutate(dem_age = if_else(
+        dem_dob_uk == "Yes",
+        floor(time_length(interval(dem_dob, clt_date), "years")),
+        dem_age),
+        Gender = "Female") %>% 
+    mutate(age_range = case_when(
+        dem_age >= 14 & dem_age <= 17 ~ "14-17",
+        dem_age >= 18 & dem_age <=25 ~ "18-25",
+        dem_age >= 26 & dem_age <= 45 ~ "26-45",
+        dem_age >= 46 & dem_age <= 64 ~ "46-64",
+        dem_age >= 65 & dem_age <= 75 ~ "65-75",
+        dem_age >75 ~ "> 76+")) %>%
+    select(clt_ptid, Gender, dem_age,  age_range) %>% 
+    filter(!is.na(age_range))
+
+
+rct_age_summary <- ppw_rct_age %>% 
+    group_by(age_range) %>% 
+    rename(`Age Categories` = age_range ) %>% 
+    summarise(Total = n())
+```
+
+
+## Enrollment Summary
+
+A total of `r qual_demographic_df$record_id %>% unique() %>% length()` have been enrolled in Qualitaive Survey, `r quant_demographic_df$record_id %>% unique() %>% length()` in Quantitaive Survey and `r ppw_rct_age$clt_ptid %>% unique() %>% length()` in Perinatal Women RCT.
+
+
+### Enrollment Age Groups
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-# Merge the two tables by Age Category and sum up the Total values
-merged_summary <- quant_age_summary %>%
+# Merge summaries and compute totals
+merged_summary <- hcw_quant_age_summary %>%
+  full_join(ppw_quant_age_summary, by = "Age Categories") %>%
   full_join(qual_age_summary, by = "Age Categories") %>%
-  mutate(`Total Count` = coalesce(Total.x, 0) + coalesce(Total.y, 0)) %>%
-  select(`Age Categories`, `Total Count`) %>% 
-    adorn_totals()
+  full_join(rct_age_summary, by = "Age Categories") %>%
+  mutate(`Total Count` = coalesce(Total.x, 0) +
+                         coalesce(Total.y, 0) +
+                         coalesce(Total.x.x, 0) +
+                         coalesce(Total.y.y, 0)) %>%
+  select(`Age Categories`, `Total Count`)
 
-# Transpose the resulting dataframe
-transposed_summary <- as.data.frame(t(merged_summary))
-colnames(transposed_summary) <- transposed_summary[1, ]
-transposed_summary <- transposed_summary[-1, ]
+# Add grand total row
+merged_summary <- merged_summary %>%
+  bind_rows(
+    tibble(`Age Categories` = "TOTAL",
+           `Total Count` = sum(merged_summary$`Total Count`, na.rm = TRUE))
+  )
 
-# Create overall_table with a caption
-overall_table <- flextable(transposed_summary) %>%
-  set_caption(caption = "Age Enrollment Report")
+# Render with gt
+overall_table <- merged_summary %>%
+  gt() %>%
+  tab_header(title = "Enrollment Age Report") %>%
+  fmt_number(columns = vars(`Total Count`), decimals = 0) %>%
+  tab_style(
+    style = list(cell_text(weight = "bold")),
+    locations = cells_body(rows = `Age Categories` == "TOTAL")
+  )
 
-# Print the overall_table
-#print(overall_table)
+overall_table
 
- #Print the transposed summary table using kableExtra
-kable(transposed_summary, 
-      format = "latex", caption = "Age Enrollment Summary")%>%
-    kable_styling(latex_options = c("striped", "hold_position"), font_size = 12)
 ```
 
 
@@ -129,16 +207,63 @@ qual_gender <- qual_age_df %>%
                         "1" = "Male",
                         "2"= "Female"))
 
-quant_gender <- quant_age_df %>% 
+hcw_quant_gender <- hcw_quant_age_df %>% 
     select(hcw_sex, age) %>% 
     rename(Age = age, Gender = hcw_sex) %>% 
     mutate(Gender = recode(Gender,
                         "1" = "Male",
                         "2"= "Female"))
 
-enro_gender <- rbind(qual_gender, quant_gender)
+ppw_quant_gender <- ppw_quant_df %>% 
+    select(age) %>% 
+    rename(Age = age) %>% 
+    mutate(Gender = "Female")
 
-write_xlsx(enro_gender, "Enrollment Gender and Age.xlsx")
-write_xlsx(enro_gender, paste0("Enrollment_Gender_and_Age_", Sys.Date(), ".xlsx"))
+ppw_rct_gender <- ppw_rct_age %>% 
+    select(Gender, dem_age) %>% 
+    rename(Age = dem_age)
+
+enro_gender <- rbind(qual_gender, hcw_quant_gender, 
+                     ppw_quant_gender, ppw_rct_gender)
+
+write_xlsx(enro_gender, paste0("Enrollment Gender and Age", Sys.Date(), ".xlsx"))
 ```
 
+
+```{r gender_summary, echo=FALSE, message=FALSE, warning=FALSE}
+# Add study labels
+qual_gender2 <- qual_gender %>% mutate(Study = "Qualitative")
+hcw_quant_gender2 <- hcw_quant_gender %>% mutate(Study = "Quantitative")
+ppw_quant_gender2 <- ppw_quant_gender %>% mutate(Study = "Quantitative")
+ppw_rct_gender2 <- ppw_rct_gender %>% mutate(Study = "PPW RCT")
+
+# Combine all datasets
+all_gender <- bind_rows(
+  qual_gender2,
+  hcw_quant_gender2,
+  ppw_quant_gender2,
+  ppw_rct_gender2
+) %>%
+  mutate(Gender = toupper(Gender))   # Capitalize gender
+
+# Summarize counts by Study and Gender, pivot to wide format
+gender_summary <- all_gender %>%
+  count(Study, Gender) %>%
+  pivot_wider(names_from = Study, values_from = n, values_fill = 0) %>%
+  mutate(Total = Qualitative + Quantitative + `PPW RCT`)
+
+# Add grand total row
+grand_total <- gender_summary %>%
+  summarise(across(where(is.numeric), sum)) %>%
+  mutate(Gender = "TOTAL")
+
+gender_summary <- bind_rows(gender_summary, grand_total)
+
+# Render with gt
+gender_tbl <- gender_summary %>%
+  gt() %>%
+  tab_header(title = "Gender Counts by Study Type") %>%
+  fmt_number(columns = where(is.numeric), decimals = 0)
+
+gender_tbl
+```
