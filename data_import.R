@@ -79,3 +79,11 @@ pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_",
 costing_df <- read.csv(paste0(ipmh_filepath, "/Data/9. Costing data/Costing_", 
                                 file_date, ".csv", sep=""))
 
+phq2_gad2_abstract <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PHQ2_GAD2_abstract_", 
+                              file_date, ".csv", sep=""))
+
+aim1qual_demo_df  <- read.csv(paste0(ipmh_filepath, "/Data/3. Aim 1 qualitative demo/Aim1_qual_demo_", 
+                                  file_date, ".csv", sep=""))
+
+aim1quant_df <- read.csv(paste0(ipmh_filepath, "/Data/4. Aim 1 quantitative data/Aim1_quant_data_", 
+                                  file_date, ".csv", sep=""))
