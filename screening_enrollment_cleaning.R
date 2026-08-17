@@ -10,11 +10,17 @@ rm(list = ls())
 # Reference source codes & other dependencies:
 source("Dependencies.R")
 source("data_import.R")
+source("DataTeam_ipmh.R")
+
+# Set up data freeze time for this report
+data_freeze <- as.Date("2026-08-17") 
 
 ###############################################################
 # 1. only keep the databases we need
 ###############################################################
-rm(list = setdiff(ls(), c("screening_consent_df")))
+rm(list = setdiff(ls(), c("screening_consent_df", "ipmh_filepath",
+                          "data_freeze")))
+
 
 ##############################################################
 # 2. Select Raw Dataset variables for cleaning
@@ -77,7 +83,7 @@ screening_raw_df <- screening_raw_df %>%
 # Age plausibility
 summary(screening_raw_df$age_at_screening)
 
-screening_raw_df %>% 
+out_range <- screening_raw_df %>% 
     filter(age_at_screening < 14 | age_at_screening > 49)
 ###########################################################################
 # 4. Create Eligibility column
