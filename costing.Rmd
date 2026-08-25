@@ -9,7 +9,7 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 # Set up data freeze time for this report
-data_freeze <- as.Date("2026-05-11") 
+#data_freeze <- as.Date("2026-06-11") 
 
 source("Costing.R")
 
@@ -118,6 +118,8 @@ table_audit_feedback_costing
 ```
 
 \pagebreak
+
+# Out of Pocket Costing Summary
 
 ```{r patient cost, echo=FALSE, message=FALSE, warning=FALSE}
 source("Out of Pocket Costing.R")
