@@ -3,6 +3,9 @@
 # Author(s): Yuwei
 # Date: July 14, 2025
 # This is a script that analyzes the costing_df data.
+# Notes of August 17, 2026: there are some negative duration values which we need to come back to
+# clean later. For the purposes of the MARCE conference, I am currently putting
+# all negative values to NA.
 
 # Setup ------------------------------------------------------------------------
 rm(list = ls())
@@ -449,7 +452,8 @@ screening_ctrl_costing_df <- screening_ctrl_costing_df %>%
 #     )
 
 screening_ctrl_table <- screening_ctrl_costing_df %>%
-    select(study_site,triage_desig_con, triage_duration_con,
+    select(study_site, triage_desig_con, 
+           triage_duration_con,
         screen_desig_con, screen_duration_con,
         room_type_con, phq2_cont, gad2_cont,
         score_duration_con,
@@ -687,11 +691,11 @@ session_table <- session_table %>%
     )
 
 
-# --- Make GT table ---
+# --- Make GT table 
 gt_session_table <- session_table %>%
     gt() %>%
     
-    # ---- BOLD the TOTAL row ----
+    # ---- BOLD the TOTAL row 
 tab_style(
     style = cell_text(weight = "bold"),
     locations = cells_body(
@@ -699,7 +703,7 @@ tab_style(
     )
 ) %>%
     
-    # ---- Add heading ----
+    # ---- Add heading 
 tab_header(
     title = md("*PM+ Sessions Completed by Facility*")
 ) %>%
@@ -1107,6 +1111,7 @@ designation_summary <- audit_feedback_costing_df %>%
 
 
 audit_feedback_table <- audit_feedback_costing_df %>%
+    filter(activity_type == "Audit and Feedback") %>%   
     select(arm, part_num, 
         af_analysis_desig, af_analysis_duration, 
         af_develop_desig, af_develop_duration,
@@ -1124,8 +1129,7 @@ audit_feedback_table <- audit_feedback_costing_df %>%
         af_feedback_desig,
         af_feedback_duration,
         af_session_duration, 
-        af_total_duration,
-        health_talk_duration
+        af_total_duration
     ) %>%
     tbl_summary(
         by = arm,
@@ -1146,8 +1150,7 @@ audit_feedback_table <- audit_feedback_costing_df %>%
             af_implement_duration = "continuous",
             af_feedback_duration = "continuous",
             af_session_duration = "continuous",
-            af_total_duration = "continuous",
-            health_talk_duration = "continuous"
+            af_total_duration = "continuous"
         ),
         label = list(
             part_num = "Participant Number",
@@ -1172,8 +1175,7 @@ audit_feedback_table <- audit_feedback_costing_df %>%
             af_feedback_desig = "Feedback Relay Staff",
             af_feedback_duration = "Feedback Relay Duration (min)",
             af_session_duration = "Session Total Duration (min)",
-            af_total_duration = "Total Audit & Feedback Duration (min)",
-            health_talk_duration = "Health Talk Duration (min)"
+            af_total_duration = "Total Audit & Feedback Duration (min)"
         ),
         digits = all_continuous() ~ 1,
         missing = "no"
@@ -1198,11 +1200,40 @@ table_audit_feedback_costing <- audit_feedback_table%>%
         footnote = "Note: Total Audit & Feedback Duration includes all components from analysis to feedback."
     )
 
-
-#----
-# Change to flextables
-ft_designation  <- flextable(designation_summary)
-
+## health talk table ------------
+audit_feedback_costing_df %>%
+    filter(activity_type == "Health Talk") %>%
+    select(arm, health_talk_duration) %>% 
+    tbl_summary(
+        by = arm,
+        statistic = list(
+            all_continuous() ~ "{mean} ({sd})",
+            all_categorical() ~ "{n} ({p}%)"
+        ),
+        type = list(
+            health_talk_duration = "continuous"
+        ),
+        label = list(
+            health_talk_duration = "Health Talk Duration (min)"
+        ),
+        digits = all_continuous() ~ 1,
+        missing = "no"
+    ) %>%
+    add_n() %>% 
+    add_overall() %>%
+    add_p() %>%
+    bold_labels() %>%
+    # convert from gtsummary object to gt object
+    gtsummary::as_gt() %>%
+    # modify with gt functions
+    gt::tab_header("Comparison of Health Talk Duration between arms") %>% 
+    gt::tab_options(
+        table.font.size = "medium",
+        data_row.padding = gt::px(1)) %>%
+    tab_options(
+        table.font.size = px(14))
+    
+    
 # Create Word doc and add both
 doc <- read_docx()%>%
     body_add_par("PM+ Supervision Per Facility", style = "heading 1") %>%
@@ -1213,11 +1244,527 @@ doc <- read_docx()%>%
         body_add_flextable(ft)%>%
     body_add_par("") 
 
-# Save Word file
-print(
-    doc,
-    target = file.path("C:/Users/hp/OneDrive/Desktop/IPMH/Time and Motion (costing)",
-                       paste0("Time and Motion QCs ",
-                              format(Sys.time(), "%Y-%m-%d_%H%M%S"),
-                              ".docx"))
-)
+# # Save Word file
+# print(
+#     doc,
+#     target = file.path("C:/Users/hp/OneDrive/Desktop/IPMH/Time and Motion (costing)",
+#                        paste0("Time and Motion QCs ",
+#                               format(Sys.time(), "%Y-%m-%d_%H%M%S"),
+#                               ".docx"))
+# )
+
+# graphs for MARCE conference presentations ---------
+
+library(ggpubr)
+
+## PHQ2/GAD2 scoring duration boxplot ---------
+
+dur_col <- "score_duration"
+y_unit  <- "minutes"         
+y_cap   <- 14              
+
+plot_data <- combined_data %>%
+    select(arm, duration = all_of(dur_col)) %>%
+    filter(!is.na(duration)) %>%
+    mutate(arm = factor(arm, levels = c("Control", "Intervention")))
+
+n_lab <- plot_data %>%
+    count(arm) %>%
+    mutate(lab = paste0(arm, "\n(n = ", n, ")"))
+
+n_above <- sum(plot_data$duration > y_cap)
+
+# --- NEW: per-arm median / IQR / mean, formatted for on-plot text ---
+stats_lab <- plot_data %>%
+    group_by(arm) %>%
+    summarise(
+        med = median(duration),
+        q1  = quantile(duration, 0.25),
+        q3  = quantile(duration, 0.75),
+        mn  = mean(duration),
+        .groups = "drop"
+    ) %>%
+    mutate(lab = paste0("Median = ", round(med, 1),
+                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
+                        "\nMean = ",  round(mn, 1)))
+
+
+ggplot(plot_data, aes(arm, duration, fill = arm)) +
+    geom_boxplot(width = 0.5, outliers = F, alpha = 0.6) +
+    #geom_jitter(width = 0.10, height = 0, alpha = 0.18, size = 0.9) +
+    stat_summary(fun = mean, geom = "point",
+                 shape = 23, size = 3, fill = "white") +
+    stat_compare_means(method = "wilcox.test", label = "p.format",
+                       label.x = 1.45,
+                       label.y = y_cap * 0.94) +
+    # --- NEW: print the summary numbers above each box ---
+    geom_text(data = stats_lab,
+              aes(x = arm, y = 12.5, label = lab),
+              inherit.aes = FALSE,         
+              size = 4.5, lineheight = 0.95, vjust = 1) +
+    scale_fill_manual(values = c("Control"      = "#4C9AA8",   # was salmon
+                                 "Intervention" = "#E4837B")) + # was teal
+
+scale_x_discrete(labels = setNames(n_lab$lab, n_lab$arm)) +
+    coord_cartesian(ylim = c(0, y_cap)) +
+    labs(
+        title    = "PHQ2/GAD2 screening time by study arm",
+        subtitle = "Box = median/IQR; white diamond = mean",
+        caption  = paste0("Notes: Wilcoxon rank-sum test. \n", n_above,
+                          " point(s) above ", y_cap, " ", y_unit,
+                          " not shown but retained in the test."),
+        x = NULL,
+        y = paste0("PHQ-2 / GAD-2 scoring duration (", y_unit, ")"),
+        fill = NULL
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+        plot.title    = element_text(face = "bold", hjust = 0.5),  # centered
+        plot.subtitle = element_text(hjust = 0.5),                 # centered
+        plot.caption  = element_text(hjust = 0.5, color = "grey40"),
+        legend.position = "none"
+    )
+
+## PHQ9/GAD7 scoring duration boxplot ---------
+y_unit <- "minutes"     
+y_cap  <- 30            
+
+plot_data <- screening_int_costing_df %>%
+    select(duration = phq9_duration) %>%
+    filter(!is.na(duration))
+
+stats_lab <- plot_data %>%
+    summarise(med = median(duration),
+              q1  = quantile(duration, .25),
+              q3  = quantile(duration, .75),
+              mn  = mean(duration)) %>%
+    mutate(lab = paste0("Median = ", round(med, 1),
+                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
+                        "\nMean = ", round(mn, 1)))
+
+
+n_above <- sum(plot_data$duration > y_cap)
+
+ggplot(plot_data, aes(x = "PHQ-9", y = duration)) +
+    geom_boxplot(width = 0.5, outliers = FALSE, alpha = 0.6, fill = "#E4837B") +  
+    stat_summary(fun = mean, geom = "point",
+                 shape = 23, size = 3, fill = "white") +
+    geom_text(data = stats_lab,
+              aes(x = "PHQ-9", y = 38, label = lab),
+              inherit.aes = FALSE,
+              size = 4.5, lineheight = 0.95, vjust = 1) +
+    coord_cartesian(ylim = c(0, 39)) +
+    labs(
+        title    = "PHQ-9 administration time \n (intervention arm)",
+        subtitle = "Box = median/IQR; white diamond = mean",
+        caption  = paste0("Notes: ", n_above,
+                          " point(s) above ", y_cap, " ", y_unit,
+                          " not shown but \nretained in the summary."),
+        x = NULL,
+        y = paste0("PHQ-9 administration time (", y_unit, ")")
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+        plot.title    = element_text(face = "bold", hjust = 0.5),  # centered
+        plot.subtitle = element_text(hjust = 0.5),                 # centered
+        plot.caption  = element_text(hjust = 0.5, color = "grey40")# changed from hjust = 0 to 0.5
+    )
+
+## ANC consultation duration boxplot ---------
+
+dur_col <- "clinic_duration"
+y_unit  <- "minutes"         
+y_cap   <- 60             
+
+plot_data <- combined_data %>%
+    select(arm, duration = all_of(dur_col)) %>%
+    filter(!is.na(duration)) %>%
+    mutate(arm = factor(arm, levels = c("Control", "Intervention")))
+
+#there is an outlier of -55 here, we will have to put it as NA and drop it
+
+plot_data <- plot_data %>%
+    mutate(duration = ifelse(duration < 0, NA, duration)) %>% 
+    filter(!is.na(duration))
+
+n_lab <- plot_data %>%
+    count(arm) %>%
+    mutate(lab = paste0(arm, "\n(n = ", n, ")"))
+
+n_above <- sum(plot_data$duration > y_cap)
+
+# --- NEW: per-arm median / IQR / mean, formatted for on-plot text ---
+stats_lab <- plot_data %>%
+    group_by(arm) %>%
+    summarise(
+        med = median(duration),
+        q1  = quantile(duration, 0.25),
+        q3  = quantile(duration, 0.75),
+        mn  = mean(duration),
+        .groups = "drop"
+    ) %>%
+    mutate(lab = paste0("Median = ", round(med, 1),
+                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
+                        "\nMean = ",  round(mn, 1)))
+
+
+ggplot(plot_data, aes(arm, duration, fill = arm)) +
+    geom_boxplot(width = 0.5, outliers = F, alpha = 0.6) +
+    #geom_jitter(width = 0.10, height = 0, alpha = 0.18, size = 0.9) +
+    stat_summary(fun = mean, geom = "point",
+                 shape = 23, size = 3, fill = "white") +
+    stat_compare_means(method = "wilcox.test", label = "p.format",
+                       label.x = 1.45,
+                       label.y = 57) +
+    # --- NEW: print the summary numbers above each box ---
+    geom_text(data = stats_lab,
+              aes(x = arm, y = 55, label = lab),
+              inherit.aes = FALSE,         
+              size = 4.5, lineheight = 0.95, vjust = 1) +
+    scale_fill_manual(values = c("Control"      = "#4C9AA8",   # was salmon
+                                 "Intervention" = "#E4837B")) + # was teal
+    scale_x_discrete(labels = setNames(n_lab$lab, n_lab$arm)) +
+    coord_cartesian(ylim = c(0, 60)) +
+    labs(
+        title    = "ANC consultation time by study arm",
+        subtitle = "Box = median/IQR; white diamond = mean",
+        caption  = paste0("Notes: Wilcoxon rank-sum test. \n", n_above,
+                          " point(s) above ", y_cap, " ", y_unit,
+                          " not shown but retained in the test."),
+        x = NULL,
+        y = paste0("ANC consultation duration (", y_unit, ")"),
+        fill = NULL
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+        plot.title    = element_text(face = "bold", hjust = 0.5),  # centered
+        plot.subtitle = element_text(hjust = 0.5),                 # centered
+        plot.caption  = element_text(hjust = 0.5, color = "grey40"),
+        legend.position = "none"
+    )
+
+## pm+ duration ---------
+
+## there are 4 observations that capture data for multiple PM+ sessions,
+# dropping the duration that should not be captured in the session,
+# so we get a more accurate average duration per session
+library(ggridges)
+
+dur_cols <- paste0("pm", 1:5, "_duration")
+
+# declared session number parsed from pm_number ("Session 4" -> 4)
+session_no <- as.integer(gsub("\\D", "", pm_ave_time$pm_number))
+n_filled   <- rowSums(!is.na(pm_ave_time[dur_cols]))
+
+# guard: for each row, is the column pm_number points to actually filled?
+matches_filled <- vapply(seq_len(nrow(pm_ave_time)), function(i) {
+    s <- session_no[i]
+    if (is.na(s) || s < 1 || s > 5) return(FALSE)
+    !is.na(pm_ave_time[[paste0("pm", s, "_duration")]][i])
+}, logical(1))
+
+# rows to edit: >1 duration AND the declared session is present
+to_fix <- n_filled >= 2 & matches_filled
+
+# safety flag: multi-duration row where pm_number points to an EMPTY column
+needs_review <- n_filled >= 2 & !matches_filled
+if (any(needs_review)) {
+    message("Rows needing manual review (pm_number column is empty): ",
+            paste(which(needs_review), collapse = ", "))
+}
+
+# apply fix: keep only the pmX_duration matching pm_number, NA the rest
+pm_fixed <- pm_ave_time
+for (k in 1:5) {
+    col  <- paste0("pm", k, "_duration")
+    drop <- to_fix & session_no != k
+    pm_fixed[[col]][drop] <- NA
+}
+
+pm_long <- pm_fixed %>%
+    select(study_site, pt_id_pm, pm_number, all_of(dur_cols)) %>%
+    pivot_longer(all_of(dur_cols), names_to = "session", values_to = "duration") %>%
+    filter(!is.na(duration))
+
+nrow(pm_long)   # 175
+
+# reshape sessions 1-5 into long form
+# CHANGED: source is pm_fixed, NOT pm_ave_time  <-- this was the 179-vs-175 bug
+pm_sessions <- pm_fixed %>%
+    select(all_of(dur_cols)) %>%
+    pivot_longer(everything(),
+                 names_to = "session", values_to = "duration") %>%
+    filter(!is.na(duration)) %>%
+    mutate(session = recode(session,
+                            pm1_duration = "Session 1",
+                            pm2_duration = "Session 2",
+                            pm3_duration = "Session 3",
+                            pm4_duration = "Session 4",
+                            pm5_duration = "Session 5"))
+
+# pooled "Total" = every session's rows duplicated under one label
+pm_ridge <- bind_rows(
+    pm_sessions,
+    pm_sessions %>% mutate(session = "Total")
+) %>%
+    mutate(session = factor(
+        session,
+        levels = c("Session 5", "Session 4", "Session 3",
+                   "Session 2", "Session 1", "Total")   # Total last => top
+    ))
+
+# ADDED: lab_n was referenced later but never defined in this chunk
+lab_n <- pm_ridge %>%
+    count(session) %>%
+    mutate(lab = paste0(session, " (n = ", n, ")"))
+
+
+# Plot 1: pooled Total (single distribution -> plain density, not a ridge)
+total_data <- pm_ridge %>% filter(session == "Total")
+
+s <- total_data %>%
+    summarise(med = median(duration), q1 = quantile(duration, .25),
+              q3 = quantile(duration, .75), mn = mean(duration), sd = sd(duration))
+
+stat_txt <- paste0("Median = ", round(s$med, 1),
+                   "   IQR [", round(s$q1, 1), ", ", round(s$q3, 1), "]",
+                   "\nMean = ", round(s$mn, 1), " (SD ", round(s$sd, 1), ")")
+
+x_cap <- quantile(total_data$duration, 0.97)
+
+ggplot(total_data, aes(x = duration)) +
+    geom_density(fill = "#B5433A", alpha = 0.6, color = "grey30") +
+    geom_vline(xintercept = s$med, color = "black", linewidth = 0.6) +
+    geom_vline(xintercept = s$mn, linetype = "dashed") +
+    annotate("text", x = 30, y = Inf, label = stat_txt,     
+             hjust = 1, vjust = 1.3, size = 4, lineheight = 0.95) +
+    coord_cartesian(xlim = c(0, x_cap)) +
+    labs(title = "PM+ session duration (all sessions pooled)",
+         subtitle = "Solid line = median; dashed line = mean",
+         x = "Session duration (minutes)", y = "Density") +
+    theme_minimal(base_size = 13) +                             
+    theme(
+        plot.title       = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle    = element_text(hjust = 0.5)                           
+    )
+
+
+# Plot 2: Sessions 1-5 (ridge is fine here, 5 groups to stack)
+sess_data <- pm_ridge %>% filter(session != "Total")
+
+lab_sess <- lab_n %>% filter(session != "Total")
+
+mean_sess <- sess_data %>%
+    group_by(session) %>% summarise(mean = mean(duration), .groups = "drop")
+
+ggplot(sess_data, aes(x = duration, y = session, fill = session)) +
+    geom_density_ridges(alpha = 0.6, scale = 1.1,
+                        quantile_lines = TRUE, quantiles = 2,     # median line
+                        vline_color = "black", vline_size = 0.6) +
+    geom_segment(data = mean_sess,                                # mean line per ridge
+                 aes(x = mean, xend = mean,
+                     y = as.numeric(factor(session, levels = levels(sess_data$session))),
+                     yend = as.numeric(factor(session, levels = levels(sess_data$session))) + 0.6),
+                 inherit.aes = FALSE, linetype = "dashed",
+                 linewidth = 0.6, color = "grey25") +
+    scale_y_discrete(labels = setNames(lab_sess$lab, lab_sess$session)) +            # ADDED: salmon fill (drop if you want default colors)
+    coord_cartesian(xlim = c(0, x_cap)) +
+    labs(title = "PM+ session duration by session",
+         subtitle = "Solid line = median; dashed line = mean",
+         x = "Session duration (minutes)", y = NULL) +
+    theme_minimal(base_size = 13) +
+    theme(legend.position = "none",
+          plot.title       = element_text(face = "bold", hjust = 0.5),
+          plot.subtitle    = element_text(hjust = 0.5))                           # ADDED: no gridlines
+
+## telepsychiatry duration ---------
+plot_data <- telepsychiatry_costing_df %>%
+    select(duration = tele_total_duration) %>%
+    filter(!is.na(duration))
+
+# one negative duration -> NA and drop
+plot_data <- plot_data %>%
+    mutate(duration = ifelse(duration < 0, NA, duration)) %>%
+    filter(!is.na(duration))
+
+s <- plot_data %>%
+    summarise(med = median(duration), q1 = quantile(duration, .25),
+              q3 = quantile(duration, .75), mn = mean(duration), sd = sd(duration))
+
+stat_txt <- paste0("Median = ", round(s$med, 1),
+                   "   IQR [", round(s$q1, 1), ", ", round(s$q3, 1), "]",
+                   "\nMean = ", round(s$mn, 1), " (SD ", round(s$sd, 1), ")")
+
+x_cap <- quantile(plot_data$duration, 0.97)
+
+ggplot(plot_data, aes(x = duration)) +
+    geom_density(fill = "#B5433A", alpha = 0.6, color = "grey30") +
+    geom_vline(xintercept = s$med, color = "black", linewidth = 0.6) +
+    geom_vline(xintercept = s$mn, linetype = "dashed") +
+    annotate("text", x = Inf, y = 0.009, label = stat_txt,          # CHANGED: pin to top-right corner
+             hjust = 1.05, vjust = 1.3, size = 4, lineheight = 0.95) +  # CHANGED: hjust/vjust for clean inset
+    coord_cartesian(xlim = c(30, 180)) +
+    labs(title = "Telepsychiatry session duration",
+         subtitle = "Solid line = median; dashed line = mean",
+         x = "Session duration (minutes)", y = "Density") +
+    theme_minimal(base_size = 13) +                              # CHANGED: %>% -> + (theme now applies)
+    theme(
+        plot.title       = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle    = element_text(hjust = 0.5)                           # ADDED: drop minor grid
+    )
+
+## audit and feedback ---------
+# ---- knobs 
+dur_col <- "af_total_duration"    # <-- the A&F outcome; change if you mean a component step
+y_unit  <- "minutes"
+# y_cap set below from the data
+
+plot_data <- audit_feedback_costing_df %>%
+    filter(activity_type=="Audit and Feedback") %>% 
+    select(arm, duration = all_of(dur_col)) %>%
+    filter(!is.na(duration)) %>%
+    mutate(arm = factor(arm, levels = c("Control", "Intervention")))
+
+y_cap <- as.numeric(quantile(plot_data$duration, 0.97))   # zoom, keep outliers in the test
+
+n_lab <- plot_data %>% count(arm) %>%
+    mutate(lab = paste0(arm, "\n(n = ", n, ")"))
+
+stats_lab <- plot_data %>%
+    group_by(arm) %>%
+    summarise(med = median(duration), q1 = quantile(duration, .25),
+              q3 = quantile(duration, .75), mn = mean(duration), .groups = "drop") %>%
+    mutate(lab = paste0("Median = ", round(med, 1),
+                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
+                        "\nMean = ", round(mn, 1)))
+
+n_above <- sum(plot_data$duration > y_cap)
+
+p_af <- ggplot(plot_data, aes(arm, duration, fill = arm)) +
+    geom_boxplot(width = 0.5, outliers = FALSE, alpha = 0.6) +
+    #geom_jitter(width = 0.10, height = 0, alpha = 0.18, size = 0.9) +
+    stat_summary(fun = mean, geom = "point", 
+                 shape = 23, size = 3, fill = "white") +
+    stat_compare_means(method = "wilcox.test", label = "p.format",
+                       label.x = 1.5, label.y = 200 * 0.97) +
+    geom_text(data = stats_lab, aes(x = arm, y = 180, label = lab),
+              inherit.aes = FALSE, size = 4, lineheight = 0.95, vjust = 1) +
+    scale_fill_manual(values = c("Control"      = "#4C9AA8",   # was salmon
+                                 "Intervention" = "#E4837B")) + # was teal
+    scale_x_discrete(labels = setNames(n_lab$lab, n_lab$arm)) +
+    coord_cartesian(ylim = c(0, 200)) +
+    labs(title = "A&F duration \nby study arm",
+         subtitle = "Box = median/IQR; \nwhite diamond = mean",
+         caption = paste0("Notes: Wilcoxon rank-sum test. ", n_above,
+                          " point(s) above \n", round(y_cap), " ", y_unit,
+                          " not shown but retained in the test."),
+         x = NULL, y = paste0("A&F duration (", y_unit, ")"), fill = NULL) +
+    theme_minimal(base_size = 13) +
+    theme(
+        plot.title    = element_text(face = "bold", hjust = 0.5),  # centered
+        plot.subtitle = element_text(hjust = 0.5),                 # centered
+        plot.caption  = element_text(hjust = 0.5, color = "grey40"),
+        legend.position = "none"
+    )
+
+## health talks ---------
+# ---- knobs 
+dur_col <- "health_talk_duration"    # <-- the A&F outcome; change if you mean a component step
+y_unit  <- "minutes"
+# y_cap set below from the data
+
+plot_data <- audit_feedback_costing_df %>%
+    filter(activity_type=="Health Talk") %>% 
+    select(arm, duration = all_of(dur_col)) %>%
+    filter(!is.na(duration)) %>%
+    mutate(arm = factor(arm, levels = c("Control", "Intervention")))
+
+y_cap <- as.numeric(quantile(plot_data$duration, 0.97))   # zoom, keep outliers in the test
+
+n_lab <- plot_data %>% count(arm) %>%
+    mutate(lab = paste0(arm, "\n(n = ", n, ")"))
+
+stats_lab <- plot_data %>%
+    group_by(arm) %>%
+    summarise(med = median(duration), q1 = quantile(duration, .25),
+              q3 = quantile(duration, .75), mn = mean(duration), .groups = "drop") %>%
+    mutate(lab = paste0("Median = ", round(med, 1),
+                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
+                        "\nMean = ", round(mn, 1)))
+
+n_above <- sum(plot_data$duration > y_cap)
+
+p_talk <- ggplot(plot_data, aes(arm, duration, fill = arm)) +
+    geom_boxplot(width = 0.5, outliers = FALSE, alpha = 0.6) +
+    #geom_jitter(width = 0.10, height = 0, alpha = 0.18, size = 0.9) +
+    stat_summary(fun = mean, geom = "point", 
+                 shape = 23, size = 3, fill = "white") +
+    stat_compare_means(method = "wilcox.test", label = "p.format",
+                       label.x = 1.5, label.y = 110 * 0.97) +
+    geom_text(data = stats_lab, aes(x = arm, y = 100, label = lab),
+              inherit.aes = FALSE, size = 4, lineheight = 0.95, vjust = 1) +
+    scale_x_discrete(labels = setNames(n_lab$lab, n_lab$arm)) +
+    scale_fill_manual(values = c("Control"      = "#4C9AA8",   # was salmon
+                                 "Intervention" = "#E4837B")) + # was teal
+    coord_cartesian(ylim = c(0, 110)) +
+    labs(title = "Health talk duration \nby study arm",
+         subtitle = "Box = median/IQR; \nwhite diamond = mean",
+         caption = paste0("Notes: Wilcoxon rank-sum test. ", n_above,
+                          " point(s) above \n", round(y_cap), " ", y_unit,
+                          " not shown but retained in the test."),
+         x = NULL, y = paste0("Health talk duration (", y_unit, ")"), fill = NULL) +
+    theme_minimal(base_size = 13) +
+    theme(
+        plot.title    = element_text(face = "bold", hjust = 0.5),  # centered
+        plot.subtitle = element_text(hjust = 0.5),                 # centered
+        plot.caption  = element_text(hjust = 0.5, color = "grey40"),
+        legend.position = "none"
+    )
+## pm+ supervision --------
+plot_data <- pm_plus_costing_df %>%
+    filter(pm_number == "PM+ Supervision") %>%
+    select(superv_duration) %>%
+    filter(!is.na(superv_duration))          
+
+y_unit <- "minutes"
+
+y_cap  <- as.numeric(quantile(plot_data$superv_duration, 0.97))
+
+stats_lab <- plot_data %>%
+    summarise(med = median(superv_duration),
+              q1  = quantile(superv_duration, .25),
+              q3  = quantile(superv_duration, .75),
+              mn  = mean(superv_duration)) %>%
+    mutate(lab = paste0("Median = ", round(med, 1),
+                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
+                        "\nMean = ", round(mn, 1)))
+
+n_above <- sum(plot_data$superv_duration > y_cap)
+
+p_supervision <- ggplot(plot_data, aes(x = "PM+ supervision", y = superv_duration)) +
+    geom_boxplot(width = 0.5, outliers = FALSE, alpha = 0.6, fill = "#E4837B") +
+    stat_summary(fun = mean, geom = "point",
+                 shape = 23, size = 3, fill = "white") +
+    geom_text(data = stats_lab,
+              aes(x = "PM+ supervision", y = 160, label = lab),  
+              inherit.aes = FALSE,
+              size = 4.5, lineheight = 0.95, vjust = 1) +
+    coord_cartesian(ylim = c(0, 160)) +                                 
+    labs(
+        title    = "PM+ supervision time \n(intervention arm)",              
+        subtitle = "Box = median/IQR; \nwhite diamond = mean",
+        caption  = paste0("Notes: ", n_above,
+                          " point(s) above ", round(y_cap), " ", y_unit,
+                          " not shown \nbut retained in the summary."),
+        x = NULL,
+        y = paste0("PM+ supervision time (", y_unit, ")")
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+        plot.title       = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle    = element_text(hjust = 0.5),
+        plot.caption     = element_text(hjust = 0.5, color = "grey40")
+    )
+
+library(patchwork)
+p_af + p_talk + p_supervision
