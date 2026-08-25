@@ -1600,6 +1600,68 @@ p_screen_all <- ggplot(stats, aes(x = mean_importance, y = mean_addressability))
   )
 
 p_screen_all
+
+### Companion table: per-barrier ratings, spread, and zone -----
+# n and median[IQR] per barrier per axis (respects the same NA handling as the plot)
+axis_summary <- long_data %>%
+  filter(type %in% c("bar", "add")) %>%
+  group_by(barrier, type) %>%
+  summarise(
+    n      = sum(!is.na(value_1)),
+    median = median(value_1, na.rm = TRUE),
+    q1     = quantile(value_1, 0.25, na.rm = TRUE),
+    q3     = quantile(value_1, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = type,
+    values_from = c(n, median, q1, q3)
+  ) %>%
+  rename(
+    n_importance      = n_bar,      n_addressability      = n_add,
+    median_importance = median_bar, median_addressability = median_add,
+    q1_importance     = q1_bar,     q1_addressability     = q1_add,
+    q3_importance     = q3_bar,     q3_addressability     = q3_add
+  )
+
+barrier_table <- stats %>%
+  left_join(axis_summary, by = "barrier") %>%
+  mutate(
+    zone = case_when(
+      mean_importance >= cutoff_importance &
+        mean_addressability >= cutoff_addressability ~ "Priority (Go)",
+      mean_importance >= cutoff_importance &
+        mean_addressability <  cutoff_addressability ~ "Important but hard",
+      mean_importance <  cutoff_importance &
+        mean_addressability >= cutoff_addressability ~ "Easy but lower value",
+      TRUE                                           ~ "Deprioritize"
+    ),
+    # flag barriers sitting on a cutoff line (zone is fragile)
+    near_cutoff = abs(mean_importance - cutoff_importance) < 0.05 |
+                  abs(mean_addressability - cutoff_addressability) < 0.05,
+    # readable one-line label (strip the newlines from barrier_detail)
+    barrier_label = gsub("\\s*\\n\\s*", " ", barrier_detail)
+  ) %>%
+  arrange(desc(mean_importance), desc(mean_addressability)) %>%
+  mutate(rank = row_number()) %>%
+  transmute(
+    rank,
+    barrier,
+    barrier_label,
+    zone,
+    near_cutoff,
+    importance      = sprintf("%.2f (%.2f)", mean_importance, sd_importance),
+    addressability  = sprintf("%.2f (%.2f)", mean_addressability, sd_addressability),
+    median_importance     = sprintf("%g [%g\u2013%g]", median_importance, q1_importance, q3_importance),
+    median_addressability = sprintf("%g [%g\u2013%g]", median_addressability, q1_addressability, q3_addressability),
+    sd_consensus    = round(sd_consensus, 2),
+    n_importance,
+    n_addressability
+  )
+
+barrier_table
+
+#write.csv(barrier_table, "barrier_table_panelA.csv", row.names = FALSE)
 ```
 
 
@@ -1827,6 +1889,65 @@ fig1
 # ggsave("Fig1_1200px.png",
 #         fig1,
 #         dpi=400, width = 8.5, height = 8.5, limitsize = F, bg = "white")
+
+# Companion table: per-strategy ratings, spread, and zone (Panel B) ------
+
+# n and median[IQR] per strategy per axis
+axis_summary_strat <- long_strat %>%
+  filter(type %in% c("stra", "diff")) %>%
+  group_by(strategy, type) %>%
+  summarise(
+    n      = sum(!is.na(value_1)),
+    median = median(value_1, na.rm = TRUE),
+    q1     = quantile(value_1, 0.25, na.rm = TRUE),
+    q3     = quantile(value_1, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = type,
+    values_from = c(n, median, q1, q3)
+  ) %>%
+  rename(
+    n_feasibility      = n_stra,      n_impact      = n_diff,
+    median_feasibility = median_stra, median_impact = median_diff,
+    q1_feasibility     = q1_stra,     q1_impact     = q1_diff,
+    q3_feasibility     = q3_stra,     q3_impact     = q3_diff
+  )
+
+strategy_table <- stats_strat %>%
+  left_join(axis_summary_strat, by = "strategy") %>%
+  mutate(
+    zone = case_when(
+      mean_impact >= cutoff_impact &
+        mean_feasibility >= cutoff_feasibility ~ "Priority (Go)",
+      mean_impact >= cutoff_impact &
+        mean_feasibility <  cutoff_feasibility ~ "High impact but hard",
+      mean_impact <  cutoff_impact &
+        mean_feasibility >= cutoff_feasibility ~ "Easy but lower impact",
+      TRUE                                     ~ "Deprioritize"
+    ),
+    near_cutoff = abs(mean_impact - cutoff_impact) < 0.05 |
+                  abs(mean_feasibility - cutoff_feasibility) < 0.05,
+    strategy_label = gsub("\\s*\\n\\s*", " ", strategy_detail)
+  ) %>%
+  arrange(desc(mean_impact), desc(mean_feasibility)) %>%
+  mutate(rank = row_number()) %>%
+  transmute(
+    rank,
+    strategy,
+    strategy_label,
+    zone,
+    near_cutoff,
+    impact       = sprintf("%.2f (%.2f)", mean_impact, sd_impact),
+    feasibility  = sprintf("%.2f (%.2f)", mean_feasibility, sd_feasibility),
+    median_impact      = sprintf("%g [%g-%g]", median_impact, q1_impact, q3_impact),
+    median_feasibility = sprintf("%g [%g-%g]", median_feasibility, q1_feasibility, q3_feasibility),
+    sd_consensus = round(sd_consensus, 2),
+    n_impact,
+    n_feasibility
+  )
+
+strategy_table
 ```
 
 ```{r subgroup analysis_strategy}
@@ -2032,6 +2153,62 @@ p_pm_barrier_all <- ggplot(stats_pm, aes(x = mean_importance, y = mean_addressab
   )
 
 p_pm_barrier_all
+
+axis_summary_pm <- long_data_pm %>%
+  filter(type %in% c("bar", "add")) %>%
+  group_by(barrier, type) %>%
+  summarise(
+    n      = sum(!is.na(value_1)),
+    median = median(value_1, na.rm = TRUE),
+    q1     = quantile(value_1, 0.25, na.rm = TRUE),
+    q3     = quantile(value_1, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = type,
+    values_from = c(n, median, q1, q3)
+  ) %>%
+  rename(
+    n_importance      = n_bar,      n_addressability      = n_add,
+    median_importance = median_bar, median_addressability = median_add,
+    q1_importance     = q1_bar,     q1_addressability     = q1_add,
+    q3_importance     = q3_bar,     q3_addressability     = q3_add
+  )
+
+pm_barrier_table <- stats_pm %>%
+  left_join(axis_summary_pm, by = "barrier") %>%
+  mutate(
+    zone = case_when(
+      mean_importance >= cutoff_importance_pm &
+        mean_addressability >= cutoff_addressability_pm ~ "Priority (Go)",
+      mean_importance >= cutoff_importance_pm &
+        mean_addressability <  cutoff_addressability_pm ~ "Important but hard",
+      mean_importance <  cutoff_importance_pm &
+        mean_addressability >= cutoff_addressability_pm ~ "Easy but lower value",
+      TRUE                                              ~ "Deprioritize"
+    ),
+    near_cutoff = abs(mean_importance - cutoff_importance_pm) < 0.05 |
+                  abs(mean_addressability - cutoff_addressability_pm) < 0.05,
+    barrier_label = gsub("\\s*\\n\\s*", " ", barrier_detail)
+  ) %>%
+  arrange(desc(mean_importance), desc(mean_addressability)) %>%
+  mutate(rank = row_number()) %>%
+  transmute(
+    rank,
+    barrier,
+    barrier_label,
+    zone,
+    near_cutoff,
+    importance      = sprintf("%.2f (%.2f)", mean_importance, sd_importance),
+    addressability  = sprintf("%.2f (%.2f)", mean_addressability, sd_addressability),
+    median_importance     = sprintf("%g [%g-%g]", median_importance, q1_importance, q3_importance),
+    median_addressability = sprintf("%g [%g-%g]", median_addressability, q1_addressability, q3_addressability),
+    sd_consensus    = round(sd_consensus, 2),
+    n_importance,
+    n_addressability
+  )
+
+pm_barrier_table
 ```
 
 ```{r subgroup analysis_pm}
@@ -2139,6 +2316,8 @@ p_pm_barrier_subgroups
 # ggsave("Fig_pm_barriers_subgroups_1200px.png",
 #         p_pm_barrier_subgroups,
 #         dpi=300, width = 12, height = 6, limitsize = F, bg = "white")
+
+
 ```
 
 ### Strategies
@@ -2257,6 +2436,67 @@ fig2
 # ggsave("Fig2_1200px.png",
 #         fig2,
 #         dpi=400, width = 8.5, height = 8.5, limitsize = F, bg = "white")
+
+# -----------------------------
+# Companion table: per-strategy ratings, spread, and zone (PM / treatment)
+# -----------------------------
+
+axis_summary_pm_strat <- long_pm_strat %>%
+  filter(type %in% c("stra", "diff")) %>%
+  group_by(strategy, type) %>%
+  summarise(
+    n      = sum(!is.na(value_1)),
+    median = median(value_1, na.rm = TRUE),
+    q1     = quantile(value_1, 0.25, na.rm = TRUE),
+    q3     = quantile(value_1, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = type,
+    values_from = c(n, median, q1, q3)
+  ) %>%
+  rename(
+    n_feasibility      = n_stra,      n_impact      = n_diff,
+    median_feasibility = median_stra, median_impact = median_diff,
+    q1_feasibility     = q1_stra,     q1_impact     = q1_diff,
+    q3_feasibility     = q3_stra,     q3_impact     = q3_diff
+  )
+
+pm_strategy_table <- stats_pm_strat %>%
+  left_join(axis_summary_pm_strat, by = "strategy") %>%
+  mutate(
+    zone = case_when(
+      mean_impact >= cutoff_pm_impact &
+        mean_feasibility >= cutoff_pm_feasibility ~ "Priority (Go)",
+      mean_impact >= cutoff_pm_impact &
+        mean_feasibility <  cutoff_pm_feasibility ~ "High impact but hard",
+      mean_impact <  cutoff_pm_impact &
+        mean_feasibility >= cutoff_pm_feasibility ~ "Easy but lower impact",
+      TRUE                                        ~ "Deprioritize"
+    ),
+    near_cutoff = abs(mean_impact - cutoff_pm_impact) < 0.05 |
+                  abs(mean_feasibility - cutoff_pm_feasibility) < 0.05,
+    strategy_label = gsub("\\s*\\n\\s*", " ", strategy_detail)
+  ) %>%
+  arrange(desc(mean_impact), desc(mean_feasibility)) %>%
+  mutate(rank = row_number()) %>%
+  transmute(
+    rank,
+    strategy,
+    strategy_label,
+    zone,
+    near_cutoff,
+    impact       = sprintf("%.2f (%.2f)", mean_impact, sd_impact),
+    feasibility  = sprintf("%.2f (%.2f)", mean_feasibility, sd_feasibility),
+    median_impact      = sprintf("%g [%g-%g]", median_impact, q1_impact, q3_impact),
+    median_feasibility = sprintf("%g [%g-%g]", median_feasibility, q1_feasibility, q3_feasibility),
+    sd_consensus = round(sd_consensus, 2),
+    n_impact,
+    n_feasibility
+  )
+
+pm_strategy_table
+    
 ```
 
 ```{r subgroup analysis_pm_strategy}
@@ -2473,6 +2713,66 @@ p_telepsy_barrier_all <- ggplot(stats_telepsy, aes(x = mean_importance, y = mean
   )
 
 p_telepsy_barrier_all
+
+# -----------------------------
+# Companion table: per-barrier ratings, spread, and zone (telepsychiatry)
+# -----------------------------
+
+axis_summary_telepsy <- long_telepsy %>%
+  filter(type %in% c("bar", "add")) %>%
+  group_by(barrier, type) %>%
+  summarise(
+    n      = sum(!is.na(value_1)),
+    median = median(value_1, na.rm = TRUE),
+    q1     = quantile(value_1, 0.25, na.rm = TRUE),
+    q3     = quantile(value_1, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = type,
+    values_from = c(n, median, q1, q3)
+  ) %>%
+  rename(
+    n_importance      = n_bar,      n_addressability      = n_add,
+    median_importance = median_bar, median_addressability = median_add,
+    q1_importance     = q1_bar,     q1_addressability     = q1_add,
+    q3_importance     = q3_bar,     q3_addressability     = q3_add
+  )
+
+telepsy_barrier_table <- stats_telepsy %>%
+  left_join(axis_summary_telepsy, by = "barrier") %>%
+  mutate(
+    zone = case_when(
+      mean_importance >= cutoff_telepsy_importance &
+        mean_addressability >= cutoff_telepsy_addressability ~ "Priority (Go)",
+      mean_importance >= cutoff_telepsy_importance &
+        mean_addressability <  cutoff_telepsy_addressability ~ "Important but hard",
+      mean_importance <  cutoff_telepsy_importance &
+        mean_addressability >= cutoff_telepsy_addressability ~ "Easy but lower value",
+      TRUE                                                   ~ "Deprioritize"
+    ),
+    near_cutoff = abs(mean_importance - cutoff_telepsy_importance) < 0.05 |
+                  abs(mean_addressability - cutoff_telepsy_addressability) < 0.05,
+    barrier_label = gsub("\\s*\\n\\s*", " ", barrier_detail)
+  ) %>%
+  arrange(desc(mean_importance), desc(mean_addressability)) %>%
+  mutate(rank = row_number()) %>%
+  transmute(
+    rank,
+    barrier,
+    barrier_label,
+    zone,
+    near_cutoff,
+    importance      = sprintf("%.2f (%.2f)", mean_importance, sd_importance),
+    addressability  = sprintf("%.2f (%.2f)", mean_addressability, sd_addressability),
+    median_importance     = sprintf("%g [%g-%g]", median_importance, q1_importance, q3_importance),
+    median_addressability = sprintf("%g [%g-%g]", median_addressability, q1_addressability, q3_addressability),
+    sd_consensus    = round(sd_consensus, 2),
+    n_importance,
+    n_addressability
+  )
+
+telepsy_barrier_table
 ```
 
 ```{r subgroup analysis_telepsy}
@@ -2696,6 +2996,66 @@ fig3
 # ggsave("Fig3_1200px.png",
 #         fig3,
 #         dpi=400, width = 8.5, height = 8.5, limitsize = F, bg = "white")
+
+# -----------------------------
+# Companion table: per-strategy ratings, spread, and zone (telepsychiatry)
+# -----------------------------
+
+axis_summary_telepsy_strat <- long_telepsy_strat %>%
+  filter(type %in% c("stra", "diff")) %>%
+  group_by(strategy, type) %>%
+  summarise(
+    n      = sum(!is.na(value_1)),
+    median = median(value_1, na.rm = TRUE),
+    q1     = quantile(value_1, 0.25, na.rm = TRUE),
+    q3     = quantile(value_1, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = type,
+    values_from = c(n, median, q1, q3)
+  ) %>%
+  rename(
+    n_feasibility      = n_stra,      n_impact      = n_diff,
+    median_feasibility = median_stra, median_impact = median_diff,
+    q1_feasibility     = q1_stra,     q1_impact     = q1_diff,
+    q3_feasibility     = q3_stra,     q3_impact     = q3_diff
+  )
+
+telepsy_strategy_table <- stats_telepsy_strat %>%
+  left_join(axis_summary_telepsy_strat, by = "strategy") %>%
+  mutate(
+    zone = case_when(
+      mean_impact >= cutoff_telepsy_impact &
+        mean_feasibility >= cutoff_telepsy_feasibility ~ "Priority (Go)",
+      mean_impact >= cutoff_telepsy_impact &
+        mean_feasibility <  cutoff_telepsy_feasibility ~ "High impact but hard",
+      mean_impact <  cutoff_telepsy_impact &
+        mean_feasibility >= cutoff_telepsy_feasibility ~ "Easy but lower impact",
+      TRUE                                             ~ "Deprioritize"
+    ),
+    near_cutoff = abs(mean_impact - cutoff_telepsy_impact) < 0.05 |
+                  abs(mean_feasibility - cutoff_telepsy_feasibility) < 0.05,
+    strategy_label = gsub("\\s*\\n\\s*", " ", strategy_detail)
+  ) %>%
+  arrange(desc(mean_impact), desc(mean_feasibility)) %>%
+  mutate(rank = row_number()) %>%
+  transmute(
+    rank,
+    strategy,
+    strategy_label,
+    zone,
+    near_cutoff,
+    impact       = sprintf("%.2f (%.2f)", mean_impact, sd_impact),
+    feasibility  = sprintf("%.2f (%.2f)", mean_feasibility, sd_feasibility),
+    median_impact      = sprintf("%g [%g-%g]", median_impact, q1_impact, q3_impact),
+    median_feasibility = sprintf("%g [%g-%g]", median_feasibility, q1_feasibility, q3_feasibility),
+    sd_consensus = round(sd_consensus, 2),
+    n_impact,
+    n_feasibility
+  )
+
+telepsy_strategy_table
 ```
 
 ```{r subgroup analysis_telepsy_strategy}
