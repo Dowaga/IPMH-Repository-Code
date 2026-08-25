@@ -19,7 +19,7 @@
 # Reference source codes & other dependencies: Use this section to reference other scripts and dependencies
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
-source("REDCap_datapull.R")
+source("data_import.R")
 
 ##### main database needed
 #Data close out survey 
@@ -31,22 +31,22 @@ source("REDCap_datapull.R")
 
 
 
-#time period for the data [2026-03-31, 2026-01-01]
-pm_all <- pm
-rct_ppw_all <- rct_ppw
-#time period for the data [2026-04-01, 2026-01-01]
-pm_all <- pm
-rct_ppw_all <- rct_ppw
-daily_closeout <- daily_closeout %>% 
-    filter(rct_dcr_date >= as.Date("2026-01-01") & rct_dcr_date <= as.Date("2026-03-31"))
+#time period for the data [2026-06-30, 2026-04-01]
+daily_closeout <- daily_closeout_df%>% 
+    filter(rct_dcr_date >= as.Date("2026-04-01") & rct_dcr_date <= as.Date("2026-06-30")) %>% 
+    mutate(rct_dcr_date = as.Date(rct_dcr_date))
+
 phq2_gad2_abstract <- phq2_gad2_abstract %>%
-    filter(screening_date >= as.Date("2026-01-01") & screening_date <= as.Date("2026-03-31"))
-rct_ppw <- rct_ppw %>% 
-    filter(clt_timestamp >= as.Date("2026-01-01") & clt_timestamp <= as.Date("2026-03-31"))
-pm <- pm %>% 
-    filter(pm_date >= as.Date("2026-01-01") & pm_date <= as.Date("2026-03-31"))
+    filter(screening_date >= as.Date("2026-04-01") & screening_date <= as.Date("2026-06-30"))
+
+rct_ppw <- ppw_rct_df %>% 
+    filter(clt_timestamp >= as.Date("2026-04-01") & clt_timestamp <= as.Date("2026-06-30"))
+
+pm <- pm_survey_df %>% 
+    filter(pm_date >= as.Date("2026-04-01") & pm_date <= as.Date("2026-06-30"))
+
 telepsych <- telepsych %>% 
-    filter(tele_date >= as.Date("2026-01-01") & tele_date <= as.Date("2026-03-31"))
+    filter(tele_date >= as.Date("2026-04-01") & tele_date <= as.Date("2026-06-30"))
 
 #uniform study site number for all datasets
 phq2_gad2_abstract <- phq2_gad2_abstract %>%
@@ -65,8 +65,14 @@ phq2_gad2_abstract$record_id <- str_replace(phq2_gad2_abstract$record_id, " ", "
 daily_closeout <- daily_closeout %>%
     mutate(rct_facility_name = str_replace(rct_facility_name, "Mirogi Heath Centre", "Mirogi Health Centre"))
 
-#1. PHQ2/GAD2 screening---------------
-
+#1. PHQ2/GAD2 screening--------------
+phq2_gad2_abstract <- phq2_gad2_abstract %>%
+    mutate(
+        across(
+            ends_with("_date"),
+            ~ as.Date(.x, format = "%Y-%m-%d")
+        )
+    )
 #1.1 cross checking the number ------------
 # method 1 - daily checking
 #get the total number of clients screened per facility per day using abstraction dataset
@@ -141,6 +147,7 @@ screening_rate_weekly <- phq2_gad2_abstract %>%
     group_by(study_site, week) %>%
     summarise(num_screened = n(), .groups = "drop")
 
+
 # Aggregate total ANC clients from daily closeout data
 total_anc_clients_weekly <- daily_closeout %>%
     mutate(week = floor_date(rct_dcr_date, "week", week_start = 1)) %>%
@@ -209,7 +216,8 @@ phq9_screening <- full_join(phq9_screening, n_part, by = c("clt_study_site" = "c
 
 #weekly data
 phq9_screening_weekly <- phq9_screening %>%
-    mutate(week = as.Date(floor_date(clt_timestamp, "week", week_start = 1))) %>%
+    mutate(clt_timestamp = as.Date(clt_timestamp),
+        week = as.Date(floor_date(clt_timestamp, "week", week_start = 1))) %>%
     group_by(clt_study_site, week) %>%
     summarise(
         `Weekly PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
@@ -221,12 +229,16 @@ phq9_screening_weekly <- phq9_screening %>%
 #monthly data
 #make phq9_screening have one row per day per facility
 phq9_screening_monthly <- phq9_screening %>%
-    mutate(month = format(clt_timestamp, "%Y-%m")) %>%
+    mutate(
+        clt_timestamp = ymd_hms(clt_timestamp),
+        month = format(clt_timestamp, "%Y-%m")
+    ) %>%
     group_by(clt_study_site, month) %>%
     summarise(
         `Monthly PHQ9/GAD7 screening` = sum(num_screened, na.rm = TRUE),
         `Monthly study participants` = sum(n_part, na.rm = TRUE),
-        `PHQ9/GAD7 monthly screening rate` = (`Monthly PHQ9/GAD7 screening` / `Monthly study participants`) * 100,
+        `PHQ9/GAD7 monthly screening rate` =
+            (`Monthly PHQ9/GAD7 screening` / `Monthly study participants`) * 100,
         .groups = "drop"
     )
 
@@ -276,7 +288,8 @@ phq9_high_scores <- rct_ppw_int %>%
     filter((score_phq9 >= 10 & score_phq9 <15 )| 
                (score_gad7 >= 10 & score_gad7 <15)) %>%
     filter(phq_dead == "not at all") %>% 
-    mutate(day = floor_date(clt_timestamp, "day")) %>%
+    mutate(clt_timestamp = as.Date(clt_timestamp),
+        day = floor_date(clt_timestamp, "day")) %>%
     group_by(clt_study_site, day) %>%
     summarise(total_high_scores = n(),
               .groups = "drop")
@@ -286,10 +299,11 @@ pm_referral <- rct_ppw_int %>%
     filter(abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes") %>% 
     mutate(clt_date = ymd(clt_date)) %>%
     #filter referral based on audit period
-  filter(between(clt_date, ymd("2026-01-01"), ymd("2026-03-31")))
+  filter(between(clt_date, ymd("2026-04-01"), ymd("2026-06-30")))
 
 pm_referral <- pm_referral %>%
-    mutate(day = floor_date(clt_timestamp, "day")) %>%
+    mutate(clt_timestamp = as.Date(clt_timestamp),
+        day = floor_date(clt_timestamp, "day")) %>%
     group_by(clt_study_site, day) %>%
     summarise(num_referred = n(), .groups = "drop")
 
@@ -355,7 +369,8 @@ tele_referral <- tele_referral %>%
 
 #monthly data
 monthly_referral_summary_tele <- tele_referral %>%
-    mutate(month = format(clt_timestamp, "%Y-%m")) %>%
+    mutate(clt_timestamp = as.Date(clt_timestamp),
+        month = format(clt_timestamp, "%Y-%m")) %>%
     group_by(clt_study_site, month) %>%
     summarise(
         `Monthly telepsych referral` = sum(num_referred, na.rm = TRUE),
@@ -381,7 +396,8 @@ pm_initiation <- pm %>%
     filter(ipmh_participant == "Yes") %>%
     select(pm_facility, pm_date, pm_ptid, pm_session, pm_explain, pm_adv,
            pm_stress, pm_prob, pm_activ, pm_social, pm_stay, pm_nonresponse, pm_psychlops) %>% 
-    mutate(month = format(pm_date, "%Y-%m")) 
+    mutate(pm_date = as.Date(pm_date),
+        month = format(pm_date, "%Y-%m")) 
 
 #calculate the number of participants per facility per month and pm_session == "Session 1"
 pm_summary_session1 <- pm_initiation %>%
@@ -429,11 +445,12 @@ pm_initiation_all_merge_session1 <- pm_initiation_all_merge_session1 %>%
     mutate(initiation_rate = num_initiated / num_referred * 100)
 
 #6. PM+ session completion---------------
-pm_completion <- pm_all %>%
+pm_completion <- pm %>%
     filter(ipmh_participant == "Yes") %>%
     select(pm_facility, pm_date, pm_ptid, pm_session, pm_explain, pm_adv,
            pm_stress, pm_prob, pm_activ, pm_social, pm_stay, pm_nonresponse, pm_psychlops) %>% 
-    mutate(month = format(pm_date, "%Y-%m"))
+    mutate(pm_date = as.Date(pm_date),
+        month = format(pm_date, "%Y-%m"))
 
 pm_completion_session1 <- pm_completion %>%
     filter(pm_session == "Session 1 content") %>%
@@ -476,7 +493,8 @@ tele_with_facility <- initiated_telepsych_df %>%
 
 #aggregate tele_with_facility by month
 telepsych_initiation <- tele_with_facility %>%
-    mutate(month = format(tele_date, "%Y-%m")) %>%
+    mutate(tele_date = as.Date(tele_date),
+        month = format(tele_date, "%Y-%m")) %>%
     group_by(study_site, month) %>%
     summarise(num_initiated = n(), .groups = "drop")
 
@@ -486,7 +504,8 @@ telepsych_initiation <- telepsych_initiation %>%
 
 #get denominator information from tele_referral and aggregate by month
 telepsych_referral <- tele_referral %>%
-    mutate(month = format(clt_timestamp, "%Y-%m")) %>%
+    mutate(clt_timestamp = as.Date(clt_timestamp),
+        month = format(clt_timestamp, "%Y-%m")) %>%
     group_by(clt_study_site, month) %>%
     summarise(num_referred = sum(num_referred, na.rm = TRUE), .groups = "drop")
 
