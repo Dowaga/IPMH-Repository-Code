@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1uYywr5RH84pG16fCYnMXSUpBlzWaVB8-0nEsJ3JaV2Q/edit?gid=351061477#gid=351061477"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1pM1-gxvIwHTT2KUm9Zy75-eRo1zNERUJznufM3jxBvM/edit?gid=1141083339#gid=1141083339"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
