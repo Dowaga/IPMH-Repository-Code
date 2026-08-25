@@ -213,7 +213,7 @@ pm_intervals <- pm_follow_up %>%
         pm_date = as.Date(pm_date)
     ) %>%
     arrange(pm_ptid, pm_session, pm_date) %>%
-    group_by(pm_ptid, pm_session) %>%
+    group_by(pm_ancid, pm_session) %>%
     mutate(
         round = row_number()  # round number within the same session
     ) %>%
