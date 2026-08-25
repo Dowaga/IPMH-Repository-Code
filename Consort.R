@@ -5,7 +5,7 @@
 # Consort Diagram for weekly report
 
 # Setup ------------------------------------------------------------------------
-data_freeze <- as.Date("2026-06-04")
+#data_freeze <- as.Date("2026-06-04")
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
@@ -252,8 +252,6 @@ consort_data <- screening_consent_df %>%
             TRUE ~ rct_other_reasons
         )
     )
-
-
 
 # Merge consort data with pm_df
 consort_data <- consort_data %>% 
