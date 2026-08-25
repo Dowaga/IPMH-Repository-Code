@@ -7,7 +7,7 @@ output: word_document
 
 ```{r setup, include=FALSE}
 rm(list = ls())
-
+data_freeze <- as.Date("2026-06-11")
 # read data
 source("Datateam_ipmh.R")
 source("Dependencies.R")
