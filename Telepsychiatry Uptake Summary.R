@@ -190,7 +190,7 @@ attendance_summary <- tele_dates %>%
 # Merge with referral + sessions summary
 ref_summary <- tele_dates %>%
     distinct(tele_ancid, .keep_all = TRUE) %>%
-    select(tele_ancid, tele) %>%
+    select(tele_ancid, clt_study_site, tele) %>%
     right_join(sessions_summary, by = "tele_ancid") %>%
     left_join(attendance_summary, by = "tele_ancid") %>% 
     mutate(tele = if_else(is.na(tele), "No", tele)) %>% 
@@ -310,6 +310,6 @@ tele_uptake_summary <- ref_summary %>%
     italicize_levels() %>%
     modify_caption("**Telepsychiatry Referral, Uptake, and Drug Prescription Summary**") %>%
     modify_footnote(update = list(all_stat_cols() ~ "Attendance defined as >=1 session attended")) %>%
-    as_gt()
+    gtsummary::as_gt()
 
 
