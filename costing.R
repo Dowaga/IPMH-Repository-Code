@@ -13,7 +13,7 @@ source("data_import.R")
 pacman::p_load(hms)
 
 # Set up data freeze time for this report
-data_freeze <- as.Date("2026-06-11") 
+#data_freeze <- as.Date("2026-06-11") 
 
 # load data
 rm(list = setdiff(ls(), c("costing_df")))
