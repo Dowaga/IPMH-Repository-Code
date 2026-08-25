@@ -140,14 +140,20 @@ pregnancy_outcomes_6week %>%
          filter(gestage_calculated > 50) %>%
          select(clt_ptid, med_lmp, tpnc_date, gestage_calculated)
 
-#table(pregnancy_outcomes_6week$gestage, useNA = "ifany")            
+
+# Count how many missed the visit (e.g., missing outcomes)
+missed_n <- pregnancy_outcomes_6week %>%
+    filter(is.na(tpnc_lb) & is.na(gestage) & is.na(tpnc_place) & is.na(tpnc_mode)) %>%
+    nrow()
+
+# table(pregnancy_outcomes_6week$gestage, useNA = "ifany")  
 
 table1 <- pregnancy_outcomes_6week %>%
     select(
         tpnc_lb,              # Live birth
-        gestage,         # Gestational age at birth
+        gestage,              # Gestational age at birth
         tpnc_place,           # Place of delivery
-        tpnc_mode            # Mode of delivery
+        tpnc_mode             # Mode of delivery
     ) %>%
     tbl_summary(
         label = list(
@@ -156,33 +162,45 @@ table1 <- pregnancy_outcomes_6week %>%
             tpnc_place ~ "Place of delivery",
             tpnc_mode ~ "Mode of delivery"
         ),
-        sort = list(all_categorical() ~ "frequency"), # Sort categorical levels by frequency in descending order
+        sort = list(all_categorical() ~ "frequency"),
         statistic = list(
             all_continuous() ~ "{median} ({p25}, {p75})",
             all_categorical() ~ "{n} ({p}%)"
         ),
-        missing = "no",# This removes missing values from the display
+        missing = "no",
         digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
+            all_continuous() ~ 1,
+            all_categorical() ~ c(0, 1)
         )
     ) %>%
     add_n() %>%
-    # convert from gtsummary object to gt object
     gtsummary::as_gt() %>%
-    # modify with gt functions
     gt::tab_header(
         title = "Pregnancy Outcome",
-        subtitle = "Table 1. Pregnancy Outcomes at 6 Weeks Follow-up") %>%
+        subtitle = "Table 1. Pregnancy Outcomes at 6 Weeks Follow-up"
+    ) %>%
     gt::tab_options(
         table.font.size = "medium",
-        data_row.padding = gt::px(1))
+        data_row.padding = gt::px(1)
+    ) %>%
+    gt::tab_source_note(
+        source_note = paste0(
+            "Note: ", missed_n,
+            " participants missed the visit, so their outcomes are not included."
+        )
+    )
+
 
 table1
 
 # Missed six weeks visit
 pregnancy_end_NA <- pregnancy_outcomes_6week %>% 
     filter(is.na(tpnc_ended))
+
+# Participants with pregnancy marked as ended with NAs wether live birth
+pregnancy_end_NA <- pregnancy_outcomes_6week %>% 
+    filter(!is.na(tpnc_ended) & is.na(tpnc_lb))
+
 
 # Infant outcomes at 6 weeks, 14 weeks, & 6 months postpartum --------------
 infant_outcomes <- rct_ppw_followup %>%
