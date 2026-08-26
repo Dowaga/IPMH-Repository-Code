@@ -1,0 +1,84 @@
+---
+title: "Field Team Data Report"
+author: "David Owaga"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+
+```{r setup, include=FALSE, warning = FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+rm(list = ls())
+
+# data_freeze <- as.Date("2026-07-03")
+# Reference source codes & other dependencies:
+source("dependencies.R")
+source("DataTeam_ipmh.R")
+#source("REDCap_datapull.R")
+source("data_import.R")
+```
+
+
+# Time and Motion 
+## Screening and Enrollment
+```{r Screening and enrollment, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+source("Costing.R")
+table_combined_summary
+```
+
+
+
+## PM Plus Supervision
+```{r PM+ supervision, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+source("Costing.R")
+ft_supervision
+
+```
+
+
+## PM+ Sessions Completed by Facility
+```{r Pm+Sessions, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+source("Costing.R")
+gt_session_table
+```
+
+
+## Audit & Feedback and Health Talks
+```{r audit & feedback, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+ft
+```
+
+
+# Retention
+## Overall Retention Summary
+```{r retention number source, echo=FALSE, message=FALSE, warning=FALSE}
+source("RCT Retention.R")
+gt_overall
+```
+
+## Six Weeks Retention per facility
+```{r Six weeks retention rates, echo=FALSE, message=FALSE, warning=FALSE}
+gt_6
+```
+
+## Fourteen Weeks Retention per facility
+```{r fourteen weeks retention rates, echo=FALSE, message=FALSE, warning=FALSE}
+gt_14
+```
+
+## Six Months Retention per facility
+```{r Six months retention rates, echo=FALSE, message=FALSE, warning=FALSE}
+gt_6m
+```
+
+# Enrollment
+## Overall Enrollment 
+```{r Summary of Study Enrollment by Facility, echo=FALSE, message=FALSE, warning=FALSE}
+source("Enrollment Progress.R")
+facility_summary
+
+```
+
+
+
