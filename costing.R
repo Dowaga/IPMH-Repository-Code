@@ -1275,6 +1275,9 @@ n_lab <- plot_data %>%
 n_above <- sum(plot_data$duration > y_cap)
 
 # --- NEW: per-arm median / IQR / mean, formatted for on-plot text ---
+library(ggtext)  # NEW: needed for markdown-formatted bold text in labels
+
+# --- NEW: per-arm median / IQR / mean, formatted for on-plot text ---
 stats_lab <- plot_data %>%
     group_by(arm) %>%
     summarise(
@@ -1284,10 +1287,9 @@ stats_lab <- plot_data %>%
         mn  = mean(duration),
         .groups = "drop"
     ) %>%
-    mutate(lab = paste0("Median = ", round(med, 1),
-                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
-                        "\nMean = ",  round(mn, 1)))
-
+    mutate(lab = paste0("**Median = ", round(med, 1), "**",   # CHANGED: wrapped median line in ** ** for bold
+                        "<br>IQR [", round(q1, 1), ", ", round(q3, 1), "]",  # CHANGED: \n -> <br> (richtext needs html line breaks)
+                        "<br>Mean = ",  round(mn, 1)))         # CHANGED: \n -> <br>
 
 ggplot(plot_data, aes(arm, duration, fill = arm)) +
     geom_boxplot(width = 0.5, outliers = F, alpha = 0.6) +
@@ -1297,15 +1299,16 @@ ggplot(plot_data, aes(arm, duration, fill = arm)) +
     stat_compare_means(method = "wilcox.test", label = "p.format",
                        label.x = 1.45,
                        label.y = y_cap * 0.94) +
-    # --- NEW: print the summary numbers above each box ---
-    geom_text(data = stats_lab,
-              aes(x = arm, y = 12.5, label = lab),
-              inherit.aes = FALSE,         
-              size = 4.5, lineheight = 0.95, vjust = 1) +
+    # --- NEW: print the summary numbers above each box (median line bold via markdown) ---
+    geom_richtext(data = stats_lab,                          # CHANGED: geom_text -> geom_richtext
+                  aes(x = arm, y = 12.5, label = lab),
+                  inherit.aes = FALSE,
+                  size = 4.5, lineheight = 0.95, vjust = 1,
+                  fill = NA, label.color = NA,                    # NEW: removes the default richtext background box and border
+                  label.padding = grid::unit(rep(0, 4), "pt")) +  # NEW: removes default padding so position matches old geom_text
     scale_fill_manual(values = c("Control"      = "#4C9AA8",   # was salmon
                                  "Intervention" = "#E4837B")) + # was teal
-
-scale_x_discrete(labels = setNames(n_lab$lab, n_lab$arm)) +
+    scale_x_discrete(labels = setNames(n_lab$lab, n_lab$arm)) +
     coord_cartesian(ylim = c(0, y_cap)) +
     labs(
         title    = "PHQ2/GAD2 screening time by study arm",
@@ -1338,10 +1341,9 @@ stats_lab <- plot_data %>%
               q1  = quantile(duration, .25),
               q3  = quantile(duration, .75),
               mn  = mean(duration)) %>%
-    mutate(lab = paste0("Median = ", round(med, 1),
-                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
-                        "\nMean = ", round(mn, 1)))
-
+    mutate(lab = paste0("**Median = ", round(med, 1), "**",   # CHANGED: wrapped median line in ** ** for bold
+                        "<br>IQR [", round(q1, 1), ", ", round(q3, 1), "]",  # CHANGED: \n -> <br>
+                        "<br>Mean = ", round(mn, 1)))          # CHANGED: \n -> <br>
 
 n_above <- sum(plot_data$duration > y_cap)
 
@@ -1349,25 +1351,28 @@ ggplot(plot_data, aes(x = "PHQ-9", y = duration)) +
     geom_boxplot(width = 0.5, outliers = FALSE, alpha = 0.6, fill = "#E4837B") +  
     stat_summary(fun = mean, geom = "point",
                  shape = 23, size = 3, fill = "white") +
-    geom_text(data = stats_lab,
-              aes(x = "PHQ-9", y = 38, label = lab),
-              inherit.aes = FALSE,
-              size = 4.5, lineheight = 0.95, vjust = 1) +
+    geom_richtext(data = stats_lab,                           # CHANGED: geom_text -> geom_richtext
+                  aes(x = "PHQ-9", y = 38, label = lab),
+                  inherit.aes = FALSE,
+                  size = 4.5, lineheight = 0.95, vjust = 1,
+                  fill = NA, label.color = NA,                     # NEW: removes default richtext background box and border
+                  label.padding = grid::unit(rep(0, 4), "pt")) +   # NEW: removes default padding so position matches old geom_text
     coord_cartesian(ylim = c(0, 39)) +
     labs(
-        title    = "PHQ-9 administration time \n (intervention arm)",
+        title    = "PHQ-9/GAD-7 administration time \n (intervention arm)",
         subtitle = "Box = median/IQR; white diamond = mean",
         caption  = paste0("Notes: ", n_above,
                           " point(s) above ", y_cap, " ", y_unit,
                           " not shown but \nretained in the summary."),
         x = NULL,
-        y = paste0("PHQ-9 administration time (", y_unit, ")")
+        y = paste0("PHQ-9/GAD-7 administration time (", y_unit, ")")
     ) +
     theme_minimal(base_size = 13) +
     theme(
         plot.title    = element_text(face = "bold", hjust = 0.5),  # centered
         plot.subtitle = element_text(hjust = 0.5),                 # centered
-        plot.caption  = element_text(hjust = 0.5, color = "grey40")# changed from hjust = 0 to 0.5
+        plot.caption  = element_text(hjust = 0.5, color = "grey40"),
+        axis.text.x   = element_blank()# changed from hjust = 0 to 0.5
     )
 
 ## ANC consultation duration boxplot ---------
@@ -1613,6 +1618,104 @@ ggplot(plot_data, aes(x = duration)) +
         plot.subtitle    = element_text(hjust = 0.5)                           # ADDED: drop minor grid
     )
 
+## PM+ and telepsychiatry side by side (box plot) --------------
+
+## --- PM+ box plot ---
+pm_box_data <- pm_sessions %>%
+    transmute(duration)
+
+y_cap_pm <- quantile(pm_box_data$duration, 0.97)
+n_above_pm <- sum(pm_box_data$duration > y_cap_pm)
+
+stats_lab_pm <- pm_box_data %>%
+    summarise(med = median(duration),
+              q1  = quantile(duration, .25),
+              q3  = quantile(duration, .75),
+              mn  = mean(duration)) %>%
+    mutate(lab = paste0("**Median = ", round(med, 1), "**",
+                        "<br>IQR [", round(q1, 1), ", ", round(q3, 1), "]",
+                        "<br>Mean = ",  round(mn, 1)))
+
+p_pm <- ggplot(pm_box_data, aes(x = "PM+", y = duration)) +
+    geom_boxplot(width = 0.5, outliers = FALSE, alpha = 0.6, fill = "#B5433A") +
+    stat_summary(fun = mean, geom = "point",
+                 shape = 23, size = 3, fill = "white") +
+    geom_richtext(data = stats_lab_pm,
+                  aes(x = "PM+", y = 145, label = lab),
+                  inherit.aes = FALSE,
+                  size = 4.5, lineheight = 0.95, vjust = 1,
+                  fill = NA, label.color = NA,
+                  label.padding = grid::unit(rep(0, 4), "pt")) +
+    coord_cartesian(ylim = c(0, 150)) +
+    labs(
+        title    = "PM+ session duration",
+        subtitle = "Box = median/IQR; white diamond = mean",
+        caption  = paste0("Notes: ", n_above_pm,
+                          " point(s) above ", round(y_cap_pm, 1),
+                          " minutes not shown but \nretained in the summary."),
+        x = NULL,
+        y = "Session duration (minutes)"
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+        plot.title    = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        plot.caption  = element_text(hjust = 0.5, color = "grey40"),
+        axis.text.x   = element_blank(),
+        axis.ticks.x  = element_blank()
+    )
+
+## --- Telepsychiatry box plot ---
+tele_box_data <- telepsychiatry_costing_df %>%
+    select(duration = tele_total_duration) %>%
+    filter(!is.na(duration)) %>%
+    mutate(duration = ifelse(duration < 0, NA, duration)) %>%
+    filter(!is.na(duration))
+
+y_cap_tele <- quantile(tele_box_data$duration, 0.97)
+n_above_tele <- sum(tele_box_data$duration > y_cap_tele)
+
+stats_lab_tele <- tele_box_data %>%
+    summarise(med = median(duration),
+              q1  = quantile(duration, .25),
+              q3  = quantile(duration, .75),
+              mn  = mean(duration)) %>%
+    mutate(lab = paste0("**Median = ", round(med, 1), "**",
+                        "<br>IQR [", round(q1, 1), ", ", round(q3, 1), "]",
+                        "<br>Mean = ",  round(mn, 1)))
+
+p_tele <- ggplot(tele_box_data, aes(x = "Telepsychiatry", y = duration)) +
+    geom_boxplot(width = 0.5, outliers = FALSE, alpha = 0.6, fill = "#B5433A") +
+    stat_summary(fun = mean, geom = "point",
+                 shape = 23, size = 3, fill = "white") +
+    geom_richtext(data = stats_lab_tele,
+                  aes(x = "Telepsychiatry", y = 200, label = lab),
+                  inherit.aes = FALSE,
+                  size = 4.5, lineheight = 0.95, vjust = 1,
+                  fill = NA, label.color = NA,
+                  label.padding = grid::unit(rep(0, 4), "pt")) +
+    coord_cartesian(ylim = c(30, 210)) +
+    labs(
+        title    = "Telepsychiatry session duration",
+        subtitle = "Box = median/IQR; white diamond = mean",
+        caption  = paste0("Notes: ", n_above_tele,
+                          " point(s) above ", round(y_cap_tele, 1),
+                          " minutes not shown but \nretained in the summary."),
+        x = NULL,
+        y = "Session duration (minutes)"
+    ) +
+    theme_minimal(base_size = 13) +
+    theme(
+        plot.title    = element_text(face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        plot.caption  = element_text(hjust = 0.5, color = "grey40"),
+        axis.text.x   = element_blank(),
+        axis.ticks.x  = element_blank()
+    )
+
+## --- combine side by side
+p_pm + p_tele
+
 ## audit and feedback ---------
 # ---- knobs 
 dur_col <- "af_total_duration"    # <-- the A&F outcome; change if you mean a component step
@@ -1634,9 +1737,9 @@ stats_lab <- plot_data %>%
     group_by(arm) %>%
     summarise(med = median(duration), q1 = quantile(duration, .25),
               q3 = quantile(duration, .75), mn = mean(duration), .groups = "drop") %>%
-    mutate(lab = paste0("Median = ", round(med, 1),
-                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
-                        "\nMean = ", round(mn, 1)))
+    mutate(lab = paste0("**Median = ", round(med, 1), "**",         # CHANGED: bold median
+                        "<br>IQR [", round(q1, 1), ", ", round(q3, 1), "]",  # CHANGED: \n -> <br>
+                        "<br>Mean = ", round(mn, 1))) 
 
 n_above <- sum(plot_data$duration > y_cap)
 
@@ -1647,8 +1750,10 @@ p_af <- ggplot(plot_data, aes(arm, duration, fill = arm)) +
                  shape = 23, size = 3, fill = "white") +
     stat_compare_means(method = "wilcox.test", label = "p.format",
                        label.x = 1.5, label.y = 200 * 0.97) +
-    geom_text(data = stats_lab, aes(x = arm, y = 180, label = lab),
-              inherit.aes = FALSE, size = 4, lineheight = 0.95, vjust = 1) +
+    geom_richtext(data = stats_lab, aes(x = arm, y = 180, label = lab),   # CHANGED: geom_text -> geom_richtext
+                  inherit.aes = FALSE, size = 4, lineheight = 0.95, vjust = 1,
+                  fill = NA, label.color = NA,                                # NEW: no background box/border
+                  label.padding = grid::unit(rep(0, 4), "pt")) +              # NEW: no default padding
     scale_fill_manual(values = c("Control"      = "#4C9AA8",   # was salmon
                                  "Intervention" = "#E4837B")) + # was teal
     scale_x_discrete(labels = setNames(n_lab$lab, n_lab$arm)) +
@@ -1688,9 +1793,9 @@ stats_lab <- plot_data %>%
     group_by(arm) %>%
     summarise(med = median(duration), q1 = quantile(duration, .25),
               q3 = quantile(duration, .75), mn = mean(duration), .groups = "drop") %>%
-    mutate(lab = paste0("Median = ", round(med, 1),
-                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
-                        "\nMean = ", round(mn, 1)))
+    mutate(lab = paste0("**Median = ", round(med, 1), "**",         # CHANGED: bold median
+                        "<br>IQR [", round(q1, 1), ", ", round(q3, 1), "]",  # CHANGED: \n -> <br>
+                        "<br>Mean = ", round(mn, 1)))                # CHANGED: \n -> <br>
 
 n_above <- sum(plot_data$duration > y_cap)
 
@@ -1701,8 +1806,10 @@ p_talk <- ggplot(plot_data, aes(arm, duration, fill = arm)) +
                  shape = 23, size = 3, fill = "white") +
     stat_compare_means(method = "wilcox.test", label = "p.format",
                        label.x = 1.5, label.y = 110 * 0.97) +
-    geom_text(data = stats_lab, aes(x = arm, y = 100, label = lab),
-              inherit.aes = FALSE, size = 4, lineheight = 0.95, vjust = 1) +
+    geom_richtext(data = stats_lab, aes(x = arm, y = 100, label = lab),   # CHANGED: geom_text -> geom_richtext
+                  inherit.aes = FALSE, size = 4, lineheight = 0.95, vjust = 1,
+                  fill = NA, label.color = NA,                                # NEW: no background box/border
+                  label.padding = grid::unit(rep(0, 4), "pt")) +              # NEW: no default padding
     scale_x_discrete(labels = setNames(n_lab$lab, n_lab$arm)) +
     scale_fill_manual(values = c("Control"      = "#4C9AA8",   # was salmon
                                  "Intervention" = "#E4837B")) + # was teal
@@ -1720,6 +1827,7 @@ p_talk <- ggplot(plot_data, aes(arm, duration, fill = arm)) +
         plot.caption  = element_text(hjust = 0.5, color = "grey40"),
         legend.position = "none"
     )
+
 ## pm+ supervision --------
 plot_data <- pm_plus_costing_df %>%
     filter(pm_number == "PM+ Supervision") %>%
@@ -1735,9 +1843,9 @@ stats_lab <- plot_data %>%
               q1  = quantile(superv_duration, .25),
               q3  = quantile(superv_duration, .75),
               mn  = mean(superv_duration)) %>%
-    mutate(lab = paste0("Median = ", round(med, 1),
-                        "\nIQR [", round(q1, 1), ", ", round(q3, 1), "]",
-                        "\nMean = ", round(mn, 1)))
+    mutate(lab = paste0("**Median = ", round(med, 1), "**",         # CHANGED: bold median
+                        "<br>IQR [", round(q1, 1), ", ", round(q3, 1), "]",  # CHANGED: \n -> <br>
+                        "<br>Mean = ", round(mn, 1))) 
 
 n_above <- sum(plot_data$superv_duration > y_cap)
 
@@ -1745,10 +1853,12 @@ p_supervision <- ggplot(plot_data, aes(x = "PM+ supervision", y = superv_duratio
     geom_boxplot(width = 0.5, outliers = FALSE, alpha = 0.6, fill = "#E4837B") +
     stat_summary(fun = mean, geom = "point",
                  shape = 23, size = 3, fill = "white") +
-    geom_text(data = stats_lab,
-              aes(x = "PM+ supervision", y = 160, label = lab),  
-              inherit.aes = FALSE,
-              size = 4.5, lineheight = 0.95, vjust = 1) +
+    geom_richtext(data = stats_lab,                                       # CHANGED: geom_text -> geom_richtext
+                  aes(x = "PM+ supervision", y = 160, label = lab),  
+                  inherit.aes = FALSE,
+                  size = 4.5, lineheight = 0.95, vjust = 1,
+                  fill = NA, label.color = NA,                                # NEW: no background box/border
+                  label.padding = grid::unit(rep(0, 4), "pt")) +              # NEW: no default padding
     coord_cartesian(ylim = c(0, 160)) +                                 
     labs(
         title    = "PM+ supervision time \n(intervention arm)",              
@@ -1765,6 +1875,5 @@ p_supervision <- ggplot(plot_data, aes(x = "PM+ supervision", y = superv_duratio
         plot.subtitle    = element_text(hjust = 0.5),
         plot.caption     = element_text(hjust = 0.5, color = "grey40")
     )
-
 library(patchwork)
 p_af + p_talk + p_supervision
