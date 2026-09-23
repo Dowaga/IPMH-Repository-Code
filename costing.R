@@ -1235,14 +1235,14 @@ audit_feedback_costing_df %>%
     
     
 # Create Word doc and add both
-doc <- read_docx()%>%
-    body_add_par("PM+ Supervision Per Facility", style = "heading 1") %>%
-    body_add_flextable(ft_supervision) %>%
-    body_add_par("Audit and Feedback Designation", style = "heading 1") %>%
-    body_add_flextable(ft_designation) %>%
-    body_add_par("") %>%  # Spacer
-        body_add_flextable(ft)%>%
-    body_add_par("") 
+# doc <- read_docx()%>%
+#     body_add_par("PM+ Supervision Per Facility", style = "heading 1") %>%
+#     body_add_flextable(ft_supervision) %>%
+#     body_add_par("Audit and Feedback Designation", style = "heading 1") %>%
+#     body_add_flextable(ft_designation) %>%
+#     body_add_par("") %>%  # Spacer
+#         body_add_flextable(ft)%>%
+#     body_add_par("") 
 
 # # Save Word file
 # print(
