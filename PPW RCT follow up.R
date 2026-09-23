@@ -220,6 +220,12 @@ hiv_status <- rct_ppw_baseline %>%
 infant_outcomes <- infant_outcomes %>% 
     left_join(hiv_status, by = "clt_ptid")
 
+# Check: 
+status <- infant_outcomes %>% 
+    filter(med_pastdiag___2 == "Checked") %>% 
+    filter(is.na(io_ihiv)) %>% 
+    filter(visit_type == "6 Weeks")
+
 # 6 Weeks Outcome----
 ## Filter PTIDs of none-reactive women with infant HIV status
 infant_hiv_status_QCs <- infant_outcomes %>% 
