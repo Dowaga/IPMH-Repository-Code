@@ -17,25 +17,25 @@ theme_update(plot.title = element_text(hjust = 0.5))
 
 ## Figure 1: Enrollment progress since the beginning of the study to today
 enrollment_progress <- screening_consent_df %>% 
-    filter(rct_enrolling == "Yes"| latest_consent == 
-               'Yes') %>% 
-    select(study_site, consent_date_auto, consent_date_auto_v2)
+    filter(rct_eligible == "1"& rct_enrolling == "Yes")%>% 
+    select(study_site, record_id, consent_date, consent_date_v2, 
+           date_consented, date_consented_v2)
 
 
 ## 
 enrollment_progress <- enrollment_progress %>%
     mutate(
-        consent_date_auto = coalesce(consent_date_auto, consent_date_auto_v2)
-    ) %>%
-    select(study_site, consent_date_auto)
+        consent_date= coalesce(date_consented, date_consented_v2)) %>%
+    select(record_id, study_site, consent_date)
+
 
 ## Convert consent_date_auto column to date format
 enrollment_progress <- enrollment_progress %>%
-    mutate(consent_date_auto = as.Date(consent_date_auto, origin = "1899-12-30"))
+    mutate(consent_date = as.Date(consent_date, origin = "1899-12-30"))
 
 # Aggregate weekly enrollments per site
 weekly_count <- enrollment_progress %>%
-    mutate(week = floor_date(consent_date_auto, "week", week_start = 1)) %>%  # Group by week
+    mutate(week = floor_date(consent_date, "week", week_start = 1)) %>%  # Group by week
     group_by(study_site, week) %>%
     summarise(enrollment_count = n(), .groups = "drop")  # Count enrollments
 
@@ -112,6 +112,12 @@ target_reached_50 <- total_enrollment %>%
 target_reached_75 <- total_enrollment %>%
     mutate(week = format(as.Date(week), "%b %d, %Y"))%>% 
     filter(cumulative_enrollment >= 2228) %>%
+    slice(1) %>%
+    pull(week)
+
+target_reached_100 <- total_enrollment %>%
+    mutate(week = format(as.Date(week), "%b %d, %Y"))%>% 
+    filter(cumulative_enrollment >= 2970) %>%
     slice(1) %>%
     pull(week)
 
