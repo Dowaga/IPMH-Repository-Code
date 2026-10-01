@@ -1,4 +1,4 @@
-# Header ------------------------------------------------------------------
+# Header -----------------------------------------------------------------------
 
 # Author(s): Dowaga
 # Date: August 25, 2026
@@ -11,6 +11,7 @@ rm(list = ls())
 source("Dependencies.R")
 source("DataTeam_ipmh.R")
 source("data_import.R")
+
 
 ###############################################################
 # 1. only keep the databases we need----
@@ -79,7 +80,7 @@ demographics_df <- demographics_df %>%
             TRUE ~ NA_real_
         )
     )
-
+# look at the number of those who respondent (Don't know of No answer)----
 
 tabyl(demographics_df$dem_current_partner_num)
 
@@ -96,6 +97,7 @@ demographics_df <- demographics_df %>%
             dem_maritalstat %in% c("Prefer not to answer", NA) ~ NA_real_,
             TRUE ~ 0)
     )
+
 
 # Check distribution of binary marital status (1 = married, 0 = not married, NA = missing/prefer not to answer)
 tabyl(demographics_df$dem_maritalstat_num)
@@ -140,7 +142,7 @@ demographics_df <- demographics_df %>%
         )
     )
 
-
+# Check partners financial support for those having partners----
 demographics_df %>%
     filter(dem_current_partner_num == 1) %>%
     tabyl(dem_partner_financial)
@@ -177,7 +179,7 @@ demographics_df <- demographics_df %>%
         )
     )
 
-# Check
+# Check is resides with partner----
 demographics_df %>%
     filter(dem_current_partner_num == 1) %>%
     tabyl(dem_partner_residence_num)
@@ -198,22 +200,27 @@ demographics_df <- demographics_df %>%
 demographics_df %>%
     tabyl(current_school_num)
 
-# Check distribution of number of years completed in school
+# Check distribution of number of years completed in school----
 demographics_df %>%
     tabyl(dem_school)
 
-# Schooling vs. age: Years in school greater than age
+# Check: Schooling vs. age:- Years in school greater than age----
 school_age <- demographics_df %>% 
     filter(dem_school > dem_age)
 
-# Schooling vs. age: Years in school should not exceed age minus 4
-school_age <- demographics_df %>% 
+# Check: Schooling vs. age:- Years in school should not exceed age minus 4----
+schooling_age_mismatch <- demographics_df %>% 
     filter(dem_school > (dem_age - 4))
 
+# Check those whose schooling years exceeds age----
+school_years_exceed_age <- demographics_df %>% 
+    filter(dem_school > (dem_age - 4)) %>% 
+    select(clt_ptid, dem_school, dem_age) %>% 
+    filter(dem_school > dem_age)
 
-#filter those who took > 24 in school
+# filter those who took > 19 in school
 more_schooling <- demographics_df %>%
-    filter(dem_school > 24)
+    filter(dem_school > 19)
 
 ################################################################################
 # 12. Recoding regular employment
@@ -228,12 +235,16 @@ demographics_df <- demographics_df %>%
         )
     )
 
-# Check distribution of regular employment
+# check employment status---
+demographics_df %>% 
+    count(dem_employment)
+
+# Check distribution of regular employment number assigned----
 demographics_df %>%
     tabyl(dem_regular_num)
 
-# Check those who are currently in school & regular employment
-schol <- demographics_df %>% 
+# Check those who are currently in school & in regular employment
+school_employed <- demographics_df %>% 
     filter(current_school_num == 1) %>% 
     filter(dem_regular_num == 1)
 
@@ -247,6 +258,10 @@ demographics_df %>%
 demographics_df %>%
     tabyl(dem_houserooms)
 
+# Check houses that does have a room----
+no_rooms <- demographics_df %>% 
+    filter(dem_houserooms <1)
+
 # Distribution of people sleeping in same house as respondent----
 demographics_df %>% 
     tabyl(dem_housesleep)
@@ -254,15 +269,28 @@ demographics_df %>%
 
 # more people sleeping in house than household size----
 household_vs_sleep_check <- demographics_df %>% 
-    filter(dem_housesleep > dem_household_num)
+    filter(dem_housesleep > dem_household_num) %>% 
+    select(clt_ptid, dem_household_num, dem_housesleep, dem_houserooms)
 
+################################################################################
+# 13. overcrowded_sleeping: Flag households where sleeping arrangements exceed
+# threshold (>3 persons per sleeping room).
+# Value = 1 if overcrowded, 0 if not, NA if missing data.
 
+################################################################################
+demographics_df <- demographics_df %>%
+    mutate(
+        overcrowded_sleeping = if_else(dem_housesleep / dem_houserooms > 3, 1, 0, missing = NA_real_))
+
+demographics_df %>% 
+    tabyl(overcrowded_sleeping)
 
 ###########################################################################
-# 13. Clean Demographic Dataset
+# 14. Clean Demographic Dataset
 ########################################################################
 
 demographic_clean_df <- demographics_df %>% 
     select(clt_ptid, dem_age, dem_maritalstat_num, dem_current_partner_num, 
            dem_maritalstat_num, dem_partner_father_num, dem_partner_support_num,
-           dem_partner_residence_num,current_school_num, dem_regular_num)
+           dem_partner_residence_num,current_school_num, dem_regular_num, 
+           overcrowded_sleeping)
