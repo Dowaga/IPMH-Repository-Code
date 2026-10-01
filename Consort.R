@@ -289,10 +289,12 @@ consort_data <- consort_data %>%
 consort_data <- consort_data %>% 
     left_join(fourthvisit, by = c("partipant_id" = "clt_ptid"))
 
+
 # Merge consort data with pm_df
 consort_data <- consort_data %>% 
     left_join(pm_df, by = c("partipant_id"="pm_ptid"))
 
+# Bind ANC attendees
 consort_data <- bind_rows(anc_attendees_df, consort_data)
 
 
