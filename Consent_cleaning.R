@@ -13,7 +13,7 @@ source("data_import.R")
 source("DataTeam_ipmh.R")
 
 # Set up data freeze time for this report
-data_freeze <- as.Date("2026-08-18") 
+#data_freeze <- as.Date("2026-08-18") 
 
 ###############################################################
 # 1. only keep the databases we need
@@ -80,7 +80,7 @@ consent_df <- enrolling_raw_df %>%
     )
 
 ####################################################################
-# 3. Consent version completed
+# 4. Consent version completed
 ####################################################################
 
 consent_df <- consent_df %>%
@@ -91,8 +91,9 @@ consent_df <- consent_df %>%
         
         v60_complete = !is.na(ipmh_rct_enrollment_consent_v60_complete) &
             ipmh_rct_enrollment_consent_v60_complete == "Complete")
+
 ####################################################################
-# 3. Consent version Status
+# 5. Consent version Status
 ####################################################################
 consent_df <-consent_df %>% 
     mutate(
@@ -103,13 +104,14 @@ consent_df <-consent_df %>%
             TRUE ~ "No Completed Consent"
         )
     )
+
 # Check participants who should have been re-consented
 reconsent_df <- consent_df %>% 
     filter(consent_status == "V5.0 Only")
 
 
 #########################################################################
-# 4. Create a unified agreeing to participate column:
+# 6. Create a unified agreeing to participate column:
 ########################################################################
 consent_df <- consent_df %>%
     mutate(
@@ -124,7 +126,7 @@ participation_status <- consent_df %>%
 
         
 #########################################################################
-# 5. Create a unified agreeing to be re-contacted for this study column:
+# 7. Create a unified agreeing to be re-contacted for this study column:
 ########################################################################
 consent_df <- consent_df %>% 
     mutate(
@@ -137,8 +139,9 @@ consent_df <- consent_df %>%
 recontact_status <- consent_df %>% 
     tabyl(re_contacted)
 
+
 #########################################################################
-# 6. Create a unified agreeing to be re-contacted for future studies column:
+# 8. Create a unified agreeing to be re-contacted for future studies column:
 ########################################################################
 consent_df <- consent_df %>% 
     mutate(
@@ -152,7 +155,7 @@ fu_contact_status <- consent_df %>%
     tabyl(future_contact)
 
 #########################################################################
-# 7. Create a unified first name column:
+# 9. Create a unified first name column:
 ########################################################################
 consent_df <- consent_df %>% 
     mutate(
@@ -279,7 +282,7 @@ consent_df <- consent_df %>%
         ))
 
 #########################################################################
-# 16. Create a unified re-consent date:
+# 17. Create a unified re-consent date:
 ######################################################################## 
 consent_df <- consent_df %>% 
     mutate(
@@ -315,6 +318,48 @@ same_date_errors <- consent_df %>%
 ########################################################################
 
 consent_clean_df <- consent_df %>% 
-    select(participant_id, participate, re_contacted,
-           future_contact, consent_status, )
+    select(participant_id, original_consent_date, participate, 
+           re_contacted,future_contact, consent_status)
+
+
+after14_sept <- consent_clean_df %>%
+    filter(original_consent_date > ymd("2026-09-14"))
+
+
+# First Enrollment Date
+first_enrollment <- consent_clean_df %>%
+    pull(original_consent_date) %>%  # Extract the enrollment_date column
+    min(na.rm = TRUE)     # Find the minimum date
+
+# Last Enrollment Date
+last_enrollment <- consent_clean_df %>%
+    pull(original_consent_date) %>%  # Extract the enrollment_date column
+    max(na.rm = TRUE)     # Find the maximum date
+
+###########
+enrolled_df <- consent_clean_df %>%
+    arrange(original_consent_date) %>% 
+    mutate(cumulative_enrollment = row_number())
+
+# Define thresholds
+thresholds <- c(
+  "25%" = 743,
+  "50%" = 1486,
+  "75%" = 2228,
+  "100%" = 2970
+)
+
+# Function to get the first date a threshold is reached
+get_target_date <- function(df, threshold) {
+  df %>%
+    mutate(week = format(as.Date(week), "%b %d, %Y")) %>%
+    filter(cumulative_enrollment >= threshold) %>%
+    slice(1) %>%
+    pull(week)
+}
+
+# Apply function to each threshold
+milestone_dates <- sapply(thresholds, function(x) get_target_date(total_enrollment, x))
+
+milestone_dates
 
