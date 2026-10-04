@@ -63,6 +63,10 @@ screening_consent_df <- read.csv(paste0(ipmh_filepath,
                                         "/Data/2. Consenting database/RCT_PPW_consenting_", 
                                         file_date, ".csv", sep=""))
 
+screening_consent_hcw_df <- read.csv(paste0(ipmh_filepath, 
+                                            "/Data/2. Consenting database/RCT_HCW_consenting_", 
+                                            file_date, ".csv", sep=""))
+
 pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_", 
                                 file_date, ".csv", sep="" ))
 
