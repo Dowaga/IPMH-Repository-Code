@@ -91,3 +91,6 @@ aim1qual_demo_df  <- read.csv(paste0(ipmh_filepath, "/Data/3. Aim 1 qualitative 
 
 aim1quant_df <- read.csv(paste0(ipmh_filepath, "/Data/4. Aim 1 quantitative data/Aim1_quant_data_", 
                                   file_date, ".csv", sep=""))
+
+hcw_is_df <- read.csv(paste0(ipmh_filepath, "/Data/5. RCT HCW data/RCT_HCW_", 
+                             file_date, ".csv", sep=""))
