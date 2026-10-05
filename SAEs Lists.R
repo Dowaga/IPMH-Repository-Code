@@ -234,6 +234,9 @@ clean_sae_df <- clean_sae_df %>%
             death_type == "Maternal Death" &
                 str_detect(ae_narrative, regex("abdominal pain.*(emergency|urgent)|intraoperative|cesarean", ignore_case = TRUE)) ~
                 "Intraoperative complication during CS",
+            
+            death_type == "Maternal Death" &
+                str_detect(ae_narrative, regex("C-section surgery", ignore_case = TRUE)) ~ "Intraoperative complication during CS",
             TRUE ~ NA_character_
         )
     )
