@@ -63,6 +63,10 @@ screening_consent_df <- read.csv(paste0(ipmh_filepath,
                                         "/Data/2. Consenting database/RCT_PPW_consenting_", 
                                         file_date, ".csv", sep=""))
 
+screening_consent_hcw_df <- read.csv(paste0(ipmh_filepath, 
+                                            "/Data/2. Consenting database/RCT_HCW_consenting_", 
+                                            file_date, ".csv", sep=""))
+
 pm_survey_df <- read.csv(paste0(ipmh_filepath, "/Data/7. RCT admin data/PM_", 
                                 file_date, ".csv", sep="" ))
 
@@ -87,3 +91,6 @@ aim1qual_demo_df  <- read.csv(paste0(ipmh_filepath, "/Data/3. Aim 1 qualitative 
 
 aim1quant_df <- read.csv(paste0(ipmh_filepath, "/Data/4. Aim 1 quantitative data/Aim1_quant_data_", 
                                   file_date, ".csv", sep=""))
+
+hcw_is_df <- read.csv(paste0(ipmh_filepath, "/Data/5. RCT HCW data/RCT_HCW_", 
+                             file_date, ".csv", sep=""))
