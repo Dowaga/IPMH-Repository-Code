@@ -9,6 +9,7 @@
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
+data_freeze <- as.Date("2026-10-20")
 
 ae_df <- ppw_sae_df %>% 
     select(record_id, redcap_repeat_instance, starts_with("ae_"), 
