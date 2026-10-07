@@ -14,7 +14,7 @@ source("data_import.R")
 gs4_auth()
 
 # Your Google Sheet ID or URL
-sheet_id <- "https://docs.google.com/spreadsheets/d/1pM1-gxvIwHTT2KUm9Zy75-eRo1zNERUJznufM3jxBvM/edit?gid=1141083339#gid=1141083339"  # or use full URL
+sheet_id <- "https://docs.google.com/spreadsheets/d/1qOQTI62qFtLMGHWrsiI0OsbWSDbiQBXK-EJ_RBrf6iw/edit?gid=1170966687#gid=1170966687"  # or use full URL
 
 # Get all sheet names
 sheet_names <- sheet_properties(sheet_id)$name
@@ -131,6 +131,8 @@ all_deliveries <- all_deliveries %>%
       mo6_window_close = delivery_date + weeks(30)
    )
 
+
+
 # Read PPW RCT Database and extracted those who attended their visits
 visits <- ppw_rct_df %>% 
     filter(
@@ -139,7 +141,8 @@ visits <- ppw_rct_df %>%
         clt_visit %in% c("6 weeks post-partum", 
                          "14 weeks post-partum", 
                          "6 months post-partum")
-    )
+    ) %>% 
+    select(record_id, redcap_event_name, clt_date, clt_visit, mv_visit )
 
 attendance_df <- visits %>%
     mutate(
@@ -170,6 +173,7 @@ attendance_df <- visits %>%
 all_deliveries <- all_deliveries %>% 
     mutate(ptid = as.integer(ptid)) %>% 
     left_join(attendance_df, by = c("ptid" = "record_id"))
+
 
 # 6Wks Visit:----
 ## NA, window closed; no data, missed visit not filled.
@@ -215,6 +219,7 @@ beyond_window <- all_deliveries %>%
 
 
 # Retention----
+
 #### 6 Wks Overall retention
 wk6_overall_retention <- all_deliveries %>%
     #group_by(Facility) %>% 
@@ -333,63 +338,7 @@ ft_overall <- flextable(overall_retention_tbl) %>%
         Percentage_attended = "Percentage Attended (%)"
     )
 
-# Filter enrollments since 2026-02-06
-enrollments_filtered <- ppw_rct_df %>%
-    filter(clt_date >= as.Date("2026-01-06")) %>% 
-    filter(clt_visit == "Enrollment")
 
-facility_list <- ppw_rct_df %>%
-    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
-    distinct(Facility = clt_study_site)
-
-# Summarize actual enrollments
-enrollment_counts <- enrollments_filtered %>%
-    mutate(clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site)) %>%
-    group_by(Facility = clt_study_site) %>%
-    summarise(Enrolled = n(), .groups = "drop")
-
-
-# Calculate days active (same for all facilities)
-days_active <- sum(!weekdays(seq.Date(as.Date("2026-01-06"), 
-                                      Sys.Date(), by = "day")) %in% c("Saturday", "Sunday"))
-
-# Merge and compute expected + gap
-enrollment_summary <- facility_list %>%
-    left_join(enrollment_counts, by = "Facility") %>%
-    mutate(
-        Enrolled = replace_na(Enrolled, 0),
-        Expected = days_active,
-        `Enrollment Gap` = Enrolled - Expected
-    ) %>%
-    arrange(desc(Enrolled)) %>% 
-    select(Facility, Expected, Enrolled, `Enrollment Gap`) %>%
-    adorn_totals()
-
-
-enrollment <- enrollment_summary %>%
-    gt() %>%
-    tab_header(
-        title = md("**Enrollment Performance by Facility**"),
-        subtitle = "Target: 1 enrollment per day per Facility since 22 Sept 2025"
-    ) %>%
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_column_labels(everything())
-    ) %>%
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_body(rows = Facility == "Total")
-    ) %>%
-    fmt_number(
-        columns = c(`Expected`, `Enrolled`, `Enrollment Gap`),
-        decimals = 0
-    ) %>%
-    tab_options(
-        table.font.size = "small",
-        data_row.padding = px(4)
-    )
-
-enrollment
 
 # Change to flextables
 ft_6_overall <- flextable(wk6_overall_retention)
@@ -397,18 +346,7 @@ ft_14_overall  <- flextable(wk14_overall_retention)
 ft_6 <- flextable(wk6_facility_retention)
 ft_14  <- flextable(wk14_facility_retention)
 ft_6m <- flextable(six_mths_facility_retention)
-ft_enrollment <- enrollment_summary %>%
-    flextable() %>%
-    set_header_labels(
-        Facility = "Facility",
-        Expected = "Expected",
-        Enrolled = "Enrolled",
-        `Enrollment Gap` = "Enrollment Gap"
-    ) %>%
-    bold(part = "header") %>%
-    bold(i = ~ Facility == "Total", bold = TRUE) %>%
-    autofit() %>%
-    fontsize(size = 9, part = "all")
+
 
 # Create Word doc and add both
 
@@ -438,179 +376,1091 @@ gt_6m <- six_mths_facility_retention %>%
     gt() %>%
     tab_header(title = "Six Months Retention Summary")
 
-gt_enrollment <- enrollment_summary %>% 
-    gt() %>% 
-    cols_label(
-        Facility = "Facility",
-        Expected = "Expected",
-        Enrolled = "Enrolled",
-        `Enrollment Gap` = "Enrollment Gap"
-    ) %>% 
-    # Bold header
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_column_labels(everything())
-    ) %>% 
-    # Bold total row
-    tab_style(
-        style = cell_text(weight = "bold"),
-        locations = cells_body(rows = Facility == "Total")) %>% 
-    gt::tab_options(
-        table.font.size = "medium",
-        data_row.padding = gt::px(1)) %>%
-    tab_options(
-        table.font.size = px(12))
 
-# -----------------------------------------
-# Summary participants whose 6-weeks or 14-weeks window closes in a month
-# Define the date window
-today <- Sys.Date()
-next_friday <- as.Date("2026-02-28")
 
-closing_soon <- all_deliveries %>%
+
+############################################################################
+
+# ============================================================
+# IPMH FOLLOW-UP RETENTION ANALYSIS
+# ============================================================
+# Purpose:
+#   1. Establish the best delivery date for each participant
+#   2. Calculate protocol-defined follow-up windows
+#   3. Identify actual follow-up attendance
+#   4. Classify participants by retention status
+#   5. Produce overall and facility-level retention summaries
+#
+# Primary retention definition:
+#
+#   Retention =
+#       Attended within window /
+#       (Attended within window + Missed)
+#
+# Participants with an open follow-up window are NOT included
+# in the retention denominator.
+# ============================================================
+###
+tracker_delivery <- all_deliveries %>% 
+    select(ptid, tracker_delivery_date = delivery_date)
+
+# Check iff all PTIDS in the tracker are capture as in the PPW RCT
+#IDs in the survey database
+survey_id <- ppw_rct_df %>% 
+    select(clt_ptid) %>% 
+    distinct()
+
+#compare -------------------------------------------------------------------
+### Those that are in the Tracker, but not in the RCT database
+setdiff(tracker_delivery$ptid, survey_id$clt_ptid)
+
+### Those that are in the RCT, and haven't been updated in the tracker
+setdiff(survey_id$clt_ptid, tracker_delivery$ptid) 
+
+
+# ------------------------------------------------------------
+# 1. Prepare delivery tracker data
+# ------------------------------------------------------------
+
+all_deliveries <- imap_dfr(
+    delivery_dfs,
+    ~ .x %>%
+        mutate(
+            ptid = as.integer(`Participant ID`),
+            
+            delivery_date = ymd(`Delivery Date`),
+            
+            actual_visit_6wks  = ymd(actual_visit_6wks),
+            actual_visit_14wks = ymd(actual_visit_14wks),
+            actual_visit_6mths = ymd(actual_visit_6mths)
+        ) %>%
+        filter(!is.na(delivery_date))
+) %>%
+    select(
+        ptid,
+        delivery_date,
+        actual_visit_6wks,
+        actual_visit_14wks,
+        actual_visit_6mths
+    ) %>%
+    mutate(
+        Facility = substr(as.character(ptid), 3, 4),
+        
+        Facility = dplyr::recode(
+            Facility,
+            "01" = "Rwambwa Sub-county Hospital",
+            "02" = "Sigomere Sub County Hospital",
+            "03" = "Uyawi Sub County Hospital",
+            "04" = "Got Agulu Sub-District Hospital",
+            "05" = "Ukwala Sub County Hospital",
+            "06" = "Madiany Sub County Hospital",
+            "07" = "Kabondo Sub County Hospital",
+            "08" = "Mbita Sub-County Hospital",
+            "09" = "Miriu Health Centre",
+            "11" = "Nyandiwa Level IV Hospital",
+            "13" = "Ober Kamoth Sub County Hospital",
+            "14" = "Gita Sub County Hospital",
+            "15" = "Akala Health Centre",
+            "16" = "Usigu Health Centre",
+            "17" = "Ramula Health Centre",
+            "18" = "Simenya Health Centre",
+            "19" = "Airport Health Centre (Kisumu)",
+            "20" = "Nyalenda Health Centre",
+            "21" = "Mirogi Health Centre",
+            "22" = "Ndiru Level 4 Hospital"
+        )
+    )
+
+
+# ------------------------------------------------------------
+# 2. Extract delivery date from the 6-week CRF
+# ------------------------------------------------------------
+
+six_week_delivery <- ppw_rct_df %>%
     filter(
-        (wk6_window_close >= today & wk6_window_close <= next_friday) |
-            (wk14_window_close >= today & wk14_window_close <= next_friday) |
-            (mo6_window_close >= today & mo6_window_close <= next_friday) # example if you had a 6-week variable
+        grepl("^6 Weeks", redcap_event_name),
+        is.na(redcap_repeat_instance),
+        clt_visit == "6 weeks post-partum"
+    ) %>%
+    select(
+        record_id,
+        delivery_date_crf = tpnc_date,
+        clt_date,
+        mv_visit
+    ) %>%
+    mutate(
+        record_id = as.integer(record_id),
+        delivery_date_crf = as.Date(delivery_date_crf),
+        clt_date = as.Date(clt_date)
+    ) %>%
+    distinct(record_id, .keep_all = TRUE)
+
+# Verify six-week follow-up participants not in tracker
+
+setdiff(six_week_delivery$record_id, all_deliveries$ptid)
+
+
+
+
+# ------------------------------------------------------------
+# 3. Compare tracker and 6-week CRF delivery dates
+# ------------------------------------------------------------
+
+delivery_dates <- all_deliveries %>%
+    select(
+        ptid,tracker_delivery_date = delivery_date, Facility
+    ) %>%
+    left_join(
+        six_week_delivery,
+        by = c("ptid" = "record_id")
+    ) %>%
+    mutate(
+        
+        # --------------------------------------------------------
+        # Delivery-date discrepancy
+        # --------------------------------------------------------
+        delivery_date_discrepancy =
+            !is.na(tracker_delivery_date) &
+            !is.na(delivery_date_crf) &
+            tracker_delivery_date != delivery_date_crf,        
+        # --------------------------------------------------------
+        # Final delivery date
+        #
+        # PRIMARY SOURCE:
+        # 6-week CRF delivery date when available.
+        #
+        # If the Tracker and 6-week CRF dates disagree,
+        # use the 6-week CRF delivery date.
+        #
+        # If the 6-week CRF date is missing, use the
+        # Tracker delivery date.
+        # --------------------------------------------------------
+        retention_delivery_date = case_when(
+            
+            !is.na(tracker_delivery_date) &
+                !is.na(delivery_date_crf) &
+                tracker_delivery_date != delivery_date_crf ~
+                delivery_date_crf,
+            
+            !is.na(delivery_date_crf) ~
+                delivery_date_crf,
+            
+            !is.na(tracker_delivery_date) ~
+                tracker_delivery_date,
+            
+            TRUE ~ as.Date(NA)
+        ),
+        
+        # --------------------------------------------------------
+        # Source of final delivery date
+        # --------------------------------------------------------
+        delivery_date_source = case_when(
+            
+            !is.na(tracker_delivery_date) &
+                !is.na(delivery_date_crf) &
+                tracker_delivery_date != delivery_date_crf ~
+                "6-week CRF - discrepancy with Tracker",
+            
+            !is.na(delivery_date_crf) ~
+                "6-week CRF",
+            
+            !is.na(tracker_delivery_date) ~
+                "Tracker",
+            
+            TRUE ~
+                "Missing"
+        )) 
+
+
+# ------------------------------------------------------------
+# 4. Delivery-date QC dataset
+# ------------------------------------------------------------
+
+delivery_date_qc <- delivery_dates %>%
+    filter(delivery_date_discrepancy) %>%
+    select(
+        ptid,
+        tracker_delivery_date,
+        delivery_date_crf,
+        retention_delivery_date,
+        delivery_date_source
+    ) %>%
+    arrange(ptid)
+
+
+# Participants without a final delivery date
+missing_delivery_dates <- delivery_dates %>%
+    filter(is.na(retention_delivery_date)) %>%
+    select(
+        ptid,
+        tracker_delivery_date,
+        delivery_date_crf,
+        delivery_date_source
+    )
+
+
+# ------------------------------------------------------------
+# 5. Calculate protocol follow-up windows
+# ------------------------------------------------------------
+#
+# CURRENT DEFINITIONS:
+#
+# 6 Weeks:
+#   Open  = 6 weeks
+#   Close = 10 weeks
+#
+# 14 Weeks:
+#   Open  = 10 weeks + 1 day
+#   Close = 20 weeks
+#
+# 6 Months:
+#   Open  = 20 weeks + 1 day
+#   Close = 30 weeks
+#
+# Confirm these against the approved IPMH protocol/SOP.
+# ------------------------------------------------------------
+
+retention_windows <- delivery_dates %>%
+    filter(!is.na(retention_delivery_date)) %>%
+    select(
+        ptid,
+        retention_delivery_date,
+        delivery_date_source,
+        delivery_date_discrepancy
+    ) %>%
+    mutate(
+        
+        # --------------------------------------------------------
+        # 6 Weeks
+        # --------------------------------------------------------
+        wk6_window_open =
+            retention_delivery_date + weeks(6),
+        
+        wk6_window_close =
+            retention_delivery_date + weeks(10),
+        
+        # --------------------------------------------------------
+        # 14 Weeks
+        # --------------------------------------------------------
+        wk14_window_open =
+            retention_delivery_date + weeks(10) + days(1),
+        
+        wk14_window_close =
+            retention_delivery_date + weeks(20),
+        
+        # --------------------------------------------------------
+        # 6 Months
+        # --------------------------------------------------------
+        mo6_window_open =
+            retention_delivery_date + weeks(20) + days(1),
+        
+        mo6_window_close =
+            retention_delivery_date + weeks(30)
+    )
+
+
+# ------------------------------------------------------------
+# 6. Extract follow-up visit records from PPW RCT database
+# ------------------------------------------------------------
+
+visits <- ppw_rct_df %>%
+    mutate(arm = case_when(
+        grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
+        grepl("Arm 2: Control", redcap_event_name) ~ "Control",
+        TRUE ~ "Unknown"
+    )) %>% 
+    filter(
+        grepl(
+            "^(6 Weeks|14 Weeks|6 Months)",
+            redcap_event_name
+        ),
+        is.na(redcap_repeat_instance),
+        clt_visit %in% c(
+            "6 weeks post-partum",
+            "14 weeks post-partum",
+            "6 months post-partum"
+        )
+    ) %>%
+    select(
+        record_id, clt_study_site, redcap_event_name,
+        clt_visit, clt_date, mv_visit, arm
+    ) %>%
+    mutate(
+        record_id = as.integer(record_id),
+        
+        clt_date = as.Date(clt_date),
+        
+        # Clean non-breaking spaces
+        mv_visit = gsub("\u00A0", " ", mv_visit),
+        
+        # Remove leading/trailing spaces
+        mv_visit = trimws(mv_visit),
+        
+        # Treat blank strings as missing
+        mv_visit = na_if(mv_visit, "")
+    )
+
+
+# ------------------------------------------------------------
+# 7. Check for duplicate follow-up records
+# ------------------------------------------------------------
+
+duplicate_followup_records <- visits %>%
+    count(
+        record_id,
+        clt_visit
+    ) %>%
+    filter(n > 1) %>%
+    arrange(
+        record_id,
+        clt_visit
+    )
+
+
+# ------------------------------------------------------------
+# 8. Derive participant-level attendance
+# ------------------------------------------------------------
+
+attendance <- visits %>%
+    group_by(
+        ptid = record_id, clt_study_site, arm
+    ) %>%
+    summarise(
+        
+        # ========================================================
+        # 6 WEEKS
+        # ========================================================
+        
+        six_weeks_date = {
+            x <- clt_date[
+                clt_visit == "6 weeks post-partum" &
+                    is.na(mv_visit) &
+                    !is.na(clt_date)
+            ]
+            
+            if (length(x) == 0) {
+                as.Date(NA)
+            } else {
+                max(x)
+            }
+        },
+        
+        six_weeks_missed = any(
+            clt_visit == "6 weeks post-partum" &
+                !is.na(mv_visit)
+        ),
+        
+        # ========================================================
+        # 14 WEEKS
+        # ========================================================
+        
+        fourteen_weeks_date = {
+            x <- clt_date[
+                clt_visit == "14 weeks post-partum" &
+                    is.na(mv_visit) &
+                    !is.na(clt_date)
+            ]
+            
+            if (length(x) == 0) {
+                as.Date(NA)
+            } else {
+                max(x)
+            }
+        },
+        
+        fourteen_weeks_missed = any(
+            clt_visit == "14 weeks post-partum" &
+                !is.na(mv_visit)
+        ),
+        
+        # ========================================================
+        # 6 MONTHS
+        # ========================================================
+        
+        six_months_date = {
+            x <- clt_date[
+                clt_visit == "6 months post-partum" &
+                    is.na(mv_visit) &
+                    !is.na(clt_date)
+            ]
+            
+            if (length(x) == 0) {
+                as.Date(NA)
+            } else {
+                max(x)
+            }
+        },
+        
+        six_months_missed = any(
+            clt_visit == "6 months post-partum" &
+                !is.na(mv_visit)
+        ),
+        
+        .groups = "drop"
+    )
+
+
+# ------------------------------------------------------------
+# 9. Combine delivery windows and attendance
+# ------------------------------------------------------------
+
+retention_data <- retention_windows %>%
+    full_join(
+        attendance,
+        by = "ptid"
+    )
+
+
+# ------------------------------------------------------------
+# 10. Determine today's date
+# ------------------------------------------------------------
+
+today <- Sys.Date()
+
+
+# ------------------------------------------------------------
+# 11. Create retention status
+# ------------------------------------------------------------
+#
+# IMPORTANT:
+#
+# "Attended" means:
+#   Actual visit date is within the protocol window.
+#
+# "Attended Outside Window" means:
+#   A visit was recorded, but it occurred outside the
+#   protocol-defined window.
+#
+# "Missed" means:
+#   Explicit missed-visit record OR
+#   follow-up window has closed without an attended visit.
+#
+# "Window Open":
+#   Participant is currently within their follow-up window.
+#
+# "Not Due":
+#   Follow-up window has not yet opened.
+# ------------------------------------------------------------
+
+retention_status <- retention_data %>%
+    mutate(
+        
+        # 6 Weeks
+        six_weeks_status = case_when(
+            !is.na(six_weeks_date) ~ "Attended",
+            today > wk6_window_close ~ "Missed",
+            today >= wk6_window_open ~ "Window Open",
+            TRUE ~ "Not Due"
+        ),
+        
+        # 14 Weeks
+        fourteen_weeks_status = case_when(
+            !is.na(fourteen_weeks_date) ~ "Attended",
+            today > wk14_window_close ~ "Missed",
+            today >= wk14_window_open ~ "Window Open",
+            TRUE ~ "Not Due"
+        ),
+        
+        # 6 Months
+        six_months_status = case_when(
+            !is.na(six_months_date) ~ "Attended",
+            today > mo6_window_close ~ "Missed",
+            today >= mo6_window_open ~ "Window Open",
+            TRUE ~ "Not Due"
+        )
+    ) %>% 
+    filter(!is.na(clt_study_site))
+
+# ============================================================
+# 12. RETENTION SUMMARY FUNCTION
+# ============================================================
+#
+# This function creates a consistent summary for each visit.
+#
+# Retention denominator:
+#
+#   Attended + Missed
+#
+# Window Open is NOT included.
+#
+# Attended Outside Window is reported separately and is NOT
+# counted as successful retention within the protocol window.
+# ============================================================
+
+calculate_retention <- function(
+        data,
+        status_variable,
+        visit_label
+) {
+    
+    status <- data[[status_variable]]
+    
+    attended <- sum(
+        status == "Attended",
+        na.rm = TRUE
+    )
+    
+    attended_outside_window <- sum(
+        status == "Attended Outside Window",
+        na.rm = TRUE
+    )
+    
+    missed <- sum(
+        status == "Missed",
+        na.rm = TRUE
+    )
+    
+    window_open <- sum(
+        status == "Window Open",
+        na.rm = TRUE
+    )
+    
+    not_due <- sum(
+        status == "Not Due",
+        na.rm = TRUE
+    )
+    
+    # Primary retention denominator
+    eligible_for_retention <- attended + missed
+    
+    retention <- ifelse(
+        eligible_for_retention > 0,
+        attended / eligible_for_retention,
+        NA_real_
+    )
+    
+    tibble(
+        Visit = visit_label,
+        
+        `Participants Due` =
+            eligible_for_retention,
+        
+        Attended =
+            attended,
+        
+        Missed =
+            missed,
+        
+        `Attended Outside Window` =
+            attended_outside_window,
+        
+        `Window Open` =
+            window_open,
+        
+        `Not Due` =
+            not_due,
+        
+        `Percentage Attended` =
+            round(retention * 100, 1)
+    )
+}
+
+
+# ============================================================
+# 13. OVERALL RETENTION
+# ============================================================
+
+retention_summary <- bind_rows(
+    
+    # 6 Weeks
+    retention_status %>%
+        filter(six_weeks_status != "Not Due") %>%
+        summarise(
+            Visit = "6 Weeks",
+            `Participants Due` = n(),
+            Attended = sum(
+                six_weeks_status == "Attended"
+            ),
+            Missed = sum(
+                six_weeks_status == "Missed"
+            ),
+            `Window Open` = sum(
+                six_weeks_status == "Window Open"
+            )
+        ),
+    
+    # 14 Weeks
+    retention_status %>%
+        filter(fourteen_weeks_status != "Not Due") %>%
+        summarise(
+            Visit = "14 Weeks",
+            `Participants Due` = n(),
+            Attended = sum(
+                fourteen_weeks_status == "Attended"
+            ),
+            Missed = sum(
+                fourteen_weeks_status == "Missed"
+            ),
+            `Window Open` = sum(
+                fourteen_weeks_status == "Window Open"
+            )
+        ),
+    
+    # 6 Months
+    retention_status %>%
+        filter(six_months_status != "Not Due") %>%
+        summarise(
+            Visit = "6 Months",
+            `Participants Due` = n(),
+            Attended = sum(
+                six_months_status == "Attended"
+            ),
+            Missed = sum(
+                six_months_status == "Missed"
+            ),
+            `Window Open` = sum(
+                six_months_status == "Window Open"
+            )
+        )
+) %>%
+    mutate(
+        Retention = Attended / `Participants Due`,
+        Retention = scales::percent(
+            Retention,
+            accuracy = 0.1
+        )
+    )
+
+overall_tbl <- gt(retention_summary) %>%
+    tab_header(
+        title = md("**Overall Retention Across Study Follow-up**"),
+        subtitle = md("All facilities combined")
+    ) %>%
+    opt_table_font(
+        font = list(
+            google_font("Chivo"),
+            default_fonts()
+        )
+    ) %>%
+    tab_style(
+        locations = cells_column_labels(columns = everything()),
+        style = list(
+            cell_borders(
+                sides = "bottom",
+                weight = px(2)
+            ),
+            cell_text(weight = "bold")
+        )
+    ) %>%
+    tab_options(
+        table.font.size = px(12),
+        table.border.top.style = "none",
+        column_labels.border.bottom.width = 2,
+        table_body.border.top.style = "none",
+        data_row.padding = px(3)
+    )
+# ============================================================
+# 14. FACILITY-LEVEL RETENTION FUNCTION
+# ============================================================
+
+facility_retention_summary <- bind_rows(
+    
+    # 6 Weeks
+    retention_status %>%
+        filter(six_weeks_status != "Not Due") %>%
+        group_by(clt_study_site) %>%
+        summarise(
+            Visit = "6 Weeks",
+            `Participants Due` = n(),
+            Attended = sum(
+                six_weeks_status == "Attended"
+            ),
+            Missed = sum(
+                six_weeks_status == "Missed"
+            ),
+            `Window Open` = sum(
+                six_weeks_status == "Window Open"
+            ),
+            .groups = "drop"
+        ),
+    
+    # 14 Weeks
+    retention_status %>%
+        filter(fourteen_weeks_status != "Not Due") %>%
+        group_by(clt_study_site) %>%
+        summarise(
+            Visit = "14 Weeks",
+            `Participants Due` = n(),
+            Attended = sum(
+                fourteen_weeks_status == "Attended"
+            ),
+            Missed = sum(
+                fourteen_weeks_status == "Missed"
+            ),
+            `Window Open` = sum(
+                fourteen_weeks_status == "Window Open"
+            ),
+            .groups = "drop"
+        ),
+    
+    # 6 Months
+    retention_status %>%
+        filter(six_months_status != "Not Due") %>%
+        group_by(clt_study_site) %>%
+        summarise(
+            Visit = "6 Months",
+            `Participants Due` = n(),
+            Attended = sum(
+                six_months_status == "Attended"
+            ),
+            Missed = sum(
+                six_months_status == "Missed"
+            ),
+            `Window Open` = sum(
+                six_months_status == "Window Open"
+            ),
+            .groups = "drop"
+        )
+) %>%
+    mutate(
+        Retention = Attended / `Participants Due`,
+        Retention = scales::percent(
+            Retention,
+            accuracy = 0.1
+        )
+    ) %>%
+    arrange(
+        Visit,
+        desc(Retention)
+    )
+
+
+# ============================================================
+# 15. FACILITY RETENTION
+# ============================================================
+
+# 6 Weeks Summary
+wk6_facility_retention <- retention_status %>%
+    filter(six_weeks_status != "Not Due") %>%
+    group_by(clt_study_site) %>%
+    summarise(
+        `Participants Due` = n(),
+        Attended = sum(six_weeks_status == "Attended"),
+        Missed = sum(six_weeks_status == "Missed"),
+        `Window Open` = sum(six_weeks_status == "Window Open"),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        Retention = scales::percent(Attended / `Participants Due`, accuracy = 0.1)
+    ) %>%
+    arrange(desc(Retention))
+
+wk6_tbl <- gt(wk6_facility_retention) %>%
+    tab_header(
+        title = md("**Six Weeks Retention by Facility**")
+    ) %>%
+    opt_table_font(
+        font = list(
+            google_font("Chivo"),
+            default_fonts()
+        )
+    ) %>%
+    tab_style(
+        locations = cells_column_labels(columns = everything()),
+        style = list(
+            cell_borders(sides = "bottom", weight = px(2)),
+            cell_text(weight = "bold")
+        )
+    ) %>%
+    tab_options(
+        table.font.size = px(12),
+        table.border.top.style = "none",
+        column_labels.border.bottom.width = 2,
+        table_body.border.top.style = "none",
+        data_row.padding = px(4)
     )
 
 
 
-# Summarise count of participants within range
-window_summary <- all_deliveries %>%
-    group_by(Facility) %>% 
-    summarise(
-        `Week 6 Visits` = sum(wk6_window_close >= today & wk6_window_close <= next_friday, na.rm = TRUE),
-        `Week 14 Visits` = sum(wk14_window_close >= today & wk14_window_close <= next_friday, na.rm = TRUE),
-        `Month 6 Visits` = sum(mo6_window_open <= next_friday & mo6_window_close <= next_friday, na.rm = TRUE)    
-        ) %>%
-    mutate(`Total Visits` = `Week 6 Visits` + `Week 14 Visits` + `Month 6 Visits`) %>% 
-    adorn_totals(name = "Total")
-
-# Convert to flextable
-ft <- flextable(window_summary)
-ft <- theme_vanilla(ft)
-ft <- bold(ft, i = which(window_summary$Facility == "Total"), bold = TRUE)
-ft <- autofit(ft)
-
-# # Create Word document
-# doc <- read_docx() %>%
-#     body_add_par("Follow-ups Due Between in September 2025", style = "heading 1") %>%
-#     body_add_par("This summary includes participants whose follow-up windows (Week 6, Week 14, or Month 6) falls between September 1 and September 30, 2025.", style = "Normal") %>%
-#     body_add_flextable(ft)
-# 
-# # Save document
-# print(doc, target = "Follow-up Summary for this Week.docx")
-
-# Summary participants whose 6-weeks or 14-weeks window closes in a week----
-start_date <- as.Date("2025-09-01")
-end_date <- as.Date("2025-09-05")
-
-pending_followups <- all_deliveries %>%
-    filter(six_weeks_flag == 0) %>%
-    filter(
-        between(wk6_window_close, start_date, end_date) |
-            between(wk14_window_close, start_date, end_date)
-    ) %>%
-    select(ptid, wk6_window_close, wk14_window_close)
-
-# Summarise count of participants within range
-window_clossing_week <- all_deliveries %>%
-    group_by(Facility) %>% 
-    summarise(
-        `Week 6 Visits` = sum(wk6_window_close >= start_date & wk6_window_close <= end_date, na.rm = TRUE),
-        `Week 14 Visits` = sum(wk14_window_close >= start_date & wk14_window_close <= end_date, na.rm = TRUE),
-        `Month 6 Visits` = sum(mo6_window_open <= next_friday & mo6_window_close <= end_date, na.rm = TRUE)    
-    ) %>%
-    mutate(`Total Visits` = `Week 6 Visits` + `Week 14 Visits` + `Month 6 Visits`) %>% 
-    adorn_totals(name = "Total")
-
-# Follow-up due for a month and a week put together----
-# Define date windows
-today <- as.Date("2026-02-06")
-month_end <- as.Date("2025-02-28")
-week_end <- as.Date("2025-02-13") # N/B: Define the exact date the week ends
-
-# Monthly summary
-month_summary <- all_deliveries %>%
-    group_by(Facility) %>%
-    summarise(
-        `Week 6 Visits` = sum(wk6_window_close >= today & wk6_window_close <= month_end, na.rm = TRUE),
-        `Week 14 Visits` = sum(wk14_window_close >= today & wk14_window_close <= month_end, na.rm = TRUE),
-        `Month 6 Visits` = sum(mo6_window_open >= today & mo6_window_close <= month_end, na.rm = TRUE)
-    ) %>%
-    mutate(`Total Visits` = `Week 6 Visits` + `Week 14 Visits` + `Month 6 Visits`) %>%
-    adorn_totals(name = "Total")
-
-# Weekly summary
-week_summary <- all_deliveries %>%
-    group_by(Facility) %>%
-    summarise(
-        `Week 6 Visits` = sum(wk6_window_close >= today & wk6_window_close <= week_end, na.rm = TRUE),
-        `Week 14 Visits` = sum(wk14_window_close >= today & wk14_window_close <= week_end, na.rm = TRUE),
-        `Month 6 Visits` = sum(mo6_window_open <= week_end & mo6_window_close <= week_end, na.rm = TRUE)
-    ) %>%
-    mutate(`Total Visits` = `Week 6 Visits` + `Week 14 Visits` + `Month 6 Visits`) %>%
-    adorn_totals(name = "Total")
-
-# Format tables
-ft_month <- flextable(month_summary) %>%
-    theme_vanilla() %>%
-    bold(i = which(month_summary$Facility == "Total"), bold = TRUE) %>%
-    autofit()
-
-ft_week <- flextable(week_summary) %>%
-    theme_vanilla() %>%
-    bold(i = which(week_summary$Facility == "Total"), bold = TRUE) %>%
-    autofit()
-
-
-# # Create Word document
-# doc <- read_docx() %>%body_add_par("Follow-ups Due Within the Next 7 Days", style = "heading 1") %>%
-#     body_add_par("Summary of participants whose follow-up windows close between September 1 and September 8, 2025.", style = "Normal") %>%
-#     body_add_flextable(ft_week)%>%
-#     body_add_par("Follow-ups Due in September 2025", style = "heading 1") %>%
-#     body_add_par("Summary of participants whose follow-up windows close between September 1 and September 30, 2025.", style = "Normal") %>%
-#     body_add_flextable(ft_month) 
-# 
-# # Save document
-# print(doc, target = "Follow-up Summary - Month and Week.docx")
-
-
-
-# Tracking follow-up visits ----
-ppw_date_track <- ppw_rct_df %>%
-    mutate(
-        clt_date = as.Date(clt_date),
-        med_pre_edd = as.Date(med_pre_edd),
-        tpnc_date = as.Date(tpnc_date)
-    ) %>%
-    # Create participant ID if needed
+# 14 Weeks Summary
+wk14_facility_retention <- retention_status %>%
+    filter(fourteen_weeks_status != "Not Due") %>%
     group_by(clt_study_site) %>%
-    ungroup()
+    summarise(
+        `Participants Due` = n(),
+        Attended = sum(six_weeks_status == "Attended"),
+        Missed = sum(six_weeks_status == "Missed"),
+        `Window Open` = sum(six_weeks_status == "Window Open"),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        Retention = scales::percent(Attended / `Participants Due`, accuracy = 0.1)
+    ) %>%
+    arrange(desc(Retention))
 
-# Enrollment per facility since 2026-01-06 (after hault)---
-Enrollments <- screening_consent_df %>%
-    group_by(study_site) %>%
-    reframe(Screened = n(),
-            `Eligible` = sum(rct_eligible == 1),
-            `Enrolled` = sum(rct_enrolling == "Yes", na.rm = "TRUE"),
-            `% Enrolled (of Eligible)` = round((Enrolled / Eligible) * 100)) %>%
-    # Remove the facility code
-    mutate(study_site = gsub("^[0-9]+,\\s*", "", study_site)) %>% 
-    rename(`Facility` = study_site)  %>%
-    bind_rows(summarise(.,Facility = "Overall",
-                        Screened = sum(Screened),
-                        Eligible = sum(Eligible),Enrolled = sum(Enrolled),
-                        `% Enrolled (of Eligible)` = ifelse(sum(Eligible) > 0, round((sum(Enrolled) / sum(Eligible)) * 100, 1), NA)))  %>%
-    arrange(desc(`Enrolled`))%>%
-    gt() %>%
-    tab_header(title = "Summary of Study Enrollment by Facility",subtitle = "Showing Participants enrollments") %>%
-    tab_style(style = cell_text(weight = "bold"),locations = cells_body(rows = Facility == "Overall")) %>%
-    tab_options(table.font.size = px(12))
+wk14_tbl <- gt(wk14_facility_retention) %>%
+    tab_header(
+        title = md("**Fourteen Weeks Retention by Facility**")
+    ) %>%
+    opt_table_font(
+        font = list(
+            google_font("Chivo"),
+            default_fonts()
+        )
+    ) %>%
+    tab_style(
+        locations = cells_column_labels(columns = everything()),
+        style = list(
+            cell_borders(sides = "bottom", weight = px(2)),
+            cell_text(weight = "bold")
+        )
+    ) %>%
+    tab_options(
+        table.font.size = px(12),
+        table.border.top.style = "none",
+        column_labels.border.bottom.width = 2,
+        table_body.border.top.style = "none",
+        data_row.padding = px(4)
+    )
 
-Enrollments
+
+
+# 6 Months Summary
+mo6_facility_retention <- retention_status %>%
+    filter(six_months_status != "Not Due") %>%
+    group_by(clt_study_site) %>%
+    summarise(
+        `Participants Due` = n(),
+        Attended = sum(six_months_status == "Attended"),
+        Missed = sum(six_months_status == "Missed"),
+        `Window Open` = sum(six_months_status == "Window Open"),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        Retention = scales::percent(Attended / `Participants Due`, accuracy = 0.1)
+    ) %>%
+    arrange(desc(Retention))
+
+mo6_tbl <- gt(mo6_facility_retention) %>%
+    tab_header(
+        title = md("**Six Months Retention by Facility**")
+    ) %>%
+    opt_table_font(
+        font = list(
+            google_font("Chivo"),
+            default_fonts()
+        )
+    ) %>%
+    tab_style(
+        locations = cells_column_labels(columns = everything()),
+        style = list(
+            cell_borders(sides = "bottom", weight = px(2)),
+            cell_text(weight = "bold")
+        )
+    ) %>%
+    tab_options(
+        table.font.size = px(12),
+        table.border.top.style = "none",
+        column_labels.border.bottom.width = 2,
+        table_body.border.top.style = "none",
+        data_row.padding = px(4)
+    )
+
+ 
+
+# ============================================================
+# 18. Missed visits
+# ============================================================
+#
+# Only participants whose window has closed are classified
+# as missed.
+# ============================================================
+
+missed_6wks <- retention_status %>%
+    filter(
+        six_weeks_status == "Missed"
+    ) %>%
+    select(
+        clt_study_site,
+        ptid,
+        retention_delivery_date,
+        wk6_window_open,
+        wk6_window_close,
+        six_weeks_date,
+        six_weeks_missed,
+        six_weeks_status
+    )
+
+
+missed_14wks <- retention_status %>%
+    filter(
+        fourteen_weeks_status == "Missed"
+    ) %>%
+    select(
+        clt_study_site,
+        ptid,
+        retention_delivery_date,
+        wk14_window_open,
+        wk14_window_close,
+        fourteen_weeks_date,
+        fourteen_weeks_missed,
+        fourteen_weeks_status
+    )
+
+
+missed_6months <- retention_status %>%
+    filter(
+        six_months_status == "Missed"
+    ) %>%
+    select(
+        clt_study_site,
+        ptid,
+        retention_delivery_date,
+        mo6_window_open,
+        mo6_window_close,
+        six_months_date,
+        six_months_missed,
+        six_months_status
+    )
 
 
 
+# ============================================================
+# 23. Follow-up windows closing soon
+# ============================================================
+#
+# Set the period you want to monitor.
+#
+# Example: next 7 days
+# ============================================================
+
+window_start <- today
+window_end <- today + days(7)
+
+
+followups_closing_soon <- bind_rows(
+    
+    retention_status %>%
+        filter(
+            six_weeks_status == "Window Open",
+            wk6_window_close >= window_start,
+            wk6_window_close <= window_end
+        ) %>%
+        transmute(
+            clt_study_site,
+            ptid,
+            Visit = "6 Weeks",
+            Window_Open = wk6_window_open,
+            Window_Close = wk6_window_close,
+            Days_Remaining =
+                as.integer(wk6_window_close - today)
+        ),
+    
+    retention_status %>%
+        filter(
+            fourteen_weeks_status == "Window Open",
+            wk14_window_close >= window_start,
+            wk14_window_close <= window_end
+        ) %>%
+        transmute(
+            clt_study_site,
+            ptid,
+            Visit = "14 Weeks",
+            Window_Open = wk14_window_open,
+            Window_Close = wk14_window_close,
+            Days_Remaining =
+                as.integer(wk14_window_close - today)
+        ),
+    
+    retention_status %>%
+        filter(
+            six_months_status == "Window Open",
+            mo6_window_close >= window_start,
+            mo6_window_close <= window_end
+        ) %>%
+        transmute(
+            clt_study_site,
+            ptid,
+            Visit = "6 Months",
+            Window_Open = mo6_window_open,
+            Window_Close = mo6_window_close,
+            Days_Remaining =
+                as.integer(mo6_window_close - today)
+        )
+) %>%
+    arrange(
+        Window_Close,
+        clt_study_site,
+        ptid
+    )
+
+
+# ============================================================
+# 24. Follow-ups closing by facility
+# ============================================================
+
+followups_closing_by_facility <- followups_closing_soon %>%
+    group_by(
+        clt_study_site,
+        Visit
+    ) %>%
+    summarise(
+        `Follow-ups Closing` = n(),
+        .groups = "drop"
+    )
+
+
+
+# ============================================================
+# 26. Final QC summary
+# ============================================================
+
+retention_qc_summary <- tibble(
+    
+    `Total Participants` =
+        nrow(retention_status),
+    
+    `Missing Delivery Date` =
+        sum(
+            is.na(retention_status$retention_delivery_date)
+        ),
+    
+    `Delivery Date Discrepancies` =
+        sum(
+            retention_status$delivery_date_discrepancy,
+            na.rm = TRUE
+        ),
+    
+    `6 Week Duplicate Records` =
+        sum(
+            duplicate_followup_records$clt_visit ==
+                "6 weeks post-partum",
+            na.rm = TRUE
+        ),
+    
+    `14 Week Duplicate Records` =
+        sum(
+            duplicate_followup_records$clt_visit ==
+                "14 weeks post-partum",
+            na.rm = TRUE
+        ),
+    
+    `6 Month Duplicate Records` =
+        sum(
+            duplicate_followup_records$clt_visit ==
+                "6 months post-partum",
+            na.rm = TRUE
+        ),
+    
+    `6 Week Outside Window` =
+        sum(
+            retention_status$six_weeks_status ==
+                "Attended Outside Window",
+            na.rm = TRUE
+        ),
+    
+    `14 Week Outside Window` =
+        sum(
+            retention_status$fourteen_weeks_status ==
+                "Attended Outside Window",
+            na.rm = TRUE
+        ),
+    
+    `6 Month Outside Window` =
+        sum(
+            retention_status$six_months_status ==
+                "Attended Outside Window",
+            na.rm = TRUE
+        )
+)
 
