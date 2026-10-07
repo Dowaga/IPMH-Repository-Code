@@ -259,8 +259,9 @@ dup_ID <- consort_data %>%
 
 #. Count follow-ups from PPW RCT Database
 secondvisit <- ppw_rct_df %>% 
-    filter(str_detect(redcap_event_name, "6 Weeks"))%>% 
-    filter(is.na(mv_visit)) %>% 
+    filter(clt_visit == "6 weeks post-partum") %>%  # six weeks visit filled
+    filter(is.na(mv_visit)) %>% # the visit was not a missed visit
+    filter(dis_today == "No"|is.na(dis_today)) %>% # not discharged
     distinct(clt_ptid) %>% 
     mutate(secondvisit = "Yes") 
 
