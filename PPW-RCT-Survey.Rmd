@@ -15,7 +15,7 @@ rm(list = ls())
 # read data
 source("Datateam_ipmh.R")
 source("Dependencies.R")
-#source("REDCap_datapull.R")
+source("REDCap_datapull.R")
 source("data_import.R")
 
 #Drop Dummy Out of Pocket training data and Un-enrolled 6 weeks participant
@@ -168,7 +168,7 @@ not_enrolled %>%
 
 ```{r retention number source, echo=FALSE, message=FALSE, warning=FALSE}
 source("RCT Retention.R")
-gt_overall
+retention_summary
 ```
 
 ## Enrollment Per Facility

@@ -1526,7 +1526,7 @@ facility_random_arm <- ppw_rct_df %>%
     distinct(clt_study_site) %>%
     mutate(
         random_arm = sample(
-            rep(c("Arm X", "Arm Y"), each = 10)
+            rep(c("Arm Y", "Arm X"), each = 10)
         )
     )
 
