@@ -301,8 +301,8 @@ consort_data <- consort_data %>%
     mutate(
         dummy_arm = case_when(
             is.na(arm) ~ NA_character_,        # keep NA as NA
-            grepl("Control", arm) ~ "Arm X",   # if arm contains "Control"
-            TRUE ~ "Arm Y"                     # everything else
+            grepl("Control", arm) ~ "Arm Y",   # if arm contains "Control"
+            TRUE ~ "Arm X"                     # everything else
         ))
 
 # HIV
@@ -614,4 +614,22 @@ consort_single <- add_box(txt = txt_anc) |>
 
 consort_single
 
+############
+study_dischages <- ppw_rct_df %>% 
+    filter(dis_today == "Yes")
 
+# Check at which visit participant was discharged---
+discharge_visit <- study_dischages %>% 
+    count(clt_visit)
+
+
+# Check why participants were discharged earlier---
+early_termination <- study_dischages %>% 
+    filter(clt_visit != "6 months post-partum") %>% 
+    select(clt_ptid, clt_study_site, clt_visit, clt_date, dis_reason)
+
+# Check participants who completed 6 months visit and not discharged----
+not_discharged <- ppw_rct_df %>% 
+    filter(clt_visit=="6 months post-partum") %>% 
+    filter(dis_today == "No"|is.na(dis_today)) %>% 
+    select(clt_ptid, clt_study_site, dis_today, clt_visit, clt_date)
