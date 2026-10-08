@@ -510,7 +510,7 @@ delivery_dates <- all_deliveries %>%
     select(
         ptid,tracker_delivery_date = delivery_date, Facility
     ) %>%
-    left_join(
+    full_join(
         six_week_delivery,
         by = c("ptid" = "record_id")
     ) %>%
