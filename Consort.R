@@ -321,8 +321,8 @@ consort_data <- consort_data %>%
     mutate(
         dummy_arm = case_when(
             is.na(arm) ~ NA_character_,        # keep NA as NA
-            grepl("Control", arm) ~ "Arm X",   # if arm contains "Control"
-            TRUE ~ "Arm Y"                     # everything else
+            grepl("Control", arm) ~ "Arm Y",   # if arm contains "Control"
+            TRUE ~ "Arm X"                     # everything else
         ))
 #generate consort diagram without percentages (also without telepsychiatry)
 consort_diagram <- consort_plot(data = consort_data,
