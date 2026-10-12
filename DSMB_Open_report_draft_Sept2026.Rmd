@@ -941,17 +941,64 @@ earliest_due <- first_6ths %>%
  mutate(clt_date = format(as.Date(clt_date), "%b %d, %Y")) %>% 
  pull(clt_date) 
 
-total_exits <- ppw_rct_df %>%
-   # Filter to "6 months" and grab the first per participant
- filter(clt_visit == "6 months post-partum") %>% 
-    filter(dis_today == "Yes")
 
-completed_follow_up <- total_exits %>% 
+# Completed study visits
+completed_6m <- ppw_rct_df %>%
+  filter(
+    clt_visit == "6 months post-partum",
+    dis_today == "Yes"
+  ) %>% 
+    filter(grepl("(Study End)",dis_reason))
+
+
+# Withdrew consent
+withdrawals <- ppw_rct_df %>%
+    filter(
+        dis_today == "Yes",
+        !clt_visit %in% c("6 months post-partum")
+        ) %>% 
+    select(clt_ptid, dis_today, dis_date, dis_reason) %>% 
+    mutate(
+    dis_reason = case_when(
+      str_detect(dis_reason, 
+                 "Participant has requested to end participation before completing all study visits") ~ "Withdrawal",
+      str_detect(dis_reason, 
+                 "Unable to contact the participant") ~ "Lost to follow-up",
+      TRUE ~ dis_reason   # keep original if no match
+    )
+  ) %>% 
+    filter(dis_reason == "Withdrawal")
+
+n_withdrawals <- withdrawals %>%
+  distinct(clt_ptid) %>%
+  nrow()
+
+lost_to_follow_up <- ppw_rct_df %>% 
+    filter(dis_today == "Yes") %>% 
+    mutate(
+    dis_reason = case_when(
+      str_detect(dis_reason, 
+                 "Unable to contact the participant") ~ "Lost to follow-up",
+      TRUE ~ dis_reason   # keep original if no match
+    )) %>% 
+    filter(dis_reason == "Lost to follow-up") %>% 
+    select(clt_ptid, clt_visit, dis_today, dis_date, dis_reason)
+
+n_lost <- lost_to_follow_up %>%
+  distinct(clt_ptid) %>%
+  nrow()
+    
+completed_follow_up <- completed_6m %>% 
     nrow()
 ```
 
 
-To date, no participants have been withdrawn early due to discharge decisions by either the participant or the PI. A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint. The first study exit occurred on `r earliest_due`. Three maternal deaths (N=3) were reported; details are provided in the adverse events section.
+To date, a total of `r completed_follow_up` participants have completed the scheduled six-month post-partum follow-up and exited the study at the planned study endpoint. The first study completion/exit occurred on `r earliest_due`.
+
+One participant (N = 1) withdrew consent before completing all scheduled study visits. In addition, `r n_lost` participants were classified as lost to follow-up after being unable to be contacted. No participants have been terminated early based on a Principal Investigator (PI) discharge decision.
+
+Three maternal deaths (N = 3) have been reported; these are described separately in the Adverse Events section.
+
 
 # 7. Psychosocial Referrals
 
