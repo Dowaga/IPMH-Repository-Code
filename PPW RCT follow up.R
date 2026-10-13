@@ -1432,6 +1432,10 @@ end_rtc <- psychosocial_data %>%
 adverse_end <- pregnancy_combined_dedup %>% 
     select(clt_ptid, any_adverse_outcome)
 
+adverse_end %>% 
+    tabyl(any_adverse_outcome)
+    
+
 
 
 ## Changed to full join- LP ----
@@ -1507,6 +1511,10 @@ end_joined <- end_points %>%
 # 
 # outcome_summary
 
+# check duplicated ptid
+dup_ptid <- end_joined %>% 
+    count(clt_ptid) %>% 
+    filter(n > 1)
 
 # Step 1: Participant-level dataset with facility and arm group
 participant_facility <- ppw_rct_df %>%
