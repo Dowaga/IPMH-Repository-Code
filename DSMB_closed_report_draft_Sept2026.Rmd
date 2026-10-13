@@ -143,7 +143,9 @@ study_summary
 
 \newpage
 
-# 2. Study Enrollment
+# 2. Overall Study Status
+## 2.1 Overall Cohort
+### 2.1.1 Current subject status
 
 
 ```{r Consort data prep, echo=FALSE, message=FALSE, warning=FALSE}
@@ -250,23 +252,26 @@ tele_sessions <- nrow(telepsych_ids)
 
 # Copied from Consort.R
 secondvisit <- ppw_rct_df %>% 
-    filter(clt_visit == "6 weeks post-partum" &
-               hiv_care_and_treatment_complete == "Complete") %>%
-    select(clt_ptid) %>% 
+    filter(str_detect(redcap_event_name, "6 Weeks")) %>%  # six weeks visit filled
+    filter(is.na(mv_visit)) %>% # the visit was not a missed visit
+    #filter(dis_today == "No"|is.na(dis_today)) %>% # not discharged
+    distinct(clt_ptid) %>% 
     mutate(secondvisit = "Yes") 
 
 thirdvisit <- ppw_rct_df %>% 
-    filter(clt_visit == "14 weeks post-partum" &
-               hiv_care_and_treatment_complete== "Complete") %>%
-    select(clt_ptid) %>% 
+    filter(str_detect(redcap_event_name, "14 Weeks"))%>% 
+    filter(is.na(mv_visit)) %>% 
+    #filter(dis_today == "No"|is.na(dis_today)) %>% # not discharged
+    distinct(clt_ptid) %>% 
     mutate(thirdvisit = "Yes") 
 
-
-fourthvisit <- ppw_rct_df %>% 
-    filter(clt_visit == "6 months post-partum" &
-               hiv_care_and_treatment_complete== "Complete") %>%
-    select(clt_ptid) %>% 
-    mutate(fourthvisit = "Yes") 
+fourthvisit <- ppw_rct_df %>%
+    filter(str_detect(redcap_event_name, "6 Months")) %>%
+    filter(is.na(mv_visit)) %>%
+    filter(dis_today == "Yes") %>% 
+    #filter(grepl("(Study End)",dis_reason)) %>% 
+    distinct(clt_ptid) %>%
+    mutate(fourthvisit = "Yes")
 
 
 # CONSORT data assembly ---------------------------------------------------
@@ -409,8 +414,8 @@ facility_arms <- consort_data %>%
     distinct(facility) %>%
     arrange(facility) %>%
     mutate(
-        arm_random = sample(rep(c("Arm X",
-                                  "Arm Y"), each = 10))
+        arm_random = sample(rep(c("Arm Y",
+                                  "Arm X"), each = 10))
     )
 
 consort_data <- consort_data %>%
@@ -542,254 +547,9 @@ consort_per <- add_box(txt = txt_anc) |>
 consort_per
 ```
 
-
 \newpage
+## 2.2 Participant Retention During Follow-up
 
-
-## 2.1 Enrollment Progress - Overall
-Final enrollment closed with 2,970 participants recruited, including 417 women living with HIV (WLWH). Control Arm enrolled 1,488 participants and Intervention Arm enrolled 1,482 participants. While Control achieved slightly higher enrollment, both arms contributed substantial numbers and maintained consistent recruitment patterns over time. The difference in totals between arms is modest and does not indicate major imbalance.
-The milestone lines (25%, 50%, 75%, 100%) illustrate that both arms reached key thresholds within the expected timeframe, demonstrating robust recruitment performance across study sites.
-
-
-```{r enrollment_progress prep, echo=FALSE}
-# Site label lookup (number ??? short name)
-site_labels <- c(
-    "01, Rwambwa Sub-county Hospital"     = "01, Rwambwa",
-    "02, Sigomere Sub County Hospital"    = "02, Sigomere",
-    "03, Uyawi Sub County Hospital"       = "03, Uyawi",
-    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
-    "05, Ukwala Sub County Hospital"      = "05, Ukwala",
-    "06, Madiany Sub County Hospital"     = "06, Madiany",
-    "07, Kabondo Sub County Hospital"     = "07, Kabondo",
-    "08, Mbita Sub-County Hospital"       = "08, Mbita",
-    "09, Miriu Health Centre"             = "09, Miriu",
-    "11, Nyandiwa Level IV Hospital"      = "11, Nyandiwa",
-    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
-    "14, Gita Sub County Hospital"        = "14, Gita",
-    "15, Akala Health Centre"             = "15, Akala",
-    "16, Usigu Health Centre"             = "16, Usigu",
-    "17, Ramula Health Centre"            = "17, Ramula",
-    "18, Simenya Health Centre"           = "18, Simenya",
-    "19, Airport Health Centre (Kisumu)"  = "19, Airport",
-    "20, Nyalenda Health Centre"          = "20, Nyalenda",
-    "21, Mirogi Health Centre"            = "21, Mirogi",
-    "22, Ndiru Level 4 Hospital"          = "22, Ndiru"
-)
-
-# Enrollment prep ??? collapsed into a single pipeline
-weekly_enrollment <- screening_consent_df %>%
-    filter(rct_eligible == "1"& rct_enrolling == "Yes") %>%
-    select(study_site, date_consented, date_consented_v2) %>%
-    mutate(
-        consent_date = as.Date(
-            coalesce(date_consented, date_consented_v2),
-            origin = "1899-12-30"
-        ),
-        week      = floor_date(consent_date, "week", week_start = 1),
-        study_site = recode(study_site, !!!site_labels),
-        arm        = str_extract(study_site, "^\\d{2}"),
-        arm_group  = if_else(
-            arm %in% c("02", "05", "06", "08", "11", "14", "15", "18", "20", "21"),
-            "Control", "Intervention"
-        )
-    ) %>%
-    select(-date_consented_v2) %>%
-    group_by(study_site, arm, arm_group, week) %>%
-    summarise(enrollment_count = n(), .groups = "drop") %>%
-    # Full join to fill in weeks with no enrollment
-    full_join(
-        data.frame(week = seq(as.Date("2025-02-16"), as.Date(data_freeze), by = "week")),
-        by = "week"
-    ) %>%
-    arrange(week) %>%
-    mutate(enrollment_count = replace_na(enrollment_count, 0)) %>%
-    filter(!is.na(study_site)) %>%
-    group_by(study_site) %>%
-    mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
-    ungroup()
-```
-
-
-
-```{r generate dummy arm2, echo=FALSE}
-# ---- Random arm assignment at facility level ----
-set.seed(12345)
-
-facility_arms <- weekly_enrollment %>%
-    filter(!is.na(study_site)) %>%
-    distinct(study_site) %>%
-    arrange(study_site) %>%
-    mutate(
-        arm_random = sample(rep(c("Arm X",
-                                  "Arm Y"), each = 10))
-    )
-
-weekly_enrollment <- weekly_enrollment %>%
-    left_join(facility_arms, by = "study_site") %>%
-    mutate(
-        arm_random = factor(arm_random,
-                            levels = c("Arm Y",
-                                       "Arm X"))
-    )
-
-# NOTE FOR WENWEN: Replace arm_random with arm_group throughout the plot chunk
-# below to switch from dummy to real arm assignment.
-```
-
-
-
-```{r enrollment_progress plot, echo=FALSE, fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
-# Shared plot theme ---------------------------------------------------------
-consort_theme <- theme_minimal(base_size = 12) +
-    theme(
-        plot.title        = element_text(face = "bold", size = 14, hjust = 0.5),
-        axis.text.x       = element_text(angle = 45, vjust = 1, hjust = 1),
-        strip.text        = element_text(face = "bold", size = 11),
-        legend.position   = "right",
-        legend.box        = "vertical",
-        legend.title      = element_text(face = "bold", size = 10),
-        legend.text       = element_text(size = 9),
-        legend.key.height = unit(0.5, "cm"),
-        legend.key.width  = unit(0.5, "cm"),
-        plot.margin       = margin(10, 20, 10, 10)
-    )
-
-total_enrollment <- weekly_enrollment %>%
-    group_by(week, arm_random) %>%
-    summarise(enrollment_count = sum(enrollment_count), .groups = "drop") %>%
-    arrange(week) %>%
-    group_by(arm_random) %>%
-    mutate(
-        cumulative_enrollment = cumsum(enrollment_count),
-        study_site = "Total"
-    ) %>%
-    ungroup()
-
-combined_enrollment <- bind_rows(weekly_enrollment, total_enrollment) %>%
-    mutate(is_total = study_site == "Total")
-
-# Color palette: sites in default ggplot hues, "Total" in black
-site_names  <- sort(unique(weekly_enrollment$study_site))
-site_colors <- setNames(scales::hue_pal()(length(site_names)), site_names)
-all_colors  <- c(site_colors, "Total" = "black")
-
-p1 <- ggplot(combined_enrollment,
-             aes(x = week, y = cumulative_enrollment,
-                 color = study_site, group = study_site,
-                 linewidth = is_total)) +
-    geom_line() +
-    scale_linewidth_manual(values = c("FALSE" = 0.5, "TRUE" = 1.5), guide = "none") +
-    # Target lines
-    geom_hline(yintercept = 372,  linetype = "dashed", color = "#0072B2", linewidth = 0.8) +
-geom_hline(yintercept = 743,  linetype = "dashed", color = "#E69F00", linewidth = 0.8) +
-geom_hline(yintercept = 1114, linetype = "dashed", color = "#009E73", linewidth = 0.8) +
-geom_hline(yintercept = 1485, linetype = "dashed", color = "#D55E00", linewidth = 0.8) +
-    annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-         y = 372 + 20, label = "25% (n=372)", color = "#0072B2", hjust = 0, size = 3.5) +
-annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-         y = 743 + 20, label = "50% (n=743)", color = "#E69F00", hjust = 0, size = 3.5) +
-annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-         y = 1114 + 20, label = "75% (n=1114)", color = "#009E73", hjust = 0, size = 3.5) +
-annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-         y = 1485 + 20, label = "100% (n=1485)", color = "#D55E00", hjust = 0, size = 3.5) +
-    scale_color_manual(values = all_colors) +
-    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
-    coord_cartesian(clip = "off") +
-    facet_wrap(~ arm_random, ncol = 1) +
-    labs(
-        title = "Enrollment Trends by Study Arm",
-        x     = "Date",
-        y     = "Cumulative Enrollment",
-        color = "Study Site"
-    ) +
-    consort_theme +
-    guides(color = guide_legend(ncol = 2))
-
-p1
-```
-
-
-
-\newpage
-
-## 2.2 Enrollment Progress - Per Facility
-
-
-```{r Facility target reached, echo=F}
-reached_25per_target <- weekly_enrollment %>%
-  group_by(study_site) %>%
-  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
-  filter(latest_enrollment >= 37) %>%
-  summarise(n = n()) %>%
-  pull(n)
-
-reached_50per_target <- weekly_enrollment %>%
-  group_by(study_site) %>%
-  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
-  filter(latest_enrollment >= 74) %>%
-  summarise(n = n()) %>%
-  pull(n)
-
-reached_75per_target <- weekly_enrollment %>%
-  group_by(study_site) %>%
-  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
-  filter(latest_enrollment >= 111) %>%
-  summarise(n = n()) %>%
-  pull(n)
-
-reached_100per_target <- weekly_enrollment %>%
-  group_by(study_site) %>%
-  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
-  filter(latest_enrollment >= 148) %>%
-  summarise(n = n()) %>%
-  pull(n)
-```
-
-
-All `r reached_75per_target` facilities surpassed the 75% enrollment milestone ($\geq$ 111 participants). Importantly, 15 facilities achieved or exceeded the full target of 148 participants, while 5 facilities fell slightly short but still maintained strong recruitment performance. Overall, the study demonstrated robust enrollment momentum and milestone attainment across sites, with balanced contributions across arms and sustained progress through to completion.
-
-
-```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
-# NOTE FOR WENWEN: Replace arm_random with arm_random in this plot chunk
-# below to switch from dummy to real arm assignment.
-
-p2 <- ggplot(weekly_enrollment,
-             aes(x = week, y = cumulative_enrollment,
-                 color = study_site, group = study_site)) +
-    geom_line(linewidth = 1) +
-    # Target lines
-    geom_hline(yintercept = 37,  linetype = "dashed", color = "red",       linewidth = 0.5) +
-    geom_hline(yintercept = 74,  linetype = "dashed", color = "orange",    linewidth = 0.5) +
-    geom_hline(yintercept = 111, linetype = "dashed", color = "purple", linewidth = 0.5) +
-    geom_hline(yintercept = 148, linetype = "dashed", color = "green", linewidth = 0.5) +
-    # Target labels
-    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
-             y = 37  + 3, label = "25% target (n=37)",  color = "red",       hjust = 0, size = 3) +
-    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
-             y = 74  + 3, label = "50% target (n=74)",  color = "orange",    hjust = 0, size = 3) +
-    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
-             y = 111 + 3, label = "75% target (n=111)", color = "purple", hjust = 0, size = 3) +
-    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
-             y = 148 + 3, label = "100% target (n=148)", color = "green", hjust = 0, size = 3) +
-    scale_color_manual(values = site_colors) +
-    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
-    coord_cartesian(clip = "off") +
-    facet_wrap(~ arm_random, ncol = 1) +
-    labs(
-        title = "Enrollment Trends by Facility",
-        x     = "Date",
-        y     = "Cumulative Enrollment",
-        color = "Study Site"
-    ) +
-    consort_theme +
-    theme(legend.position = "right") +
-    guides(color = guide_legend(ncol = 2))
-
-p2
-```
-
-
-# 5. Follow-Up Retention Summary
 ```{r Follow-up Summary, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, dpi=300, paged.print=TRUE}
 source("RCT Retention.R")
 set.seed(12345)
@@ -880,8 +640,7 @@ retention_summary <- bind_rows(
                 six_months_status == "Window Open"
             ),
             .groups = "drop"
-        )
-) %>%
+        )) %>%
     rename(
         Arm = all_of(arm_variable)
     ) %>%
@@ -890,13 +649,24 @@ retention_summary <- bind_rows(
         Retention = scales::percent(
             Retention,
             accuracy = 0.1
+        ),
+        Visit = factor(
+            Visit,
+            levels = c("6 Weeks", "14 Weeks", "6 Months")
+        ),
+        Arm = factor(
+            Arm,
+            levels = c("Arm Y", "Arm X")
         )
     ) %>%
     arrange(
         Visit,
         Arm
+    ) %>%
+    mutate(
+        Visit = as.character(Visit),
+        Arm = as.character(Arm)
     )
-
 gt_overall <- as.data.frame(retention_summary)
 
 overall_tbl <- gt(gt_overall) %>%
@@ -931,18 +701,260 @@ overall_tbl <- gt(gt_overall) %>%
 overall_tbl
 ```
 
+\newpage
+
+## 2.3 Enrollment Progress - Overall
+Final enrollment closed with 2,970 participants recruited, including 417 women living with HIV (WLWH). Control Arm enrolled 1,488 participants and Intervention Arm enrolled 1,482 participants. While Control achieved slightly higher enrollment, both arms contributed substantial numbers and maintained consistent recruitment patterns over time. The difference in totals between arms is modest and does not indicate major imbalance.
+The milestone lines (25%, 50%, 75%, 100%) illustrate that both arms reached key thresholds within the expected timeframe, demonstrating robust recruitment performance across study sites.
+
+
+```{r enrollment_progress prep, echo=FALSE}
+# Site label lookup (number ??? short name)
+site_labels <- c(
+    "01, Rwambwa Sub-county Hospital"     = "01, Rwambwa",
+    "02, Sigomere Sub County Hospital"    = "02, Sigomere",
+    "03, Uyawi Sub County Hospital"       = "03, Uyawi",
+    "04, Got Agulu Sub-District Hospital" = "04, Got Agulu",
+    "05, Ukwala Sub County Hospital"      = "05, Ukwala",
+    "06, Madiany Sub County Hospital"     = "06, Madiany",
+    "07, Kabondo Sub County Hospital"     = "07, Kabondo",
+    "08, Mbita Sub-County Hospital"       = "08, Mbita",
+    "09, Miriu Health Centre"             = "09, Miriu",
+    "11, Nyandiwa Level IV Hospital"      = "11, Nyandiwa",
+    "13, Ober Kamoth Sub County Hospital" = "13, Ober Kamoth",
+    "14, Gita Sub County Hospital"        = "14, Gita",
+    "15, Akala Health Centre"             = "15, Akala",
+    "16, Usigu Health Centre"             = "16, Usigu",
+    "17, Ramula Health Centre"            = "17, Ramula",
+    "18, Simenya Health Centre"           = "18, Simenya",
+    "19, Airport Health Centre (Kisumu)"  = "19, Airport",
+    "20, Nyalenda Health Centre"          = "20, Nyalenda",
+    "21, Mirogi Health Centre"            = "21, Mirogi",
+    "22, Ndiru Level 4 Hospital"          = "22, Ndiru"
+)
+
+# Enrollment prep ??? collapsed into a single pipeline
+weekly_enrollment <- screening_consent_df %>%
+    filter(rct_eligible == "1"& rct_enrolling == "Yes") %>%
+    select(study_site, date_consented, date_consented_v2) %>%
+    mutate(
+        consent_date = as.Date(
+            coalesce(date_consented, date_consented_v2),
+            origin = "1899-12-30"
+        ),
+        week      = floor_date(consent_date, "week", week_start = 1),
+        study_site = recode(study_site, !!!site_labels),
+        arm        = str_extract(study_site, "^\\d{2}"),
+        arm_group  = if_else(
+            arm %in% c("02", "05", "06", "08", "11", "14", "15", "18", "20", "21"),
+            "Control", "Intervention"
+        )
+    ) %>%
+    select(-date_consented_v2) %>%
+    group_by(study_site, arm, arm_group, week) %>%
+    summarise(enrollment_count = n(), .groups = "drop") %>%
+    # Full join to fill in weeks with no enrollment
+    full_join(
+        data.frame(week = seq(as.Date("2025-02-16"), as.Date(data_freeze), by = "week")),
+        by = "week"
+    ) %>%
+    arrange(week) %>%
+    mutate(enrollment_count = replace_na(enrollment_count, 0)) %>%
+    filter(!is.na(study_site)) %>%
+    group_by(study_site) %>%
+    mutate(cumulative_enrollment = cumsum(enrollment_count)) %>%
+    ungroup()
+```
+
+
+
+```{r generate dummy arm2, echo=FALSE}
+# ---- Random arm assignment at facility level ----
+set.seed(12345)
+
+facility_arms <- weekly_enrollment %>%
+    filter(!is.na(study_site)) %>%
+    distinct(study_site) %>%
+    arrange(study_site) %>%
+    mutate(
+        arm_random = sample(rep(c("Arm Y",
+                                  "Arm X"), each = 10))
+    )
+
+weekly_enrollment <- weekly_enrollment %>%
+    left_join(facility_arms, by = "study_site") %>%
+    mutate(
+        arm_random = factor(arm_random,
+                            levels = c("Arm Y",
+                                       "Arm X"))
+    )
+
+# NOTE FOR WENWEN: Replace arm_random with arm_group throughout the plot chunk
+# below to switch from dummy to real arm assignment.
+```
+
+
+
+```{r enrollment_progress plot, echo=FALSE, fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
+# Shared plot theme ---------------------------------------------------------
+consort_theme <- theme_minimal(base_size = 12) +
+    theme(
+        plot.title        = element_text(face = "bold", size = 14, hjust = 0.5),
+        axis.text.x       = element_text(angle = 45, vjust = 1, hjust = 1),
+        strip.text        = element_text(face = "bold", size = 11),
+        legend.position   = "right",
+        legend.box        = "vertical",
+        legend.title      = element_text(face = "bold", size = 10),
+        legend.text       = element_text(size = 9),
+        legend.key.height = unit(0.5, "cm"),
+        legend.key.width  = unit(0.5, "cm"),
+        plot.margin       = margin(10, 20, 10, 10)
+    )
+
+total_enrollment <- weekly_enrollment %>%
+    group_by(week, arm_random) %>%
+    summarise(enrollment_count = sum(enrollment_count), .groups = "drop") %>%
+    arrange(week) %>%
+    group_by(arm_random) %>%
+    mutate(
+        cumulative_enrollment = cumsum(enrollment_count),
+        study_site = "Total"
+    ) %>%
+    ungroup()
+
+combined_enrollment <- bind_rows(weekly_enrollment, total_enrollment) %>%
+    mutate(is_total = study_site == "Total")
+
+# Color palette: sites in default ggplot hues, "Total" in black
+site_names  <- sort(unique(weekly_enrollment$study_site))
+site_colors <- setNames(scales::hue_pal()(length(site_names)), site_names)
+all_colors  <- c(site_colors, "Total" = "black")
+
+p1 <- ggplot(combined_enrollment,
+             aes(x = week, y = cumulative_enrollment,
+                 color = study_site, group = study_site,
+                 linewidth = is_total)) +
+    geom_line() +
+    scale_linewidth_manual(values = c("FALSE" = 0.5, "TRUE" = 1.5), guide = "none") +
+    # Target lines
+    geom_hline(yintercept = 372,  linetype = "dashed", color = "#0072B2", linewidth = 0.8) +
+geom_hline(yintercept = 743,  linetype = "dashed", color = "#E69F00", linewidth = 0.8) +
+geom_hline(yintercept = 1114, linetype = "dashed", color = "#009E73", linewidth = 0.8) +
+geom_hline(yintercept = 1485, linetype = "dashed", color = "#D55E00", linewidth = 0.8) +
+    annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+         y = 372 + 20, label = "25% (n=372)", color = "#0072B2", hjust = 0, size = 3.5) +
+annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+         y = 743 + 20, label = "50% (n=743)", color = "#E69F00", hjust = 0, size = 3.5) +
+annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+         y = 1114 + 20, label = "75% (n=1114)", color = "#009E73", hjust = 0, size = 3.5) +
+annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+         y = 1485 + 20, label = "100% (n=1485)", color = "#D55E00", hjust = 0, size = 3.5) +
+    scale_color_manual(values = all_colors) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+    coord_cartesian(clip = "off") +
+    facet_wrap(~ arm_random, ncol = 1) +
+    labs(
+        title = "Enrollment Trends by Study Arm",
+        x     = "Date",
+        y     = "Cumulative Enrollment",
+        color = "Study Site"
+    ) +
+    consort_theme +
+    guides(color = guide_legend(ncol = 2))
+
+p1
+```
+
+
+
+\newpage
+
+## 2.4 Enrollment Progress - Per Facility
+
+
+```{r Facility target reached, echo=F}
+reached_25per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 37) %>%
+  summarise(n = n()) %>%
+  pull(n)
+
+reached_50per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 74) %>%
+  summarise(n = n()) %>%
+  pull(n)
+
+reached_75per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 111) %>%
+  summarise(n = n()) %>%
+  pull(n)
+
+reached_100per_target <- weekly_enrollment %>%
+  group_by(study_site) %>%
+  summarise(latest_enrollment = max(cumulative_enrollment, na.rm = TRUE)) %>%
+  filter(latest_enrollment >= 148) %>%
+  summarise(n = n()) %>%
+  pull(n)
+```
+
+
+All `r reached_75per_target` facilities surpassed the 75% enrollment milestone ($\geq$ 111 participants). Importantly, 15 facilities achieved or exceeded the full target of 148 participants, while 5 facilities fell slightly short but still maintained strong recruitment performance. Overall, the study demonstrated robust enrollment momentum and milestone attainment across sites, with balanced contributions across arms and sustained progress through to completion.
+
+
+```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
+# NOTE FOR WENWEN: Replace arm_random with arm_random in this plot chunk
+# below to switch from dummy to real arm assignment.
+
+p2 <- ggplot(weekly_enrollment,
+             aes(x = week, y = cumulative_enrollment,
+                 color = study_site, group = study_site)) +
+    geom_line(linewidth = 1) +
+    # Target lines
+    geom_hline(yintercept = 37,  linetype = "dashed", color = "red",       linewidth = 0.5) +
+    geom_hline(yintercept = 74,  linetype = "dashed", color = "orange",    linewidth = 0.5) +
+    geom_hline(yintercept = 111, linetype = "dashed", color = "purple", linewidth = 0.5) +
+    geom_hline(yintercept = 148, linetype = "dashed", color = "green", linewidth = 0.5) +
+    # Target labels
+    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
+             y = 37  + 3, label = "25% target (n=37)",  color = "red",       hjust = 0, size = 3) +
+    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
+             y = 74  + 3, label = "50% target (n=74)",  color = "orange",    hjust = 0, size = 3) +
+    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
+             y = 111 + 3, label = "75% target (n=111)", color = "purple", hjust = 0, size = 3) +
+    annotate("text", x = min(weekly_enrollment$week, na.rm = TRUE),
+             y = 148 + 3, label = "100% target (n=148)", color = "green", hjust = 0, size = 3) +
+    scale_color_manual(values = site_colors) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+    coord_cartesian(clip = "off") +
+    facet_wrap(~ arm_random, ncol = 1) +
+    labs(
+        title = "Enrollment Trends by Facility",
+        x     = "Date",
+        y     = "Cumulative Enrollment",
+        color = "Study Site"
+    ) +
+    consort_theme +
+    theme(legend.position = "right") +
+    guides(color = guide_legend(ncol = 2))
+
+p2
+```
+
 
 \newpage
 
 # 3. Women Living with HIV Cohort
-
 
 ```{r wlwh prep, echo=FALSE}
 
 source("Consort_WLWH.R")
 
 ```
-
 
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed their 6 months postpartum follow-up visits. Percentages do not reflect study retention as not all enrolled participants have reached follow-up visits.
 
@@ -1110,8 +1122,8 @@ demographic_arms <- demographics_df %>%
     distinct(clt_study_site) %>%
     arrange(clt_study_site) %>%
     mutate(
-        arm_random = sample(rep(c("Arm X",
-                                  "Arm Y"), each = 10))
+        arm_random = sample(rep(c("Arm Y",
+                                  "Arm X"), each = 10))
     )
 
 demographics_df <- demographics_df %>%
@@ -1267,12 +1279,14 @@ earliest_due <- first_6ths %>%
   select(clt_ptid, clt_date) %>% 
     pull(clt_date) 
 
-total_exits <- ppw_rct_df%>%
-    # Filter to "6 months" and grab the first per participant
-  filter(clt_visit == "6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>%
+# Completed study visits
+total_exits <- ppw_rct_df %>%
+    filter(str_detect(redcap_event_name, "6 Months")) %>%
+    select(clt_ptid,clt_study_site, mv_visit, dis_today, dis_reason)%>% 
     mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
            arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
                               "Control", "Intervention")) 
+
 
 # Random arm generation
 exits_arm <- total_exits %>%
@@ -1280,8 +1294,8 @@ exits_arm <- total_exits %>%
     distinct(clt_study_site) %>%
     arrange(clt_study_site) %>%
     mutate(
-        arm_random = sample(rep(c("Arm X",
-                                  "Arm Y"), each = 10))
+        arm_random = sample(rep(c("Arm Y",
+                                  "Arm X"), each = 10))
     )
 
 # Assign exit_arm to total exits
@@ -1294,24 +1308,69 @@ total_exits <- total_exits%>%
     )
 
 completed_follow_up <- total_exits %>% 
-    filter(clt_visit=="6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
+    filter(is.na(mv_visit)) %>%
+    filter(dis_today == "Yes") %>% 
+    filter(grepl("(Study End)",dis_reason)) %>% 
     nrow()
 
 completed_control <- total_exits %>% 
     filter(arm_group == "Control") %>% 
-    select(clt_ptid, clt_visit, hiv_care_and_treatment_complete) %>% 
-    filter(clt_visit=="6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>%
+    filter(is.na(mv_visit)) %>%
+    filter(dis_today == "Yes") %>% 
+    filter(grepl("(Study End)",dis_reason)) %>%
     nrow()
     
 completed_intervention <- total_exits %>% 
-    filter(arm_group == "Intervention") %>%
-    select(clt_ptid, clt_visit, hiv_care_and_treatment_complete) %>% 
-    filter(clt_visit=="6 months post-partum" & hiv_care_and_treatment_complete== "Complete") %>% 
+    filter(arm_group == "Intervention") %>% 
+    filter(is.na(mv_visit)) %>%
+    filter(dis_today == "Yes") %>% 
+    filter(grepl("(Study End)",dis_reason)) %>%
     nrow()
 
-```
+# Lost to follow up
+lost_to_follow_up <- total_exits %>% 
+    filter(dis_today == "Yes") %>% 
+    mutate(
+    dis_reason = case_when(
+      str_detect(dis_reason, 
+                 "Unable to contact the participant") ~ "Lost to follow-up",
+      TRUE ~ dis_reason   # keep original if no match
+    )) %>% 
+    filter(dis_reason == "Lost to follow-up")
 
-To date, no early terminations have been recorded aside from maternal deaths (see adverse event section). A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint, including `r completed_control` from the control arm and `r completed_intervention` from the intervention arm. The first termination occurred on `r earliest_due`.
+n_lost <- lost_to_follow_up %>%
+  distinct(clt_ptid) %>%
+  nrow()
+
+# Withdrew consent
+withdrawals <- ppw_rct_df %>%
+    filter(
+        dis_today == "Yes",
+        !clt_visit %in% c("6 months post-partum")
+        ) %>% 
+    select(clt_ptid, dis_today, dis_date, dis_reason) %>% 
+    mutate(
+    dis_reason = case_when(
+      str_detect(dis_reason, 
+                 "Participant has requested to end participation before completing all study visits") ~ "Withdrawal",
+      str_detect(dis_reason, 
+                 "Unable to contact the participant") ~ "Lost to follow-up",
+      TRUE ~ dis_reason   # keep original if no match
+    )
+  ) %>% 
+    filter(dis_reason == "Withdrawal")
+
+n_withdrawals <- withdrawals %>%
+  distinct(clt_ptid) %>%
+  nrow()
+```
+The following summarizes participant study exits and disposition to date.
+
+A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint, including `r completed_control` from the control arm and `r completed_intervention` from the intervention arm. The first study exit occurred on `r earliest_due`.
+
+One participant (N = 1) withdrew consent before completing all scheduled study visits, while `r n_lost` participants were classified as lost to follow-up because they could not be contacted. No participants have been terminated early following a Principal Investigator (PI) discharge decision.
+
+Three maternal deaths (N = 3) have been reported and are described separately in the Adverse Events section.
 
 
 # 7. Referrals
@@ -1859,7 +1918,7 @@ sae_arm <- clean_sae_df %>%
   arrange(redcap_event_name) %>%
   mutate(
     arm_random = sample(
-      rep(c("Arm X", "Arm Y"), 
+      rep(c("Arm Y", "Arm X"), 
           length.out = n())
     )
   )
@@ -2160,7 +2219,7 @@ ae_arm <- final_ae %>%
   arrange(redcap_event_name) %>%
   mutate(
     arm_random = sample(
-      rep(c("Arm X", "Arm Y"),
+      rep(c("Arm Y", "Arm X"),
           length.out = n())
     )
   )
@@ -2276,7 +2335,7 @@ int_ae_summary %>%
 ```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 cont_ae_summary <- final_ae %>%
     #filter(Arm == "Control") %>%
-    filter(arm_random == "Arm X") %>%
+    filter(arm_random == "Arm Y") %>%
     # To external analyst: Replace with Arm for real data (Control)----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days, days_since_enrolment) %>%
