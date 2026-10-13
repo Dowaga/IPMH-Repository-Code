@@ -500,8 +500,6 @@ six_week_delivery <- ppw_rct_df %>%
 setdiff(six_week_delivery$record_id, all_deliveries$ptid)
 
 
-
-
 # ------------------------------------------------------------
 # 3. Compare tracker and 6-week CRF delivery dates
 # ------------------------------------------------------------
@@ -808,7 +806,8 @@ retention_data <- retention_windows %>%
     full_join(
         attendance,
         by = "ptid"
-    )
+    )%>%
+    distinct(ptid, .keep_all = TRUE)
 
 
 # ------------------------------------------------------------
@@ -971,11 +970,11 @@ retention_summary <- bind_rows(
             Attended = sum(
                 six_weeks_status == "Attended"
             ),
-            Missed = sum(
-                six_weeks_status == "Missed"
-            ),
             `Window Open` = sum(
                 six_weeks_status == "Window Open"
+            ),
+            Missed = sum(
+                six_weeks_status == "Missed"
             )
         ),
     
@@ -988,11 +987,11 @@ retention_summary <- bind_rows(
             Attended = sum(
                 fourteen_weeks_status == "Attended"
             ),
-            Missed = sum(
-                fourteen_weeks_status == "Missed"
-            ),
             `Window Open` = sum(
                 fourteen_weeks_status == "Window Open"
+            ),
+            Missed = sum(
+                fourteen_weeks_status == "Missed"
             )
         ),
     
@@ -1005,49 +1004,117 @@ retention_summary <- bind_rows(
             Attended = sum(
                 six_months_status == "Attended"
             ),
-            Missed = sum(
-                six_months_status == "Missed"
-            ),
             `Window Open` = sum(
                 six_months_status == "Window Open"
+            ),
+            Missed = sum(
+                six_months_status == "Missed"
             )
         )
 ) %>%
     mutate(
-        Retention = Attended / `Participants Due`,
+        Retention = (
+            Attended + `Window Open`
+        ) / `Participants Due`,
         Retention = scales::percent(
             Retention,
             accuracy = 0.1
         )
     )
 
+
+
 overall_tbl <- gt(retention_summary) %>%
+    
+    # Table title
     tab_header(
         title = md("**Overall Retention Across Study Follow-up**"),
         subtitle = md("All facilities combined")
     ) %>%
+    
+    # Professional, consistent font
     opt_table_font(
         font = list(
-            google_font("Chivo"),
+            google_font("Arial"),
             default_fonts()
         )
     ) %>%
+    
+    # Format column headers
     tab_style(
-        locations = cells_column_labels(columns = everything()),
         style = list(
+            cell_text(
+                weight = "bold",
+                color = "#24364B",
+                size = px(11)
+            ),
+            cell_fill(color = "#EAF0F6"),
             cell_borders(
                 sides = "bottom",
-                weight = px(2)
-            ),
-            cell_text(weight = "bold")
+                color = "#65758B",
+                weight = px(1.5)
+            )
+        ),
+        locations = cells_column_labels(
+            columns = everything()
         )
     ) %>%
+    
+    # Format table title
+    tab_style(
+        style = cell_text(
+            weight = "bold",
+            size = px(15),
+            color = "#24364B"
+        ),
+        locations = cells_title(groups = "title")
+    ) %>%
+    
+    # Format subtitle
+    tab_style(
+        style = cell_text(
+            size = px(10),
+            color = "#606B78"
+        ),
+        locations = cells_title(groups = "subtitle")
+    ) %>%
+    
+    # Align columns according to content
+    cols_align(
+        align = "left",
+        columns = where(is.character)
+    ) %>%
+    cols_align(
+        align = "center",
+        columns = where(is.numeric)
+    ) %>%
+    
+    # Table-wide formatting
     tab_options(
-        table.font.size = px(12),
+        table.font.size = px(10),
+        table.background.color = "white",
         table.border.top.style = "none",
-        column_labels.border.bottom.width = 2,
+        table.border.bottom.style = "solid",
+        table.border.bottom.color = "#AAB4C0",
+        table.border.bottom.width = px(1),
+        column_labels.border.top.style = "none",
+        column_labels.border.bottom.width = px(1.5),
         table_body.border.top.style = "none",
-        data_row.padding = px(3)
+        table_body.hlines.style = "solid",
+        table_body.hlines.color = "#E2E7ED",
+        table_body.hlines.width = px(0.5),
+        data_row.padding = px(5),
+        heading.padding = px(6),
+        footnotes.font.size = px(9),
+        footnotes.padding = px(4)
+    ) %>%
+    
+    # Explain the retention definition
+    tab_footnote(
+        footnote = md(
+            "Retention = (Attended + Window Open) / Participants Due. Participants whose visit windows remain open are included in the retention numerator."
+        ),
+        locations = cells_title(groups = "title")
     )
 # ============================================================
 # 14. FACILITY-LEVEL RETENTION FUNCTION
@@ -1136,13 +1203,15 @@ wk6_facility_retention <- retention_status %>%
     summarise(
         `Participants Due` = n(),
         Attended = sum(six_weeks_status == "Attended"),
-        Missed = sum(six_weeks_status == "Missed"),
         `Window Open` = sum(six_weeks_status == "Window Open"),
+        Missed = sum(six_weeks_status == "Missed"),
         .groups = "drop"
     ) %>%
     mutate(
-        Retention = scales::percent(Attended / `Participants Due`, accuracy = 0.1)
-    ) %>%
+        Retention = scales::percent(
+            (Attended + `Window Open`) / `Participants Due`,
+            accuracy = 0.1
+        )) %>%
     arrange(desc(Retention))
 
 wk6_tbl <- gt(wk6_facility_retention) %>%
@@ -1178,14 +1247,16 @@ wk14_facility_retention <- retention_status %>%
     group_by(clt_study_site) %>%
     summarise(
         `Participants Due` = n(),
-        Attended = sum(six_weeks_status == "Attended"),
-        Missed = sum(six_weeks_status == "Missed"),
-        `Window Open` = sum(six_weeks_status == "Window Open"),
+        Attended = sum(fourteen_weeks_status == "Attended"),
+        `Window Open` = sum(fourteen_weeks_status == "Window Open"),
+        Missed = sum(fourteen_weeks_status == "Missed"),
         .groups = "drop"
     ) %>%
     mutate(
-        Retention = scales::percent(Attended / `Participants Due`, accuracy = 0.1)
-    ) %>%
+        Retention = scales::percent(
+            (Attended + `Window Open`) / `Participants Due`,
+            accuracy = 0.1
+        )) %>%
     arrange(desc(Retention))
 
 wk14_tbl <- gt(wk14_facility_retention) %>%
@@ -1222,13 +1293,15 @@ mo6_facility_retention <- retention_status %>%
     summarise(
         `Participants Due` = n(),
         Attended = sum(six_months_status == "Attended"),
-        Missed = sum(six_months_status == "Missed"),
         `Window Open` = sum(six_months_status == "Window Open"),
+        Missed = sum(six_months_status == "Missed"),
+        
         .groups = "drop"
     ) %>%
     mutate(
-        Retention = scales::percent(Attended / `Participants Due`, accuracy = 0.1)
-    ) %>%
+        Retention = scales::percent(
+            (Attended + `Window Open`) / `Participants Due`,
+            accuracy = 0.1)) %>%
     arrange(desc(Retention))
 
 mo6_tbl <- gt(mo6_facility_retention) %>%
@@ -1464,3 +1537,146 @@ retention_qc_summary <- tibble(
         )
 )
 
+# RETENTION OF WLHIV----
+# ------------------------------------------------------------
+# Identify WLHIV participants at enrollment
+# ------------------------------------------------------------
+
+wlhiv_ids <- ppw_rct_df %>%
+    filter(
+        med_pastdiag___2 == "Checked",
+        !is.na(clt_ptid)
+    ) %>%
+    transmute(
+        ptid = as.integer(clt_ptid)
+    ) %>%
+    distinct(ptid)
+
+# Check unique WLHIV participants
+nrow(wlhiv_ids)
+
+
+# ------------------------------------------------------------
+# WLHIV cohort retention status
+# ------------------------------------------------------------
+
+retention_status_wlhiv <- retention_status %>%
+    semi_join(
+        wlhiv_ids,
+        by = "ptid"
+    ) %>%
+    distinct(ptid, .keep_all = TRUE)
+
+# Verify cohort size
+n_distinct(retention_status_wlhiv$ptid)
+
+# ============================================================
+# WLHIV OVERALL RETENTION
+# ============================================================
+
+retention_summary_wlhiv <- bind_rows(
+    
+    # 6 Weeks
+    retention_status_wlhiv %>%
+        filter(six_weeks_status != "Not Due") %>%
+        summarise(
+            Visit = "6 Weeks",
+            `Participants Due` = n(),
+            Attended = sum(six_weeks_status == "Attended"),
+            `Window Open` = sum(six_weeks_status == "Window Open"),
+            Missed = sum(six_weeks_status == "Missed")
+        ),
+    
+    # 14 Weeks
+    retention_status_wlhiv %>%
+        filter(fourteen_weeks_status != "Not Due") %>%
+        summarise(
+            Visit = "14 Weeks",
+            `Participants Due` = n(),
+            Attended = sum(fourteen_weeks_status == "Attended"),
+            `Window Open` = sum(fourteen_weeks_status == "Window Open"),
+            Missed = sum(fourteen_weeks_status == "Missed")
+        ),
+    
+    # 6 Months
+    retention_status_wlhiv %>%
+        filter(six_months_status != "Not Due") %>%
+        summarise(
+            Visit = "6 Months",
+            `Participants Due` = n(),
+            Attended = sum(six_months_status == "Attended"),
+            `Window Open` = sum(six_months_status == "Window Open"),
+            Missed = sum(six_months_status == "Missed")
+        )
+    
+) %>%
+    mutate(
+        Retention = scales::percent(
+            (Attended + `Window Open`) / `Participants Due`,
+            accuracy = 0.1
+        )
+    )
+
+overall_wlhiv_tbl <- gt(retention_summary_wlhiv) %>%
+    
+    tab_header(
+        title = md("**Retention Among Women Living with HIV**"),
+        subtitle = md("All facilities combined")
+    ) %>%
+    opt_table_font(
+        font = list(
+            google_font("Arial"),
+            default_fonts()
+        )
+    ) %>%
+    
+    tab_style(
+        style = list(
+            cell_text(
+                weight = "bold",
+                color = "#24364B",
+                size = px(11)
+            ),
+            cell_fill(color = "#EAF0F6"),
+            cell_borders(
+                sides = "bottom",
+                color = "#65758B",
+                weight = px(1.5)
+            )
+        ),
+        locations = cells_column_labels(everything())
+    ) %>%
+    
+    tab_style(
+        style = cell_text(
+            weight = "bold",
+            size = px(15),
+            color = "#24364B"
+        ),
+        locations = cells_title(groups = "title")
+    ) %>%
+    
+    cols_align(
+        align = "left",
+        columns = Visit
+    ) %>%
+    
+    cols_align(
+        align = "center",
+        columns = -Visit
+    ) %>%
+    
+    tab_options(
+        table.font.size = px(10),
+        data_row.padding = px(5),
+        table.align = "center"
+    ) %>%
+    
+    tab_footnote(
+        footnote = md(
+            "Retention = (Attended + Window Open) / Participants Due."
+        ),
+        locations = cells_title(groups = "title")
+    )
+
+overall_wlhiv_tbl
