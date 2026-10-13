@@ -13,6 +13,7 @@ header-includes:
  \usepackage[table]{xcolor}
  \usepackage{wrapfig}
  \floatplacement{figure}{H}
+ \usepackage{placeins}
 
 output:
     pdf_document:
@@ -138,7 +139,13 @@ study_summary
 
 ## 1.2 Key Changes to Study Protocol
 
+### 1.2.1 Changes to study protocol since most-recent DSMB meeting:
+None
+
+### 1.2.2 Changes to study protocol since beginning of study:
+
 We requested for a modification from the Kenyatta National Hospital Ethical Research Committee on May 12, 2025 to include women from \ $\geq$ 20 weeks gestation because most of the participants enrolled from \ $\geq$ 28 weeks gestation were not completing the required 5 sessions of the Problem Management+ (PM+) psychotherapy that is offered as part of the intervention due to delivery. By modifying the inclusion criteria, our participants have adequate time to receive the required 5 sessions of PM+ and we will be able to evaluate the mechanism of action of PM+ which is a secondary outcome for the study.
+
 
 \newpage 
 
@@ -172,9 +179,16 @@ n_fourth <- consort_data %>%
 n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
 ```
 
-We began recruiting pregnant women into the study on February 17, 2025. `r n_enrol` participants have been recruited into the study, meeting `r round((n_enrol / 2970) * 100, 1)`% of our enrollment target.
+### 2.1.1 Recruitment updates since most-recent DSMB meeting:
+To date, `r n_enrol` participants have been enrolled, achieving `r round((n_enrol / 2970) * 100, 1)`% of the target sample size.
+Among those enrolled, `r n_second` (`r round(n_second / n_enrol * 100, 1)`%) have completed the 6-week postpartum visit, `r n_third` (`r round(n_third / n_enrol * 100, 1)`%) have completed the 14-week visit, and `r n_fourth` (`r round(n_fourth / n_enrol * 100, 1)`%) have completed the 6-month visit.
 
-Of the enrolled participants, `r n_second` (`r round(n_second / n_enrol * 100, 1)`%) have completed their 6 weeks, `r n_third` (`r round(n_third / n_enrol * 100, 1)`%) have completed 14 weeks and `r n_fourth` (`r round(n_fourth / n_enrol * 100, 1)`%) have completed 6 months postpartum follow-up visits.
+Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
+
+### 2.1.2 Recruitment timeline for entire study to date:
+Recruitment of pregnant women commenced on February 17, 2025, and the study achieved its full enrollment target of 2,970 participants on September 14, 2026.
+
+Among those enrolled, `r n_second` (`r round(n_second / n_enrol * 100, 1)`%) have completed the 6-week postpartum visit, `r n_third` (`r round(n_third / n_enrol * 100, 1)`%) have completed the 14-week visit, and `r n_fourth` (`r round(n_fourth / n_enrol * 100, 1)`%) have completed the 6-month visit.
 
 In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily; however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts.
 
@@ -184,6 +198,9 @@ In Siaya County, there was a nurse strike which began on September 18, 2025. The
 
 Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
 
+A nurses' strike affecting all three study counties-Homa Bay, Kisumu, and Siaya-began on July 29, 2026, and was called off on September 14, 2026. Nurses in Homa Bay and Kisumu counties subsequently returned to work, while nurses in Siaya County remain on strike.
+
+
 \newpage
 
 # 3. Overall Study Status
@@ -192,7 +209,7 @@ Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following
 
 ### 3.1.1 Current subject status
 
-We screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. A total of `r n_enrol` (`r n_enrol_per`% of eligible) consented and were enrolled. Follow-up completion was as follows: `r n_second` (`r n_second_per`% out of all enrolled) completed the 6-week postpartum visit, `r n_third` (`r n_third_per`% out of all enrolled) completed the 14-week visit, and `r n_fourth` (`r n_fourth_per`% out of all enrolled) completed the 6-month visit. Percentages reflect visit completion among those enrolled, not overall retention, as not all participants have yet reached later follow-up points.
+We screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. A total of `r n_enrol` (`r n_enrol_per`% of eligible) consented and were enrolled. Follow-up completion was as follows: `r n_second` (`r n_second_per`% out of all enrolled) completed the 6-week postpartum visit, `r n_third` (`r n_third_per`% out of all enrolled) completed the 14-week visit, and `r n_fourth` (`r n_fourth_per`% out of all enrolled) completed the 6-month visit. Percentages reflect visit completion among those enrolled, not overall retention, as not all participants have yet reached later follow-up points (see 3.2 Participant Retention During Follow-up").
 
 ```{r consort, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
 open_consort_diagram <- consort_plot(data = consort_data,
@@ -212,12 +229,44 @@ open_consort_diagram
 
 ## 3.2 Participant Retention During Follow-up
 ```{r Follow-up Summary, echo=FALSE, fig.height=6, fig.width=10, warning=FALSE, dpi=300}
-source("RCT Retention.R")
+source("RCT Retention.R", encoding = "UTF-8")
 
-overall_tbl <- retention_summary %>% knitr::kable(format = "latex", booktabs = TRUE, caption = "Overall Retention Across Study Follow-up") %>% kable_styling( latex_options = c("HOLD_position", "scale_down"), font_size = 12 ) %>% row_spec(0, bold = TRUE, underline = TRUE) %>% # header styling 
-    row_spec(1:nrow(retention_summary)) %>% add_header_above(c(" " = ncol(retention_summary)), bold = FALSE, italic = TRUE, line = FALSE, escape = FALSE) %>% add_header_above(c("All facilities combined" = ncol(retention_summary)), bold = FALSE, italic = TRUE, line = FALSE, escape = FALSE)
+overall_tbl <- retention_summary %>%
+    knitr::kable(
+        format = "latex",
+        booktabs = TRUE,
+        caption = "Overall Retention Across Study Follow-up",
+        align = "l",
+        escape = TRUE
+    ) %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down"),
+        font_size = 11,
+        position = "center",
+        full_width = FALSE
+    ) %>%
+    kableExtra::row_spec(
+        0,
+        bold = TRUE
+    ) %>%
+    kableExtra::add_header_above(
+        c("All facilities combined" = ncol(retention_summary)),
+        bold = TRUE,
+        italic = TRUE,
+        line = TRUE
+    ) %>%
+    kableExtra::footnote(
+        general = paste(
+            "Retention = (Attended + Window Open) / Participants Due. Participants whose visit windows remain open are included in the retention numerator."
+        ),
+        general_title = "Note: ",
+        footnote_as_chunk = TRUE,
+        threeparttable = TRUE,
+        escape = TRUE
+    )
 
 overall_tbl
+
 ```
 
 
@@ -645,6 +694,49 @@ add_box(txt = txt_enrolled) |>
 
 ```
 
+
+\newpage
+```{r wlhiv_retention, echo=FALSE, message=FALSE, warning=FALSE}
+source("RCT Retention.R")
+overall_wlhiv_tbl1 <- retention_summary_wlhiv %>%
+    knitr::kable(
+        format = "latex",
+        booktabs = TRUE,
+        caption = "Retention Among Women Living with HIV",
+        align = "l",
+        escape = TRUE
+    ) %>%
+    kableExtra::kable_styling(
+        latex_options = c("HOLD_position", "scale_down"),
+        font_size = 11,
+        position = "center",
+        full_width = FALSE
+    ) %>%
+    kableExtra::row_spec(
+        0,
+        bold = TRUE
+    ) %>%
+    kableExtra::add_header_above(
+        c("All facilities combined" = ncol(retention_summary)),
+        bold = TRUE,
+        italic = TRUE,
+        line = TRUE
+    ) %>%
+    kableExtra::footnote(
+        general = paste(
+            "Retention = (Attended + Window Open) / Participants Due."
+        ),
+        general_title = "Note: ",
+        footnote_as_chunk = TRUE,
+        threeparttable = TRUE,
+        escape = TRUE
+    )
+
+overall_wlhiv_tbl1
+
+overall_wlhiv_tbl
+```
+
 \newpage
 
 ### 3.4.2 Enrollment Progress
@@ -688,7 +780,7 @@ wlwh_75 <- milestone_wlwh(wlwh_timeline, 0.75, total_wlwh_target)
 wlwh_100 <- milestone_wlwh(wlwh_timeline, 1.00, total_wlwh_target)
 ```
 
-Recruitment of women living with HIV (WLWH) into the cohort was successfully completed, surpassing the original target of 405 with a total of 417 participants enrolled among 2,970 overall. Facility-level enrollment ranged from a minimum of 16 to a maximum of 28 WLWH. Milestone progress was steady: the 25% enrollment threshold was reached on May 27, 2025, the 50% threshold on December 3, 2025, and the 75% threshold on March 30, 2026. Out of the target of approximately `r wlwh_target` WLWH per facility, all `r wlwh_milestones$reached_75` facilities reached at least 75% of their target ($\geq$ 15 participants), and `r wlwh_milestones$reached_100` facilities fully achieved or exceeded the target of `r wlwh_target` participants.
+Recruitment of women living with HIV (WLWH) into the cohort was successfully completed, surpassing the original target of 405 with a total of 417 participants enrolled among 2,970 overall. Facility-level enrollment ranged from a minimum of 16 to a maximum of 28 WLWH. Milestone progress was steady: the 25% enrollment threshold was reached on May 27, 2025, the 50% threshold on December 3, 2025, the 75% threshold on March 30, 2026 and 100% threshhold on July 12, 2026. Out of the target of approximately `r wlwh_target` WLWH per facility, all `r wlwh_milestones$reached_75` facilities reached at least 75% of their target ($\geq$ 15 participants), and `r wlwh_milestones$reached_100` facilities fully achieved or exceeded the target of `r wlwh_target` participants.
 
 
 ```{r enrollment_mor, echo=FALSE, fig.height=6, fig.width=10, warning=FALSE, dpi=300}
@@ -774,6 +866,7 @@ Women were ineligible if their gestational age at eligibility assessment was \<2
 
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
+source("Consort.R")
 ineligibility_summary <- consort_data %>% 
   filter(!is.na(exclusion)) %>% 
   tbl_summary(
@@ -944,11 +1037,12 @@ earliest_due <- first_6ths %>%
 
 # Completed study visits
 completed_6m <- ppw_rct_df %>%
-  filter(
-    clt_visit == "6 months post-partum",
-    dis_today == "Yes"
-  ) %>% 
-    filter(grepl("(Study End)",dis_reason))
+    filter(str_detect(redcap_event_name, "6 Months")) %>%
+    filter(is.na(mv_visit)) %>%
+    filter(dis_today == "Yes") %>% 
+    filter(grepl("(Study End)",dis_reason)) %>% 
+    distinct(clt_ptid)
+
 
 
 # Withdrew consent
@@ -992,12 +1086,13 @@ completed_follow_up <- completed_6m %>%
     nrow()
 ```
 
+The following summarizes participant study exits and disposition to date.
 
-To date, a total of `r completed_follow_up` participants have completed the scheduled six-month post-partum follow-up and exited the study at the planned study endpoint. The first study completion/exit occurred on `r earliest_due`.
+A total of `r completed_follow_up` participants have completed the scheduled six-month post-partum follow-up and exited the study at the planned endpoint. The first study exit occurred on `r earliest_due`.
 
-One participant (N = 1) withdrew consent before completing all scheduled study visits. In addition, `r n_lost` participants were classified as lost to follow-up after being unable to be contacted. No participants have been terminated early based on a Principal Investigator (PI) discharge decision.
+One participant (N = 1) withdrew consent before completing all scheduled study visits, while `r n_lost` participants were classified as lost to follow-up because they could not be contacted. No participants have been terminated early following a Principal Investigator (PI) discharge decision.
 
-Three maternal deaths (N = 3) have been reported; these are described separately in the Adverse Events section.
+Three maternal deaths (N = 3) have been reported and are described separately in the Adverse Events section.
 
 
 # 7. Psychosocial Referrals
@@ -1134,8 +1229,9 @@ outcome_summary <- end_joined %>%
         )
     ) %>%
     add_n() %>%
+    modify_header(stat_0 = "") %>%
     modify_header(label ~ "**Characteristic**") %>%
-  as_kable_extra(
+    as_kable_extra(
     booktabs = TRUE,
     caption = "Primary and Secondary Outcomes Summary"
   ) %>%
@@ -1147,7 +1243,7 @@ outcome_summary <- end_joined %>%
   column_spec(1, width = "6cm") %>%
   kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
   kableExtra::footnote(
-    symbol = "Adverse events may be reported even for participants who missed the scheduled outcome visit. In this dataset, 21 participants missed the visit. Other outcome measures exclude these participants, leading to differences in denominators across outcomes.",
+    symbol = "Adverse pregnancy outcomes may be reported before the six-month follow-up, including at the 14-week visit or for participants who missed the visit. Consequently, the denominator for "Any adverse pregnancy outcome" is larger than the number of participants who attended the 14-week visit.",
     footnote_as_chunk = TRUE,
     threeparttable = TRUE,
     escape = FALSE
@@ -1220,6 +1316,7 @@ total_hosp <- clean_sae_df %>%
 As of `r format(data_freeze, '%d %B %Y')`, `r total_SAEs` serious adverse events were reported, of which `r total_deaths_infant` were infant deaths, `r total_deaths_mat` were maternal deaths, `r pregnancy_loss` were stillbirths, and `r total_hosp` were a prolonged hospitalization.
 
 ```{r SAEs Report, echo=FALSE, message=FALSE, warning=FALSE}
+
 sae_overall <- sae_wide %>%
   tbl_summary(
     include = c("Maternal Death ", "maternal_cause_category",
@@ -1236,6 +1333,7 @@ sae_overall <- sae_wide %>%
   ) %>%
   bold_labels() %>%
   add_n() %>%
+  modify_header(stat_0 = "") %>%
   as_kable_extra(
     booktabs = TRUE,
     caption = "Summary of Reported Serious Adverse Events"
@@ -1245,5 +1343,6 @@ sae_overall <- sae_wide %>%
     font_size = 11,
     position = "center"
   )
+
 sae_overall
 ```
