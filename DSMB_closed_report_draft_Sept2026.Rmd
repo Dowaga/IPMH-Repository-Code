@@ -119,7 +119,7 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
           "-Receiving antenatal care at study facility\n- ≥20 weeks gestation\n- Age ≥ 14\n- screen positive for PMAD symptoms (PHQ-2 ≥ 3 and/or GAD-2 ≥ 3)", 
           "2970, including 405 women living with HIV (WLWH)", 
           "2970 participants, of whom 417 are WLHIV",
-          "1,663", # Should be changed on the data freeze data
+          "1669", # Should be changed on the data freeze data
           "Follow-up through 6 months postpartum", 
           "September 19, 2023", 
           "February 17, 2025",
@@ -433,7 +433,7 @@ consort_data <- consort_data %>%
 
 
 
-```{r consort diagram, echo=FALSE, fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
+```{r consort diagram, fig.cap="CONSORT Flow Diagram", echo=FALSE, fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
 # Helper: percentage-formatted label -----------------------------------------
 generate_stage_text <- function(label, n, denom, decimals = 2) {
     pct <- if_else(denom > 0, (n / denom) * 100, 0)
@@ -549,10 +549,20 @@ consort_per <- add_box(txt = txt_anc) |>
 consort_per
 ```
 
+
+```{=Latex}
+\setcounter{table}{0}
+
+```
+
+
 \newpage
 ### 2.1.2 Participant Retention During Follow-up
 
-```{r Follow-up Summary, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, dpi=300, paged.print=TRUE}
+```{r Follow-up Summary, results='asis', echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, dpi=300, paged.print=TRUE}
+
+cat("\\setcounter{table}{0}\n")
+
 source("RCT Retention.R")
 set.seed(12345)
 
@@ -672,45 +682,27 @@ retention_summary <- bind_rows(
     )
 gt_overall <- as.data.frame(retention_summary)
 
-overall_tbl <- gt(gt_overall) %>%
-  tab_header(
-    title = md("**Overall Retention Across Study Follow-up**"),
-    subtitle = md("All facilities combined")) %>%
-  opt_table_font(
-    font = list(
-      google_font("Chivo"),
-      default_fonts()
-    )
-  ) %>% 
-    tab_style(
-    locations = cells_title(groups = "title"),
-    style = cell_text(
-      size = px(14),
-      weight = "bold",
-      align = "center"
-    )) %>%
-    tab_style(
-    locations = cells_title(groups = "subtitle"),
-    style = cell_text(
-      size = px(11),
-      align = "center"
-    )) %>%
-  tab_style(
-    locations = cells_column_labels(columns = everything()),
-    style = list(
-      cell_borders(
-        sides = "bottom",
-        weight = px(2)
-      ),
-      cell_text(weight = "bold")
-    )
+overall_tbl <- gt_overall %>%
+  knitr::kable(
+    format = "latex",
+    booktabs = TRUE,
+    caption = "Overall Retention Across Study Follow-up",
+    align = "l"
   ) %>%
-  tab_options(
-    table.font.size = px(12),
-    table.border.top.style = "none",
-    column_labels.border.bottom.width = 2,
-    table_body.border.top.style = "none",
-    data_row.padding = px(3)
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    font_size = 10,
+    position = "center"
+  ) %>%
+  kableExtra::row_spec(
+    0,
+    bold = TRUE
+  ) %>%
+  kableExtra::footnote(
+    general = "Retention = (Attended + Window Open) / Participants Due.",
+    general_title = "Note: ",
+    threeparttable = TRUE,
+    escape = TRUE
   )
 
 overall_tbl
@@ -811,7 +803,7 @@ weekly_enrollment <- weekly_enrollment %>%
 
 
 
-```{r enrollment_progress plot, echo=FALSE, fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
+```{r enrollment_progress plot, fig.cap = "Overall Enrollment Progress", echo=FALSE, fig.height=10, fig.width=15, message=FALSE, warning=FALSE}
 # Shared plot theme ---------------------------------------------------------
 consort_theme <- theme_minimal(base_size = 12) +
     theme(
@@ -885,7 +877,7 @@ p1
 
 \newpage
 
-## 2.4 Enrollment Progress - Per Facility
+## 2.3 Enrollment Progress - Per Facility
 
 
 ```{r Facility target reached, echo=F}
@@ -922,7 +914,7 @@ reached_100per_target <- weekly_enrollment %>%
 All `r reached_75per_target` facilities surpassed the 75% enrollment milestone ($\geq$ 111 participants). Importantly, 15 facilities achieved or exceeded the full target of 148 participants, while 5 facilities fell slightly short but still maintained strong recruitment performance. Overall, the study demonstrated robust enrollment momentum and milestone attainment across sites, with balanced contributions across arms and sustained progress through to completion.
 
 
-```{r enrollment_sub_facility, fig.width=12, fig.height=10, echo=FALSE}
+```{r enrollment_sub_facility, fig.cap = "Facility Enrollment Progress", fig.width=12, fig.height=10, echo=FALSE}
 # NOTE FOR WENWEN: Replace arm_random with arm_random in this plot chunk
 # below to switch from dummy to real arm assignment.
 
@@ -964,7 +956,9 @@ p2
 
 \newpage
 
-## 2.5. Women Living with HIV Cohort
+## 2.4 Women Living with HIV Cohort
+
+### 2.4.1 Current subject status
 
 ```{r wlwh prep, echo=FALSE}
 
@@ -975,7 +969,7 @@ source("Consort_WLWH.R")
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv *100,1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks/n_hiv*100,1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months/n_hiv*100,1)`%) have completed their 6 months postpartum follow-up visits. Percentages do not reflect study retention as not all enrolled participants have reached follow-up visits.
 
 
-```{r consort_WLWHIV, echo=FALSE, fig.height=10, fig.width = 15, message = FALSE, warning = FALSE}
+```{r consort_WLHIV, fig.cap="CONSORT Flow Diagram for WLHIV",echo=FALSE, fig.height=10, fig.width = 15, message = FALSE, warning = FALSE}
 # NOTE FOR WENWEN: Replace dummy_arm with arm in this chunk
 # to switch from dummy to real arm assignment.
 
@@ -1046,8 +1040,9 @@ consort_wlwh <- add_box(
 consort_wlwh
 ```
 
-### 2.5.3 Women Living with HIV (WLHIV) Retention During Follow-up
+
 \newpage
+### 2.4.2 Women Living with HIV (WLHIV) Retention During Follow-up
 ```{r wlhiv_retention, echo=FALSE, message=FALSE, warning=FALSE}
 source("RCT Retention.R")
 # Randomly assign 20 facilities equally to Arm Y and Arm X
@@ -1162,61 +1157,40 @@ retention_summary <- bind_rows(
         Visit = as.character(Visit),
         Arm = as.character(Arm)
     )
-gt_overall <- as.data.frame(retention_summary)
+wlhiv_gt_overall <- as.data.frame(retention_summary)
 
-overall_tbl_wlhiv <- gt(gt_overall) %>%
-  tab_header(
-    title = md("**WLHIV Retention Across Study Follow-up**"),
-    subtitle = md("All facilities combined")) %>%
-  opt_table_font(
-    font = list(
-      google_font("Chivo"),
-      default_fonts()
-    )
-  )  %>%
-  tab_style(
-    locations = cells_title(groups = "title"),
-    style = cell_text(
-      size = px(14),
-      weight = "bold",
-      align = "center"
-    )) %>%
-  tab_style(
-    locations = cells_title(groups = "subtitle"),
-    style = cell_text(
-      size = px(11),
-      align = "center"
-    )) %>%
-  tab_style(
-    locations = cells_column_labels(columns = everything()),
-    style = list(
-      cell_borders(
-        sides = "bottom",
-        weight = px(2)
-      ),
-      cell_text(weight = "bold")
-    )) %>%
-  tab_options(
-    table.font.size = px(12),
-    table.border.top.style = "none",
-    column_labels.border.bottom.width = 2,
-    table_body.border.top.style = "none",
-    data_row.padding = px(3)
+overall_tbl_wlhiv <- wlhiv_gt_overall %>%
+  knitr::kable(
+    format = "latex",
+    booktabs = TRUE,
+    caption = "WLHIV Retention Across Study Follow-up",
+    align = "l"
+  ) %>%
+  kableExtra::kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    font_size = 10,
+    position = "center"
+  ) %>%
+  kableExtra::row_spec(
+    0,
+    bold = TRUE
+  ) %>%
+  kableExtra::footnote(
+    general = "Retention = (Attended + Window Open) / Participants Due.",
+    general_title = "Note: ",
+    threeparttable = TRUE,
+    escape = TRUE
   )
+
 
 overall_tbl_wlhiv
 ```
 
 \newpage
 
-# 4. Ineligibility
+# 3. Ineligibility
 
 Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
-
-```{=Latex}
-\setcounter{table}{0}
-
-```
 
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1252,9 +1226,9 @@ arm_ineligibility_summary
 
 \newpage
 
-# 5. Baseline Demographics
+# 4. Baseline Demographics
 
-## 5.1 Participant Baseline Demographics
+## 4.1 Participant Baseline Demographics
 
 Demographic characteristics were balanced across study arms, supporting baseline comparability.
 
@@ -1378,7 +1352,7 @@ arm_demo %>%
 
 \newpage
 
-## 5.2 WLWH Cohort Baseline Demographics
+## 4.2 WLWH Cohort Baseline Demographics
 
 Demographic characteristics were balanced across study arms, supporting baseline comparability.
 
@@ -1442,7 +1416,7 @@ arm_wlwh_demo%>%
 ```
 
 
-# 6. Study Terminations
+# 5. Study Terminations
 
 ```{r Ealiest Expected termination}
 first_6ths <- ppw_rct_df %>%
@@ -1555,8 +1529,8 @@ One participant (N = 1) withdrew consent before completing all scheduled study v
 Three maternal deaths (N = 3) have been reported and are described separately in the Adverse Events section.
 
 \newpage
-# 7. Referrals
-## 7.1 Psychosocial Referrals
+# 6. Referrals
+## 6.1 Psychosocial Referrals
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 referral_df <- ppw_rct_df %>% 
     #filter(clt_visit == "Enrollment") %>% 
@@ -1751,8 +1725,9 @@ arm_referral_summary
 
 ```
 
+
 \newpage
-## 7.2 Intervention Treatment Referrals
+## 6.2 Intervention Treatment Referrals
 ```{r treatment_referrals_numsource, echo=FALSE, message=FALSE, warning=FALSE}
 
 # Summarise ANC attendees and extract the sum as a numeric value
@@ -2011,7 +1986,7 @@ fidelity_summary %>% kable_styling(
 
 \newpage
 
-# 8. Primary and secondary study endpoints
+# 7. Primary and secondary study endpoints
 
 ```{r load-outcome-data, echo=FALSE, message=FALSE, warning=FALSE}
 invisible(capture.output(source("PPW RCT follow up.R")))
@@ -2074,9 +2049,9 @@ arm_outcome_summary <- end_joined_arms %>%
 
 
 \newpage
-# 9. Adverse Events
+# 8. Adverse Events
 
-## 9.1 Serious Adverse Event Summary
+## 8.1 Serious Adverse Event Summary
 
 ```{r Summary of SAEs}
 sae_df <- ppw_sae_df %>% 
@@ -2241,7 +2216,7 @@ sae_summary_arm %>%
 ```
 
 \newpage
-## 9.2 Adverse Event Summary
+## 8.2 Adverse Event Summary
 
 ```{r ae_summary_morcohort, echo=FALSE}
 ae_df <- ppw_sae_df %>%
@@ -2349,7 +2324,7 @@ ae_summary %>%
 ```
 
 \newpage
-### 9.2.1 List of Adverse Events: Intervention Arm
+### 8.2.1 List of Adverse Events: Intervention Arm
 
 ```{r intervention_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 #----1. Prepare AE dataset----
@@ -2523,7 +2498,7 @@ cont_ae_summary %>%
 
 
 \newpage
-### 9.2.2 List of Adverse Events: Control Arm
+### 8.2.2 List of Adverse Events: Control Arm
 
 ```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
 int_ae_summary <- final_ae %>%
