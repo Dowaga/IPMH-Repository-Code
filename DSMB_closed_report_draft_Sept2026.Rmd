@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 rm(list = ls())
 
 # Set up data freeze time for this report
-data_freeze <- as.Date("2026-10-20") 
+data_freeze <- as.Date("2026-10-14") 
 
 ##### NOTES: Need to replace this with October 20 2026, which is the date of data freeze for this report after Oct 20 2026. #####
 
@@ -118,8 +118,8 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
           "Pregnant Kenyan women", 
           "-Receiving antenatal care at study facility\n- ≥20 weeks gestation\n- Age ≥ 14\n- screen positive for PMAD symptoms (PHQ-2 ≥ 3 and/or GAD-2 ≥ 3)", 
           "2970, including 405 women living with HIV (WLWH)", 
-          "setdiff(retention_status$ptid, secondvisit$clt_ptid) participants, of whom 417 are WLWH",
-          "1622", # Should be changed on the data freeze data
+          "2970 participants, of whom 417 are WLHIV",
+          "1,663", # Should be changed on the data freeze data
           "Follow-up through 6 months postpartum", 
           "September 19, 2023", 
           "February 17, 2025",
@@ -144,7 +144,9 @@ study_summary
 \newpage
 
 # 2. Overall Study Status
+
 ## 2.1 Overall Cohort
+
 ### 2.1.1 Current subject status
 
 
@@ -548,7 +550,7 @@ consort_per
 ```
 
 \newpage
-## 2.2 Participant Retention During Follow-up
+### 2.1.2 Participant Retention During Follow-up
 
 ```{r Follow-up Summary, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, dpi=300, paged.print=TRUE}
 source("RCT Retention.R")
@@ -577,8 +579,9 @@ retention_status <- retention_status %>%
 arm_variable <- "random_arm"
 
 
+
 retention_summary <- bind_rows(
-    
+
     # 6 Weeks
     retention_status %>%
         filter(six_weeks_status != "Not Due") %>%
@@ -599,7 +602,7 @@ retention_summary <- bind_rows(
             ),
             .groups = "drop"
         ),
-    
+
     # 14 Weeks
     retention_status %>%
         filter(fourteen_weeks_status != "Not Due") %>%
@@ -620,7 +623,7 @@ retention_summary <- bind_rows(
             ),
             .groups = "drop"
         ),
-    
+
     # 6 Months
     retention_status %>%
         filter(six_months_status != "Not Due") %>%
@@ -672,14 +675,26 @@ gt_overall <- as.data.frame(retention_summary)
 overall_tbl <- gt(gt_overall) %>%
   tab_header(
     title = md("**Overall Retention Across Study Follow-up**"),
-    subtitle = md("All facilities combined")
-  ) %>%
+    subtitle = md("All facilities combined")) %>%
   opt_table_font(
     font = list(
       google_font("Chivo"),
       default_fonts()
     )
-  ) %>%
+  ) %>% 
+    tab_style(
+    locations = cells_title(groups = "title"),
+    style = cell_text(
+      size = px(14),
+      weight = "bold",
+      align = "center"
+    )) %>%
+    tab_style(
+    locations = cells_title(groups = "subtitle"),
+    style = cell_text(
+      size = px(11),
+      align = "center"
+    )) %>%
   tab_style(
     locations = cells_column_labels(columns = everything()),
     style = list(
@@ -703,12 +718,13 @@ overall_tbl
 
 \newpage
 
-## 2.3 Enrollment Progress - Overall
+## 2.2 Enrollment Progress - Overall
 Final enrollment closed with 2,970 participants recruited, including 417 women living with HIV (WLWH). Control Arm enrolled 1,488 participants and Intervention Arm enrolled 1,482 participants. While Control achieved slightly higher enrollment, both arms contributed substantial numbers and maintained consistent recruitment patterns over time. The difference in totals between arms is modest and does not indicate major imbalance.
 The milestone lines (25%, 50%, 75%, 100%) illustrate that both arms reached key thresholds within the expected timeframe, demonstrating robust recruitment performance across study sites.
 
 
 ```{r enrollment_progress prep, echo=FALSE}
+eval(parse(text = knitr::knit_code$get("data-preparation")))
 # Site label lookup (number ??? short name)
 site_labels <- c(
     "01, Rwambwa Sub-county Hospital"     = "01, Rwambwa",
@@ -948,7 +964,7 @@ p2
 
 \newpage
 
-# 3. Women Living with HIV Cohort
+## 2.5. Women Living with HIV Cohort
 
 ```{r wlwh prep, echo=FALSE}
 
@@ -966,8 +982,11 @@ Overall `r n_enrolled` participants have been enrolled into the study, of which 
 
 #### Without ANC visit and Assessed for Eligibility-----
 counts_by_arm <- consort_data %>%
-  filter(rct_enrolling == "Yes", !is.na(dummy_arm)) %>%
-  group_by(dummy_arm) %>%
+  filter(rct_enrolling == "Yes", !is.na(arm)) %>%
+    mutate(
+    dummy_arm = factor(dummy_arm, levels = c("Arm Y", "Arm X"))
+  ) %>% 
+     group_by(dummy_arm) %>%
   summarise(
     enrolled             = n(),
     hiv                  = sum(WLWH == "Yes", na.rm = TRUE),
@@ -1027,6 +1046,167 @@ consort_wlwh <- add_box(
 consort_wlwh
 ```
 
+### 2.5.3 Women Living with HIV (WLHIV) Retention During Follow-up
+\newpage
+```{r wlhiv_retention, echo=FALSE, message=FALSE, warning=FALSE}
+source("RCT Retention.R")
+# Randomly assign 20 facilities equally to Arm Y and Arm X
+facility_random_arm <- retention_status_wlhiv %>%
+    distinct(clt_study_site) %>%
+    mutate(
+        random_arm = sample(
+            rep(c("Arm Y", "Arm X" ), each = 10)
+        )
+    )
+
+# Add the randomized arm to the participant-level data
+retention_status_wlhiv <- retention_status_wlhiv %>%
+    left_join(
+        facility_random_arm,
+        by = "clt_study_site"
+    )
+
+# Choose the arm variable
+# "arm"        = actual study arm
+# "random_arm" = randomized/blinded arm
+
+arm_variable <- "random_arm"
+
+retention_summary <- bind_rows(
+
+    # 6 Weeks
+    retention_status_wlhiv %>%
+        filter(six_weeks_status != "Not Due") %>%
+        group_by(
+            .data[[arm_variable]]
+        ) %>%
+        summarise(
+            Visit = "6 Weeks",
+            `Participants Due` = n(),
+            Attended = sum(
+                six_weeks_status == "Attended"
+            ),
+            Missed = sum(
+                six_weeks_status == "Missed"
+            ),
+            `Window Open` = sum(
+                six_weeks_status == "Window Open"
+            ),
+            .groups = "drop"
+        ),
+
+    # 14 Weeks
+    retention_status_wlhiv %>%
+        filter(fourteen_weeks_status != "Not Due") %>%
+        group_by(
+            .data[[arm_variable]]
+        ) %>%
+        summarise(
+            Visit = "14 Weeks",
+            `Participants Due` = n(),
+            Attended = sum(
+                fourteen_weeks_status == "Attended"
+            ),
+            Missed = sum(
+                fourteen_weeks_status == "Missed"
+            ),
+            `Window Open` = sum(
+                fourteen_weeks_status == "Window Open"
+            ),
+            .groups = "drop"
+        ),
+
+    # 6 Months
+    retention_status_wlhiv %>%
+        filter(six_months_status != "Not Due") %>%
+        group_by(
+            .data[[arm_variable]]
+        ) %>%
+        summarise(
+            Visit = "6 Months",
+            `Participants Due` = n(),
+            Attended = sum(
+                six_months_status == "Attended"
+            ),
+            Missed = sum(
+                six_months_status == "Missed"
+            ),
+            `Window Open` = sum(
+                six_months_status == "Window Open"
+            ),
+            .groups = "drop"
+        )) %>%
+    rename(
+        Arm = all_of(arm_variable)
+    ) %>%
+    mutate(
+        Retention = Attended / `Participants Due`,
+        Retention = scales::percent(
+            Retention,
+            accuracy = 0.1
+        ),
+        Visit = factor(
+            Visit,
+            levels = c("6 Weeks", "14 Weeks", "6 Months")
+        ),
+        Arm = factor(
+            Arm,
+            levels = c("Arm Y", "Arm X")
+        )
+    ) %>%
+    arrange(
+        Visit,
+        Arm
+    ) %>%
+    mutate(
+        Visit = as.character(Visit),
+        Arm = as.character(Arm)
+    )
+gt_overall <- as.data.frame(retention_summary)
+
+overall_tbl_wlhiv <- gt(gt_overall) %>%
+  tab_header(
+    title = md("**WLHIV Retention Across Study Follow-up**"),
+    subtitle = md("All facilities combined")) %>%
+  opt_table_font(
+    font = list(
+      google_font("Chivo"),
+      default_fonts()
+    )
+  )  %>%
+  tab_style(
+    locations = cells_title(groups = "title"),
+    style = cell_text(
+      size = px(14),
+      weight = "bold",
+      align = "center"
+    )) %>%
+  tab_style(
+    locations = cells_title(groups = "subtitle"),
+    style = cell_text(
+      size = px(11),
+      align = "center"
+    )) %>%
+  tab_style(
+    locations = cells_column_labels(columns = everything()),
+    style = list(
+      cell_borders(
+        sides = "bottom",
+        weight = px(2)
+      ),
+      cell_text(weight = "bold")
+    )) %>%
+  tab_options(
+    table.font.size = px(12),
+    table.border.top.style = "none",
+    column_labels.border.bottom.width = 2,
+    table_body.border.top.style = "none",
+    data_row.padding = px(3)
+  )
+
+overall_tbl_wlhiv
+```
+
 \newpage
 
 # 4. Ineligibility
@@ -1044,6 +1224,8 @@ Women were ineligible if their gestational age at eligibility assessment was \<2
 # below to switch from dummy to real arm assignment.
 
 arm_ineligibility_summary <- consort_data %>%
+    mutate(dummy_arm = factor(dummy_arm,
+                              levels = c("Arm Y", "Arm X"))) %>%
     filter(!is.na(exclusion)) %>%
     tbl_summary(
         by      = dummy_arm,
@@ -1310,7 +1492,7 @@ total_exits <- total_exits%>%
 completed_follow_up <- total_exits %>% 
     filter(is.na(mv_visit)) %>%
     filter(dis_today == "Yes") %>% 
-    filter(grepl("(Study End)",dis_reason)) %>% 
+    #filter(grepl("(Study End)",dis_reason)) %>% 
     nrow()
 
 completed_control <- total_exits %>% 
@@ -1372,7 +1554,7 @@ One participant (N = 1) withdrew consent before completing all scheduled study v
 
 Three maternal deaths (N = 3) have been reported and are described separately in the Adverse Events section.
 
-
+\newpage
 # 7. Referrals
 ## 7.1 Psychosocial Referrals
 ```{r message=FALSE, warning=FALSE, include=FALSE}
@@ -1425,7 +1607,10 @@ referral_df <- ppw_rct_df %>%
     arm_random = sample(
       rep(c("Arm Y", "Arm X"), length.out = n())
     )
-  )
+  ) %>% 
+    mutate(arm_random = factor(
+        arm_random,
+        levels = c("Arm Y", "Arm X")))
     
  # 1. Define a lookup for nicer labels 
 condition_labels <- tribble(
@@ -1839,6 +2024,8 @@ The table below displays summaries of primary and secondary study endpoints for 
 
 # Create summary table
 arm_outcome_summary <- end_joined_arms %>%
+    mutate(random_arm = factor(random_arm,
+                               levels = c("Arm Y", "Arm X"))) %>% 
     tbl_summary(
         by = random_arm,  # # For external analysis: replace 'random_arm' with 'arm_group' when using actual study data---- 
         include = c(phq9_total, gad7_total, qol_overall_scaled, 
@@ -2094,7 +2281,10 @@ ae_arm <- ae_df %>%
       rep(c("Arm Y", "Arm X"),
           length.out = n())
     )
-  )
+  ) %>%  
+    mutate(
+  arm_random = factor(arm_random,
+                      levels = c("Arm Y", "Arm X")))
 
 
 # Join random arms
@@ -2222,7 +2412,10 @@ ae_arm <- final_ae %>%
       rep(c("Arm Y", "Arm X"),
           length.out = n())
     )
-  )
+  ) %>% 
+    mutate(arm_random = factor(
+        arm_random,
+        levels = c("Arm Y", "Arm X")))
 
 #----7. Join random arms----
 final_ae <- final_ae %>% 
@@ -2286,12 +2479,12 @@ final_ae <- final_ae %>%
     ae_label = factor(ae_label, levels = severity_order)
   )
 
-# 12. ----Intervention AE summary----
+# 12. ----Control AE summary----
 
-int_ae_summary <- final_ae %>%
-  #filter(Arm == "Intervention") %>%
-  filter(arm_random == "Arm X") %>%
-    # To external analyst: Replace with Arm for real data (Intervention)----
+cont_ae_summary <- final_ae %>%
+  #filter(Arm == "Control") %>%
+  filter(arm_random == "Arm Y") %>%
+    # To external analyst: Replace with Arm for real data (Control)----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days, days_since_enrolment) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
@@ -2307,9 +2500,9 @@ int_ae_summary <- final_ae %>%
 
 #----13. Table output----
 
-int_ae_summary %>%
+cont_ae_summary %>%
   kable(
-    caption = "List of Study Adverse Events for Arm X",
+    caption = "List of Study Adverse Events for Arm Y",
     booktabs = TRUE
   ) %>%
   kable_styling(
@@ -2333,10 +2526,10 @@ int_ae_summary %>%
 ### 9.2.2 List of Adverse Events: Control Arm
 
 ```{r control_AE_list, echo=FALSE, fig.height=9, fig.width=15, message=FALSE, warning=FALSE}
-cont_ae_summary <- final_ae %>%
-    #filter(Arm == "Control") %>%
-    filter(arm_random == "Arm Y") %>%
-    # To external analyst: Replace with Arm for real data (Control)----
+int_ae_summary <- final_ae %>%
+    #filter(Arm == "Interventio") %>%
+    filter(arm_random == "Arm X") %>%
+    # To external analyst: Replace with Arm for real data (Intervention)----
   select(record_id, clt_study_site, ae_label, 
          dem_age, reported_days, days_since_enrolment) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
@@ -2351,7 +2544,7 @@ cont_ae_summary <- final_ae %>%
   arrange(`Adverse Event reported`)
 
 # Table output
-cont_ae_summary %>%
+int_ae_summary %>%
   kable(
     caption = "List of Study Adverse Events for Arm Y",
     booktabs = TRUE
