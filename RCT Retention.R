@@ -3,7 +3,8 @@
 # Loading Participants Scheduling and Follow-up
 
 # Load Packages---------------------------------------
-rm(list = ls())
+
+#rm(list = ls())
 source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
