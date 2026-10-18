@@ -16,6 +16,7 @@ pacman::p_load(knitr, tidyverse, ggplot2, psych, janitor, dplyr,
 knitr::opts_chunk$set(fig.width = 10, fig.height = 12)
 
 source("data_import.R")
+
 # read data
 data <- aim1quant_df %>%
   filter(pt_id > 14999999) %>% 
@@ -462,7 +463,7 @@ stats <- stats %>%
                                    "specialist" =	"Specialist: Employ specialized mental health staff",
                                    "staff" = "Staff: Allocate screening to a specific HCW\n or have a mental health desk for screening",
                                    "language" =	"Language: Provide a translator",
-                                 "aware" = "Aware: Sensitize CHVs and the community about MH"))
+                                 "aware" = "Aware: Sensitize CHPs and the community about MH"))
 
 ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
   geom_point(aes(color = strategy_detail, size = se_average), shape =1) +
@@ -1416,7 +1417,7 @@ stats <- long_data %>%
 stats <- stats %>% 
   mutate(strategy_detail = dplyr::recode(strategy, 
                                   "knowledge" = "Knowledge: Provide training for existing HCWs",
-                                  "chv" = "CHV: Involve CHVs to aid in completion of referral",
+                                  "chv" = "CHP: Involve CHPs to aid in completion of referral",
                                    "guideline" =	"Guideline: Provide guidelines for HCWs",
                                    "tool" = 	"Tool: Provide standardized tools for HCWs",
                                   "home" = "Home: Conduct home visits to participants"))
@@ -1462,11 +1463,11 @@ ggplot(stats, aes(x = mean_impact, y = mean_feasibility)) +
 barrier_colors <- c(
   workload="#332288", flow="#88CCEE", staff="#44AA99", partner="#117733",
   incentive="#999933", long="#DDCC77", reach="#CC6677", prefer="#882255", confi="#AA4499",
-  device="#332288", internet="#88CCEE", drug="#44AA99", inte="#117733",
+  devices="#332288", internet="#88CCEE", drug="#44AA99", inte="#117733",
   physical="#999933", setup="#DDCC77", port="#CC6677", language="#882255", sche="#661100")
 
 strategy_colors <- c(
-  streamline="#332288", stream="#332288", info="#88CCEE", chv="#44AA99", partner="#117733",
+  streamline="#332288", stream="#332288", info="#88CCEE", chp="#44AA99", partner="#117733",
   incentive="#999933", trainall="#DDCC77", traincli="#DDCC77", room="#CC6677",
   nurse="#882255", clin="#AA4499", align="#661100", lang="#88CCEE", mm="#999933")
 
@@ -1539,18 +1540,18 @@ long_strat <- ipmh_screen %>%
   pivot_longer(cols=-c(record_id, provider_type, ipmh_scre_strategy_other),
                names_to=c("type","strategy"), names_pattern="ipmh_scre_(.*)_(.*)") %>%
   mutate(value_1 = case_when(
-    value == "I don't know" ~ NA_real_,
+    value=="I don't know" ~ NA_real_,
     value %in% c("Very hard","Major negative impact")     ~ 1,
     value %in% c("Somewhat hard","Some negative impact")  ~ 2,
-    value %in% c("Neutral","No impact")                  ~ 3,  
+    value %in% c("Neutral","No impact")                   ~ 3,
     value %in% c("Somewhat easy","Some positive impact")  ~ 4,
-    value %in% c("Very easy","Major positive impact")     ~ 5,
-    TRUE ~ NA_real_),
-    strategy = ifelse(strategy=="plan","streamline", strategy))
+    value %in% c("Very easy","Major positive impact")     ~ 5, TRUE ~ NA_real_),
+    strategy = ifelse(strategy=="plan","streamline", strategy)) %>%
+  mutate(strategy = dplyr::recode(strategy, chv = "chp"))
 
 strat_recode <- function(df) df %>% mutate(strategy_detail = dplyr::recode(strategy,
   nurse="Nurse", room="Room", incentive="Incentive", trainall="Trainall",
-  streamline="Streamline", chv="CHV", partner="Partner", info="Info", .default=strategy))
+  streamline="Streamline", chp="CHP", partner="Partner", info="Info", .default=strategy))
 
 # overall
 stats_strat <- long_strat %>%
@@ -1833,7 +1834,7 @@ pm_strat_recode <- function(df) df %>% mutate(strategy_detail = dplyr::recode(st
   clin="Clin: Have clinicians in charge of PM+\ninstead of lay providers",
   stream="Stream: Streamline the workflow at the facility",
   incentive="Incentive: Provide financial incentives to\nmotivate HCWs",
-  chv="CHV: Involve community health promoters", partner="Partner: Encourage male partner involvement",
+  chp="CHP: Involve community health promoters", partner="Partner: Encourage male partner involvement",
   info="Info: Provide IPMH information and\nreassurance at the triage desk", .default=strategy))
 
 long_pm_strat <- ipmh_pm %>%
@@ -1848,7 +1849,8 @@ long_pm_strat <- ipmh_pm %>%
     value %in% c("Somewhat hard","Some negative impact")  ~ 2,
     value %in% c("Neutral","No impact")                   ~ 3,
     value %in% c("Somewhat easy","Some positive impact")  ~ 4,
-    value %in% c("Very easy","Major positive impact")     ~ 5, TRUE ~ NA_real_))
+    value %in% c("Very easy","Major positive impact")     ~ 5, TRUE ~ NA_real_)) %>%
+  mutate(strategy = dplyr::recode(strategy, chv = "chp"))
 
 stats_pm_strat <- long_pm_strat %>%
   group_by(strategy, type) %>%
@@ -1982,7 +1984,7 @@ telepsy_barrier_recode <- function(df) df %>% mutate(barrier_detail = dplyr::rec
   drug="Drug: Inadequate or lack of access to\nthe medication prescribed",
   setup="Setup: User challenges in setting up\nand using telepsychiatry",
   internet="Internet: Internet connectivity", port="Port: Portability of the device",
-  device="Gadget: Lack of required devices",
+  device="Device: Lack of required devices",
   inte="Inte: Challenging process of integration\nwith the care at the facility",
   language="Language: Language barrier between\nwomen and psychiatrists",
   confi="Confi: Fear of breach of confidentiality",
@@ -1998,7 +2000,8 @@ long_telepsy <- ipmh_telepsy %>%
     value %in% c("Not at all addressable","Not at all") ~ 1,
     value %in% c("Somewhat addressable","A little")      ~ 2,
     value %in% c("Addressable","Somewhat")               ~ 3,
-    value %in% c("Very addressable","Very much")         ~ 4, TRUE ~ NA_real_))
+    value %in% c("Very addressable","Very much")         ~ 4, TRUE ~ NA_real_)) %>%
+  mutate(barrier = dplyr::recode(barrier, gadget = "devices"))
 
 stats_telepsy <- long_telepsy %>%
   group_by(barrier, type) %>%
