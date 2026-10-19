@@ -706,7 +706,7 @@ stopifnot(nrow(demog_master) == 217, n_distinct(demog_master$pt_id) == 217)
 demog_master %>% count(conflict_level)
 demog_master %>% count(conflict_level, affects_entry)
 
-
+#######################################################################################
 ### Data team list  ------------
 ## Major conflicts only. IDs and original values; no names or contacts.
 datateam_list <- demog_master %>%
@@ -726,6 +726,119 @@ datateam_list %>% count(issues, sort = TRUE)
 ## Save (run when ready; contains DOBs, keep on the secure drive) ------
 # write.csv(demog_master,  file.path(ipmh_filepath, "demog_master.csv"),        row.names = FALSE)
 # write.csv(datateam_list, file.path(ipmh_filepath, "demog_datateam_list.csv"), row.names = FALSE)
+
+#######################################################################################
+
+# Culture, stress and effort (CFIR Inner Setting) ------------
+## Source: inner_setting_culture_stress form, HCW survey database.
+## Items: culture_1-9, cstress_1-6, ceffort_1-5.
+## Response: 1 Strongly disagree ... 5 Strongly agree; 99 Prefer not to answer.
+
+cse_items <- c(paste0("culture_", 1:9), paste0("cstress_", 1:6), paste0("ceffort_", 1:5))
+
+cse_all <- hcw_is_df %>%
+    mutate(wave  = event_to_wave(redcap_event_name),
+           arm   = str_extract(redcap_event_name, "(?<=: ).+(?=\\))"),
+           pt_id = as.numeric(pt_id)) %>%
+    select(part_id, pt_id, wave, arm, pt_type, all_of(cse_items),
+           form_status = inner_setting_culture_stress_complete)
+
+## (1) Confirm: completed only at 6 months ------
+## Expect "Complete" only at wave 6 (about 198); other waves blank
+cse_all %>% count(wave, form_status)
+
+# CHANGED: keep the 6-month visit only
+cse_raw <- cse_all %>% filter(wave == 6)
+
+# Enrolled at 6 months but no completed form. Expect 0 rows
+screen_key %>%
+    filter(wave == 6) %>%
+    select(pt_id = screen_id) %>%
+    anti_join(cse_raw %>% filter(form_status == "Complete"), by = "pt_id")
+
+# Completed by arm (in-charges, lay providers, nurses/COs; each condition)
+cse_raw %>% count(arm, form_status)
+
+## (2) Every response value that appears ------
+cse_raw %>%
+    pivot_longer(all_of(cse_items), names_to = "item", values_to = "value") %>%
+    count(value, sort = TRUE)
+
+## (3) Missing and "Prefer not to answer", per item ------
+cse_raw %>%
+    filter(form_status == "Complete") %>%
+    pivot_longer(all_of(cse_items), names_to = "item", values_to = "value") %>%
+    group_by(item) %>%
+    summarise(n          = n(),
+              missing    = sum(is.na(value) | value == ""),
+              prefer_not = sum(str_detect(value, "Prefer not"), na.rm = TRUE),
+              .groups    = "drop") %>%
+    print(n = Inf)
+
+## (4) Completed forms that link to the cleaned HCW list. Expect 0 rows ------
+cse_raw %>%
+    filter(form_status == "Complete") %>%
+    anti_join(demog_master, by = "pt_id") %>%
+    select(part_id, pt_id, wave, arm)
+
+## ## Recode responses to 1-5 
+## Culture items are exported as "4: Agree"; stress/effort items as "Agree".
+## Strip the "n: " prefix so both formats match, then map to 1-5.
+## "Prefer not to answer" (99) becomes NA.
+likert_lev <- c("Strongly disagree" = 1, "Disagree" = 2, "Neutral" = 3,
+                "Agree" = 4, "Strongly agree" = 5)
+
+to_likert <- function(x) {
+    x <- str_trim(str_remove(x, "^\\d+:\\s*"))   # "4: Agree" -> "Agree"
+    unname(likert_lev[x])                        # "Prefer not to answer" -> NA
+}
+
+cse_num <- cse_raw %>%
+    filter(form_status == "Complete") %>%
+    mutate(across(all_of(cse_items), to_likert))
+
+## Check: every original label mapped as intended ------
+## Expect 10 label types -> 1 to 5, and "Prefer not to answer" -> NA only
+cse_raw %>%
+    filter(form_status == "Complete") %>%
+    pivot_longer(all_of(cse_items), names_to = "item", values_to = "label") %>%
+    mutate(value = to_likert(label)) %>%
+    count(label, value) %>%
+    arrange(value)
+
+## Which HCWs and items have "Prefer not to answer" (4 responses) ------
+cse_num %>%
+    pivot_longer(all_of(cse_items), names_to = "item", values_to = "value") %>%
+    filter(is.na(value)) %>%
+    select(pt_id, arm, item)
+
+## Reverse-worded items: 6 - x 
+## culture_3 ("hard to get things to change"),
+## ceffort_3 ("get by with doing as little as possible"),
+## ceffort_5 ("do not put more effort than they have to")
+rev_items <- c("culture_3", "ceffort_3", "ceffort_5")
+
+cse_rev <- cse_num %>%
+    mutate(across(all_of(rev_items), ~ 6 - .x, .names = "{.col}_r"))
+
+# Check: original vs reversed. Expect 1<->5, 2<->4, 3<->3
+cse_rev %>% count(culture_3, culture_3_r)
+
+## Clean dataset: link to the cleaned HCW list ------
+# CHANGED: starts from cse_rev (reversed items already added)
+cse_clean <- cse_rev %>%
+    left_join(demog_master %>%
+                  select(pt_id, facility_code, facility_name, condition,
+                         cadre_code, flag_swap_suspect),
+              by = "pt_id") %>%
+    select(pt_id, part_id, facility_code, facility_name, condition, cadre_code,
+           flag_swap_suspect, all_of(cse_items), ends_with("_r"))
+
+## Checks ------
+nrow(cse_clean)                          # 198
+n_distinct(cse_clean$pt_id)              # 198, one row per HCW
+sum(is.na(cse_clean$condition))          # 0: all linked
+cse_clean %>% count(flag_swap_suspect)   # 5 TRUE if all swap suspects present
 
 # Demographics: Table and figures ------------
 ## Uses final_* columns only (entry visit).
@@ -1100,6 +1213,276 @@ ggplot(fig4_src, aes(x = pct, y = facility)) +
           panel.grid.minor   = element_blank(),
           strip.text         = element_text(face = "bold"),
           plot.title         = element_text(face = "bold"))
+
+# Culture, stress and effort: tables and figures ------------
+## A  Completion and data quality (table)
+## B  Item responses, all HCWs (diverging bars)
+## C  Item responses by arm (diverging bars)
+## D  Scale scores by arm and cadre (table; PROVISIONAL scoring)
+## E  % agree by facility and item (heatmap)
+
+cadre_lab <- c("22" = "Lay providers", "24" = "Nurses/COs", "23" = "In-charges")
+
+## Short item labels; (R) = reverse-worded
+item_lab <- c(
+    culture_1 = "Openly talk about what works",
+    culture_2 = "Willing to change after feedback",
+    culture_3 = "Hard to get things to change (R)",
+    culture_4 = "Can rely on others to do their jobs",
+    culture_5 = "People enjoy their work",
+    culture_6 = "Problems solved face-to-face",
+    culture_7 = "Regularly reflect on how we work",
+    culture_8 = "Reflect after trying something new",
+    culture_9 = "Operate as a real team",
+    cstress_1 = "Too many pressures to do my job",
+    cstress_2 = "Staff show stress and strain",
+    cstress_3 = "Workload reduces quality of care",
+    cstress_4 = "Staff frustration is common",
+    cstress_5 = "Pulled in too many directions",
+    cstress_6 = "Frequent changes in responsibilities",
+    ceffort_1 = "Want to perform at their best",
+    ceffort_2 = "Enthusiastic about their work",
+    ceffort_3 = "Get by doing as little as possible (R)",
+    ceffort_4 = "Make a special effort to do a good job",
+    ceffort_5 = "No more effort than they have to (R)"
+)
+
+scale_of <- function(item) factor(case_when(str_starts(item, "culture") ~ "Culture",
+                                            str_starts(item, "cstress") ~ "Stress",
+                                            str_starts(item, "ceffort") ~ "Effort"),
+                                  levels = c("Culture", "Stress", "Effort"))
+
+
+## A. Completion and data quality ------------
+cse_long_raw <- cse_raw %>%
+    filter(form_status == "Complete") %>%
+    pivot_longer(all_of(cse_items), names_to = "item", values_to = "label")
+
+pnta <- cse_long_raw %>% filter(str_detect(label, "Prefer not"))
+
+tab_a <- tibble(
+    Check  = c("HCWs enrolled at 6 months", "Forms completed", "Items per form",
+               "Blank items", "Prefer not to answer", "Response label formats",
+               "Reverse-worded items"),
+    Result = c(sum(screen_key$wave == 6),
+               n_distinct(cse_long_raw$pt_id),
+               "20 (culture 9, stress 6, effort 5)",
+               sum(is.na(cse_long_raw$label) | cse_long_raw$label == ""),
+               paste0(nrow(pnta), " responses from ", n_distinct(pnta$pt_id),
+                      " HCWs (set to missing)"),
+               "2 formats (\"4: Agree\" and \"Agree\"), recoded to 1-5",
+               "culture_3, ceffort_3, ceffort_5 (reversed copies added as *_r)")
+)
+
+tab_a %>%
+    kbl(caption = "Culture, stress and effort: completion and data quality (6-month visit)") %>%
+    kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
+
+
+## Helper for B and C: response percentages and diverging positions ------
+## Neutral is split half left, half right of zero.
+lik_pos <- function(df, group_vars = character(0)) {
+    df %>%
+        select(all_of(group_vars), all_of(cse_items)) %>%
+        pivot_longer(all_of(cse_items), names_to = "item", values_to = "value") %>%
+        filter(!is.na(value)) %>%
+        count(across(all_of(c(group_vars, "item"))), value) %>%
+        group_by(across(all_of(c(group_vars, "item")))) %>%
+        complete(value = 1:5, fill = list(n = 0)) %>%
+        arrange(value, .by_group = TRUE) %>%
+        mutate(pct   = 100 * n / sum(n),
+               start = -(pct[value == 1] + pct[value == 2] + pct[value == 3] / 2),
+               xmin  = start + cumsum(lag(pct, default = 0)),
+               xmax  = xmin + pct,
+               agree = pct[value == 4] + pct[value == 5]) %>%
+        ungroup() %>%
+        mutate(response   = factor(value, levels = 1:5,
+                                   labels = c("Strongly disagree", "Disagree", "Neutral",
+                                              "Agree", "Strongly agree")),
+               scale      = scale_of(item),
+               item_label = factor(item_lab[item], levels = rev(item_lab)))
+}
+
+## Diverging colours: red (disagree) - grey (neutral) - blue (agree)
+lik_cols <- c("Strongly disagree" = "#e34948", "Disagree" = "#f4a9a8",
+              "Neutral" = "#d9d8d4",
+              "Agree" = "#86b6ef", "Strongly agree" = "#1c5cab")
+
+# CHANGED: facet_formula can be NULL (no facets)
+# CHANGED: base_size argument (default 14); bar labels scale with it
+plot_lik <- function(d, facet_formula = NULL, title, base_size = 14) {
+    p <- ggplot(d, aes(x = (xmin + xmax) / 2, y = item_label,
+                       width = xmax - xmin, fill = response)) +
+        geom_tile(height = 0.7, colour = "white", linewidth = 0.3) +
+        geom_vline(xintercept = 0, colour = "grey40", linewidth = 0.3) +
+        geom_text(data = d %>% filter(value == 5),
+                  mapping = aes(x = xmax + 3, y = item_label,
+                                label = paste0(round(agree), "%")),
+                  inherit.aes = FALSE, hjust = 0,
+                  size = base_size / 3.2,                  # CHANGED: was fixed at 3
+                  colour = "grey30") +
+        scale_fill_manual(values = lik_cols, drop = FALSE) +
+        scale_x_continuous(limits = c(-100, 118), breaks = seq(-100, 100, 50),
+                           labels = function(x) paste0(abs(x), "%")) +
+        labs(title = title, x = NULL, y = NULL, fill = NULL,
+             caption = "Number at right = % agree or strongly agree. (R) = reverse-worded item, shown as answered.") +
+        guides(fill = guide_legend(nrow = 1)) +
+        theme_minimal(base_size = base_size) +           # CHANGED: was 11
+        theme(legend.position    = "top",
+              legend.text        = element_text(size = base_size - 1),
+              axis.text.y        = element_text(size = base_size, colour = "grey15"),  # NEW: item labels
+              panel.grid.major.y = element_blank(),
+              panel.grid.minor   = element_blank(),
+              strip.text         = element_text(face = "bold", size = base_size),
+              plot.title         = element_text(face = "bold", size = base_size + 2),
+              plot.caption       = element_text(colour = "grey40", size = base_size - 3))
+    
+    if (!is.null(facet_formula)) {
+        p <- p + facet_grid(facet_formula, scales = "free_y", space = "free_y")
+    }
+    p
+}
+
+
+## B. Item responses, one figure per scale ------------
+# NEW: split by scale
+b_src <- lik_pos(cse_clean)
+
+fig_b <- map(set_names(levels(b_src$scale)), function(s) {
+    plot_lik(b_src %>% filter(scale == s),
+             title = paste0(s, ": responses by item (6-month visit, n = 198)"))
+})
+
+fig_b$Culture
+fig_b$Stress
+fig_b$Effort
+
+## C. Item responses by arm ------------
+fig_c <- plot_lik(lik_pos(cse_clean %>%
+                              mutate(condition = factor(condition,
+                                                        levels = c("Intervention", "Control"))),
+                          group_vars = "condition"),
+                  scale ~ condition,
+                  "Responses to culture, stress and effort items, by arm")
+fig_c
+
+
+## D1. Scale scores by arm ------------
+## SMD: standardized mean difference (intervention vs control)
+# CHANGED: split from the merged table
+tab_d_arm <- d_vars %>%
+    tbl_summary(by = condition,
+                include = c(Culture, Stress, Effort),
+                statistic = d_stat, digits = all_continuous() ~ 2,
+                missing = "no") %>%
+    add_overall() %>%
+    add_difference(test = everything() ~ "smd")
+
+tab_d_arm %>%
+    as_kable_extra(caption = "Scale scores by arm, mean (SD), range 1-5") %>%
+    kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
+
+
+## D2. Scale scores by cadre ------------
+## p-value: linear mixed model with a random intercept for facility
+# CHANGED: split from the merged table
+tab_d_cadre <- d_vars %>%
+    tbl_summary(by = cadre,
+                include = c(Culture, Stress, Effort),
+                statistic = d_stat, digits = all_continuous() ~ 2,
+                missing = "no") %>%
+    add_overall() %>%                                  # NEW: overall column, as in D1
+    add_p(test = everything() ~ mixed_p)
+
+tab_d_cadre %>%
+    as_kable_extra(caption = "Scale scores by cadre, mean (SD), range 1-5") %>%
+    kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
+
+score_mean <- function(df, items, min_prop = 0.8) {
+    m     <- as.matrix(df[, items])
+    n_ans <- rowSums(!is.na(m))
+    ifelse(n_ans / length(items) >= min_prop, rowMeans(m, na.rm = TRUE), NA_real_)
+}
+
+culture_items <- c(paste0("culture_", c(1, 2, 4:9)), "culture_3_r")
+stress_items  <- paste0("cstress_", 1:6)
+effort_items  <- c(paste0("ceffort_", c(1, 2, 4)), "ceffort_3_r", "ceffort_5_r")
+
+# CHANGED: scores computed outside mutate() (avoids cur_data(), deprecated in newer dplyr)
+cse_scores <- cse_clean %>%
+    mutate(
+        culture_score = score_mean(cse_clean, culture_items),
+        stress_score  = score_mean(cse_clean, stress_items),
+        effort_score  = score_mean(cse_clean, effort_items),
+        cadre     = factor(cadre_lab[as.character(cadre_code)],
+                           levels = c("Lay providers", "Nurses/COs", "In-charges")),
+        condition = factor(condition, levels = c("Intervention", "Control"))
+    )
+
+## E. Facility mean scores with 95% CI ------------
+## One panel per scale; facilities ordered by score within each panel.
+## Colour and (I)/(C) tag = arm; dashed line = overall mean.
+## About 10 HCWs per facility, so CIs are wide; read differences with care.
+## Requires: cse_scores (section D).
+## CHANGED: replaces the heatmap (old fig_e_src / fig_e removed)
+
+library(tidytext)   # reorder_within(): order facilities separately in each panel
+
+## Data: one row per facility per scale ------
+fig_e_src <- cse_scores %>%
+    select(facility_code, facility_name, condition,
+           Culture = culture_score, Stress = stress_score, Effort = effort_score) %>%
+    pivot_longer(c(Culture, Stress, Effort), names_to = "scale", values_to = "score") %>%
+    filter(!is.na(score)) %>%
+    group_by(scale, facility_code, facility_name, condition) %>%
+    summarise(n    = n(),
+              mean = mean(score),
+              se   = sd(score) / sqrt(n),
+              lo   = mean - qt(0.975, n - 1) * se,
+              hi   = mean + qt(0.975, n - 1) * se,
+              .groups = "drop") %>%
+    mutate(scale      = factor(scale, levels = c("Culture", "Stress", "Effort")),
+           arm_tag    = if_else(condition == "Intervention", "I", "C"),
+           # shorter facility names so labels fit
+           fac_short  = str_remove(facility_name,
+                                   " Sub[- ]?[Cc]ounty Hospital| Sub-District Hospital| Health Centre.*| Level (4|IV) Hospital"),
+           facility   = sprintf("%02d %s (%s)", facility_code, fac_short, arm_tag),
+           facility_s = reorder_within(facility, mean, scale))
+
+# Check: 20 facilities x 3 scales = 60 rows
+nrow(fig_e_src)
+
+## Overall mean per scale (reference line) ------
+overall_means <- fig_e_src %>%
+    group_by(scale) %>%
+    summarise(overall = weighted.mean(mean, n), .groups = "drop")
+
+## Plot ------
+fig_e <- ggplot(fig_e_src, aes(x = mean, y = facility_s, colour = condition)) +
+    geom_vline(data = overall_means, aes(xintercept = overall),
+               linetype = "dashed", colour = "grey50") +
+    geom_errorbarh(aes(xmin = lo, xmax = hi), height = 0, linewidth = 0.6) +
+    geom_point(size = 2.5) +
+    facet_wrap(~ scale, scales = "free_y", nrow = 1) +
+    scale_y_reordered() +
+    scale_colour_manual(values = c("Intervention" = "#2a78d6", "Control" = "#eb6834")) +
+    scale_x_continuous(limits = c(1, 5), breaks = 1:5) +
+    labs(title = "Facility mean scores with 95% CI",
+         x = "Mean score (1-5)", y = NULL, colour = NULL,
+         caption = "(I) = intervention, (C) = control. Dashed line = overall mean. About 10 HCWs per facility.\nHigher = better culture, more stress, more effort.") +
+    theme_minimal(base_size = 13) +
+    theme(legend.position    = "top",
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor   = element_blank(),
+          strip.text         = element_text(face = "bold"),
+          plot.title         = element_text(face = "bold"),
+          plot.caption       = element_text(colour = "grey40"))
+
+fig_e
+
+## Save for slides (run when ready) ------
+# ggsave(file.path(ipmh_filepath, "fig_cse_facility.png"), fig_e,
+#        width = 14, height = 7, dpi = 300)
 
 # Save clean datasets -------------------
 
