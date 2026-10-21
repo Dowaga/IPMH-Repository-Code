@@ -604,11 +604,11 @@ retention_summary <- bind_rows(
             Attended = sum(
                 six_weeks_status == "Attended"
             ),
-            Missed = sum(
-                six_weeks_status == "Missed"
-            ),
             `Window Open` = sum(
                 six_weeks_status == "Window Open"
+            ),
+            Missed = sum(
+                six_weeks_status == "Missed"
             ),
             .groups = "drop"
         ),
@@ -625,11 +625,11 @@ retention_summary <- bind_rows(
             Attended = sum(
                 fourteen_weeks_status == "Attended"
             ),
-            Missed = sum(
-                fourteen_weeks_status == "Missed"
-            ),
             `Window Open` = sum(
                 fourteen_weeks_status == "Window Open"
+            ),
+            Missed = sum(
+                fourteen_weeks_status == "Missed"
             ),
             .groups = "drop"
         ),
@@ -646,11 +646,11 @@ retention_summary <- bind_rows(
             Attended = sum(
                 six_months_status == "Attended"
             ),
-            Missed = sum(
-                six_months_status == "Missed"
-            ),
             `Window Open` = sum(
                 six_months_status == "Window Open"
+            ),
+            Missed = sum(
+                six_months_status == "Missed"
             ),
             .groups = "drop"
         )) %>%
@@ -658,9 +658,8 @@ retention_summary <- bind_rows(
         Arm = all_of(arm_variable)
     ) %>%
     mutate(
-        Retention = Attended / `Participants Due`,
         Retention = scales::percent(
-            Retention,
+            (Attended + `Window Open`) / `Participants Due`,
             accuracy = 0.1
         ),
         Visit = factor(
@@ -680,6 +679,7 @@ retention_summary <- bind_rows(
         Visit = as.character(Visit),
         Arm = as.character(Arm)
     )
+
 gt_overall <- as.data.frame(retention_summary)
 
 overall_tbl <- gt_overall %>%
@@ -711,12 +711,11 @@ overall_tbl
 \newpage
 
 ## 2.2 Enrollment Progress - Overall
-Final enrollment closed with 2,970 participants recruited, including 417 women living with HIV (WLWH). Control Arm enrolled 1,488 participants and Intervention Arm enrolled 1,482 participants. While Control achieved slightly higher enrollment, both arms contributed substantial numbers and maintained consistent recruitment patterns over time. The difference in totals between arms is modest and does not indicate major imbalance.
+Final enrollment closed with 2,970 participants recruited, including 417 women living with HIV (WLWH). Arm Y enrolled 1,488 participants and Arm X enrolled 1,482 participants. While Control achieved slightly higher enrollment, both arms contributed substantial numbers and maintained consistent recruitment patterns over time. The difference in totals between arms is modest and does not indicate major imbalance.
 The milestone lines (25%, 50%, 75%, 100%) illustrate that both arms reached key thresholds within the expected timeframe, demonstrating robust recruitment performance across study sites.
 
 
 ```{r enrollment_progress prep, echo=FALSE}
-eval(parse(text = knitr::knit_code$get("data-preparation")))
 # Site label lookup (number ??? short name)
 site_labels <- c(
     "01, Rwambwa Sub-county Hospital"     = "01, Rwambwa",
@@ -1081,11 +1080,11 @@ retention_summary <- bind_rows(
             Attended = sum(
                 six_weeks_status == "Attended"
             ),
-            Missed = sum(
-                six_weeks_status == "Missed"
-            ),
             `Window Open` = sum(
                 six_weeks_status == "Window Open"
+            ),
+            Missed = sum(
+                six_weeks_status == "Missed"
             ),
             .groups = "drop"
         ),
@@ -1102,11 +1101,11 @@ retention_summary <- bind_rows(
             Attended = sum(
                 fourteen_weeks_status == "Attended"
             ),
-            Missed = sum(
-                fourteen_weeks_status == "Missed"
-            ),
             `Window Open` = sum(
                 fourteen_weeks_status == "Window Open"
+            ),
+            Missed = sum(
+                fourteen_weeks_status == "Missed"
             ),
             .groups = "drop"
         ),
@@ -1123,11 +1122,11 @@ retention_summary <- bind_rows(
             Attended = sum(
                 six_months_status == "Attended"
             ),
-            Missed = sum(
-                six_months_status == "Missed"
-            ),
             `Window Open` = sum(
                 six_months_status == "Window Open"
+            ),
+            Missed = sum(
+                six_months_status == "Missed"
             ),
             .groups = "drop"
         )) %>%
@@ -1135,9 +1134,8 @@ retention_summary <- bind_rows(
         Arm = all_of(arm_variable)
     ) %>%
     mutate(
-        Retention = Attended / `Participants Due`,
         Retention = scales::percent(
-            Retention,
+            (Attended + `Window Open`) / `Participants Due`,
             accuracy = 0.1
         ),
         Visit = factor(
@@ -1157,6 +1155,7 @@ retention_summary <- bind_rows(
         Visit = as.character(Visit),
         Arm = as.character(Arm)
     )
+
 wlhiv_gt_overall <- as.data.frame(retention_summary)
 
 overall_tbl_wlhiv <- wlhiv_gt_overall %>%
@@ -1623,8 +1622,8 @@ total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 
 ```
 
-
-During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants screened positive for  referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) have accepted referrals. These referrals reflect routine care and services available within the facility, not the implementation treatment
+During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV).
+Out of `r total_visits` total study visits, positive screens necessitating psychosocial referral occurred in `r total_scr_num` (`r total_scr_per`%) visits, of which, participants accepted referrals in `r total_ref_num` (`r total_ref_per`%) of the visits.
 
 \newpage
 ```{r referrals, Results = 'Asis', echo=FALSE, message=FALSE, warning=FALSE}
@@ -2003,8 +2002,8 @@ arm_outcome_summary <- end_joined_arms %>%
                                levels = c("Arm Y", "Arm X"))) %>% 
     tbl_summary(
         by = random_arm,  # # For external analysis: replace 'random_arm' with 'arm_group' when using actual study data---- 
-        include = c(phq9_total, gad7_total, qol_overall_scaled, 
-                    any_adverse_outcome, rtc_total),
+        include = c(any_adverse_outcome, phq9_total, gad7_total,
+                    qol_overall_scaled, rtc_total),
         type = list(
             all_continuous() ~ "continuous2",
             all_categorical() ~ "categorical",
@@ -2179,11 +2178,11 @@ sae_summary_arm <- sae_wide %>%
     tbl_summary(
         by = arm_random,
         include = c(
-            "Maternal Death ",
+            "Maternal Death ", 
+            "maternal_cause_category",
             "Infant Death ",
             #"death_type",
             "infant_cause_category",
-            "maternal_cause_category",
             "Stillbirth ",
             "New/prolonged hospitalization "
         ),
