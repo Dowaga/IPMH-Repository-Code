@@ -1209,11 +1209,16 @@ wk6_facility_retention <- retention_status %>%
         .groups = "drop"
     ) %>%
     mutate(
+        retention_numeric = (Attended + `Window Open`) / `Participants Due`
+    ) %>%
+    arrange(desc(retention_numeric)) %>%
+    mutate(
         Retention = scales::percent(
-            (Attended + `Window Open`) / `Participants Due`,
+            retention_numeric,
             accuracy = 0.1
-        )) %>%
-    arrange(desc(Retention))
+        )
+    ) %>%
+    select(-retention_numeric)
 
 wk6_tbl <- gt(wk6_facility_retention) %>%
     tab_header(
@@ -1254,11 +1259,16 @@ wk14_facility_retention <- retention_status %>%
         .groups = "drop"
     ) %>%
     mutate(
+        retention_numeric = (Attended + `Window Open`) / `Participants Due`
+    ) %>%
+    arrange(desc(retention_numeric)) %>%
+    mutate(
         Retention = scales::percent(
-            (Attended + `Window Open`) / `Participants Due`,
+            retention_numeric,
             accuracy = 0.1
-        )) %>%
-    arrange(desc(Retention))
+        )
+    ) %>%
+    select(-retention_numeric)
 
 wk14_tbl <- gt(wk14_facility_retention) %>%
     tab_header(
@@ -1300,11 +1310,17 @@ mo6_facility_retention <- retention_status %>%
         .groups = "drop"
     ) %>%
     mutate(
+        retention_numeric = (Attended + `Window Open`) / `Participants Due`
+    ) %>%
+    arrange(desc(retention_numeric)) %>%
+    mutate(
         Retention = scales::percent(
-            (Attended + `Window Open`) / `Participants Due`,
-            accuracy = 0.1)) %>%
-    arrange(desc(Retention))
-
+            retention_numeric,
+            accuracy = 0.1
+        )
+    ) %>%
+    select(-retention_numeric)
+   
 mo6_tbl <- gt(mo6_facility_retention) %>%
     tab_header(
         title = md("**Six Months Retention by Facility**")
