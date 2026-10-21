@@ -38,7 +38,7 @@ library(flextable)
 rm(list = ls())
 
 # Set up data freeze time for this report
-data_freeze <- as.Date("2026-10-20") 
+data_freeze <- as.Date("2026-10-14") 
 
 #data_freeze <- "2026-05-11"
 ##### NOTES: Need to replace this with May 11 2026, which is the date of data freeze for this report after May 11 2026. ##### 
@@ -91,7 +91,7 @@ vars2 <- c("Integrate IPMH, a stepped care intervention for screening and treatm
           "- Receiving antenatal care at study facility\n- ≥20 weeks gestation\n- Age ≥ 14\n- screen positive for PMAD symptoms (PHQ-2 ≥ 3 and/or GAD-2 ≥ 3)", 
           "2970, including 405 women living with HIV (WLWH)", 
           "2970 participants, of whom 417 are WLWH",
-          "1631 ", # Should be changed on the data freeze data
+          "1669", # Should be changed on the data freeze data
           "Follow-up through 6 months postpartum", 
           "September 19, 2023", 
           "February 17, 2025",
@@ -135,6 +135,7 @@ study_summary
 -   Jan 22, 2026: Data collection resumed after REDCap server upgrade
 -   Mar 30, 2026: 75% of planned WLWH enrollment achieved
 -   Apr 20, 2026: 75% of planned enrollment achieved
+-   June 9, 2026: 3nd DSMB meeting
 -   Sep 14, 2026: 100% of planned enrollment achieved
 
 ## 1.2 Key Changes to Study Protocol
@@ -190,7 +191,7 @@ Recruitment of pregnant women commenced on February 17, 2025, and the study achi
 
 Among those enrolled, `r n_second` (`r round(n_second / n_enrol * 100, 1)`%) have completed the 6-week postpartum visit, `r n_third` (`r round(n_third / n_enrol * 100, 1)`%) have completed the 14-week visit, and `r n_fourth` (`r round(n_fourth / n_enrol * 100, 1)`%) have completed the 6-month visit.
 
-In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily; however, this did not greatly impact enrollment at the site. Over this duration, we have been doing the enrollments despite the challenges with HIV Implementing Partner staff demotivation as a result of uncertainty with the continuation of their contracts.
+In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily; however, this did not greatly impact enrollment at the site. During this period, we continued enrollments despite challenges arising from staff demotivation among HIV Implementing Partners, which was linked to uncertainty over the continuation of their contracts.
 
 We halted enrollment of new participants on August 1, 2025 after the grant period ended on July 31, 2025, pending approval of the Notice of Award from the National Institute of Health. We received the Notice of Award on September 8, 2025, and enrollments resumed on September 22, 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued.
 
@@ -198,7 +199,7 @@ In Siaya County, there was a nurse strike which began on September 18, 2025. The
 
 Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
 
-A nurses' strike affecting all three study counties-Homa Bay, Kisumu, and Siaya-began on July 29, 2026, and was called off on September 14, 2026. Nurses in Homa Bay and Kisumu counties subsequently returned to work, while nurses in Siaya County remain on strike.
+A nurses' strike affecting all three study counties-Homa Bay, Kisumu, and Siaya began on July 29, 2026, and was called off on September 14, 2026. Nurses in Homa Bay and Kisumu resumed duties on 14 September 2026, while the strike in Siaya remains ongoing. Despite the disruption, 10 facilities (5 intervention, 5 control) continued enrollments relying on program nurses and facility-employed locum staff. PM+ delivery in intervention sites was not affected, as lay providers remained available throughout.
 
 
 \newpage
@@ -208,26 +209,145 @@ A nurses' strike affecting all three study counties-Homa Bay, Kisumu, and Siaya-
 ## 3.1 Overall Cohort
 
 ### 3.1.1 Current subject status
+We screened `r n_ass` women for eligibility, representing `r round(n_ass/n_anc * 100, 1)`% of the `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. A total of `r n_enrol` (`r n_enrol_per`% of eligible) consented and were enrolled. Follow-up completion was as follows: `r n_second` (`r n_second_per`% out of all enrolled) completed the 6-week postpartum visit, `r n_third` (`r n_third_per`% out of all enrolled) completed the 14-week visit, and `r n_fourth` (`r n_fourth_per`% out of all enrolled) completed the 6-month visit. Percentages reflect visit completion among those enrolled, not overall retention, as not all participants have yet reached later follow-up points (see 3.2 Participant Retention During Follow-up").
 
-We screened `r n_ass` women for eligibility among `r n_anc` non-unique ANC attendees at recruitment sites. Of these, `r n_eligible` (`r n_eligible_per`%) were eligible across intervention and control clusters. A total of `r n_enrol` (`r n_enrol_per`% of eligible) consented and were enrolled. Follow-up completion was as follows: `r n_second` (`r n_second_per`% out of all enrolled) completed the 6-week postpartum visit, `r n_third` (`r n_third_per`% out of all enrolled) completed the 14-week visit, and `r n_fourth` (`r n_fourth_per`% out of all enrolled) completed the 6-month visit. Percentages reflect visit completion among those enrolled, not overall retention, as not all participants have yet reached later follow-up points (see 3.2 Participant Retention During Follow-up").
+```{r consort, fig.cap = "CONSORT Flow Diagram", echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
 
-```{r consort, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
-open_consort_diagram <- consort_plot(data = consort_data,
-                                 orders = c(anc_attendees = "ANC Attendees",
-                                            arm = "Assessed for Eligibility",
-                                            exclusion = "Excluded",
-                                            eligible = "Eligible",
-                                            rct_decline_reason = "Declined Enrollment",
-                                            rct_enrolling = "Enrolled",
-                                            secondvisit = "6 weeks postpartum visit",
-                                            thirdvisit = "14 Weeks Postpartum Visit",
-                                            fourthvisit = "6 Months Postpartum Visit"),
-                                 side_box = c("exclusion", "rct_decline_reason"))
-open_consort_diagram
+## consort diagram without arm breaking--------
+# Total ANC attendees
+n_attendees <- consort_data %>% 
+    filter(anc_attendees == "Yes") %>% 
+    nrow()
+
+# Total assessed (non-NA arm)
+n_assessed <- consort_data %>% 
+    filter(!is.na(arm)) %>% 
+    nrow()
+
+# Total excluded
+n_excluded <- consort_data %>% 
+    filter(!is.na(exclusion)) %>% 
+    nrow()
+
+
+# Total eligible
+n_eligible <- consort_data %>% 
+    filter(eligible == 1) %>% 
+    nrow()
+
+# Total enrolled
+n_enrolled <- consort_data %>% 
+    filter(rct_enrolling == "Yes")%>% 
+    nrow()
+
+# Total PM+ participants
+n_pm <- consort_data %>% 
+    filter(ipmh_participant == "Yes") %>% 
+    nrow()
+
+# Total telepsychiatry participants
+n_tele <- telepsych_ids %>%
+    nrow()
+
+# Total postpartum visits
+w6_postpartum <- consort_data %>%
+         filter(rct_enrolling == "Yes", secondvisit == "Yes") %>%
+         nrow()
+w14_postpartum <- consort_data %>%
+    filter(rct_enrolling == "Yes", thirdvisit == "Yes") %>%
+    nrow()
+m6_postpartum <- consort_data %>%
+    filter(rct_enrolling == "Yes", fourthvisit == "Yes") %>%
+    nrow()
+
+# ANC attendees (no percentage)
+txt_anc <- sprintf("ANC Attendees (n=%d)", n_attendees)
+
+# Assessed
+txt_ass <- sprintf("Assessed for Eligibility\n (n=%d, %.1f%%)", n_assessed, (n_assessed / n_attendees) * 100)
+
+# Eligible
+txt_eligible <- sprintf("Eligible\n (n=%d, %.1f%%)", n_eligible, (n_eligible / n_assessed) * 100)
+
+# Excluded
+txt_excluded <- sprintf("Excluded\n (n=%d, %.1f%%)", n_excluded, (n_excluded / n_assessed) * 100)
+
+# Enrolled
+txt_enrolled <- sprintf("Enrolled\n (n=%d, %.1f%%)", n_enrolled, (n_enrolled / n_eligible) * 100)
+
+# PM+
+txt_pm <- sprintf("PM+\n (n=%d, %.1f%%)", n_pm, (n_pm / n_enrolled) * 100)
+
+#telepsychiatry
+txt_tele <- sprintf("Telepsychiatry\n (n=%d, %.1f%%)", n_tele , (n_tele  / n_enrolled) * 100)
+
+# Postpartum
+six_weeks_postpartum <- sprintf("6 weeks postpartum visit\n (n=%d, %.1f%%)", w6_postpartum, (w6_postpartum / n_enrolled) * 100)
+fourteen_weeks_postpartum <- sprintf("14 weeks postpartum visit\n (n=%d, %.1f%%)", w14_postpartum, (w14_postpartum / n_enrolled) * 100)
+six_months_postpartum <- sprintf("6 months postpartum visit\n (n=%d, %.1f%%)", m6_postpartum, (m6_postpartum / n_enrolled) * 100)
+
+
+#combining pm+ and telepsychiatry
+txt_pm_tele <- paste(txt_pm, txt_tele, sep = "\n")
+
+#exclusion side box
+exclusion_summary <- consort_data %>%
+    filter(!is.na(exclusion)) %>%
+    group_by(exclusion_reason = exclusion) %>%
+    summarise(count = n(), .groups = "drop")
+
+header_ex <- sprintf("Excluded (n=%d, %.1f%%):", n_excluded, (n_excluded / n_assessed) * 100)
+
+reason_lines_ex <- mapply(
+    function(reason, count) {
+        sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / n_excluded) * 100)
+    },
+    exclusion_summary$exclusion_reason,
+    exclusion_summary$count
+)
+
+txt_ex <- paste(c(header_ex, reason_lines_ex), collapse = "\n")
+
+
+#decline side box
+n_declined <- consort_data %>% 
+    filter(!is.na(rct_decline_reason)) %>% 
+    nrow()
+
+decline_summary <- consort_data %>%
+    filter(!is.na(rct_decline_reason)) %>%
+    group_by(decline_reason = rct_decline_reason) %>%
+    summarise(count = n(), .groups = "drop")
+
+header_decline <- sprintf("Declined Enrollment (n=%d, %.1f%%):", n_declined, (n_declined / n_eligible) * 100)
+
+reason_lines_decline <- mapply(
+    function(reason, count) {
+        sprintf("\u2022 %s (n=%d, %.1f%%)", reason, count, (count / n_declined) * 100)
+    },
+    decline_summary$decline_reason,
+    decline_summary$count
+)
+
+txt_decline <- paste(c(header_decline, reason_lines_decline), collapse = "\n")
+
+#consort generation
+consort_single <- add_box(txt = txt_anc) |>
+    add_box(txt = txt_ass) |>
+    add_side_box(txt = txt_ex) |>
+    add_box(txt = txt_eligible) |>
+    add_side_box(txt = txt_decline) |>
+    add_box(txt = txt_enrolled) |>
+    #add_side_box(txt = txt_pm_tele) |>
+    add_box(txt = six_weeks_postpartum)|>
+    add_box(txt = fourteen_weeks_postpartum)|>
+    add_box(txt = six_months_postpartum)
+
+consort_single
 
 ```
 
-## 3.2 Participant Retention During Follow-up
+### 3.1.2  Participant Retention During Follow-up
 ```{r Follow-up Summary, echo=FALSE, fig.height=6, fig.width=10, warning=FALSE, dpi=300}
 source("RCT Retention.R", encoding = "UTF-8")
 
@@ -272,7 +392,7 @@ overall_tbl
 
 \newpage
 
-## 3.3 Enrollment Progress - Overall
+## 3.2 Enrollment Progress - Overall
 
 ```{r enrollment_numsource, message=FALSE, warning=FALSE, include=FALSE}
 source("Enrollment Progress.R")
@@ -287,7 +407,7 @@ Recruitment began across all facilities on February 17, 2025. Enrollment advance
 marking completion of enrollment across all clusters.
 
 
-```{r enrollment_sub, fig.height=6.5, fig.width=7.5, fig.align='center', out.width='100%', message=FALSE, warning=FALSE, dpi=300}
+```{r enrollment_sub, fig.cap="Overall Enrollment Progress", fig.height=6.5, fig.width=7.5, fig.align='center', out.width='100%', message=FALSE, warning=FALSE, dpi=300}
 
 #shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
@@ -563,7 +683,7 @@ p1
 
 \newpage
 
-### 3.3.1 Enrollment Progress - Per Facility
+### 3.2.1 Enrollment Progress - Per Facility
 
 ```{r Facility target reached}
 reached_25per_target <- weekly_enrollment %>%
@@ -600,7 +720,7 @@ Enrollment across all 20 facility clusters has been completed. We targeted 148 p
 
 Only five clusters enrolled below 148, reflecting minor operational variation that does not compromise balance within the randomized design. This distribution demonstrates strong site performance and overall adherence to the planned enrollment framework.
 
-```{r enrollment_sub_facility, echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, dpi=300}
+```{r enrollment_sub_facility, fig.cap="Overall Enrollment Progress", echo=FALSE, fig.height=6, fig.width=10, message=FALSE, warning=FALSE, dpi=300}
 # shorten the names of the study sites
 weekly_enrollment <- weekly_enrollment %>%
  mutate(study_site = recode(study_site,
@@ -674,9 +794,9 @@ p2
 
 \newpage
 
-## 3.4 Women Living with HIV
+## 3.3 Women Living with HIV
 
-### 3.4.1 Current subject status
+### 3.3.1 Current subject status
 
 ```{r consortnumsource, echo=FALSE, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
 source("Consort_WLWH.R")
@@ -684,7 +804,7 @@ source("Consort_WLWH.R")
 
 Overall `r n_enrolled` participants have been enrolled into the study, of which `r n_hiv` women are living with HIV (WLHIV), accounting to `r round(n_hiv/n_enrolled*100, 1)`% of total enrollments. Of these, `r six_weeks` (`r round(six_weeks/n_hiv * 100, 1 )`%) have completed their 6 weeks, `r fourteen_weeks` (`r round(fourteen_weeks / n_hiv * 100, 1)`%) have completed 14 weeks, and `r six_months` (`r round(six_months / n_hiv * 100, 1)`%) have completed their 6 months postpartum follow-up visits.
 
-```{r r consort_wlhiv, echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
+```{r r consort_wlhiv, fig.cap="CONSORT Flow Diagram for WLHIV", echo=FALSE, fig.height=10, fig.width=8, message=FALSE, warning=FALSE, out.width="80%"}
 add_box(txt = txt_enrolled) |>
     add_box(txt = txt_hiv) |>
     add_side_box(txt = txt_pm_tele) |>
@@ -696,9 +816,10 @@ add_box(txt = txt_enrolled) |>
 
 
 \newpage
+### 3.3.2 Women Living with HIV (WLHIV) Retention During Follow-up
 ```{r wlhiv_retention, echo=FALSE, message=FALSE, warning=FALSE}
 source("RCT Retention.R")
-overall_wlhiv_tbl1 <- retention_summary_wlhiv %>%
+overall_wlhiv_tbl <- retention_summary_wlhiv %>%
     knitr::kable(
         format = "latex",
         booktabs = TRUE,
@@ -732,14 +853,63 @@ overall_wlhiv_tbl1 <- retention_summary_wlhiv %>%
         escape = TRUE
     )
 
-overall_wlhiv_tbl1
-
 overall_wlhiv_tbl
+
+overall_wlhiv_tbl1 <- gt(retention_summary_wlhiv) %>%
+
+    tab_header(
+        title = md("**Retention Among Women Living with HIV**"),
+        subtitle = md("All facilities combined")
+    ) %>%
+
+    opt_table_font(
+        font = list(
+            google_font("Chivo"),
+            default_fonts()
+        )
+    ) %>%
+
+    tab_style(
+        locations = cells_column_labels(columns = everything()),
+        style = list(
+            cell_borders(
+                sides = "bottom",
+                weight = px(2)
+            ),
+            cell_text(weight = "bold")
+        )
+    ) %>%
+
+    tab_options(
+        table.font.size = px(12),
+        table.border.top.style = "none",
+        column_labels.border.bottom.width = 2,
+        table_body.border.top.style = "none",
+        data_row.padding = px(3),
+        table.align = "center"
+    ) %>%
+
+    cols_align(
+        align = "left",
+        columns = Visit
+    ) %>%
+
+    cols_align(
+        align = "center",
+        columns = -Visit
+    ) %>%
+
+    tab_footnote(
+        footnote = md(
+            "Retention = (Attended + Window Open) / Participants Due."
+        ),
+        locations = cells_title(groups = "title")
+    )
 ```
 
 \newpage
 
-### 3.4.2 Enrollment Progress
+### 3.3.4 Enrollment Progress
 
 ```{r enrollment_hiv, echo=FALSE}
 source("Enrollment_WLWH.R")
@@ -1040,7 +1210,7 @@ completed_6m <- ppw_rct_df %>%
     filter(str_detect(redcap_event_name, "6 Months")) %>%
     filter(is.na(mv_visit)) %>%
     filter(dis_today == "Yes") %>% 
-    filter(grepl("(Study End)",dis_reason)) %>% 
+    #filter(grepl("(Study End)",dis_reason)) %>% 
     distinct(clt_ptid)
 
 
@@ -1094,7 +1264,7 @@ One participant (N = 1) withdrew consent before completing all scheduled study v
 
 Three maternal deaths (N = 3) have been reported and are described separately in the Adverse Events section.
 
-
+\newpage
 # 7. Psychosocial Referrals
 
 ```{r psychosocial referral num source, message=FALSE, warning=FALSE, include=FALSE}
@@ -1117,7 +1287,7 @@ total_ref_num <- df_long %>%
 total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
-During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Participants at control sites are referred to routine care, while those at intervention sites are referred to telepsychiatry or PM+ based on clinical assessment of depression and/or anxiety. Out of `r total_visits` total study visits, `r total_scr_num` (`r total_scr_per`%) participants have screened positive for referable conditions, of which, `r total_ref_num` (`r total_ref_per`%) accepted the referrals.
+During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Participants at control sites are referred to routine care, while those at intervention sites are referred to telepsychiatry or PM+ based on clinical assessment of depression and/or anxiety. Out of `r total_scr_num` (`r total_scr_per`%) total study visits, positive screens necessitating psychosocial referral occurred in `r total_ref_num` (`r total_ref_per`%) visits, of which, participants accepted referrals in 1130 (91%) of the visits.
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
 # referral_summary <- summary_tbl %>%
@@ -1243,7 +1413,7 @@ outcome_summary <- end_joined %>%
   column_spec(1, width = "6cm") %>%
   kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
   kableExtra::footnote(
-    symbol = "Adverse pregnancy outcomes may be reported before the six-month follow-up, including at the 14-week visit or for participants who missed the visit. Consequently, the denominator for "Any adverse pregnancy outcome" is larger than the number of participants who attended the 14-week visit.",
+    symbol = "Adverse pregnancy outcomes may be reported before the six-month follow-up, including at the 14-week visit or for participants who missed the visit. Consequently, the denominator for Any adverse pregnancy outcome is larger than the number of participants who attended the 14-week visit.",
     footnote_as_chunk = TRUE,
     threeparttable = TRUE,
     escape = FALSE
