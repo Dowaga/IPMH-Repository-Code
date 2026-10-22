@@ -6,7 +6,6 @@
 # that's ready for analysis, manuscript writing, and sharing 
 
 # Setup ------------------------------------------------------------------------
-rm(list = ls())
 # Reference source codes & other dependencies:
 source("Dependencies.R")
 source("data_import.R")
@@ -17,7 +16,7 @@ source("DataTeam_ipmh.R")
 # 1. only keep the databases we need
 ###############################################################
 rm(list = setdiff(ls(), c("ppw_rct_df", "ipmh_filepath",
-                          "data_freeze")))
+                          "data_freeze", "clean_dir")))
 
 
 #============================================================================
@@ -154,6 +153,8 @@ medical_raw <- medical_raw %>%
 #===============================================================================
 # 9. PAST DIAGNOSIS VARIABLES
 #===============================================================================
+diagnosis_labels <- c("Checked" = 1, "Unchecked" = 0)
+
 past_diag_vars <- c(
     paste0("med_pastdiag___", 1:8),
     "med_pastdiag____2"
@@ -168,7 +169,7 @@ medical_raw <- medical_raw %>%
 # ==============================================================================
 # 10. SELECT ANALYSIS-READY & SHARING DATASET
 # ==============================================================================
-medical_clean <- medical_raw %>%
+medical_clean_df <- medical_raw %>%
     select(
         # Identifiers & Core Metadata
         record_id,
@@ -200,8 +201,6 @@ medical_clean <- medical_raw %>%
         all_of(past_diag_vars)
     )
 
-# Quick check of the final analytic data frame structure
-glimpse(medical_clean)
 
 
 
