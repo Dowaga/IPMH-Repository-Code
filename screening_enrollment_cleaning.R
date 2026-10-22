@@ -6,7 +6,6 @@
 # that's ready for analysis, manuscript writing, and sharing 
 
 # Setup ------------------------------------------------------------------------
-rm(list = ls())
 # Reference source codes & other dependencies:
 source("Dependencies.R")
 source("data_import.R")
@@ -19,7 +18,7 @@ source("DataTeam_ipmh.R")
 # 1. only keep the databases we need
 ###############################################################
 rm(list = setdiff(ls(), c("screening_consent_df", "ipmh_filepath",
-                          "data_freeze")))
+                          "data_freeze", "clean_dir")))
 
 
 ##############################################################
