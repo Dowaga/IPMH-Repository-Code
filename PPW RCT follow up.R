@@ -1428,6 +1428,7 @@ end_rtc <- psychosocial_data %>%
     filter(visit_type == "14 Weeks") %>%
     select(clt_ptid, visit_type, rtc_total)
 
+
 # Any adverse outcome
 adverse_end <- pregnancy_combined_dedup %>% 
     select(clt_ptid, any_adverse_outcome)
@@ -1611,5 +1612,3 @@ suicidality <- ppw_rct_df %>%
 #     path = "C:/Users/hp/OneDrive/Desktop/IPMH/Suicidality/Suicidality_Output.xlsx"
 # )
 
-
-    

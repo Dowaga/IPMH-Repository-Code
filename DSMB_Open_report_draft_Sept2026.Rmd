@@ -199,7 +199,7 @@ In Siaya County, there was a nurse strike which began on September 18, 2025. The
 
 Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
 
-A nurses' strike affecting all three study counties-Homa Bay, Kisumu, and Siaya began on July 29, 2026, and was called off on September 14, 2026. Nurses in Homa Bay and Kisumu resumed duties on 14 September 2026, while the strike in Siaya remains ongoing. Despite the disruption, 10 facilities (5 intervention, 5 control) continued enrollments relying on program nurses and facility-employed locum staff. PM+ delivery in intervention sites was not affected, as lay providers remained available throughout.
+A nurses' strike affecting all three study counties-Homa Bay, Kisumu, and Siaya began on July 29, 2026, and was called off on September 14, 2026. Nurses in Homa Bay and Kisumu resumed duties on 14 September 2026, while the strike in Siaya remains ongoing. Despite the disruption, 10 facilities (5 intervention, 5 control) continued enrollments relying on program nurses and facility-employed locum staff. Telepsychiatry services provided by psychiatrists and PM+ delivery at intervention sites were not affected by the nurses' strike, as psychiatrists and lay providers remained available throughout the period.
 
 
 \newpage
@@ -345,6 +345,10 @@ consort_single <- add_box(txt = txt_anc) |>
 
 consort_single
 
+```
+
+```{=latex}
+\setcounter{table}{0}
 ```
 
 ### 3.1.2  Participant Retention During Follow-up
