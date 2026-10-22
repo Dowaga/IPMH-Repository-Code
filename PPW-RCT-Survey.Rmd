@@ -2,12 +2,14 @@
 title: "IPMH PPW RCT Survey Weekly Report"
 author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
-output: 
+output:
   word_document:
-always_allow_html: true
+    toc: true
+    number_sections: true
   #html_document: default
   #pdf_document: default
 ---
+
 
 ```{r setup, echo = F, include = F, warning = F}
 rm(list = ls())
@@ -15,7 +17,7 @@ rm(list = ls())
 # read data
 source("Datateam_ipmh.R")
 source("Dependencies.R")
-source("REDCap_datapull.R")
+#source("REDCap_datapull.R")
 source("data_import.R")
 
 #Drop Dummy Out of Pocket training data and Un-enrolled 6 weeks participant
