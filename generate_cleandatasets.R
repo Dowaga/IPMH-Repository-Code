@@ -10,37 +10,85 @@
 #information, please refer to the Data Cleaning SOP.
 
 
-# Setup ------------------------------------------------------------------------
-source("DataTeam_ipmh.R")
-exists("ipmh_filepath")
+# ------------------------------------------------------------------------
+# Setup: Load shared environment and check required paths
+# ------------------------------------------------------------------------
+source("DataTeam_ipmh.R", local = .GlobalEnv)   # Load project environment variables
+stopifnot(exists("ipmh_filepath"))              # Ensure ipmh_filepath is defined
 
-# If data_freeze isn't set, use most recent data pull
-data_freeze <- if (exists("data_freeze") && !is.null(data_freeze)) {
-   data_freeze
-} else {
-   list.files(
-      path = file.path(ipmh_filepath, "Data/6. RCT PPW data"),
-      pattern = "*.csv"
-   ) %>%
-      sort() %>%
-      tail(1) %>%
-      stringr::str_sub(11, 18)
+# ------------------------------------------------------------------------
+# Define data_freeze (snapshot date) if not already set
+# ------------------------------------------------------------------------
+if (!exists("data_freeze", envir = .GlobalEnv, inherits = FALSE) ||
+    is.null(data_freeze)) {
+    
+    # List all CSV files in the RCT PPW data directory
+    csv_files <- list.files(
+        file.path(ipmh_filepath, "Data/6. RCT PPW data"),
+        pattern = "\\.csv$"
+    )
+    
+    # Stop execution if no CSV files are found
+    if (length(csv_files) == 0) {
+        stop("No CSV files found in the RCT PPW data directory.")
+    }
+    
+    # Use the most recent file (sorted descending) and extract date substring
+    data_freeze <- stringr::str_sub(
+        sort(csv_files, decreasing = TRUE)[1],
+        11, 18
+    )
 }
 
-# Make sure Clean DataSets exists
-if(!dir.exists(file.path(ipmh_filepath, "Data/Clean DataSets", data_freeze))){
-   dir.create(file.path(ipmh_filepath, "Data/Clean DataSets", data_freeze))
-}
-
-# screening and enrollment Data -------------------------------------------------------------------
-source("screening_enrollment_cleaning.R")
-
-# Save into Clean DataSets with data_freeze in the filename
-write_csv(
-   screening_clean_df,
-   file.path(
-      ipmh_filepath,
-      "Data/Clean DataSets",
-      paste0("screening_enrollment_data_", data_freeze, ".csv")
-   )
+# ------------------------------------------------------------------------
+# Create output directory for cleaned datasets
+# ------------------------------------------------------------------------
+clean_dir <- file.path(
+    ipmh_filepath,
+    "Data/Clean DataSets",
+    format(data_freeze, "%Y-%m-%d")   # Ensure consistent date format
 )
+
+# Create directory if it doesn't exist (no warnings if already present)
+dir.create(clean_dir, recursive = TRUE, showWarnings = FALSE)
+
+stopifnot(exists("data_freeze", envir = .GlobalEnv))   # Confirm data_freeze is set
+
+# ------------------------------------------------------------------------
+# Run cleaning scripts and save outputs
+# ------------------------------------------------------------------------
+
+# 1. Screening & Enrollment
+source("screening_enrollment_cleaning.R", local = .GlobalEnv)
+write_csv(
+    screening_clean_df,
+    file.path(
+        clean_dir,
+        paste0("screening_enrollment_data_", 
+               format(data_freeze, "%Y-%m-%d"), ".csv")
+    )
+)
+
+# 2. Demographics
+source("Demographics cleaning.R", local = .GlobalEnv)
+write_csv(
+    demographic_clean_df,
+    file.path(
+        clean_dir,
+        paste0("demographic_data_", 
+               format(data_freeze, "%Y-%m-%d"), ".csv")
+    )
+)
+
+# 3. Medical & Obstetric History
+source("Medical and Obstetric H_variables_cleaning.R", local = .GlobalEnv)
+write_csv(
+    medical_clean_df,
+    file.path(
+        clean_dir,
+        paste0("Medical_Obstetric_History_data_", 
+               format(data_freeze, "%Y-%m-%d"), ".csv")
+    )
+)
+
+
