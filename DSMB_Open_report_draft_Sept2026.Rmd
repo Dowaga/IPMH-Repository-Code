@@ -184,20 +184,16 @@ n_fourth_per <- round(n_fourth/n_enrol * 100, 1)
 To date, `r n_enrol` participants have been enrolled, achieving `r round((n_enrol / 2970) * 100, 1)`% of the target sample size.
 Among those enrolled, `r n_second` (`r round(n_second / n_enrol * 100, 1)`%) have completed the 6-week postpartum visit, `r n_third` (`r round(n_third / n_enrol * 100, 1)`%) have completed the 14-week visit, and `r n_fourth` (`r round(n_fourth / n_enrol * 100, 1)`%) have completed the 6-month visit.
 
-Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
+Data collection was paused from Jan 8 to Jan 20, 2026 due to the KNH REDCap server upgrade, which required migration and tool testing. During this period, enrollments were stopped and follow-ups were rescheduled. PM+ delivery and telepsychiatry sessions continued without interruption. Data collection resumed on January 22, 2026.
 
 ### 2.1.2 Recruitment timeline for entire study to date:
 Recruitment of pregnant women commenced on February 17, 2025, and the study achieved its full enrollment target of 2,970 participants on September 14, 2026.
 
-Among those enrolled, `r n_second` (`r round(n_second / n_enrol * 100, 1)`%) have completed the 6-week postpartum visit, `r n_third` (`r round(n_third / n_enrol * 100, 1)`%) have completed the 14-week visit, and `r n_fourth` (`r round(n_fourth / n_enrol * 100, 1)`%) have completed the 6-month visit.
-
 In general, the enrollment had a good start and has progressed well despite challenges right before and into the enrollment like the stop work order, which led to HIV Implementing partners staff being away for one week (Feb 3, 2025 - Feb 7, 2025), just two weeks before the launch of study enrollment. Enrollment was halted for about three weeks (March 4, 2025 - March 26, 2025) at one site (Ober Kamoth sub-county hospital) because the lay providers who support screening clients for PMAD symptoms, a gateway into the study for potential study participants with PMAD symptoms, were away on leave. For two weeks (March 17, 2025 - March 28, 2025) at Gita Subcounty, the lay providers were not reporting to duty daily; however, this did not greatly impact enrollment at the site. During this period, we continued enrollments despite challenges arising from staff demotivation among HIV Implementing Partners, which was linked to uncertainty over the continuation of their contracts.
 
-We halted enrollment of new participants on August 1, 2025 after the grant period ended on July 31, 2025, pending approval of the Notice of Award from the National Institute of Health. We received the Notice of Award on September 8, 2025, and enrollments resumed on September 22, 2025. During this period, follow up visits at 6 weeks, 14 weeks, and 6 months postpartum continued.
+Following the end of the grant period on July 31, 2025, we continued follow-up visits at 6 weeks, 14 weeks, and 6 months postpartum while temporarily halting enrollment of new participants on August 1, 2025, pending approval of the Notice of Award from the National Institutes of Health (NIH). We received the Notice of Award on September 8, 2025, and enrollment resumed on September 22, 2025.
 
 In Siaya County, there was a nurse strike which began on September 18, 2025. The strike affected participant enrollment in 5 intervention and 4 control sites, where we had not enrolled new participants into the study since the start of the strike. However, in one control site in Siaya, the facility had hired a locum nurse for the maternal child health clinic, and enrollment was not affected. In all intervention sites, PM+ offered by lay providers and telepsychiatry offered by psychiatrists were not affected. The strike was officially called off on November 17, 2025. We resumed participant enrollment in the affected sites right after the strike.
-
-Data collection was also temporarily halted from Jan 8 to Jan 20, 2026 following the KNH REDCap server upgrade, to necessitate migration from the old system to the new one, as well as refreshing and testing of the data collection tool. During this period, we halted data collection. We resumed data collection on Jan 22, 2026.
 
 A nurses' strike affecting all three study counties-Homa Bay, Kisumu, and Siaya began on July 29, 2026, and was called off on September 14, 2026. Nurses in Homa Bay and Kisumu resumed duties on 14 September 2026, while the strike in Siaya remains ongoing. Despite the disruption, 10 facilities (5 intervention, 5 control) continued enrollments relying on program nurses and facility-employed locum staff. Telepsychiatry services provided by psychiatrists and PM+ delivery at intervention sites were not affected by the nurses' strike, as psychiatrists and lay providers remained available throughout the period.
 
@@ -381,7 +377,7 @@ overall_tbl <- retention_summary %>%
     ) %>%
     kableExtra::footnote(
         general = paste(
-            "Retention = (Attended + Window Open) / Participants Due. Participants whose visit windows remain open are included in the retention numerator."
+            "Retention = Attended / (Participants Due - Window Open)."
         ),
         general_title = "Note: ",
         footnote_as_chunk = TRUE,
@@ -849,7 +845,7 @@ overall_wlhiv_tbl <- retention_summary_wlhiv %>%
     ) %>%
     kableExtra::footnote(
         general = paste(
-            "Retention = (Attended + Window Open) / Participants Due."
+            "Retention = Attended / (Participants Due - Window Open)."
         ),
         general_title = "Note: ",
         footnote_as_chunk = TRUE,
@@ -905,7 +901,7 @@ overall_wlhiv_tbl1 <- gt(retention_summary_wlhiv) %>%
 
     tab_footnote(
         footnote = md(
-            "Retention = (Attended + Window Open) / Participants Due."
+            "Retention = Attended / (Participants Due - Window Open)."
         ),
         locations = cells_title(groups = "title")
     )
@@ -915,7 +911,7 @@ overall_wlhiv_tbl1 <- gt(retention_summary_wlhiv) %>%
 
 ### 3.3.4 Enrollment Progress
 
-```{r enrollment_hiv, echo=FALSE}
+```{r enrollment_hiv, fig.cap = "WLWH Enrollment Trends by Study Site", echo=FALSE, message=FALSE, warning=FALSE}
 source("Enrollment_WLWH.R")
 wlwh_target <- 20
 
@@ -1031,12 +1027,7 @@ p3
 
 # 4. Ineligibility
 
-Women were ineligible if their gestational age at eligibility assessment was \<20 weeks, if they endorsed thoughts/actions of self-harm, and if they endorsed symptoms of potential psychosis (e.g., hearing voices that others cannot hear, holding unusual beliefs, or feeling watched/followed), or if they endorsed experiencing memory problems.
-
-```{=Latex}
-\setcounter{table}{0}
-
-```
+Women were ineligible if their gestational age at eligibility assessment was <20 weeks, if they endorsed thoughts or actions of self-harm, symptoms of potential psychosis (e.g., hearing voices that others could not hear, holding unusual beliefs, or feeling watched or followed), or memory problems. Women who were ineligible due to these criteria were referred to routine facility-based care for further assessment and appropriate mental health support.
 
 
 ```{r ineligibility, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1051,7 +1042,19 @@ ineligibility_summary <- consort_data %>%
       all_continuous() ~ 1,
       all_categorical() ~ c(0, 1)
     )) %>%
-  as_kable_extra(booktabs = TRUE, caption = "Reasons for Ineligibility")
+  as_kable_extra(
+    booktabs = TRUE,
+    caption = "Reasons for Ineligibility",
+    longtable = FALSE,
+    escape = FALSE
+  ) %>%
+  kableExtra::footnote(
+    symbol = "Seven (n = 7) individuals endorsed both thoughts of self-harm, and memory problems concurrently at the time of eligibility assessment.",
+    footnote_as_chunk = TRUE,
+    threeparttable = TRUE,
+    escape = FALSE
+  )
+   
 
 ineligibility_summary %>%
   kableExtra::kable_styling(
@@ -1102,8 +1105,8 @@ basic_demo <- demographics_df %>%
                 dem_housesleep ~ "continuous", 
                 dem_houserooms ~ "continuous", 
                 dem_traveltime_min ~ "continuous"),
-    statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
-    bold_labels() %>%
+    statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>%
+    #bold_labels() %>%
     add_n() %>%
     modify_header(label ~ "**Characteristic**") %>%
   as_kable_extra(
@@ -1165,7 +1168,7 @@ wlwh_demo <- demographics_df %>%
                     dem_houserooms ~ "continuous", 
                     dem_traveltime_min ~ "continuous"),
         statistic = list(all_continuous() ~ "{median} [IQR: {p25}, {p75}]")) %>% 
-    bold_labels() %>%
+    #bold_labels() %>%
     add_n() %>%
     modify_header(label ~ "**Characteristic**") %>%
   as_kable_extra(
@@ -1264,7 +1267,7 @@ The following summarizes participant study exits and disposition to date.
 
 A total of `r completed_follow_up` participants have completed the scheduled six-month post-partum follow-up and exited the study at the planned endpoint. The first study exit occurred on `r earliest_due`.
 
-One participant (N = 1) withdrew consent before completing all scheduled study visits, while `r n_lost` participants were classified as lost to follow-up because they could not be contacted. No participants have been terminated early following a Principal Investigator (PI) discharge decision.
+One participant (N = 1) withdrew consent before completing all scheduled study visits, while `r n_lost` participants were classified as lost to follow-up due to unsuccessful contact attempts. Of these, four (N = 4) did not attend any scheduled follow-up visits, while three (N = 3) missed their exit visit and could not be reached thereafter. No participants have been terminated early following a Principal Investigator (PI) discharge decision.
 
 Three maternal deaths (N = 3) have been reported and are described separately in the Adverse Events section.
 
@@ -1291,7 +1294,8 @@ total_ref_num <- df_long %>%
 total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
 ```
 
-During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Participants at control sites are referred to routine care, while those at intervention sites are referred to telepsychiatry or PM+ based on clinical assessment of depression and/or anxiety. Out of `r total_scr_num` (`r total_scr_per`%) total study visits, positive screens necessitating psychosocial referral occurred in `r total_ref_num` (`r total_ref_per`%) visits, of which, participants accepted referrals in 1130 (91%) of the visits.
+During enrollment and follow up study visits, participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV). Participants at control sites are referred to routine care, while those at intervention sites are referred to telepsychiatry or PM+ based on clinical assessment of depression and/or anxiety. Out of `r total_visits` total study visits, psychosocial referral were indicated following positive screens in  `r total_scr_num` (`r total_scr_per`%) visits. Of these, participants accepted referrals in `r total_ref_num` (`r total_ref_per`%) of the visits.
+
 
 ```{r referrals, echo=FALSE, message=FALSE, warning=FALSE}
 # referral_summary <- summary_tbl %>%
@@ -1414,13 +1418,15 @@ outcome_summary <- end_joined %>%
     font_size = 9,
     full_width = FALSE
   ) %>%
-  column_spec(1, width = "6cm") %>%
-  kableExtra::row_spec(0, bold = TRUE) %>%   # bold header only
+  kableExtra::row_spec(0, bold = TRUE) %>%
   kableExtra::footnote(
-    symbol = "Adverse pregnancy outcomes may be reported before the six-month follow-up, including at the 14-week visit or for participants who missed the visit. Consequently, the denominator for Any adverse pregnancy outcome is larger than the number of participants who attended the 14-week visit.",
+    symbol = c(
+      "Adverse pregnancy outcomes may be reported before the six-month follow-up, including at the 14-week visit or among participants who missed the visit. Consequently, the denominator for Any adverse pregnancy outcome may exceed the number of participants who attended the 14-week visit.",
+      "All psychosocial scales were assessed at 14 weeks postpartum. Denominators may vary across scales due to differences in item-level missingness."
+    ),
     footnote_as_chunk = TRUE,
     threeparttable = TRUE,
-    escape = FALSE
+    escape = TRUE
   )
 
 outcome_summary
@@ -1507,7 +1513,8 @@ sae_overall <- sae_wide %>%
   ) %>%
   bold_labels() %>%
   add_n() %>%
-  modify_header(stat_0 = "") %>%
+  #modify_header(stat_0 = "") %>%
+    
   as_kable_extra(
     booktabs = TRUE,
     caption = "Summary of Reported Serious Adverse Events"
@@ -1517,6 +1524,43 @@ sae_overall <- sae_wide %>%
     font_size = 11,
     position = "center"
   )
+
+
+sae_overall <- sae_wide %>%
+  tbl_summary(
+    include = c("Maternal Death ", "maternal_cause_category",
+                "Infant Death ", "infant_cause_category",
+                "Stillbirth ", "New/prolonged hospitalization "),
+    type = all_continuous() ~ "continuous",
+    statistic = all_continuous() ~ "{sum}",
+    percent = "cell",
+    missing = "no",
+    digits = list(all_continuous() ~ 1, all_categorical() ~ c(0, 1)),
+    label = list(
+      infant_cause_category   = "Infant Death Cause",
+      maternal_cause_category = "Maternal Death Cause"
+    ),
+    sort = list(all_categorical() ~ "frequency")
+  ) %>%
+  bold_labels() %>%
+  add_n() %>%
+  # indent the cause categories under their parent death categories
+  modify_table_styling(
+    columns = label,
+    rows = variable %in% c("maternal_cause_category", "infant_cause_category"),
+    indent = 2,
+    text_format = "italic"
+  ) %>%
+  as_kable_extra(
+    booktabs = TRUE,
+    caption = "Summary of Reported Serious Adverse Events"
+  ) %>%
+  kable_styling(
+    latex_options = c("HOLD_position", "scale_down"),
+    font_size = 11,
+    position = "center"
+  )
+
 
 sae_overall
 ```
