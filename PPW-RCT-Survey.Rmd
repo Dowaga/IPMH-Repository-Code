@@ -4,8 +4,6 @@ author: "David Owaga & Yuwei Wang"
 date: "`r Sys.Date()`"
 output:
   word_document:
-    toc: true
-    number_sections: true
   #html_document: default
   #pdf_document: default
 ---
@@ -170,7 +168,7 @@ not_enrolled %>%
 
 ```{r retention number source, echo=FALSE, message=FALSE, warning=FALSE}
 source("RCT Retention.R")
-retention_summary
+overall_tbl
 ```
 
 ## Enrollment Per Facility
@@ -823,7 +821,6 @@ table3
 
 \newpage
 ```{r Clinical Outcomes1, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
 table4
 ```
 
@@ -840,6 +837,7 @@ table5
 ## Mental Health Services Utilization
 
 ```{r Mental Health Utilization, echo=FALSE, message=FALSE, warning=FALSE}
+source("Mental Health Service Utilization.R")
 table6
 ```
 
