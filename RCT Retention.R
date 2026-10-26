@@ -815,8 +815,9 @@ retention_data <- retention_windows %>%
 # 10. Determine today's date
 # ------------------------------------------------------------
 
-today <- Sys.Date()
-
+# today <- Sys.Date()
+# Use data freeze as the reference date for retention
+today <- as.Date(data_freeze)
 
 # ------------------------------------------------------------
 # 11. Create retention status
@@ -1014,9 +1015,7 @@ retention_summary <- bind_rows(
         )
 ) %>%
     mutate(
-        Retention = (
-            Attended + `Window Open`
-        ) / `Participants Due`,
+        Retention = Attended / (`Participants Due` - `Window Open`),
         Retention = scales::percent(
             Retention,
             accuracy = 0.1
@@ -1181,7 +1180,7 @@ facility_retention_summary <- bind_rows(
         )
 ) %>%
     mutate(
-        Retention = Attended / `Participants Due`,
+        Retention = Attended / (`Participants Due` - `Window Open`),
         Retention = scales::percent(
             Retention,
             accuracy = 0.1
@@ -1209,7 +1208,7 @@ wk6_facility_retention <- retention_status %>%
         .groups = "drop"
     ) %>%
     mutate(
-        retention_numeric = (Attended + `Window Open`) / `Participants Due`
+        retention_numeric = Attended / (`Participants Due` - `Window Open`)
     ) %>%
     arrange(desc(retention_numeric)) %>%
     mutate(
@@ -1259,7 +1258,7 @@ wk14_facility_retention <- retention_status %>%
         .groups = "drop"
     ) %>%
     mutate(
-        retention_numeric = (Attended + `Window Open`) / `Participants Due`
+        retention_numeric = Attended / (`Participants Due` - `Window Open`)
     ) %>%
     arrange(desc(retention_numeric)) %>%
     mutate(
@@ -1310,7 +1309,7 @@ mo6_facility_retention <- retention_status %>%
         .groups = "drop"
     ) %>%
     mutate(
-        retention_numeric = (Attended + `Window Open`) / `Participants Due`
+        retention_numeric = Attended / (`Participants Due` - `Window Open`)
     ) %>%
     arrange(desc(retention_numeric)) %>%
     mutate(
@@ -1629,7 +1628,7 @@ retention_summary_wlhiv <- bind_rows(
 ) %>%
     mutate(
         Retention = scales::percent(
-            (Attended + `Window Open`) / `Participants Due`,
+            Attended / (`Participants Due` - `Window Open`),
             accuracy = 0.1
         )
     )
