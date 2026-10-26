@@ -659,7 +659,7 @@ retention_summary <- bind_rows(
     ) %>%
     mutate(
         Retention = scales::percent(
-            (Attended + `Window Open`) / `Participants Due`,
+            Attended / (`Participants Due` - `Window Open`),
             accuracy = 0.1
         ),
         Visit = factor(
@@ -699,7 +699,7 @@ overall_tbl <- gt_overall %>%
     bold = TRUE
   ) %>%
   kableExtra::footnote(
-    general = "Retention = (Attended + Window Open) / Participants Due.",
+    general = "Retention = Attended / (Participants Due - Window Open).",
     general_title = "Note: ",
     threeparttable = TRUE,
     escape = TRUE
@@ -711,7 +711,8 @@ overall_tbl
 \newpage
 
 ## 2.2 Enrollment Progress - Overall
-Final enrollment closed with 2,970 participants recruited, including 417 women living with HIV (WLWH). Arm Y enrolled 1,488 participants and Arm X enrolled 1,482 participants. While Control achieved slightly higher enrollment, both arms contributed substantial numbers and maintained consistent recruitment patterns over time. The difference in totals between arms is modest and does not indicate major imbalance.
+Final enrollment closed with 2,970 participants recruited, including 417 women living with HIV (WLWH). Arm Y enrolled 1,488 participants and Arm X enrolled 1,482 participants. While Y achieved slightly higher enrollment, both arms contributed substantial numbers and maintained consistent recruitment patterns over time. 
+
 The milestone lines (25%, 50%, 75%, 100%) illustrate that both arms reached key thresholds within the expected timeframe, demonstrating robust recruitment performance across study sites.
 
 
@@ -837,39 +838,71 @@ site_names  <- sort(unique(weekly_enrollment$study_site))
 site_colors <- setNames(scales::hue_pal()(length(site_names)), site_names)
 all_colors  <- c(site_colors, "Total" = "black")
 
-p1 <- ggplot(combined_enrollment,
-             aes(x = week, y = cumulative_enrollment,
-                 color = study_site, group = study_site,
-                 linewidth = is_total)) +
-    geom_line() +
-    scale_linewidth_manual(values = c("FALSE" = 0.5, "TRUE" = 1.5), guide = "none") +
-    # Target lines
-    geom_hline(yintercept = 372,  linetype = "dashed", color = "#0072B2", linewidth = 0.8) +
-geom_hline(yintercept = 743,  linetype = "dashed", color = "#E69F00", linewidth = 0.8) +
-geom_hline(yintercept = 1114, linetype = "dashed", color = "#009E73", linewidth = 0.8) +
-geom_hline(yintercept = 1485, linetype = "dashed", color = "#D55E00", linewidth = 0.8) +
-    annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-         y = 372 + 20, label = "25% (n=372)", color = "#0072B2", hjust = 0, size = 3.5) +
-annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-         y = 743 + 20, label = "50% (n=743)", color = "#E69F00", hjust = 0, size = 3.5) +
-annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-         y = 1114 + 20, label = "75% (n=1114)", color = "#009E73", hjust = 0, size = 3.5) +
-annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-         y = 1485 + 20, label = "100% (n=1485)", color = "#D55E00", hjust = 0, size = 3.5) +
-    scale_color_manual(values = all_colors) +
-    scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
-    coord_cartesian(clip = "off") +
-    facet_wrap(~ arm_random, ncol = 1) +
-    labs(
-        title = "Enrollment Trends by Study Arm",
-        x     = "Date",
-        y     = "Cumulative Enrollment",
-        color = "Study Site"
-    ) +
-    consort_theme +
-    guides(color = guide_legend(ncol = 2))
+# p1 <- ggplot(combined_enrollment,
+#              aes(x = week, y = cumulative_enrollment,
+#                  color = study_site, group = study_site,
+#                  linewidth = is_total)) +
+#     geom_line() +
+#     scale_linewidth_manual(values = c("FALSE" = 0.5, "TRUE" = 1.5), guide = "none") +
+#     # Target lines
+#     geom_hline(yintercept = 372,  linetype = "dashed", color = "#0072B2", linewidth = 0.8) +
+# geom_hline(yintercept = 743,  linetype = "dashed", color = "#E69F00", linewidth = 0.8) +
+# geom_hline(yintercept = 1114, linetype = "dashed", color = "#009E73", linewidth = 0.8) +
+# geom_hline(yintercept = 1485, linetype = "dashed", color = "#D55E00", linewidth = 0.8) +
+#     annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+#          y = 372 + 20, label = "25% (n=372)", color = "#0072B2", hjust = 0, size = 3.5) +
+# annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+#          y = 743 + 20, label = "50% (n=743)", color = "#E69F00", hjust = 0, size = 3.5) +
+# annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+#          y = 1114 + 20, label = "75% (n=1114)", color = "#009E73", hjust = 0, size = 3.5) +
+# annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+#          y = 1485 + 20, label = "100% (n=1485)", color = "#D55E00", hjust = 0, size = 3.5) +
+#     scale_color_manual(values = all_colors) +
+#     scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+#     coord_cartesian(clip = "off") +
+#     facet_wrap(~ arm_random, ncol = 1) +
+#     labs(
+#         title = "Enrollment Trends by Study Arm",
+#         x     = "Date",
+#         y     = "Cumulative Enrollment",
+#         color = "Study Site"
+#     ) +
+#     consort_theme +
+#     guides(color = guide_legend(ncol = 2))
+# 
+# p1
 
-p1
+p1 <- ggplot(combined_enrollment,
+             aes(x = week, y = cumulative_enrollment)) +
+  # Only plot the overall line
+  geom_line(linewidth = 1.5, color = "#0072B2") +
+  
+  # Target lines
+  geom_hline(yintercept = 372,  linetype = "dashed", color = "#0072B2", linewidth = 0.8) +
+  geom_hline(yintercept = 743,  linetype = "dashed", color = "#E69F00", linewidth = 0.8) +
+  geom_hline(yintercept = 1114, linetype = "dashed", color = "#009E73", linewidth = 0.8) +
+  geom_hline(yintercept = 1485, linetype = "dashed", color = "#D55E00", linewidth = 0.8) +
+  
+  # Target labels
+  annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+           y = 372 + 20, label = "25% (n=372)", color = "#0072B2", hjust = 0, size = 3.5) +
+  annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+           y = 743 + 20, label = "50% (n=743)", color = "#E69F00", hjust = 0, size = 3.5) +
+  annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+           y = 1114 + 20, label = "75% (n=1114)", color = "#009E73", hjust = 0, size = 3.5) +
+  annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
+           y = 1485 + 20, label = "100% (n=1485)", color = "#D55E00", hjust = 0, size = 3.5) +
+  
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  coord_cartesian(clip = "off") +
+  facet_wrap(~ arm_random, ncol = 1) +
+  labs(
+    title = "Enrollment Trends by Study Arm",
+    x     = "Date",
+    y     = "Cumulative Enrollment"
+  ) +
+  consort_theme
+
 ```
 
 
@@ -909,8 +942,6 @@ reached_100per_target <- weekly_enrollment %>%
   pull(n)
 ```
 
-
-All `r reached_75per_target` facilities surpassed the 75% enrollment milestone ($\geq$ 111 participants). Importantly, 15 facilities achieved or exceeded the full target of 148 participants, while 5 facilities fell slightly short but still maintained strong recruitment performance. Overall, the study demonstrated robust enrollment momentum and milestone attainment across sites, with balanced contributions across arms and sustained progress through to completion.
 
 
 ```{r enrollment_sub_facility, fig.cap = "Facility Enrollment Progress", fig.width=12, fig.height=10, echo=FALSE}
@@ -1135,7 +1166,7 @@ retention_summary <- bind_rows(
     ) %>%
     mutate(
         Retention = scales::percent(
-            (Attended + `Window Open`) / `Participants Due`,
+            Attended / (`Participants Due` - `Window Open`),
             accuracy = 0.1
         ),
         Visit = factor(
@@ -1175,7 +1206,7 @@ overall_tbl_wlhiv <- wlhiv_gt_overall %>%
     bold = TRUE
   ) %>%
   kableExtra::footnote(
-    general = "Retention = (Attended + Window Open) / Participants Due.",
+    general = "Retention = Attended / (Participants Due - Window Open).",
     general_title = "Note: ",
     threeparttable = TRUE,
     escape = TRUE
