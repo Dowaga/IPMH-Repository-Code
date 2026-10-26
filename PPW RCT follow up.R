@@ -176,9 +176,7 @@ table1 <- pregnancy_outcomes_6week %>%
     add_n() %>%
     gtsummary::as_gt() %>%
     gt::tab_header(
-        title = "Pregnancy Outcome",
-        subtitle = "Table 1. Pregnancy Outcomes at 6 Weeks Follow-up"
-    ) %>%
+        title = "Pregnancy Outcomes at 6 Weeks Follow-up") %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1)
@@ -291,8 +289,7 @@ table2a <- infant_outcomes %>%
     gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header(
-        title = "Infant Outcome",
-        subtitle = "Table 2a. Infant Outcomes at 6 Weeks Postpartum") %>%
+        title = "Infant Outcomes at 6 Weeks Postpartum") %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1))
@@ -352,8 +349,7 @@ table2b <- infant_outcomes %>%
     gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header(
-        title = "Infant Outcome",
-        subtitle = "Table 2b. Infant Outcomes at 14 Weeks Postpartum") %>%
+        title = "Infant Outcomes at 14 Weeks Postpartum") %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1))
@@ -399,8 +395,7 @@ table2c <- infant_outcomes %>%
     gtsummary::as_gt() %>%
     # modify with gt functions
     gt::tab_header(
-        title = "Infant Outcome",
-        subtitle = "Table 2c. Infant Outcomes at 6 Months Postpartum") %>%
+        title = "Infant Outcomes at 6 Months Postpartum") %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1))
@@ -667,7 +662,7 @@ table3 <- outcomes %>%
     # modify with gt functions
     gt::tab_header(
         title = "Clinical Outcome",
-        subtitle = "Table 3. Mental Health & QOL Outcomes Across Visits") %>%
+        subtitle = "Mental Health & QOL Outcomes Across Visits") %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>%
@@ -925,7 +920,7 @@ table4 <- pregnancy_combined_dedup %>%
     # modify with gt functions
     gt::tab_header(
         title = "Clinical Outcome",
-        subtitle = "Table 4. Clinical Adverse Outcomes") %>%
+        subtitle = "Clinical Adverse Outcomes") %>%
     gt::tab_options(
         table.font.size = "medium",
         data_row.padding = gt::px(1)) %>% 
@@ -1149,113 +1144,12 @@ table5 <- psychosocial_data %>%
     ) %>%
     add_n() %>%
     modify_header(label = "**Psychosocial Correlates**") %>%
-    modify_caption("**Table 5. Psychosocial Correlates Across Visits**") %>%
-    bold_labels()%>%
-    gtsummary::as_gt()
-
-# Mental Health Service Utilization========
-su <- ppw_rct_df %>% 
-    select(visit_type, clt_ptid, starts_with("su_")) 
-
-su <- su %>%
-    mutate(
-        # Recode su_many: "None" to "0" and make continuous
-        su_many = case_when(
-            su_many == "None" ~ "0",
-            TRUE ~ as.character(su_many)
-        ),
-        su_many = as.numeric(su_many),
-        
-        # Recode PM restart variables from Checked/Unchecked to Yes/No
-        su_pmrestart___0 = case_when(
-            su_pmrestart___0 == "Checked" ~ "Yes",
-            su_pmrestart___0 == "Unchecked" ~ "No",
-            TRUE ~ su_pmrestart___0
-        ),
-        su_pmrestart___1 = case_when(
-            su_pmrestart___1 == "Checked" ~ "Yes",
-            su_pmrestart___1 == "Unchecked" ~ "No", 
-            TRUE ~ su_pmrestart___1
-        ),
-        su_pmrestart___2 = case_when(
-            su_pmrestart___2 == "Checked" ~ "Yes",
-            su_pmrestart___2 == "Unchecked" ~ "No",
-            TRUE ~ su_pmrestart___2
-        ),
-        
-        # Ensure PM restart variables are factors
-        across(c(su_pmrestart___0, su_pmrestart___1, su_pmrestart___2), as.factor)
-    )
-
-
-table6 <- su %>%
-    mutate(visit_type = factor(visit_type, 
-                               levels = c("Enrollment", "6 Weeks", "14 Weeks", "6 Months"))) %>%
-    select(visit_type, su_phq2, su_gap2, su_phq9, su_gad7, 
-           su_access, su_referral, su_tele) %>%
-    tbl_summary(
-        by = visit_type,
-        statistic = list(all_categorical() ~ "{n} ({p}%)"),
-        missing = "no",
-        digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
-        ),
-        label = list(
-            su_phq2 ~ "Screened by PHQ-2",
-            su_gap2 ~ "Screened by GAD-2", 
-            su_phq9 ~ "Screened by PHQ-9",
-            su_gad7 ~ "Screened by GAD-7",
-            su_access ~ "Accessed Mental Health Providers",
-            su_referral ~ "Mental Health Referral Made",
-            su_tele ~ "Used Telepsychiatry"
-        )
-    ) %>%
-    add_overall() %>%
-    modify_header(label ~ "**Variable**") %>%
-    modify_spanning_header(c("stat_1", "stat_2", "stat_3", "stat_4") ~ "**Visit Type**") %>%
-    modify_caption("**Screening and Service Utilization by Visit Type**") %>%
     bold_labels() %>%
     gtsummary::as_gt() %>%
-    tab_options(
-        table.font.size = 12)
+    gt::tab_header(
+        title = gt::md("**Psychosocial Correlates Across Visits**")
+    )
 
-table6
-
-table7 <- su %>%
-    filter(visit_type != "Enrollment") %>%
-    mutate(visit_type = factor(visit_type, 
-                               levels = c("6 Weeks", "14 Weeks", "6 Months"))) %>%
-    select(visit_type, su_pmp, su_many, su_pmrestart___0, su_pmrestart___1, su_pmrestart___2) %>%
-    tbl_summary(
-        by = visit_type,
-        statistic = list(
-            all_continuous() ~ "{mean} ({sd})",
-            all_categorical() ~ "{n} ({p}%)"
-        ),
-        missing = "no",
-        digits = list(
-            all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
-            all_categorical() ~ c(0, 1) # categorical ??? 0 decimals for n, 1 d.p. for %
-        ),
-        label = list(
-            su_pmp ~ "PM+ Participation",
-            su_many ~ "PM+ Sessions Completed",
-            su_pmrestart___0 ~ "No Disruption",
-            su_pmrestart___1 ~ "Stopped PM+", 
-            su_pmrestart___2 ~ "Restarted PM+"
-        )
-    ) %>%
-    add_overall() %>%
-    modify_header(label ~ "**Variable**") %>%
-    modify_spanning_header(c("stat_1", "stat_2", "stat_3") ~ "**Visit Type**") %>%
-    modify_caption("**PM+ Program Participation Status (Reported During Post-Enrollment Visits)**") %>%
-    bold_labels()%>%
-    gtsummary::as_gt() %>%
-    tab_options(
-        table.font.size = 12)
-
-table7
 
 # Tracking follow-up visits ------------------
 ppw_date_track <- ppw_rct_df %>%
