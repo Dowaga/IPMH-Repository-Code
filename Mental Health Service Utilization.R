@@ -15,6 +15,23 @@ source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
+
+# Data pre---
+ppw_rct_df <- ppw_rct_df %>%
+    mutate(
+        visit_type = case_when(
+            grepl("Enrollment", redcap_event_name) ~ "Enrollment",
+            grepl("6 Weeks", redcap_event_name) ~ "6 Weeks",
+            grepl("14 Weeks", redcap_event_name) ~ "14 Weeks", 
+            grepl("6 Months", redcap_event_name) ~ "6 Months",
+            TRUE ~ NA_character_
+        ),
+        arm = case_when(
+            grepl("Arm 1: Intervention", redcap_event_name) ~ "Intervention",
+            grepl("Arm 2: Control", redcap_event_name) ~ "Control",
+            TRUE ~ "Unknown"
+        )
+    )
 # Mental Health Service Utilization========
 su <- ppw_rct_df %>% 
     select(visit_type, clt_ptid, starts_with("su_")) 
@@ -76,11 +93,13 @@ table6 <- su %>%
     add_overall() %>%
     modify_header(label ~ "**Variable**") %>%
     modify_spanning_header(c("stat_1", "stat_2", "stat_3", "stat_4") ~ "**Visit Type**") %>%
-    modify_caption("**Screening and Service Utilization by Visit Type**") %>%
     bold_labels() %>%
     gtsummary::as_gt() %>%
-    tab_options(
-        table.font.size = 12)
+    gt::tab_header(
+        title = gt::md(
+            "**Screening and Service Utilization by Visit Type (Self-Reported During Visits)**"
+        )
+    )
 
 table6
 
@@ -107,14 +126,24 @@ table7 <- su %>%
             su_pmrestart___1 ~ "Stopped PM+", 
             su_pmrestart___2 ~ "Restarted PM+"
         )
-    ) %>%
+    )%>%
     add_overall() %>%
     modify_header(label ~ "**Variable**") %>%
-    modify_spanning_header(c("stat_1", "stat_2", "stat_3") ~ "**Visit Type**") %>%
-    modify_caption("**PM+ Program Participation Status (Self-Reported During Post-Enrollment Visits)**") %>%
-    bold_labels()%>%
+    modify_spanning_header(
+        c("stat_1", "stat_2", "stat_3") ~ "**Visit Type**"
+    ) %>%
+    bold_labels() %>%
     gtsummary::as_gt() %>%
-    tab_options(
-        table.font.size = 12)
+    gt::tab_header(
+        title = gt::md(
+            "**PM+ Program Participation Status (Self-Reported During Visits)**"
+        )
+    ) %>%
+    gt::tab_options(
+        table.font.size = 12
+    )
 
 table7
+
+
+over <- su %>% filter(su_many > 5)
