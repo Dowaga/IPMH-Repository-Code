@@ -168,6 +168,10 @@ not_enrolled %>%
 
 ```{r retention number source, echo=FALSE, message=FALSE, warning=FALSE}
 source("RCT Retention.R")
+overall_tbl <- flextable(retention_summary) %>%
+  set_caption("Overall Retention Across Study Follow-up") %>%
+  add_footer_lines("Retention = Attended / (Participants Due - Window Open)")
+
 overall_tbl
 ```
 
@@ -794,19 +798,19 @@ table1
 ### Six Weeks Infant Outcomes
 
 ```{r Infant Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
+
 table2a
 ```
 
 ### Fourteen Weeks Infant Outcomes
 ```{r Infant Outcomes2, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
+
 table2b
 ```
 
 ### Six Months Infant Outcomes
 ```{r Infant Outcomes3, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
+
 table2c
 ```
 
@@ -815,7 +819,7 @@ table2c
 ## Clinical Outcomes
 
 ```{r Clinical Outcomes, echo=FALSE, message=FALSE, warning=FALSE}
-source("PPW RCT follow up.R")
+
 table3
 ```
 
