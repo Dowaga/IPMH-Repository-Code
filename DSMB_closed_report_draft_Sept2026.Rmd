@@ -819,20 +819,20 @@ consort_theme <- theme_minimal(base_size = 12) +
         plot.margin       = margin(10, 20, 10, 10)
     )
 
-total_enrollment <- weekly_enrollment %>%
-    group_by(week, arm_random) %>%
-    summarise(enrollment_count = sum(enrollment_count), .groups = "drop") %>%
-    arrange(week) %>%
-    group_by(arm_random) %>%
-    mutate(
-        cumulative_enrollment = cumsum(enrollment_count),
-        study_site = "Total"
-    ) %>%
-    ungroup()
-
-combined_enrollment <- bind_rows(weekly_enrollment, total_enrollment) %>%
-    mutate(is_total = study_site == "Total")
-
+# total_enrollment <- weekly_enrollment %>%
+#     group_by(week, arm_random) %>%
+#     summarise(enrollment_count = sum(enrollment_count), .groups = "drop") %>%
+#     arrange(week) %>%
+#     group_by(arm_random) %>%
+#     mutate(
+#         cumulative_enrollment = cumsum(enrollment_count),
+#         study_site = "Total"
+#     ) %>%
+#     ungroup()
+# 
+# combined_enrollment <- bind_rows(weekly_enrollment, total_enrollment) %>%
+#     mutate(is_total = study_site == "Total")
+# 
 # Color palette: sites in default ggplot hues, "Total" in black
 site_names  <- sort(unique(weekly_enrollment$study_site))
 site_colors <- setNames(scales::hue_pal()(length(site_names)), site_names)
@@ -872,37 +872,129 @@ all_colors  <- c(site_colors, "Total" = "black")
 # 
 # p1
 
-p1 <- ggplot(combined_enrollment,
-             aes(x = week, y = cumulative_enrollment)) +
-  # Only plot the overall line
-  geom_line(linewidth = 1.5, color = "#0072B2") +
-  
-  # Target lines
-  geom_hline(yintercept = 372,  linetype = "dashed", color = "#0072B2", linewidth = 0.8) +
-  geom_hline(yintercept = 743,  linetype = "dashed", color = "#E69F00", linewidth = 0.8) +
-  geom_hline(yintercept = 1114, linetype = "dashed", color = "#009E73", linewidth = 0.8) +
-  geom_hline(yintercept = 1485, linetype = "dashed", color = "#D55E00", linewidth = 0.8) +
-  
-  # Target labels
-  annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-           y = 372 + 20, label = "25% (n=372)", color = "#0072B2", hjust = 0, size = 3.5) +
-  annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-           y = 743 + 20, label = "50% (n=743)", color = "#E69F00", hjust = 0, size = 3.5) +
-  annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-           y = 1114 + 20, label = "75% (n=1114)", color = "#009E73", hjust = 0, size = 3.5) +
-  annotate("text", x = min(combined_enrollment$week, na.rm = TRUE),
-           y = 1485 + 20, label = "100% (n=1485)", color = "#D55E00", hjust = 0, size = 3.5) +
-  
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+
+# Prepare total enrollment series in chronological order
+total_enrollment <- weekly_enrollment %>%
+  group_by(week, arm_random) %>%
+  summarise(
+    enrollment_count = sum(enrollment_count, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(arm_random, week) %>%
+  group_by(arm_random) %>%
+  mutate(
+    cumulative_enrollment = cumsum(enrollment_count),
+    study_site = "Total"
+  ) %>%
+  ungroup()
+
+# Combine facility and total data
+combined_enrollment <- bind_rows(
+  weekly_enrollment,
+  total_enrollment
+) %>%
+  mutate(
+    is_total = study_site == "Total"
+  ) %>%
+  arrange(arm_random, study_site, week)
+
+# Plot total cumulative enrollment
+p1 <- ggplot(
+  filter(combined_enrollment, is_total),
+  aes(
+    x = week,
+    y = cumulative_enrollment,
+    group = arm_random
+  )
+) +
+  geom_line(
+    linewidth = 1.2,
+    color = "#0072B2",
+    lineend = "round",
+    linejoin = "round"
+  ) +
+
+  # Target milestone lines
+  geom_hline(
+    yintercept = 372,
+    linetype = "dashed",
+    color = "#0072B2",
+    linewidth = 0.8
+  ) +
+  geom_hline(
+    yintercept = 743,
+    linetype = "dashed",
+    color = "#E69F00",
+    linewidth = 0.8
+  ) +
+  geom_hline(
+    yintercept = 1114,
+    linetype = "dashed",
+    color = "#009E73",
+    linewidth = 0.8
+  ) +
+  geom_hline(
+    yintercept = 1485,
+    linetype = "dashed",
+    color = "#D55E00",
+    linewidth = 0.8
+  ) +
+
+  # Milestone labels
+  annotate(
+    "text",
+    x = min(combined_enrollment$week, na.rm = TRUE),
+    y = 392,
+    label = "25% (n=372)",
+    color = "#0072B2",
+    hjust = 0,
+    size = 3.5
+  ) +
+  annotate(
+    "text",
+    x = min(combined_enrollment$week, na.rm = TRUE),
+    y = 763,
+    label = "50% (n=743)",
+    color = "#E69F00",
+    hjust = 0,
+    size = 3.5
+  ) +
+  annotate(
+    "text",
+    x = min(combined_enrollment$week, na.rm = TRUE),
+    y = 1134,
+    label = "75% (n=1114)",
+    color = "#009E73",
+    hjust = 0,
+    size = 3.5
+  ) +
+  annotate(
+    "text",
+    x = min(combined_enrollment$week, na.rm = TRUE),
+    y = 1505,
+    label = "100% (n=1485)",
+    color = "#D55E00",
+    hjust = 0,
+    size = 3.5
+  ) +
+
+  scale_x_date(
+    date_breaks = "1 month",
+    date_labels = "%b %Y"
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.06))
+  ) +
   coord_cartesian(clip = "off") +
   facet_wrap(~ arm_random, ncol = 1) +
   labs(
     title = "Enrollment Trends by Study Arm",
-    x     = "Date",
-    y     = "Cumulative Enrollment"
+    x = "Date",
+    y = "Cumulative Enrollment"
   ) +
   consort_theme
 
+p1
 ```
 
 
@@ -1445,7 +1537,7 @@ arm_wlwh_demo%>%
 
 ```
 
-
+\newpage
 # 5. Study Terminations
 
 ```{r Ealiest Expected termination}
@@ -1500,14 +1592,14 @@ completed_follow_up <- total_exits %>%
     nrow()
 
 completed_control <- total_exits %>% 
-    filter(arm_group == "Control") %>% 
+    filter(arm_random == "Arm Y") %>% # to external analyst: replace with arm_group == "Control" for real data----
     filter(is.na(mv_visit)) %>%
     filter(dis_today == "Yes") %>% 
     filter(grepl("(Study End)",dis_reason)) %>%
     nrow()
     
 completed_intervention <- total_exits %>% 
-    filter(arm_group == "Intervention") %>% 
+    filter(arm_random == "Arm X") %>% # to external analyst: replace with arm_group == "Intervention" for real data----
     filter(is.na(mv_visit)) %>%
     filter(dis_today == "Yes") %>% 
     filter(grepl("(Study End)",dis_reason)) %>%
@@ -1550,9 +1642,7 @@ n_withdrawals <- withdrawals %>%
   distinct(clt_ptid) %>%
   nrow()
 ```
-The following summarizes participant study exits and disposition to date.
-
-A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint, including `r completed_control` from the control arm and `r completed_intervention` from the intervention arm. The first study exit occurred on `r earliest_due`.
+A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint, including `r completed_control` from the Arm Y and `r completed_intervention` from the Arm X.
 
 One participant (N = 1) withdrew consent before completing all scheduled study visits, while `r n_lost` participants were classified as lost to follow-up because they could not be contacted. No participants have been terminated early following a Principal Investigator (PI) discharge decision.
 
@@ -1561,76 +1651,79 @@ Three maternal deaths (N = 3) have been reported and are described separately in
 \newpage
 # 6. Referrals
 ## 6.1 Psychosocial Referrals
-```{r message=FALSE, warning=FALSE, include=FALSE}
-referral_df <- ppw_rct_df %>% 
-    #filter(clt_visit == "Enrollment") %>% 
-    select(record_id, clt_study_site, redcap_event_name, clt_visit, clt_date,starts_with("risk_"), 
-           referral_inf, date_infharm,
-           referral_depress, referral_anxiety, referral_ipv, referral_type___0,
-           referral_type___1, referral_type___2, referral_type___3, 
-           referral_type___4, referral_type___5, referral_type___99, 
-           referral_notoffered, referral_notofferedothsp, referral_accept, 
-           referral_decline, referral_declineothsp, referral_priorsh, 
-           referral_prioractsh___1, referral_prioractsh___2, 
-           referral_prioractsh___4, referral_prioractsh___99, 
-           referral_prioractshoth, 
-           referral_priorinf, referral_prioractions___1, 
-           referral_prioractions___2, referral_prioractions___3, 
-           referral_prioractions___4, referral_prioractions___5,
-           referral_prioractions___99, referral_prioractoth,
-           referral_priorvisit, referral_outcome, referral_help,
-           referral_experience, referral_notattend, referral_notattendoth,
-           psychosocial_support_referrals_complete)  %>%
-    mutate(
-        screened_selfharm = as.integer(risk_selfharm == "Yes"),
-    screened_depression = as.integer(referral_depress >= 10),
-    screened_anxiety = as.integer(referral_anxiety >= 10),
-    screened_IPV = as.integer(referral_ipv >= 10),
-    referred = case_when(
-        referral_type___1 == "Checked" | referral_type___2 == "Checked" | 
-            referral_type___3 == "Checked" | referral_type___4 == "Checked" |
-            referral_type___5 == "Checked" |referral_type___99 == "Checked" ~ 1|
-            risk_selfharm == "Yes",
-        TRUE ~ 0)
-    ) %>% 
-    mutate(facility_code = as.integer(str_extract(clt_study_site, "^[0-9]{2}")),
-        clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site),
-        Arm = case_when(
-                str_detect(redcap_event_name, "Arm 2: Control") ~ "control",
-                str_detect(redcap_event_name, "Arm 1: Intervention") ~ "intervention")) %>% 
-    filter(!clt_visit %in% c("PM+ Session 5 Abstraction")) %>% 
-    mutate(
+
+```{r referral uptake, message=FALSE, warning=FALSE, include=FALSE}
+# ===============================================================
+# 1. Build referral_df
+# ==================================================================
+referral_df <- ppw_rct_df %>%
+  select(
+    record_id, clt_study_site, redcap_event_name, clt_visit, clt_date,
+    starts_with("risk_"),
+    referral_inf, date_infharm,
+    referral_depress, referral_anxiety, referral_ipv,
+    referral_type___0:referral_type___99,
+    referral_notoffered, referral_notofferedothsp, referral_accept,
+    referral_decline, referral_declineothsp, referral_priorsh,
+    referral_prioractsh___1:referral_prioractsh___99,
+    referral_prioractshoth, referral_priorinf,
+    referral_prioractions___1:referral_prioractions___99,
+    referral_prioractoth, referral_priorvisit, referral_outcome,
+    referral_help, referral_experience, referral_notattend,
+    referral_notattendoth, psychosocial_support_referrals_complete
+  ) %>%
+  mutate(
+    screened_selfharm   = as.integer(risk_selfharm == "Yes"),
+    screened_depression = as.integer(!is.na(referral_depress) & referral_depress >= 10),
+    screened_anxiety    = as.integer(!is.na(referral_anxiety) & referral_anxiety >= 10),
+    screened_IPV        = as.integer(!is.na(referral_ipv) & referral_ipv >= 10),
+    referred = as.integer(
+      risk_selfharm == "Yes" |
+        referral_type___1 == "Checked" |
+        referral_type___2 == "Checked" |
+        referral_type___3 == "Checked" |
+        referral_type___4 == "Checked" |
+        referral_type___5 == "Checked" |
+        referral_type___99 == "Checked"
+    ),
+    facility_code = as.integer(str_extract(clt_study_site, "^[0-9]{2}")),
+    clt_study_site = gsub("^[0-9]+,\\s*", "", clt_study_site),
+    Arm = case_when(
+      str_detect(redcap_event_name, "Arm 2: Control") ~ "control",
+      str_detect(redcap_event_name, "Arm 1: Intervention") ~ "intervention"
+    )
+  ) %>%
+  filter(!clt_visit %in% c("PM+ Session 5 Abstraction")) %>%
+  mutate(
     clt_visit = factor(
-        clt_visit,
-        levels = c("Enrollment", "6 weeks post-partum", "14 weeks post-partum", "6 months post-partum")
+      clt_visit,
+      levels = c("Enrollment", "6 weeks post-partum", "14 weeks post-partum", "6 months post-partum")
     )
-) %>% 
-    filter(if_any(starts_with("screened_"), ~ .x == 1)) %>% 
-# introduce radnomized arm for blinding
-    mutate(
-    arm_random = sample(
-      rep(c("Arm Y", "Arm X"), length.out = n())
-    )
-  ) %>% 
-    mutate(arm_random = factor(
-        arm_random,
-        levels = c("Arm Y", "Arm X")))
-    
- # 1. Define a lookup for nicer labels 
+  ) %>%
+  filter(if_any(starts_with("screened_"), ~ .x == 1)) %>%
+  mutate(
+    # randomized arm for blinding
+    arm_random = sample(rep(c("Arm Y", "Arm X"), length.out = n())),
+    arm_random = factor(arm_random, levels = c("Arm Y", "Arm X"))
+  )
+
+# ================================================================
+# 2. Condition labels lookup
+# =================================================================
 condition_labels <- tribble(
-    ~risk_col,               ~Condition,
-    "screened_depression",   "Depression Score>=10",
-    "screened_anxiety",      "Anxiety Score>=10",
-    "screened_IPV",          "IPV Score>=10",
-    "screened_selfharm",     "Self-harm"
+  ~risk_col,             ~Condition,
+  "screened_depression", "Depression Score >=10",
+  "screened_anxiety",    "Anxiety Score >=10",
+  "screened_IPV",        "IPV Score >=10",
+  "screened_selfharm",   "Self-harm"
 )
 
-# 2. Pivot longer & flag accepted
-
-use_random <- TRUE   #To external analyst set to FALSE for Real Data----
+# ================================================================
+# 3. Pivot longer & flag accepted
+# ================================================================
+use_random <- TRUE   # external analyst: set FALSE for real data----
 arm_var <- if (use_random) "arm_random" else "Arm"
 
-# df_long----
 df_long <- referral_df %>%
   select(record_id, all_of(arm_var), starts_with("screened_"), referral_accept) %>%
   pivot_longer(
@@ -1641,35 +1734,67 @@ df_long <- referral_df %>%
   filter(screened_pos == 1) %>%
   mutate(accepted = if_else(referral_accept == "Yes", 1L, 0L))
 
-total_visits <- ppw_rct_df %>%
+# ==================================================
+# 4. Totals
+# ====================================================
+total_visits   <- ppw_rct_df %>%
   filter(!str_detect(redcap_event_name, "PM\\+ Session 5 Abstraction")) %>%
-  count() %>%
-  pull(n)
+  count() %>% pull(n)
 
-total_scr_num <- df_long %>% nrow()
-total_scr_per <- round(total_scr_num/total_visits *100, 1)
-total_ref_num <- df_long %>% filter(referral_accept == "Yes") %>% nrow()
-total_ref_per <- round(total_ref_num/total_scr_num *100, 1)
+total_scr_num  <- nrow(df_long)
+total_scr_per  <- round(total_scr_num / total_visits * 100, 1)
+total_ref_num  <- df_long %>% 
+    filter(referral_accept == "Yes") %>% 
+    nrow()
+total_ref_per  <- round(total_ref_num / total_scr_num * 100, 1)
+
+# =====================================================================
+# 5. Arm Summaries
+# ====================================================================
+
+arm_referral_summary <- df_long %>%
+   group_by(!!sym(arm_var)) %>%   # use sym() for tidy evaluation
+  summarise(
+    positive_screens = sum(screened_pos == 1, na.rm = TRUE),
+    accepted_n = sum(accepted == 1, na.rm = TRUE),
+    acceptance_denominator = sum(!is.na(referral_accept)),
+    acceptance_pct = if_else(
+      acceptance_denominator > 0,
+      round(100 * accepted_n / acceptance_denominator, 1),
+      NA_real_
+    ),
+    .groups = "drop"
+  )
+
+# -----------------------------
+# 6. Inline R reporting (fix)
+# -----------------------------
+# use arm_var dynamically
+armY <- arm_referral_summary %>%
+  filter(!!sym(arm_var) == if (arm_var == "arm_random") "Arm Y" else "control")
+
+armX <- arm_referral_summary %>%
+  filter(!!sym(arm_var) == if (arm_var == "arm_random") "Arm X" else "intervention")
 
 ```
 
-During enrollment and follow-up visits participants are asked if they would like to be referred for psychosocial support if they screen positive for depression, anxiety and intimate partner violence (IPV).
-Out of `r total_visits` total study visits, positive screens necessitating psychosocial referral occurred in `r total_scr_num` (`r total_scr_per`%) visits, of which, participants accepted referrals in `r total_ref_num` (`r total_ref_per`%) of the visits.
+Of the `r total_scr_num` screening-positive encounters with a documented referral response, 1,130 resulted in referral acceptance, yielding an overall acceptance rate of `r total_ref_per`%. Acceptance was balanced between the randomized groups, with `r armY$accepted_n` of `r armY$acceptance_denominator` encounters (`r sprintf("%.1f", armY$acceptance_pct)`%) accepting referrals in Arm Y compared to `r armX$accepted_n` of `r armX$acceptance_denominator` encounters (`r sprintf("%.1f", armX$acceptance_pct)`%) in Arm X
 
-\newpage
+
 ```{r referrals, Results = 'Asis', echo=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(fig.pos = "H")
 
 # Function to build GT referral table ---
+
 build_gt_referral_table <- function(df_long, use_random = TRUE) {
-  #To external analysts set to FALSE for real data----
+# external analyst: set FALSE for real data----
+  # 1. Select grouping variable
   group_var <- if (use_random) "arm_random" else "Arm"
-  
-  # 1. standardise grouping
+
   df_long <- df_long %>%
-    mutate(group = .data[[group_var]])
-  
-  # 2. summary
+    mutate(group = as.character(.data[[group_var]]))
+
+  # 2. Summarise referrals by risk condition and arm
   arm_summary <- df_long %>%
     group_by(risk_col, group) %>%
     summarise(
@@ -1678,16 +1803,42 @@ build_gt_referral_table <- function(df_long, use_random = TRUE) {
       .groups = "drop"
     ) %>%
     left_join(condition_labels, by = "risk_col")
-  
-  # 3. harmonise arm names
+
+  # 3. Standardise arm labels
   arm_summary <- arm_summary %>%
-    mutate(arm_clean = case_when(
-      str_detect(group, regex("control|Y", ignore_case = TRUE)) ~ "control",
-      str_detect(group, regex("intervention|X", ignore_case = TRUE)) ~ "intervention",
-      TRUE ~ as.character(group)
-    ))
-  
-  # 4. reshape wide
+    mutate(
+      arm_clean = case_when(
+        use_random &
+          str_detect(group, regex("^(Y|Arm Y)$", ignore_case = TRUE)) ~
+          "control",
+
+        use_random &
+          str_detect(group, regex("^(X|Arm X)$", ignore_case = TRUE)) ~
+          "intervention",
+
+        !use_random &
+          str_detect(group, regex("^Control$", ignore_case = TRUE)) ~
+          "control",
+
+        !use_random &
+          str_detect(group, regex("^Intervention$", ignore_case = TRUE)) ~
+          "intervention",
+
+        TRUE ~ NA_character_
+      )
+    )
+
+  # Stop if arm labels are unexpected
+  if (anyNA(arm_summary$arm_clean)) {
+    unexpected <- unique(arm_summary$group[is.na(arm_summary$arm_clean)])
+
+    stop(
+      "Unrecognised arm label(s) in ", group_var, ": ",
+      paste(unexpected, collapse = ", ")
+    )
+  }
+
+  # 4. Reshape to wide format
   wide <- arm_summary %>%
     select(Condition, arm_clean, n, n_accepted) %>%
     pivot_wider(
@@ -1695,68 +1846,103 @@ build_gt_referral_table <- function(df_long, use_random = TRUE) {
       values_from = c(n, n_accepted),
       values_fill = 0
     )
-  
-  # 5. compute uptake safely
+
+  # Ensure all expected columns exist
+  required_cols <- c(
+    "n_control", "n_accepted_control",
+    "n_intervention", "n_accepted_intervention"
+  )
+
+  for (col in required_cols) {
+    if (!col %in% names(wide)) {
+      wide[[col]] <- 0
+    }
+  }
+
+  # 5. Calculate uptake
   wide <- wide %>%
     mutate(
-      uptake_control = if_else(n_control > 0,
-                               n_accepted_control / n_control * 100, 0),
-      uptake_intervention = if_else(n_intervention > 0,
-                                    n_accepted_intervention / n_intervention * 100, 0)
+      uptake_control = if_else(
+        n_control > 0,
+        n_accepted_control / n_control * 100,
+        NA_real_
+      ),
+      uptake_intervention = if_else(
+        n_intervention > 0,
+        n_accepted_intervention / n_intervention * 100,
+        NA_real_
+      )
     )
-  
-  # 6. labels
+
+  # 6. Dynamic headings and title
   control_label <- if (use_random) "Arm Y" else "Control"
   intervention_label <- if (use_random) "Arm X" else "Intervention"
-  
+
   title_text <- if (use_random) {
-    "Referral Uptake by Randomized Arm (Blinded)"
+    "Referral Uptake by Randomized Arm"
   } else {
     "Referral Uptake by Study Arm"
   }
-  
-  # 7. GT table
-  gt_tbl <- wide %>%
-    gt() %>%
-    tab_header(title = title_text) %>%
-    cols_label(
-      Condition = "Referral Condition",
-      n_control = "Screened +",
-      n_accepted_control = "Accepted",
-      uptake_control = "Uptake (%)",
-      n_intervention = "Screened +",
-      n_accepted_intervention = "Accepted",
-      uptake_intervention = "Uptake (%)"
+
+  # Create grouped column headings
+  header_labels <- c(
+    " " = 1,
+    setNames(3, control_label),
+    setNames(3, intervention_label)
+  )
+
+  # 7. Build PDF-compatible table
+  referral_tbl <- wide %>%
+    select(
+      Condition,
+      n_control,
+      n_accepted_control,
+      uptake_control,
+      n_intervention,
+      n_accepted_intervention,
+      uptake_intervention
     ) %>%
-    tab_spanner(
-      label = control_label,
-      columns = c(n_control, n_accepted_control, uptake_control)
+    knitr::kable(
+      format = "latex",
+      booktabs = TRUE,
+      escape = TRUE,
+      digits = 1,
+      col.names = c(
+        "Condition",
+        "Referred",
+        "Accepted",
+        "Uptake (%)",
+        "Referred",
+        "Accepted",
+        "Uptake (%)"
+      ),
+      caption = title_text,
+      align = c("l", "r", "r", "r", "r", "r", "r")
     ) %>%
-    tab_spanner(
-      label = intervention_label,
-      columns = c(n_intervention, n_accepted_intervention, uptake_intervention)
+    kableExtra::add_header_above(
+      header = header_labels,
+      bold = TRUE
     ) %>%
-    fmt_number(columns = starts_with("n_"), decimals = 0) %>%
-    fmt_number(columns = starts_with("uptake"), decimals = 1) %>%
-    cols_align(align = "center", columns = everything()) %>%
-    tab_options(
-      table.font.size = px(10),
-      data_row.padding = px(2),
-      table.width = pct(100)
+    kableExtra::kable_styling(
+      latex_options = c("HOLD_position", "scale_down"),
+      font_size = 9,
+      full_width = FALSE,
+      position = "center"
     )
-  
-  return(gt_tbl)
+
+  return(referral_tbl)
 }
 
-# --- 4. Call the function ---
-arm_referral_summary <- build_gt_referral_table(df_long, use_random = TRUE)
+arm_referral_summary <- build_gt_referral_table(
+  df_long,
+  use_random = TRUE # external analyst: set FALSE for real data
+)
 
-arm_referral_summary 
-
+arm_referral_summary
 ```
 
 
-\newpage
+
 ## 6.2 Intervention Treatment Referrals
 ```{r treatment_referrals_numsource, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -2219,7 +2405,7 @@ sae_summary_arm <- sae_wide %>%
         ),
         type = all_continuous() ~ "continuous",
         statistic = all_continuous() ~ "{sum}",
-        percent = "cell",
+        percent = "column",
         missing = "no",
         digits = list(
             all_continuous() ~ 1,       # continuous variables ??? 1 d.p.
@@ -2337,13 +2523,12 @@ ae_summary <- ae_long %>%
   bold_labels() %>%
   as_kable_extra(
     caption  = "Summary of Adverse Events by Arm",
-    booktabs = TRUE
-  )%>%
-    column_spec(1, width = "7cm") %>%
-    column_spec(2, width = "3cm") %>%
-    column_spec(3, width = "3cm") %>%
-    column_spec(4, width = "3cm") %>%
-    row_spec(0, bold = TRUE, font_size = 10)
+    booktabs = TRUE) #%>%
+  #   column_spec(1, width = "7cm") %>%
+  #   column_spec(2, width = "3cm") %>%
+  #   column_spec(3, width = "3cm") %>%
+  #   column_spec(4, width = "3cm") %>%
+  #   row_spec(0, bold = TRUE, font_size = 10)
 
 ae_summary %>%
   kable_styling(
@@ -2451,7 +2636,26 @@ ae_ages <- ppw_rct_df %>%
     select(record_id, clt_study_site, redcap_event_name,
            dem_age, clt_date) %>%
   filter(str_detect(redcap_event_name, "^Enrollment"),
-         !is.na(clt_date))
+         !is.na(clt_date)) %>% 
+    mutate(
+        clt_date = as.Date(clt_date),
+        clt_date = if_else(record_id == "21062639",
+      as.Date("2026-05-28"),
+      clt_date
+    )
+  )
+
+#----10. Delivery dataset ----
+ae_delivery <- ppw_rct_df %>%
+  filter(str_detect(redcap_event_name, "^6 Weeks")) %>%
+  filter(tpnc_ended == "Yes") %>%
+  select(record_id, tpnc_date) %>%
+  mutate(tpnc_date = as.Date(tpnc_date))
+
+#----11. Attach delivery date to AEs ----
+final_ae <- final_ae %>%
+  left_join(ae_delivery, by = "record_id")
+
 
 #----10. Merge age + clean dates ----
 
@@ -2463,7 +2667,16 @@ final_ae <- final_ae %>%
     ae_dateonset  = as.Date(ae_dateonset),
     clt_date      = as.Date(clt_date),
     reported_days = as.numeric(ae_datereport - ae_dateonset),
-    days_since_enrolment = as.numeric(ae_datereport - clt_date)
+    days_since_enrolment = as.numeric(ae_datereport - clt_date),
+    infant_age_days   = if_else(ae_label == "Infant Death (SAE)",
+                                as.numeric(ae_datereport - tpnc_date), NA_real_))%>%
+    mutate(
+    infant_age_band = case_when(
+      ae_label == "Infant Death (SAE)" & infant_age_days < 28 ~ "Neonatal (<28 days)",
+      ae_label == "Infant Death (SAE)" & infant_age_days >= 28 & infant_age_days < 365 ~ "Post-neonatal (1-12 months)",
+      ae_label == "Infant Death (SAE)" & infant_age_days >= 365 ~ "Childhood (>12 months)",
+      TRUE ~ NA_character_
+    )
   )
 
 # 11. --- Severity order----
@@ -2487,24 +2700,24 @@ final_ae <- final_ae %>%
 # 12. ----Control AE summary----
 
 cont_ae_summary <- final_ae %>%
-  #filter(Arm == "Control") %>%
   filter(arm_random == "Arm Y") %>%
-    # To external analyst: Replace with Arm for real data (Control)----
-  select(record_id, clt_study_site, ae_label, 
-         dem_age, reported_days, days_since_enrolment) %>%
+  select(record_id, clt_study_site, ae_label, dem_age, 
+         reported_days, days_since_enrolment, ae_relation,
+         infant_age_band) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
   rename(
     PTID = record_id,
     `Study Site` = clt_study_site,
     `Adverse Event reported` = ae_label,
-    `Age of participant` = dem_age,
+    `Participant Age` = dem_age,
     `Days from Onset to Report` = reported_days,
-    `Days from enrolment to AE report` = days_since_enrolment
-  )%>%
+    `Days from enrolment to AE report` = days_since_enrolment,
+    `Relatedness to intervention` = ae_relation,
+    `Infant Age Band` = infant_age_band
+  ) %>%
   arrange(`Adverse Event reported`)
 
 #----13. Table output----
-
 cont_ae_summary %>%
   kable(
     caption = "List of Study Adverse Events for Arm Y",
@@ -2512,17 +2725,19 @@ cont_ae_summary %>%
   ) %>%
   kable_styling(
     font_size = 8,
-    latex_options = c("striped", "HOLD_position", "scale_down"),
+    latex_options = c("striped", "hold_position", "scale_down"),
     full_width = FALSE,
     position = "center"
   ) %>%
-    column_spec(1, width = "2cm") %>%
-    column_spec(2, width = "3cm") %>%
-    column_spec(3, width = "5cm") %>%
-    column_spec(4, width = "2cm") %>%
-    column_spec(5, width = "2cm") %>%
-    column_spec(6, width = "2cm") %>%
-    row_spec(0, bold = TRUE, font_size = 9)
+  column_spec(1, width = "1.2cm") %>%   # PTID
+  column_spec(2, width = "2.0cm") %>%   # Study Site
+  column_spec(3, width = "3.0cm") %>%   # AE reported
+  column_spec(4, width = "1.5cm") %>%   # Age of participant
+  column_spec(5, width = "1.8cm") %>%   # Days onset???report
+  column_spec(6, width = "1.8cm") %>%   # Days enrol???report
+  column_spec(7, width = "2.2cm") %>%   # Relatedness
+  column_spec(8, width = "2.2cm") %>%   # Infant Age Band
+  row_spec(0, bold = TRUE, font_size = 8)
 
 ```
 
@@ -2535,16 +2750,19 @@ int_ae_summary <- final_ae %>%
     #filter(Arm == "Interventio") %>%
     filter(arm_random == "Arm X") %>%
     # To external analyst: Replace with Arm for real data (Intervention)----
-  select(record_id, clt_study_site, ae_label, 
-         dem_age, reported_days, days_since_enrolment) %>%
+  select(record_id, clt_study_site, ae_label, dem_age, 
+         reported_days, days_since_enrolment, ae_relation,
+         infant_age_band) %>%
   mutate(clt_study_site = str_remove(clt_study_site, "^[0-9]+,\\s*")) %>%
   rename(
     PTID = record_id,
     `Study Site` = clt_study_site,
     `Adverse Event reported` = ae_label,
-    `Age of participant` = dem_age,
+    `Participant Age` = dem_age,
     `Days from Onset to Report` = reported_days,
-    `Days from enrolment to AE report` = days_since_enrolment
+    `Days from enrolment to AE report` = days_since_enrolment,
+    `Relatedness to intervention` = ae_relation,
+    `Infant Age Band` = infant_age_band
   )%>%
   arrange(`Adverse Event reported`)
 
@@ -2556,17 +2774,19 @@ int_ae_summary %>%
   ) %>% 
   kable_styling(
     font_size = 8,
-    latex_options = c("striped", "HOLD_position", "scale_down"),
+    latex_options = c("striped", "hold_position", "scale_down"),
     full_width = FALSE,
     position = "center"
   ) %>%
-    column_spec(1, width = "2cm") %>%
-    column_spec(2, width = "3cm") %>%
-    column_spec(3, width = "5cm") %>%
-    column_spec(4, width = "2cm") %>%
-    column_spec(5, width = "2cm") %>%
-    column_spec(6, width = "2cm") %>%
-    row_spec(0, bold = TRUE, font_size = 9)
+  column_spec(1, width = "1.2cm") %>%   # PTID
+  column_spec(2, width = "2.0cm") %>%   # Study Site
+  column_spec(3, width = "3.0cm") %>%   # AE reported
+  column_spec(4, width = "1.5cm") %>%   # Age of participant
+  column_spec(5, width = "1.8cm") %>%   # Days onset???report
+  column_spec(6, width = "1.8cm") %>%   # Days enrol???report
+  column_spec(7, width = "2.2cm") %>%   # Relatedness
+  column_spec(8, width = "2.2cm") %>%   # Infant Age Band
+  row_spec(0, bold = TRUE, font_size = 8)
 
 ```
 
