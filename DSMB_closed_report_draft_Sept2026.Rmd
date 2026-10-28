@@ -1563,7 +1563,14 @@ total_exits <- ppw_rct_df %>%
     select(clt_ptid,clt_study_site, mv_visit, dis_today, dis_reason)%>% 
     mutate(arm = stringr::str_extract(clt_study_site,"^\\d{2}"),
            arm_group = ifelse(arm %in% c("02","05", "06", "08", "11", "14", "15", "18", "20", "21"),
-                              "Control", "Intervention")) 
+                              "Control", "Intervention")) %>% 
+    mutate(
+    dis_reason = if_else(
+      clt_ptid == "21145516", # Correctio for discharge reason
+      "(Study End)",
+      dis_reason
+    )
+  )
 
 
 # Random arm generation
@@ -1616,9 +1623,50 @@ lost_to_follow_up <- total_exits %>%
     )) %>% 
     filter(dis_reason == "Lost to follow-up")
 
-n_lost <- lost_to_follow_up %>%
-  distinct(clt_ptid) %>%
-  nrow()
+# TRUE = blinded report; FALSE = real-data report
+use_random <- TRUE
+
+# Select the appropriate arm variable
+arm_var <- if (use_random) "arm_random" else "arm_group"
+
+lost_to_follow_up <- total_exits %>%
+  filter(dis_today == "Yes") %>%
+  mutate(
+    dis_reason = case_when(
+      str_detect(
+        coalesce(dis_reason, ""),
+        fixed("Unable to contact the participant")
+      ) ~ "Lost to follow-up",
+      TRUE ~ dis_reason
+    )
+  ) %>%
+  filter(dis_reason == "Lost to follow-up")
+
+# Count lost to follow-up by selected arm
+lost_by_arm <- lost_to_follow_up %>%
+  count(.data[[arm_var]], name = "n_lost") %>%
+  rename(arm = all_of(arm_var))
+
+# Extract counts for each arm
+arm_levels <- if (use_random) c("Arm X", "Arm Y") else unique(
+  na.omit(as.character(total_exits$arm_group))
+)
+
+lost_counts <- setNames(
+  vapply(
+    arm_levels,
+    function(a) {
+      sum(lost_by_arm$n_lost[lost_by_arm$arm == a], na.rm = TRUE)
+    },
+    numeric(1)
+  ),
+  arm_levels
+)
+
+# Total lost to follow-up
+n_lost <- nrow(lost_to_follow_up)
+
+
 
 # Withdrew consent
 withdrawals <- ppw_rct_df %>%
@@ -1644,7 +1692,7 @@ n_withdrawals <- withdrawals %>%
 ```
 A total of `r completed_follow_up` participants have completed follow-up and exited the study at the scheduled endpoint, including `r completed_control` from the Arm Y and `r completed_intervention` from the Arm X.
 
-One participant (N = 1) withdrew consent before completing all scheduled study visits, while `r n_lost` participants were classified as lost to follow-up because they could not be contacted. No participants have been terminated early following a Principal Investigator (PI) discharge decision.
+The distribution of participants classified as lost to follow-up across study arms was as follows: `r paste(paste0(names(lost_counts), ": ", lost_counts), collapse = "; ")`, while one participant (N = 1) withdrew consent before completing all scheduled study visits. No participants were terminated early following a Principal Investigator (PI) discharge decision and 
 
 Three maternal deaths (N = 3) have been reported and are described separately in the Adverse Events section.
 
