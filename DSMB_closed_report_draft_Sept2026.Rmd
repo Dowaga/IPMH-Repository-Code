@@ -2080,11 +2080,31 @@ pm_telep_df <- pm_telep_df %>%
 # PM+ participants
 pm_plus_df <- pm_telep_df %>% 
     filter(max_score >= 10 & max_score < 15) %>%
-    select(-max_score)  # Remove max_score if not needed
+    select(-max_score) %>%  # Remove max_score if not needed
+    filter(referred_to == "PM+")
 
 pm_participants <- pm_plus_df %>% 
     select(record_id, clt_study_site) %>% 
     mutate(pm_plus = "Yes")
+
+# Select distinct ptids in the PM+ Survey
+pm_ptids <- pm_survey_df %>% 
+    filter(!is.na(pm_ptid)) %>%
+    mutate(pm_ptid = ifelse(pm_ptid == 21135160, 21135060, pm_ptid)) %>% # Correct ptid
+    select(pm_ptid, pm_facility) %>%
+    distinct(pm_ptid, .keep_all = TRUE)
+
+# First, rename pm_ptid to match the column in pm_participants
+new_pm_ptids <- pm_ptids %>%
+    rename(record_id = pm_ptid,
+           clt_study_site = pm_facility) %>%
+    filter(!(record_id %in% pm_participants$record_id)) %>%
+    mutate(pm_plus = "Yes")
+
+# Then, bind these new participants to the original pm_participants
+pm_participants <- bind_rows(pm_participants, new_pm_ptids) %>% 
+    distinct(record_id, .keep_all = TRUE)
+
 
 PM_referrals <- pm_participants %>% 
     nrow()
@@ -2151,21 +2171,6 @@ screened <- screening_consent_df %>%
 screened_pmad <- screened %>% 
     nrow()
 
-# Select distinct ptids in the PM+ Survey
-pm_ptids <- pm_survey_df %>% 
-    filter(!is.na(pm_ptid)) %>%
-    select(pm_ptid, pm_facility) %>%
-    distinct(pm_ptid, .keep_all = TRUE)
-
-# First, rename pm_ptid to match the column in pm_participants
-new_pm_ptids <- pm_ptids %>%
-    rename(record_id = pm_ptid,
-           clt_study_site = pm_facility) %>%
-    filter(!(record_id %in% pm_participants$record_id)) %>%
-    mutate(pm_plus = "Yes")
-
-# Then, bind these new participants to the original pm_participants
-pm_participants <- bind_rows(pm_participants, new_pm_ptids)
 
 #Study participants in the PM+ Survey
 pm_abstractions <- pm_survey_df %>%
@@ -2175,7 +2180,9 @@ pm_abstractions <- pm_survey_df %>%
 
 pm_df <- pm_abstractions %>% 
     select(pm_ptid, pm_facility) %>% 
-    mutate(pm_plus = "Yes")
+    mutate(pm_ptid = ifelse(pm_ptid == 21135160, 21135060, pm_ptid)) %>% # Correct ptid
+    mutate(pm_plus = "Yes") %>% 
+    distinct(pm_ptid, .keep_all = TRUE)
 
 
 fidelity_df <- screened %>% 
