@@ -9,6 +9,48 @@ source("DataTeam_ipmh.R")
 source("Dependencies.R")
 source("data_import.R")
 
+# #=========================================================
+# # 1. Import SharePoint Excel tracker
+# #=========================================================
+# 
+# 
+# # Connect to IPMH SharePoint site
+# site <- get_sharepoint_site(
+#     "https://uwnetid.sharepoint.com/sites/ipmh"
+# )
+# 
+# # Access the document library
+# drive <- site$get_drive()
+# 
+# # Locate the scheduling and follow-up tracker
+# file <- drive$get_item(
+#     "Shared Documents/IPMH Participant Scheduling and Follow-up.xlsx"
+# )
+# 
+# # Download the workbook to a temporary location
+# tmp <- tempfile(fileext = ".xlsx")
+# 
+# file$download(tmp)
+# 
+# #=========================================================
+# # 2. Read all worksheets
+# #=========================================================
+# 
+# # Get sheet names
+# sheet_names <- excel_sheets(tmp)
+# 
+# # Import each sheet using the second row as column headers
+# sheet_list <- map(
+#     set_names(sheet_names, sheet_names),
+#     ~ read_excel(
+#         tmp,
+#         sheet = .x,
+#         skip = 1
+#     )
+# )
+# 
+
+
 #=========================================================
 # 1. Import Google Sheets
 #=========================================================
@@ -34,6 +76,9 @@ sheet_list <- map(
         skip = 1
     )
 )
+
+# View available worksheets
+names(sheet_list)
 
 #=========================================================
 # 2. Rename columns 4:15
