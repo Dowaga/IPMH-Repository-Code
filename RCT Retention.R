@@ -886,7 +886,7 @@ overall_tbl <- gt(retention_summary) %>%
     # Explain the retention definition
     tab_footnote(
         footnote = md(
-            "Retention = (Attended + Window Open) / Participants Due. Participants whose visit windows remain open are included in the retention numerator."
+            "Retention = Attended / (Participants Due - Window Open)."
         ),
         locations = cells_title(groups = "title")
     )
@@ -1464,7 +1464,7 @@ overall_wlhiv_tbl <- gt(retention_summary_wlhiv) %>%
     
     tab_footnote(
         footnote = md(
-            "Retention = (Attended + Window Open) / Participants Due."
+            "Retention = Attended / (Participants Due - Window Open)."
         ),
         locations = cells_title(groups = "title")
     )
