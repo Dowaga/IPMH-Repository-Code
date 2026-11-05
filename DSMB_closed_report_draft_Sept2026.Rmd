@@ -32,7 +32,7 @@ rm(list = ls())
 # Set up data freeze time for this report
 data_freeze <- as.Date("2026-10-14") 
 
-##### NOTES: Need to replace this with October 20 2026, which is the date of data freeze for this report after Oct 20 2026. #####
+##### NOTES: Need to replace this with October 14 2026, which is the date of data freeze for this report after Oct 14 2026. #####
 
 # Reference source codes & other dependencies:
 source("DataTeam_ipmh.R")
