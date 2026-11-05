@@ -91,4 +91,24 @@ write_csv(
     )
 )
 
+# 4. DSM-5 Cross Cutting Symptom Measure
+source("DSM5_Cross_Cutting_Cleaning.R", local = .GlobalEnv)
+write_csv(
+    dsm5_df,
+    file.path(
+        clean_dir,
+        paste0("DSM5_Crosscutting_Measure_data_", 
+               format(data_freeze, "%Y-%m-%d"), ".csv")
+    )
+)
 
+# 5. PHQ9 Scoring
+source("PHQ9_Scoring_Cleaning.R", local = .GlobalEnv)
+write_csv(
+    phq9_clean_df,
+    file.path(
+        clean_dir,
+        paste0("PHQ9_data_", 
+               format(data_freeze, "%Y-%m-%d"), ".csv")
+    )
+)
