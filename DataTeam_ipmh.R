@@ -13,7 +13,7 @@ da_users <- data.frame(Analyst = c("David Owaga", "Lincoln Pothan", "Yuwei Wang"
                                          "/Users/yuweiwang_1997/Library/CloudStorage/OneDrive-UW/IPMH study",
                                          "C:/Users/hp/UW/ipmh - IPMH materials",
                                          "C:/Users/Olivia Schultes/OneDrive - UW/ngumbau's files - IPMH study",
-                                         "/Users/Wenwenjiang/Library/CloudStorage/OneDrive-UW/IPMH study"),
+                                         "/Users/Wenwenjiang/Library/CloudStorage/OneDrive-UW/ipmh - IPMH materials"),
                        machinetype = c("PC", "Mac", "Mac", "PC", "PC", "Mac"))
 
 ### Defining OneDrive data filepath based on analyst ###
@@ -30,7 +30,7 @@ if (grepl("DAMARIS", current_wd)) {
 } else if (grepl("Olivia Schultes", current_wd)) {
     ipmh_filepath <- "C:/Users/Olivia Schultes/OneDrive - UW/ngumbau's files - IPMH study"
 } else if (grepl("Wenwenjiang", current_wd)) {
-    ipmh_filepath <- "/Users/Wenwenjiang/Library/CloudStorage/OneDrive-UW/IPMH study"
+    ipmh_filepath <- "/Users/Wenwenjiang/Library/CloudStorage/OneDrive-UW/ipmh - IPMH materials"
 } else {
     print("No filepath")
 }
