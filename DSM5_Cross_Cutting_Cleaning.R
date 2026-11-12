@@ -40,7 +40,6 @@ duplicate_ids <- enrollment_df %>%
     count(clt_ptid) %>%
     filter(n > 1)
 
-duplicate_ids
 
 #===============================================================================
 # 3. SELECT DSM-5 VARIABLES
@@ -104,15 +103,10 @@ dsm5_unmatched <- dsm5_df_raw %>%
                         tolower(
                             trimws(
                                 as.character(.x[!is.na(.x)])
-                            )
-                        )
-                    ),
+                            ))),
                     names(dsm5_lookup)
                 ),
-                collapse = "; "
-            )
-        )
-    ) %>%
+                collapse = "; "))) %>%
     pivot_longer(
         everything(),
         names_to = "variable",
@@ -132,8 +126,7 @@ dsm5_df <- dsm5_df %>%
                 x <- tolower(trimws(as.character(.x)))
                 as.numeric(unname(dsm5_lookup[x]))
             }
-        )
-    )
+        ))
 
 #===============================================================================
 # 6. RECODE COPIED DSM-5 ITEMS (0-3)
@@ -168,15 +161,11 @@ phq9_unmatched <- dsm5_df_raw %>%
                         tolower(
                             trimws(
                                 as.character(.x[!is.na(.x)])
-                            )
-                        )
-                    ),
+                            ))),
                     names(phq9_lookup)
                 ),
                 collapse = "; "
-            )
-        )
-    ) %>%
+            ))) %>%
     pivot_longer(
         everything(),
         names_to = "variable",
@@ -195,8 +184,7 @@ dsm5_df <- dsm5_df %>%
                 as.numeric(unname(phq9_lookup[x]))
             },
             .names = "{.col}_num"
-        )
-    )
+        ))
 
 #===============================================================================
 # 8. RECODE GAD-7 ITEM (0-3)
@@ -208,6 +196,7 @@ gad7_lookup <- c(
     "over half the days" = 2,
     "nearly every day" = 3
 )
+
 
 gad7_unmatched <- dsm5_df_raw %>%
     summarise(
@@ -223,10 +212,9 @@ gad7_unmatched <- dsm5_df_raw %>%
                 names(gad7_lookup)
             ),
             collapse = "; "
-        )
-    )
+        ))%>%
+    filter(gad7_nerve != "")
 
-gad7_unmatched
 
 dsm5_df <- dsm5_df %>%
     mutate(
@@ -372,25 +360,9 @@ dsm5_item_missingness <- dsm5_df %>%
 
 dsm5_item_missingness
 
-#===============================================================================
-# 13. INSTRUMENT COMPLETION STATUS
-#===============================================================================
-
-dsm5_completion_status <- dsm5_df %>%
-    count(
-        dsm5_cross_cutting_symptom_measure_complete,
-        name = "n",
-        .drop = FALSE
-    ) %>%
-    mutate(
-        percentage =
-            round(100 * n / sum(n), 1)
-    )
-
-dsm5_completion_status
 
 #===============================================================================
-# 14. DSM-5 DOMAIN SCORES
+# 13. DSM-5 DOMAIN SCORES
 #===============================================================================
 
 safe_pmax <- function(...) {
@@ -464,7 +436,7 @@ dsm5_df <- dsm5_df %>%
     )
 
 #===============================================================================
-# 15. CREATE FINAL ANALYTIC DATASET
+# 14. CREATE FINAL ANALYTIC DATASET
 #===============================================================================
 
 score_vars <- names(dsm5_df) %>%
