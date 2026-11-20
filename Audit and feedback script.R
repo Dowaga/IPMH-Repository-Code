@@ -30,23 +30,22 @@ source("data_import.R")
 #PPW consenting databse (ANC number matching)
 
 
-
-#time period for the data [2026-06-30, 2026-04-01]
+#time period for the data [2026-09-30, 2026-07-01]
 daily_closeout <- daily_closeout_df%>% 
-    filter(rct_dcr_date >= as.Date("2026-04-01") & rct_dcr_date <= as.Date("2026-06-30")) %>% 
+    filter(rct_dcr_date >= as.Date("2026-07-01") & rct_dcr_date <= as.Date("2026-09-30")) %>% 
     mutate(rct_dcr_date = as.Date(rct_dcr_date))
 
 phq2_gad2_abstract <- phq2_gad2_abstract %>%
-    filter(screening_date >= as.Date("2026-04-01") & screening_date <= as.Date("2026-06-30"))
+    filter(screening_date >= as.Date("2026-07-01") & screening_date <= as.Date("2026-09-30"))
 
 rct_ppw <- ppw_rct_df %>% 
-    filter(clt_timestamp >= as.Date("2026-04-01") & clt_timestamp <= as.Date("2026-06-30"))
+    filter(clt_timestamp >= as.Date("2026-07-01") & clt_timestamp <= as.Date("2026-09-30"))
 
 pm <- pm_survey_df %>% 
-    filter(pm_date >= as.Date("2026-04-01") & pm_date <= as.Date("2026-06-30"))
+    filter(pm_date >= as.Date("2026-07-01") & pm_date <= as.Date("2026-09-30"))
 
 telepsych <- telepsych %>% 
-    filter(tele_date >= as.Date("2026-04-01") & tele_date <= as.Date("2026-06-30"))
+    filter(tele_date >= as.Date("2026-07-01") & tele_date <= as.Date("2026-09-30"))
 
 #uniform study site number for all datasets
 phq2_gad2_abstract <- phq2_gad2_abstract %>%
@@ -299,7 +298,7 @@ pm_referral <- rct_ppw_int %>%
     filter(abs_phq_ref_pm == "Yes" | abs_gad7_ref_pm == "Yes") %>% 
     mutate(clt_date = ymd(clt_date)) %>%
     #filter referral based on audit period
-  filter(between(clt_date, ymd("2026-04-01"), ymd("2026-06-30")))
+  filter(between(clt_date, ymd("2026-07-01"), ymd("2026-09-30")))
 
 pm_referral <- pm_referral %>%
     mutate(clt_timestamp = as.Date(clt_timestamp),
