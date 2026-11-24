@@ -723,9 +723,43 @@ nrow(datateam_list)
 datateam_list %>% count(issues, sort = TRUE)
 
 
-## Save (run when ready; contains DOBs, keep on the secure drive) ------
+## Save (run when ready; contains DOBs, keep on the secure drive) 
 # write.csv(demog_master,  file.path(ipmh_filepath, "demog_master.csv"),        row.names = FALSE)
 # write.csv(datateam_list, file.path(ipmh_filepath, "demog_datateam_list.csv"), row.names = FALSE)
+
+# arm check (newly added Nov 24) --------
+## Arm check on ALL HCW survey rows (not only demographic forms) 
+## Recorded arm (from the REDCap event) vs expected arm
+## (facility randomization + cadre from the ID). Expect 0 rows.
+intervention_fac <- c(1, 3, 4, 7, 9, 13, 16, 17, 19, 22)
+
+arm_all_rows <- hcw_is_df %>%
+    mutate(wave  = event_to_wave(redcap_event_name),
+           pt_id = as.numeric(pt_id),
+           arm   = str_extract(redcap_event_name, "(?<=: ).+(?=\\))"),
+           condition_recorded = str_extract(arm, "^(Intervention|Control)"),
+           # expected from the ID: facility digits -> randomization
+           fac_from_id        = (pt_id %/% 1e4) %% 100,
+           condition_expected = if_else(fac_from_id %in% intervention_fac,
+                                        "Intervention", "Control"),
+           cadre_from_id      = pt_id %/% 1e6,
+           cadre_recorded     = case_when(str_detect(arm, "lay providers") ~ 22,
+                                          str_detect(arm, "in charge")     ~ 23,
+                                          str_detect(arm, "nurses/cos")    ~ 24))
+
+arm_all_rows %>%
+    filter(condition_recorded != condition_expected | cadre_recorded != cadre_from_id) %>%
+    select(pt_id, part_id, wave, redcap_event_name, fac_from_id)
+
+## Rows per arm and visit vs HCWs enrolled in screening (should match) ------
+arm_all_rows %>% count(condition_recorded, wave)
+
+## Arm check on all HCW survey rows (Nov 24, 2026):
+##   1 misentry: 23160220 (in-charge, Usigu, intervention) 12-month survey
+##   entered under Arm 5 (Control - in charge) -> intervention-only forms
+##   (incl. AIM/IAM/FIM) not administered at that visit. Query data team.
+##   24090143 (nurse/CO, Miriu): no 12-month HCW survey record. Query data team.
+##   All other rows match the arm expected from facility and cadre.
 
 #######################################################################################
 
@@ -806,7 +840,7 @@ cse_raw %>%
     count(label, value) %>%
     arrange(value)
 
-## Which HCWs and items have "Prefer not to answer" (4 responses) ------
+## Which HCWs and items have "Prefer not to answer" (4 responses) 
 cse_num %>%
     pivot_longer(all_of(cse_items), names_to = "item", values_to = "value") %>%
     filter(is.na(value)) %>%
@@ -834,11 +868,110 @@ cse_clean <- cse_rev %>%
     select(pt_id, part_id, facility_code, facility_name, condition, cadre_code,
            flag_swap_suspect, all_of(cse_items), ends_with("_r"))
 
-## Checks ------
+## Checks 
 nrow(cse_clean)                          # 198
 n_distinct(cse_clean$pt_id)              # 198, one row per HCW
 sum(is.na(cse_clean$condition))          # 0: all linked
 cse_clean %>% count(flag_swap_suspect)   # 5 TRUE if all swap suspects present
+
+# Acceptability, appropriateness and feasibility (AIM / IAM / FIM) ------------
+## Source: acceptability_appropriateness_and_feasibility form, HCW survey.
+## 4 targets x 3 scales x 4 items = 48 items:
+##   IPMH package (aim/iam/fim_1-4), screening (_sc_), PM+ (_pm_), telepsychiatry (_tp_)
+## Response: 1 Completely disagree ... 5 Completely agree; 99 Prefer not to answer.
+
+aif_items <- grep("^(aim|iam|fim)(_sc|_pm|_tp)?_[1-4]$", 
+                  names(hcw_is_df), value = TRUE)
+length(aif_items)   # expect 48
+
+aif_all <- hcw_is_df %>%
+    mutate(wave  = event_to_wave(redcap_event_name),
+           arm   = str_extract(redcap_event_name, "(?<=: ).+(?=\\))"),
+           pt_id = as.numeric(pt_id)) %>%
+    select(part_id, pt_id, wave, arm, pt_type, all_of(aif_items),
+           form_status = acceptability_appropriateness_and_feasibility_complete)
+
+## (1) Who completed the form, by visit and arm ------
+aif_all %>% count(wave, form_status)
+aif_all %>%
+    count(arm, wave, form_status) %>%
+    pivot_wider(names_from = wave, values_from = n, names_prefix = "w", values_fill = 0)
+
+## (2) Which targets were answered, by arm and visit ------
+## Number of non-missing items per target among completed forms
+aif_all %>%
+    filter(form_status == "Complete") %>%
+    mutate(package   = rowSums(!is.na(across(matches("^(aim|iam|fim)_[1-4]$")))),
+           screening = rowSums(!is.na(across(contains("_sc_")))),
+           pm_plus   = rowSums(!is.na(across(contains("_pm_")))),
+           telepsych = rowSums(!is.na(across(contains("_tp_"))))) %>%
+    count(arm, wave, package, screening, pm_plus, telepsych)
+
+## (3) Every response value that appears ------
+aif_all %>%
+    filter(form_status == "Complete") %>%
+    pivot_longer(all_of(aif_items), names_to = "item", values_to = "value") %>%
+    count(value, sort = TRUE)
+
+## (4) Intervention HCWs enrolled at 12 months but no AIM/IAM/FIM form ------
+## Expect 2 (1 in-charge, 1 nurse/CO, from the counts above)
+screen_key %>%
+    filter(wave == 12) %>%
+    transmute(pt_id = screen_id, wave) %>%
+    inner_join(demog_master %>%
+                   filter(condition == "Intervention") %>%
+                   select(pt_id, facility_name, cadre_code),
+               by = "pt_id") %>%
+    anti_join(aif_all %>% filter(form_status == "Complete"), by = c("pt_id", "wave"))
+
+
+## Recode responses to 1-5 ------
+## Labels differ from the culture scales: "Completely disagree" ... "Completely agree"
+aif_lev <- c("Completely disagree" = 1, "Disagree" = 2,
+             "Neither agree nor disagree" = 3,
+             "Agree" = 4, "Completely agree" = 5)
+
+to_aif <- function(x) unname(aif_lev[str_trim(x)])   # "Prefer not to answer" -> NA
+
+# NEW: intervention forms only; one row per HCW per visit
+aif_num <- aif_all %>%
+    filter(form_status == "Complete") %>%
+    mutate(across(all_of(aif_items), to_aif))
+
+## Check: every label mapped as intended 
+## Expect 5 labels -> 1 to 5; "Prefer not to answer" and NA -> NA
+aif_all %>%
+    filter(form_status == "Complete") %>%
+    pivot_longer(all_of(aif_items), names_to = "item", values_to = "label") %>%
+    mutate(value = to_aif(label)) %>%
+    count(label, value) %>%
+    arrange(value)
+
+## Which HCWs and items have "Prefer not to answer" (3 responses) 
+aif_all %>%
+    filter(form_status == "Complete") %>%
+    pivot_longer(all_of(aif_items), names_to = "item", values_to = "label") %>%
+    filter(label == "Prefer not to answer") %>%
+    select(pt_id, wave, arm, item)
+
+## Clean dataset: link to the cleaned HCW list ------
+## One row per HCW per visit (297 rows).
+## Package items at all visits; screening, PM+ and telepsychiatry at 12 months only
+## (NA at Pre-launch and 6 months by design).
+aif_clean <- aif_num %>%
+    left_join(demog_master %>%
+                  select(pt_id, facility_code, facility_name, condition,
+                         cadre_code, flag_swap_suspect),
+              by = "pt_id") %>%
+    select(pt_id, part_id, wave, facility_code, facility_name, condition, cadre_code,
+           flag_swap_suspect, all_of(aif_items))
+
+## Checks 
+nrow(aif_clean)                            # 297
+aif_clean %>% count(wave)                  # 101 / 100 / 96
+aif_clean %>% count(pt_id, wave) %>% filter(n > 1)   # 0 rows
+sum(is.na(aif_clean$condition))            # 0: all linked
+aif_clean %>% count(condition)             # Intervention only
 
 # Demographics: Table and figures ------------
 ## Uses final_* columns only (entry visit).
@@ -1428,7 +1561,7 @@ cse_scores <- cse_clean %>%
 
 library(tidytext)   # reorder_within(): order facilities separately in each panel
 
-## Data: one row per facility per scale ------
+## Data: one row per facility per scale 
 fig_e_src <- cse_scores %>%
     select(facility_code, facility_name, condition,
            Culture = culture_score, Stress = stress_score, Effort = effort_score) %>%
@@ -1452,12 +1585,12 @@ fig_e_src <- cse_scores %>%
 # Check: 20 facilities x 3 scales = 60 rows
 nrow(fig_e_src)
 
-## Overall mean per scale (reference line) ------
+## Overall mean per scale (reference line) 
 overall_means <- fig_e_src %>%
     group_by(scale) %>%
     summarise(overall = weighted.mean(mean, n), .groups = "drop")
 
-## Plot ------
+## Plot 
 fig_e <- ggplot(fig_e_src, aes(x = mean, y = facility_s, colour = condition)) +
     geom_vline(data = overall_means, aes(xintercept = overall),
                linetype = "dashed", colour = "grey50") +
@@ -1480,9 +1613,283 @@ fig_e <- ggplot(fig_e_src, aes(x = mean, y = facility_s, colour = condition)) +
 
 fig_e
 
-## Save for slides (run when ready) ------
-# ggsave(file.path(ipmh_filepath, "fig_cse_facility.png"), fig_e,
-#        width = 14, height = 7, dpi = 300)
+# AIM / IAM / FIM: tables and figures ------------
+## Intervention arm only.
+## IPMH package: all visits. Screening, PM+, telepsychiatry: 12 months only.
+## Score = mean of 4 items per scale (range 1-5), requires >= 3 of 4 answered.
+library(lmerTest)
+library(tidytext)
+
+cadre_lab <- c("22" = "Lay providers", "24" = "Nurses/COs", "23" = "In-charges")
+
+item_txt <- c(aim_1 = "Meets my approval",   aim_2 = "Appealing to me",
+              aim_3 = "I like it",           aim_4 = "I welcome it",
+              iam_1 = "Seems fitting",       iam_2 = "Seems suitable",
+              iam_3 = "Seems applicable",    iam_4 = "Seems like a good match",
+              fim_1 = "Seems implementable", fim_2 = "Seems possible",
+              fim_3 = "Seems doable",        fim_4 = "Seems easy to use")
+
+## Long data: one row per HCW x visit x item 
+aif_long <- aif_clean %>%
+    pivot_longer(all_of(aif_items), names_to = "item", values_to = "value") %>%
+    mutate(
+        scale  = factor(toupper(str_extract(item, "^(aim|iam|fim)")),
+                        levels = c("AIM", "IAM", "FIM")),
+        target = factor(case_when(str_detect(item, "_sc_") ~ "Screening",
+                                  str_detect(item, "_pm_") ~ "PM+",
+                                  str_detect(item, "_tp_") ~ "Telepsychiatry",
+                                  TRUE                    ~ "IPMH package"),
+                        levels = c("IPMH package", "Screening", "PM+", "Telepsychiatry")),
+        item_key   = paste0(tolower(scale), "_", str_extract(item, "\\d$")),
+        item_label = factor(unname(item_txt[item_key]), levels = rev(unname(item_txt))),
+        visit = factor(wave, levels = c(0, 6, 12),
+                       labels = c("Pre-launch", "6-month", "12-month")),
+        cadre = factor(cadre_lab[as.character(cadre_code)],
+                       levels = c("Lay providers", "Nurses/COs", "In-charges"))
+    ) %>%
+    # components were only asked at 12 months
+    filter(target == "IPMH package" | wave == 12)
+
+## Scores: one row per HCW x visit x target x scale 
+aif_scores <- aif_long %>%
+    group_by(pt_id, wave, visit, facility_code, facility_name, cadre, target, scale) %>%
+    summarise(n_ans = sum(!is.na(value)),
+              score = if (n_ans >= 3) mean(value, na.rm = TRUE) else NA_real_,
+              .groups = "drop")
+
+# Wide by scale (AIM, IAM, FIM as columns) for the tables
+aif_wide <- aif_scores %>%
+    select(-n_ans) %>%
+    pivot_wider(names_from = scale, values_from = score)
+
+## Custom tests for add_p() 
+# Repeated measures (visits, or components rated by the same HCW):
+# random intercepts for facility and HCW
+mixed_p_rep <- function(data, variable, by, ...) {
+    f <- as.formula(paste0("`", variable, "` ~ ", by,
+                           " + (1 | facility_code) + (1 | pt_id)"))
+    m <- lmerTest::lmer(f, data = data)
+    tibble::tibble(p.value = anova(m)$`Pr(>F)`[1],
+                   method  = "Linear mixed model (random intercepts for facility and HCW)")
+}
+# One row per HCW: random intercept for facility only
+mixed_p_fac <- function(data, variable, by, ...) {
+    f <- as.formula(paste0("`", variable, "` ~ ", by, " + (1 | facility_code)"))
+    m <- lmerTest::lmer(f, data = data)
+    tibble::tibble(p.value = anova(m)$`Pr(>F)`[1],
+                   method  = "Linear mixed model (random intercept for facility)")
+}
+
+stat_ms <- list(all_continuous() ~ "{mean} ({sd})")
+
+## A. Completion and data quality ------------
+n_by_visit <- aif_clean %>% count(wave) %>% pull(n)
+
+tab_a <- tibble(
+    Check  = c("Arm", "IPMH package forms (Pre-launch / 6m / 12m)",
+               "Screening, PM+, telepsychiatry forms (12m)", "Items per form",
+               "Partially completed targets", "Prefer not to answer",
+               "Enrolled at 12m with no HCW survey record"),
+    Result = c("Intervention only (form not given in control facilities)",
+               paste(n_by_visit, collapse = " / "),
+               n_by_visit[3],
+               "12 per target (AIM 4, IAM 4, FIM 4); 48 at 12 months",
+               "0",
+               "3 responses from 3 HCWs (set to missing)",
+               "2 (1 nurse/CO, 1 in-charge)")
+)
+
+tab_a %>%
+    kbl(caption = "Acceptability, appropriateness and feasibility: completion and data quality") %>%
+    kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
+
+
+## B. Item responses ------------
+resp_cols <- c("Neutral or disagree" = "#d9d8d4",
+               "Agree"               = "#86b6ef",
+               "Completely agree"    = "#1c5cab")
+
+b_src <- aif_long %>%
+    filter(!is.na(value)) %>%
+    mutate(resp = factor(case_when(value == 5 ~ "Completely agree",
+                                   value == 4 ~ "Agree",
+                                   TRUE       ~ "Neutral or disagree"),
+                         levels = names(resp_cols))) %>%
+    count(target, visit, scale, item_label, resp) %>%
+    group_by(target, visit, scale, item_label) %>%
+    mutate(pct = 100 * n / sum(n)) %>%
+    ungroup()
+
+plot_resp <- function(d, facet_formula, title, base_size = 14) {
+    ggplot(d, aes(x = pct, y = item_label, fill = resp)) +
+        geom_col(width = 0.7, colour = "white", linewidth = 0.3,
+                 position = position_stack(reverse = TRUE)) +
+        # % completely agree at the right end of each bar
+        geom_text(data = d %>% filter(resp == "Completely agree"),
+                  mapping = aes(x = 101, y = item_label, label = paste0(round(pct), "%")),
+                  inherit.aes = FALSE, hjust = 0, size = base_size / 3.2, colour = "grey30") +
+        facet_grid(facet_formula, scales = "free_y", space = "free_y") +
+        scale_fill_manual(values = resp_cols, drop = FALSE) +
+        scale_x_continuous(limits = c(0, 115), breaks = seq(0, 100, 25),
+                           labels = function(x) paste0(x, "%")) +
+        labs(title = title, x = NULL, y = NULL, fill = NULL,
+             caption = "Number at right = % completely agree.") +
+        theme_minimal(base_size = base_size) +
+        theme(legend.position    = "top",
+              panel.grid.major.y = element_blank(),
+              panel.grid.minor   = element_blank(),
+              strip.text         = element_text(face = "bold"),
+              strip.text.y       = element_text(angle = 0, face = "bold"),
+              plot.title         = element_text(face = "bold"),
+              plot.caption       = element_text(colour = "grey40"))
+}
+
+# B1. IPMH package, by visit
+fig_b1 <- plot_resp(b_src %>% filter(target == "IPMH package"), scale ~ visit,
+                    "IPMH as a package: responses by item and visit")
+fig_b1
+
+# B2. Components at 12 months
+fig_b2 <- plot_resp(b_src %>% filter(target != "IPMH package"), scale ~ target,
+                    "IPMH components: responses by item (12-month visit)")
+fig_b2
+
+
+## Ceiling: % of HCWs with the maximum score (all items "Completely agree") ------
+aif_scores %>%
+    filter(!is.na(score)) %>%
+    group_by(target, visit, scale) %>%
+    summarise(pct_max = round(100 * mean(score == 5), 1), .groups = "drop") %>%
+    pivot_wider(names_from = scale, values_from = pct_max) %>%
+    rename(Target = target, Visit = visit) %>%
+    kbl(caption = "% of HCWs scoring 5 (all items 'Completely agree')") %>%
+    kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
+
+
+## C. IPMH package scores by visit ------------
+tab_c <- aif_wide %>%
+    filter(target == "IPMH package") %>%
+    tbl_summary(by = visit, include = c(AIM, IAM, FIM),
+                statistic = stat_ms, digits = all_continuous() ~ 2,
+                missing = "no") %>%
+    add_p(test = everything() ~ mixed_p_rep)
+
+tab_c %>%
+    as_kable_extra(caption = "IPMH package scores by visit, mean (SD), range 1-5") %>%
+    kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
+
+# Figure: mean with 95% CI by visit
+mean_ci <- function(df, ...) {
+    df %>%
+        filter(!is.na(score)) %>%
+        group_by(...) %>%
+        summarise(n = n(), mean = mean(score), se = sd(score) / sqrt(n),
+                  lo = mean - qt(0.975, n - 1) * se,
+                  hi = mean + qt(0.975, n - 1) * se, .groups = "drop")
+}
+
+fig_c <- aif_scores %>%
+    filter(target == "IPMH package") %>%
+    mean_ci(scale, visit) %>%
+    ggplot(aes(x = visit, y = mean, group = 1)) +
+    geom_line(colour = "#2a78d6", linewidth = 0.8) +
+    geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.1, colour = "#2a78d6") +
+    geom_point(size = 3, colour = "#2a78d6") +
+    geom_text(aes(label = sprintf("%.2f", mean)), vjust = -1.2, size = 4.5) +
+    facet_wrap(~ scale) +
+    scale_y_continuous(limits = c(3, 5)) +
+    labs(title = "IPMH package scores by visit (mean, 95% CI)",
+         x = NULL, y = "Mean score",
+         caption = "Y-axis starts at 3. AIM = acceptability, IAM = appropriateness, FIM = feasibility.") +
+    theme_minimal(base_size = 14) +
+    theme(panel.grid.minor = element_blank(),
+          strip.text       = element_text(face = "bold"),
+          plot.title       = element_text(face = "bold"),
+          plot.caption     = element_text(colour = "grey40"))
+fig_c
+
+
+## D. Scores by component at 12 months ------------
+tab_d <- aif_wide %>%
+    filter(wave == 12) %>%
+    tbl_summary(by = target, include = c(AIM, IAM, FIM),
+                statistic = stat_ms, digits = all_continuous() ~ 2,
+                missing = "no") %>%
+    add_p(test = everything() ~ mixed_p_rep)
+
+tab_d %>%
+    as_kable_extra(caption = "Scores by IPMH component at 12 months, mean (SD), range 1-5") %>%
+    kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
+
+fig_d <- aif_scores %>%
+    filter(wave == 12) %>%
+    mean_ci(scale, target) %>%
+    mutate(target = factor(target, levels = rev(levels(target)))) %>%
+    ggplot(aes(x = mean, y = target)) +
+    geom_errorbarh(aes(xmin = lo, xmax = hi), height = 0, colour = "#2a78d6", linewidth = 0.8) +
+    geom_point(size = 3, colour = "#2a78d6") +
+    geom_text(aes(label = sprintf("%.2f", mean)), vjust = -1, size = 4.5) +
+    facet_wrap(~ scale) +
+    scale_x_continuous(limits = c(3, 5)) +
+    labs(title = "Scores by IPMH component at 12 months (mean, 95% CI)",
+         x = "Mean score", y = NULL,
+         caption = "X-axis starts at 3.") +
+    theme_minimal(base_size = 14) +
+    theme(panel.grid.major.y = element_blank(),
+          panel.grid.minor   = element_blank(),
+          strip.text         = element_text(face = "bold"),
+          plot.title         = element_text(face = "bold"),
+          plot.caption       = element_text(colour = "grey40"))
+fig_d
+
+
+## E. IPMH package scores by cadre, at each visit ------------
+tab_e <- aif_wide %>%
+    filter(target == "IPMH package") %>%
+    tbl_strata(
+        strata   = visit,
+        .tbl_fun = ~ .x %>%
+            tbl_summary(by = cadre, include = c(AIM, IAM, FIM),
+                        statistic = stat_ms, digits = all_continuous() ~ 2,
+                        missing = "no") %>%
+            add_p(test = everything() ~ mixed_p_fac)
+    )
+
+tab_e %>%
+    as_kable_extra(caption = "IPMH package scores by cadre and visit, mean (SD)") %>%
+    kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
+
+
+## F. Facility mean package scores by visit ------------
+visit_cols <- c("Pre-launch" = "#9ec5f4", "6-month" = "#5598e7", "12-month" = "#1c5cab")
+
+fig_f <- aif_scores %>%
+    filter(target == "IPMH package") %>%
+    mean_ci(scale, facility_code, facility_name, visit) %>%
+    mutate(fac_short = str_remove(facility_name,
+                                  " Sub[- ]?[Cc]ounty Hospital| Sub-District Hospital| Health Centre.*| Level (4|IV) Hospital"),
+           facility  = factor(sprintf("%02d %s", facility_code, fac_short)),
+           facility  = factor(facility, levels = rev(levels(facility)))) %>%
+    ggplot(aes(x = mean, y = facility, colour = visit)) +
+    geom_errorbarh(aes(xmin = lo, xmax = hi), height = 0, linewidth = 0.6,
+                   position = position_dodge(width = 0.6)) +
+    geom_point(size = 2.5, position = position_dodge(width = 0.6)) +
+    facet_wrap(~ scale, nrow = 1) +
+    scale_colour_manual(values = visit_cols) +
+    scale_x_continuous(limits = c(3, 5.2)) +
+    labs(title = "IPMH package: facility mean scores by visit (95% CI)",
+         x = "Mean score", y = NULL, colour = NULL,
+         caption = "Intervention facilities only. About 10 HCWs per facility. X-axis starts at 3.") +
+    guides(colour = guide_legend(reverse = FALSE)) +
+    theme_minimal(base_size = 14) +
+    theme(legend.position    = "top",
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor   = element_blank(),
+          strip.text         = element_text(face = "bold"),
+          plot.title         = element_text(face = "bold"),
+          plot.caption       = element_text(colour = "grey40"))
+fig_f
+
 
 # Save clean datasets -------------------
 
