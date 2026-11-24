@@ -1770,6 +1770,7 @@ aif_scores %>%
 tab_c <- aif_wide %>%
     filter(target == "IPMH package") %>%
     tbl_summary(by = visit, include = c(AIM, IAM, FIM),
+                type = c(AIM, IAM, FIM) ~ "continuous",   # NEW: force continuous
                 statistic = stat_ms, digits = all_continuous() ~ 2,
                 missing = "no") %>%
     add_p(test = everything() ~ mixed_p_rep)
@@ -1813,6 +1814,7 @@ fig_c
 tab_d <- aif_wide %>%
     filter(wave == 12) %>%
     tbl_summary(by = target, include = c(AIM, IAM, FIM),
+                type = c(AIM, IAM, FIM) ~ "continuous",   # NEW: force continuous
                 statistic = stat_ms, digits = all_continuous() ~ 2,
                 missing = "no") %>%
     add_p(test = everything() ~ mixed_p_rep)
@@ -1850,15 +1852,45 @@ tab_e <- aif_wide %>%
         strata   = visit,
         .tbl_fun = ~ .x %>%
             tbl_summary(by = cadre, include = c(AIM, IAM, FIM),
+                        type = c(AIM, IAM, FIM) ~ "continuous",
                         statistic = stat_ms, digits = all_continuous() ~ 2,
                         missing = "no") %>%
-            add_p(test = everything() ~ mixed_p_fac)
+            add_p(test = everything() ~ mixed_p_fac) %>%
+            # NEW: drop N from column headers (N differs by visit; shown in the group row)
+            modify_header(all_stat_cols() ~ "**{level}**"),
+        .combine_with = "tbl_stack",                       # NEW: stack visits vertically
+        .header       = "**{strata}** (N = {n})"           # NEW: visit and N as group row
     )
 
 tab_e %>%
     as_kable_extra(caption = "IPMH package scores by cadre and visit, mean (SD)") %>%
     kable_styling(bootstrap_options = c("striped", "condensed"), full_width = FALSE)
 
+cadre_cols <- c("Lay providers" = "#2a78d6", "Nurses/COs" = "#eb6834",
+                "In-charges" = "#1baf7a")
+pd <- position_dodge(width = 0.25)
+
+fig_e <- aif_scores %>%
+    filter(target == "IPMH package") %>%
+    mean_ci(scale, cadre, visit) %>%
+    ggplot(aes(x = visit, y = mean, colour = cadre, group = cadre)) +
+    geom_line(linewidth = 0.8, position = pd) +
+    geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.15, position = pd) +
+    geom_point(size = 3, position = pd) +
+    facet_wrap(~ scale) +
+    scale_colour_manual(values = cadre_cols) +
+    # coord_cartesian (not limits) so CIs above 5 are cut, not dropped
+    coord_cartesian(ylim = c(3, 5.1)) +
+    labs(title = "IPMH package scores by cadre and visit (mean, 95% CI)",
+         x = NULL, y = "Mean score", colour = NULL,
+         caption = "Y-axis starts at 3. In-charges: 8 to 9 HCWs per visit.") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position  = "top",
+          panel.grid.minor = element_blank(),
+          strip.text       = element_text(face = "bold"),
+          plot.title       = element_text(face = "bold"),
+          plot.caption     = element_text(colour = "grey40"))
+fig_e
 
 ## F. Facility mean package scores by visit ------------
 visit_cols <- c("Pre-launch" = "#9ec5f4", "6-month" = "#5598e7", "12-month" = "#1c5cab")
@@ -1890,6 +1922,42 @@ fig_f <- aif_scores %>%
           plot.caption       = element_text(colour = "grey40"))
 fig_f
 
+library(ggrepel)
+
+fac_traj <- aif_scores %>%
+    filter(target == "IPMH package", !is.na(score)) %>%
+    group_by(scale, facility_code, facility_name, visit) %>%
+    summarise(mean = mean(score), .groups = "drop") %>%
+    mutate(fac_short = str_remove(facility_name,
+                                  " Sub[- ]?[Cc]ounty Hospital| Sub-District Hospital| Health Centre.*| Level (4|IV) Hospital"))
+
+overall_traj <- aif_scores %>%
+    filter(target == "IPMH package", !is.na(score)) %>%
+    group_by(scale, visit) %>%
+    summarise(mean = mean(score), .groups = "drop")
+
+fig_f2 <- ggplot(fac_traj, aes(x = visit, y = mean, group = facility_code)) +
+    geom_line(colour = "grey70", linewidth = 0.6) +
+    geom_point(colour = "grey60", size = 1.8) +
+    geom_line(data = overall_traj, aes(group = 1), colour = "#2a78d6", linewidth = 1.4) +
+    geom_point(data = overall_traj, aes(group = 1), colour = "#2a78d6", size = 3) +
+    geom_text_repel(data = fac_traj %>% filter(visit == "12-month"),
+                    aes(label = fac_short), size = 3.5, colour = "grey30",
+                    hjust = 0, nudge_x = 0.2, direction = "y",
+                    segment.colour = NA,            # CHANGED: no connector lines
+                    xlim = c(3.15, NA)) +           # NEW: keep labels right of 12-month
+    facet_wrap(~ scale) +
+    scale_x_discrete(expand = expansion(add = c(0.3, 1.1))) +
+    coord_cartesian(ylim = c(3, 5), clip = "off") +  # CHANGED: clip off so labels aren't cut
+    labs(title = "IPMH package: facility mean scores over time",
+         x = NULL, y = "Mean score",
+         caption = "Grey = individual facilities; blue = all HCWs. Y-axis starts at 3. About 10 HCWs per facility.") +
+    theme_minimal(base_size = 14) +
+    theme(panel.grid.minor = element_blank(),
+          strip.text       = element_text(face = "bold"),
+          plot.title       = element_text(face = "bold"),
+          plot.caption     = element_text(colour = "grey40"))
+fig_f2
 
 # Save clean datasets -------------------
 
