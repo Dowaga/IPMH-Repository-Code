@@ -1011,6 +1011,142 @@ aif_clean %>% count(pt_id, wave) %>% filter(n > 1)   # 0 rows
 sum(is.na(aif_clean$condition))            # 0: all linked
 aif_clean %>% count(condition)             # Intervention only
 
+# Sustainability: NoMAD (providers) and PSAT (facility in-charges) ------------
+## Source: sustainability_nom and sustainability_psat forms, HCW survey.
+## NoMAD: intervention HCWs, 6 and 12 months. PSAT: intervention in-charges, 6 and 12 months.
+## Arm, facility and cadre taken from demog_master (not the REDCap event).
+
+psat_items  <- grep("^sus_(env_sup|funding|partner|or_cap|eval|adp|com|plan)_[1-3]$",
+                    names(hcw_is_df), value = TRUE)
+nomad_gen   <- c("sus2_familiar", "sus2_normal_now", "sus2_normal_will")
+nomad_items <- grep("^sus2_[1-4]_[1-7]$", names(hcw_is_df), value = TRUE)
+length(psat_items); length(nomad_items)   # 24 and 20
+
+sus_all <- hcw_is_df %>%
+    mutate(wave  = event_to_wave(redcap_event_name),
+           arm   = str_extract(redcap_event_name, "(?<=: ).+(?=\\))"),
+           pt_id = as.numeric(pt_id)) %>%
+    select(part_id, pt_id, wave, arm, pt_type,
+           sus2_role, all_of(nomad_gen), all_of(nomad_items), all_of(psat_items),
+           nom_status  = sustainability_nom_complete,
+           psat_status = sustainability_psat_complete)
+
+## (1) Who completed each form ------
+sus_all %>% count(arm, wave, nom_status) %>%
+    pivot_wider(names_from = wave, values_from = n, names_prefix = "w", values_fill = 0)
+sus_all %>% count(arm, wave, psat_status) %>%
+    pivot_wider(names_from = wave, values_from = n, names_prefix = "w", values_fill = 0)
+## Result (Nov 27, 2026): NoMAD intervention HCWs only, 6m 100, 12m 96.
+## PSAT intervention in-charges only, 6m 9, 12m 8. 23160220 completed both at
+## 6m; none at 12m (12-month survey under control arm).
+
+## (2) Response values ------
+sus_all %>% filter(nom_status == "Complete") %>%
+    pivot_longer(all_of(nomad_items), names_to = "item", values_to = "value") %>%
+    count(value, sort = TRUE)
+sus_all %>% filter(psat_status == "Complete") %>%
+    pivot_longer(all_of(psat_items), names_to = "item", values_to = "value") %>%
+    count(value, sort = TRUE)
+## Result (Nov 27, 2026): NoMAD coded 1 = Strongly agree ... 5 = Strongly disagree;
+## 20 "Not relevant to my role", 20 blank (one form). PSAT 1-7; 28 "Not able to answer".
+
+## Recode 
+## NoMAD construct items: 6-8 ("Not relevant...") -> NA; reversed so 5 = Strongly agree;
+##   sus2_3_2 ("IPMH disrupts working relationships") reversed again (negatively worded).
+## NoMAD general items (0-10) and PSAT (1-7): leading number; text-only -> NA.
+nomad_rc <- function(x) {
+    v <- as.integer(str_extract(x, "^\\d"))
+    v[v > 5] <- NA
+    6 - v
+}
+lead_num <- function(x) as.integer(str_extract(x, "^\\d+"))
+
+sus_num <- sus_all %>%
+    mutate(across(all_of(nomad_items), nomad_rc),
+           sus2_3_2 = 6 - sus2_3_2,
+           across(all_of(nomad_gen), lead_num),
+           across(all_of(psat_items), lead_num))
+
+# Check: original vs recoded (expect 1->5 ... 5->1; "Not relevant" -> NA)
+sus_all %>% filter(nom_status == "Complete") %>% select(pt_id, wave, sus2_1_1) %>%
+    left_join(sus_num %>% select(pt_id, wave, new = sus2_1_1), by = c("pt_id", "wave")) %>%
+    count(sus2_1_1, new)
+
+## Missing responses per item 
+sus_num %>% filter(nom_status == "Complete") %>%
+    summarise(across(all_of(nomad_items), ~ sum(is.na(.x)))) %>%
+    pivot_longer(everything(), names_to = "item", values_to = "n_missing") %>%
+    filter(n_missing > 0)
+sus_num %>% filter(psat_status == "Complete") %>%
+    summarise(across(all_of(psat_items), ~ sum(is.na(.x)))) %>%
+    pivot_longer(everything(), names_to = "item", values_to = "n_missing") %>%
+    filter(n_missing > 0) %>% arrange(desc(n_missing))
+## Result (Nov 27, 2026): NoMAD: sus2_3_6 ("Sufficient resources") missing 10,
+## mostly not relevant to role. PSAT: funding items missing for 4 of 17 forms.
+
+## Scores ------
+## NoMAD constructs and total: mean of items (1-5), >= 75% answered.
+## PSAT domains: mean of items (1-7), >= 2 of 3 answered; total: mean of domains, >= 6 of 8.
+mean_min <- function(df, items, min_prop) {
+    m <- as.matrix(df[, items]); n_ans <- rowSums(!is.na(m))
+    ifelse(n_ans / length(items) >= min_prop, rowMeans(m, na.rm = TRUE), NA_real_)
+}
+
+nomad_dom <- list(coherence      = paste0("sus2_1_", 1:4),
+                  cog_particip   = paste0("sus2_2_", 1:4),
+                  collect_action = paste0("sus2_3_", 1:7),
+                  reflex_monitor = paste0("sus2_4_", 1:5))
+psat_dom  <- list(env_support = "sus_env_sup", funding = "sus_funding",
+                  partnerships = "sus_partner", org_capacity = "sus_or_cap",
+                  evaluation = "sus_eval", adaptation = "sus_adp",
+                  communications = "sus_com", strategic_plan = "sus_plan")
+
+nomad_clean <- sus_num %>%
+    filter(nom_status == "Complete") %>%
+    select(pt_id, part_id, wave, sus2_role, all_of(nomad_gen), all_of(nomad_items))
+for (d in names(nomad_dom)) {
+    nomad_clean[[paste0("nomad_", d)]] <- mean_min(nomad_clean, nomad_dom[[d]], 0.75)
+}
+nomad_clean$nomad_total <- mean_min(nomad_clean, nomad_items, 0.75)
+
+psat_clean <- sus_num %>%
+    filter(psat_status == "Complete") %>%
+    select(pt_id, part_id, wave, all_of(psat_items))
+for (d in names(psat_dom)) {
+    psat_clean[[paste0("psat_", d)]] <- mean_min(psat_clean, paste0(psat_dom[[d]], "_", 1:3), 2/3)
+}
+psat_clean$psat_total <- mean_min(psat_clean, paste0("psat_", names(psat_dom)), 6/8)
+
+## Clean dataset: Link to cleaned HCW list ------
+link_vars <- demog_master %>%
+    select(pt_id, facility_code, facility_name, condition, cadre_code,
+           final_cadre, flag_swap_suspect)
+
+nomad_clean <- nomad_clean %>% left_join(link_vars, by = "pt_id") %>%
+    relocate(pt_id, part_id, wave, facility_code, facility_name, condition,
+             cadre_code, final_cadre, flag_swap_suspect)
+psat_clean  <- psat_clean  %>% left_join(link_vars, by = "pt_id") %>%
+    relocate(pt_id, part_id, wave, facility_code, facility_name, condition,
+             cadre_code, final_cadre, flag_swap_suspect)
+
+## Checks ------
+nomad_clean %>% count(wave)                              # 100 / 96
+psat_clean  %>% count(wave)                              # 9 / 8
+nomad_clean %>% count(pt_id, wave) %>% filter(n > 1)     # 0 rows
+sum(is.na(nomad_clean$condition)); sum(is.na(psat_clean$condition))   # 0, 0
+nomad_clean %>% summarise(across(starts_with("nomad_"), ~ sum(is.na(.x))))
+psat_clean  %>% summarise(across(starts_with("psat_"),  ~ sum(is.na(.x))))
+## Result (Nov 27, 2026): NoMAD scores missing for 1 form (22130167, 12m, blank);
+## cognitive participation also missing for 23190261 (6m).
+## PSAT: funding missing 4 (23010026 12m, 23160220 6m, 23220308 6m and 12m);
+## environmental support 2; strategic planning 2 (23220308); total missing 0.
+
+## Save ------
+# write.csv(nomad_clean, file.path(ipmh_filepath, "nomad_clean.csv"), row.names = FALSE)
+# write.csv(psat_clean,  file.path(ipmh_filepath, "psat_clean.csv"),  row.names = FALSE)
+# saveRDS(nomad_clean,   file.path(ipmh_filepath, "nomad_clean.rds"))
+# saveRDS(psat_clean,    file.path(ipmh_filepath, "psat_clean.rds"))
+
 # Save clean datasets -------------------
 
 # screening_clean_df <- screening_raw_df %>% 
